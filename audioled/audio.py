@@ -106,6 +106,7 @@ class AudioInput(Effect):
         self.__initstate__()
 
     def __initstate__(self):
+        super(AudioInput, self).__initstate__()
         self._audioStream, self._sampleRate = stream_audio(chunk_rate=self.chunk_rate, channels=self.num_channels)
         self._buffer = []
         self._chunk_size = int(self._sampleRate / self.chunk_rate)
@@ -117,7 +118,7 @@ class AudioInput(Effect):
         # perc = root(1.0 / min_value, N) = (1./min_value)**(1/N)
         self._autogain_perc = (1.0/min_value)**float(1/N)
         self._cur_gain = 1.0
-        super(AudioInput, self).__initstate__()
+        
 
     def numOutputChannels(self):
         return self.num_channels

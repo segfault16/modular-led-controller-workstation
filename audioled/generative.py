@@ -67,7 +67,7 @@ class SwimmingPool(Effect):
         _CArray = []
         _offset = random.randint(0,300)
         for i in range(-_spread, _spread+1):
-            _CArray.append(math.sin((math.pi/_spread) * i) * _scale * _wavehight * 255)
+            _CArray.append(math.sin((math.pi/_spread) * i) * _scale * _wavehight)
             _output = np.copy(self._pixel_state)
             _output[0][:len(_CArray)] += _CArray
             _output[1][:len(_CArray)] += _CArray
@@ -93,10 +93,10 @@ class SwimmingPool(Effect):
     def process(self):
         if self._outputBuffer is not None:
             color = self._inputBuffer[0]
-            self._output = 0.5 * np.ones(self.num_pixels) * color
+            self._output =  np.multiply(color, 0.5 * np.zeros(self.num_pixels))
 
             for i in range(0,self.num_waves):
-                step = np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1)
+                step = np.multiply(color, np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1))
                 self._output += step
 
             self._outputBuffer[0] = self._output.clip(0.0,255.0)
