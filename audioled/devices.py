@@ -234,15 +234,20 @@ class RaspberryPi(LEDController):
     def __initstate__(self):
         try:
             import rpi_ws281x
+            print('init')
+            self._strip = rpi_ws281x.PixelStrip(num=self.num_pixels, pin=self.pin, freq_hz=self.freq_hz, dma=self.dma,
+                                                    invert=self.invert, brightness=self.brightness)
+            self._strip.begin()
         except ImportError as e:
             url = 'learn.adafruit.com/neopixels-on-raspberry-pi/software'
             print('Could not import the neopixel library')
             print('For installation instructions, see {}'.format(url))
-            raise e
-        print('init')
-        self._strip = rpi_ws281x.PixelStrip(num=self.num_pixels, pin=self.pin, freq_hz=self.freq_hz, dma=self.dma,
-                                                invert=self.invert, brightness=self.brightness)
-        self._strip.begin()
+            print('If running on RaspberryPi, please install.')
+            print('------------------------------------------')
+            print('Otherwise rely on dependency injection')
+            print('Disconnecting Device.')
+            
+        
     
     def __cleanState__(self, stateDict):
         """
