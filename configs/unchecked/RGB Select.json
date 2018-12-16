@@ -1,0 +1,58 @@
+﻿{
+    "py/state": {
+        "recordTimings": true,
+        "nodes": [
+            {
+                "py/state": {
+                    "numOutputChannels": 0,
+                    "numInputChannels": 1,
+                    "uid": "87e1b90160184b15b906bd73a73082e7",
+                    "effect": {
+                        "py/state": {
+                            "controller": {
+                                "py/state": {
+                                    "invert": false,
+                                    "brightness": 1,
+                                    "num_pixels": 300,
+                                    "pin": 18,
+                                    "dma": 5,
+                                    "freq_hz": 800000
+                                },
+                                "py/object": "audioled.devices.RaspberryPi"
+                            }
+                        },
+                        "py/object": "audioled.devices.LEDOutput"
+                    }
+                },
+                "py/object": "audioled.filtergraph.Node"
+            },
+            {
+                "py/state": {
+                    "numOutputChannels": 1,
+                    "numInputChannels": 0,
+                    "uid": "4c888b86215647468a206219b1114418",
+                    "effect": {
+                        "py/state": {
+                            "r": 255,
+                            "num_pixels": 300,
+                            "g": 0,
+                            "b": 0
+                        },
+                        "py/object": "audioled.colors.StaticRGBColor"
+                    }
+                },
+                "py/object": "audioled.filtergraph.Node"
+            }
+        ],
+        "connections": [
+            {
+                "to_node_channel": 0,
+                "from_node_uid": "4c888b86215647468a206219b1114418",
+                "from_node_channel": 0,
+                "to_node_uid": "87e1b90160184b15b906bd73a73082e7",
+                "uid": "ee514b1e701a434dbb24ac9260182f50"
+            }
+        ]
+    },
+    "py/object": "audioled.filtergraph.FilterGraph"
+}
