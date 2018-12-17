@@ -12,7 +12,7 @@ import math
 import matplotlib as mpl
 from audioled.effect import Effect
 
-blend_modes = ['lightenOnly', 'darkenOnly', 'addition']
+blend_modes = ['lightenOnly', 'darkenOnly', 'addition', 'multiply', 'screen','overlay','softLight']
 blend_mode_default = 'lightenOnly'
 
 def blend(pixel_a, pixel_b, blend_mode):
@@ -30,6 +30,29 @@ def blend(pixel_a, pixel_b, blend_mode):
         return np.minimum(pixel_a, pixel_b)
     elif blend_mode == 'addition':
         return pixel_a + pixel_b
+    elif blend_mode == 'multiply':
+        pA = pixel_a / 255.0
+        pB = pixel_b / 255.0
+        return 255.0 * pA * pB
+    elif blend_mode == 'screen':
+        pA = pixel_a / 255.0
+        pB = pixel_b / 255.0
+        return 255.0 * (1 - (1 - pA) * (1 - pB))
+    elif blend_mode == 'overlay':
+        pA = pixel_a / 255.0
+        pB = pixel_b / 255.0
+        mask = pA >= 0.5
+
+        blended = np.zeros(np.shape(pA))
+        blended[~mask] = (2*pA*pB)[~mask]
+        blended[mask] = (1-2*(1-pA)*(1-pB))[mask]
+        return 255.0 * blended
+    elif blend_mode == 'softLight':
+        # pegtop
+        pA = pixel_a / 255.0
+        pB = pixel_b / 255.0
+        blended = (1-2*pB) * pA * pA + 2*pB*pA
+        return 255.0 * blended
     
     return pixel_a
 
