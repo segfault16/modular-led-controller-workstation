@@ -54,6 +54,11 @@ def create_app():
         ledThread.join()
         print('LED thread cancelled')
 
+    @app.after_request
+    def add_header(response):
+        response.cache_control.max_age = 0
+        return response
+
     @app.route('/<path:path>')
     def send_js(path):
         return send_from_directory('resources', path)
