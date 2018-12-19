@@ -15,6 +15,9 @@ import appendIcon from '../img/audioled.effects.Append.png'
 import glowIcon from '../img/audioled.effects.AfterGlow.png'
 import mirrorIcon from '../img/audioled.effects.Mirror.png'
 import swimmingPoolIcon from '../img/audioled.generative.SwimmingPool.png'
+import shiftIcon from '../img/audioled.effects.Shift.png'
+import defenceIcon from '../img/audioled.generative.DefenceMode.png'
+import interpolateHSV from '../img/audioled.colors.InterpolateHSV.png'
 
 var icons = {
   'audioled.audio.AudioInput':audioInputIcon,
@@ -29,7 +32,10 @@ var icons = {
   'audioled.effects.Append':appendIcon,
   'audioled.effects.AfterGlow':glowIcon,
   'audioled.effects.Mirror':mirrorIcon,
-  'audioled.generative.SwimmingPool':swimmingPoolIcon
+  'audioled.generative.SwimmingPool':swimmingPoolIcon,
+  'audioled.effects.Shift':shiftIcon,
+  'audioled.generative.DefenceMode':defenceIcon,
+  'audioled.colors.InterpolateHSV':interpolateHSV
 
 }
 
