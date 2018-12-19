@@ -6,7 +6,7 @@ import traceback
 import struct
 import numpy as np
 
-sel = selectors.DefaultSelector()
+
 
 class OPCMessage:
     def __init__(self, selector, sock, addr, callback):
@@ -100,7 +100,7 @@ class OPCMessage:
                 self.processMessageData()
 
     def close(self):
-        print("closing connection to", self.addr)
+        #print("closing connection to", self.addr)
         try:
             self.selector.unregister(self.sock)
         except Exception as e:
@@ -119,35 +119,75 @@ class OPCMessage:
             self.sock = None
     
 
-def accept_wrapper(sock, callback):
-    conn, addr = sock.accept()  # Should be ready to read
-    #print("accepted connection from", addr)
-    conn.setblocking(False)
-    message = OPCMessage(sel, conn, addr, callback)
-    sel.register(conn, selectors.EVENT_READ, data=message)
 
-def _process_thread(lsock, callback):
-    lsock.setblocking(False)
-    sel.register(lsock, selectors.EVENT_READ, data=None)
-    print("FadeCandy Server: Background thread started")
-    try:
-        while True:
-            events = sel.select(timeout=None)
-            for key, mask in events:
-                if key.data is None:
-                    accept_wrapper(key.fileobj, callback)
-                else:
-                    message = key.data
-                    try:
-                        message.process_events(mask)
-                    except Exception:
-                        message.close()
-    except KeyboardInterrupt:
-        print("caught keyboard interrupt, exiting")
-    finally:
-        sel.close()
+
+
+
+class ServerThread(object):
+    def __init__(self, socket, callback):
+        self._socket = socket
+        self._callback = callback
+        self._thread = None
+        self._stopSignal = None
+        self.sel = selectors.DefaultSelector()
+    
+    def start(self):
+        if self._thread is not None:
+            return
+        
+        self._stopSignal = False
+        self._thread = threading.Thread(target=self._process_thread, args=[self._socket, self._callback])
+        self._thread.daemon = True
+        self._thread.start()
+    
+    def stop(self):
+        self._stopSignal = True
+        self._thread.join(timeout=1)
+
+    def isAlive(self):
+        # Hard to find out :)
+        # ToDo: Implement
+        return True
+
+    def accept_wrapper(self, sock, callback):
+        conn, addr = sock.accept()  # Should be ready to read
+        #print("accepted connection from", addr)
+        conn.setblocking(False)
+        message = OPCMessage(self.sel, conn, addr, callback)
+        self.sel.register(conn, selectors.EVENT_READ, data=message)
+
+    def _process_thread(self, lsock, callback):
+        lsock.setblocking(False)
+        self.sel.register(lsock, selectors.EVENT_READ, data=None)
+        print("FadeCandy Server: Background thread started")
+        try:
+            while not self._stopSignal:
+                #print('Process')
+                events = self.sel.select(timeout=0.1)
+                for key, mask in events:
+                    if key.data is None:
+                        self.accept_wrapper(key.fileobj, callback)
+                    else:
+                        message = key.data
+                        try:
+                            message.process_events(mask)
+                        except Exception:
+                            message.close()
+        except KeyboardInterrupt:
+            print("caught keyboard interrupt, exiting")
+        finally:
+            print("Closing socket")
+            self.sel.close()
+            self._socket.close()
+        
+
 
 class Server(object):
+
+    # Using static methods here since sockets can be used only once
+    sockets = []
+    all_threads = []
+
     def __init__(self, host, port):
         self._host = host
         self._port = port
@@ -155,18 +195,73 @@ class Server(object):
         self._thread = None
         self._lastMessage = None
 
+    def __del__(self):
+        # Destructors in python... I'm never complaining about C++ again...
+
+        # Basically this thing is (maybe) called at some point, 
+        # except if anyone manages to build cyclic references.
+        if self._thread is not None:
+            self._stopThread()
     
+    def _stopThread(self):
+        # Stopping gracefully...
+        # ToDo: Error handling
+        self._thread.stop()
+        if self._thread in self.all_threads:
+            self.all_threads.remove(self._thread)
+
+    def stop(self):
+        self._stopThread()
+    
+    def _clean_threads(self):
+        toCleanup = []
+        for thread in self.all_threads:
+            try:
+                thread._socket.getpeername()
+            except:
+                toCleanup.append(thread)
+        
+        for thread in toCleanup:
+            # ToDo: Error handling
+            print("Cleaning up stale thread")
+            thread.stop()
+            self.all_threads.remove(thread)
+            
+    def _get_threads(self, host, port):
+        """
+        Returns sockets with same host and port.
+        """
+        self._clean_threads()
+        sameThreads = []
+        for thread in self.all_threads:
+            try:
+                (host, port) = thread._socket.getpeername()
+                if host == host and port == port:
+                    sameThreads.append(thread)
+            except:
+                pass
+        
+        return sameThreads
 
     def _ensure_listening(self):
-        if self._socket:
+        # We want to ensure that anyone who expects pixel information gets the data.
+        # Due to garbage collection and timing issues a corresponding thread for the same host and port
+        # may still be active and the socket may still be bound
+        if self._thread and self._thread.isAlive():
             return True
         try:
-            self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._socket.bind((self._host, self._port))
-            self._socket.listen()
+            same_socket_threads = self._get_threads(self._host, self._port)
+            for thread in same_socket_threads:
+                thread.stop()
+                self.all_threads.remove(thread)
+            
+            _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            _socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            _socket.bind((self._host, self._port))
+            _socket.listen()
             print("FadeCandy Server listening on {}:{}".format(self._host, self._port))
-            self._thread = threading.Thread(target=_process_thread, args=[self._socket, self._pixelCallback])
-            self._thread.daemon = True
+            self._thread = ServerThread(_socket, self._pixelCallback)
+            self.all_threads.append(self._thread)
             self._thread.start()
             return True
         except socket.error as e:

@@ -18,6 +18,7 @@ from audioled import effects
 from audioled import colors
 from audioled import devices
 from audioled import configs
+from audioled import input
 import jsonpickle
 from timeit import default_timer as timer
 from werkzeug.serving import is_running_from_reloader
@@ -191,7 +192,7 @@ def create_app():
 
     def getModuleAndClassName(full_class_name):
         module_name, class_name = full_class_name.rsplit(".", 1)
-        if module_name != "audioled.audio" and module_name != "audioled.effects" and module_name != "audioled.devices" and module_name != "audioled.colors" and module_name != "audioled.audioreactive" and module_name != "audioled.generative":
+        if module_name != "audioled.audio" and module_name != "audioled.effects" and module_name != "audioled.devices" and module_name != "audioled.colors" and module_name != "audioled.audioreactive" and module_name != "audioled.generative" and module_name != "audioled.input":
             raise RuntimeError("Not allowed")
         return module_name, class_name
 

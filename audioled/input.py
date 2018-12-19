@@ -1,5 +1,5 @@
 from audioled import effect
-
+from audioled import opc_server
 class CandyServer(effect.Effect):
     def __init__(self, num_pixels, host = '', port = 7891):
         self.num_pixels = num_pixels
@@ -9,6 +9,7 @@ class CandyServer(effect.Effect):
 
     def __initstate__(self):
         super().__initstate__()
+        self._server = opc_server.Server(self.host, self.port)
 
     def numInputChannels(self):
         return 0
@@ -32,3 +33,9 @@ class CandyServer(effect.Effect):
         definition['parameters']['num_pixels'][0] = self.num_pixels
         definition['parameters']['port'][0] = self.port
         return definition
+    
+    def process(self):
+        if self._outputBuffer is None:
+            return
+        pixels = self._server.get_pixels()
+        self._outputBuffer[0] = pixels

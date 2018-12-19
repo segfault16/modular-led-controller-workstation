@@ -65,7 +65,7 @@ sudo python filtergraphDemo.py
 ```
 python -m unittest discover
 # To run a single test:
-python -m unittest tests.test_opc_server.Test_OPC_Server.test_server
+python -m unittest tests.test_opc_server.Test_OPC_Server.test_serverReceives
 ```
 
 # Getting started (raspberry pi)
