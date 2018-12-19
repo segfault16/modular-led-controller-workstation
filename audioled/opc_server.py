@@ -3,6 +3,8 @@ from time import sleep
 import threading
 import selectors
 import traceback
+import struct
+import numpy as np
 
 sel = selectors.DefaultSelector()
 
@@ -12,22 +14,114 @@ class OPCMessage:
         self.sock = sock
         self.addr = addr
         self.callback = callback # this callback is called once a message is fully read
+        self.resetData()
+    
+    def _set_selector_events_mask(self, mode):
+        """Set selector to listen for events: mode is 'r', 'w', or 'rw'."""
+        if mode == "r":
+            events = selectors.EVENT_READ
+        elif mode == "w":
+            events = selectors.EVENT_WRITE
+        elif mode == "rw":
+            events = selectors.EVENT_READ | selectors.EVENT_WRITE
+        else:
+            raise ValueError("Invalid events mask mode {}".format(mode))
+        self.selector.modify(self.sock, events, data=self)
+
+    def resetData(self):
         self._recv_buffer = b""
         self._send_buffer = b""
-    
+        self.opc_header = None
+        self._opc_header_len = None
+        self.channel = None
+        self.message = None
+        self.payload_expected = None
+        self.messageData = None
+
     def process_events(self, mask):
         if mask & selectors.EVENT_READ:
             self.read()
         if mask & selectors.EVENT_WRITE:
-            self.write()
-            
+            # don't think we need a write event...
+            #self.write()
+            # Support long connections -> enter read mode again
+            self.resetData()
+            self._set_selector_events_mask('r')
+
+    def _read(self):
+        try:
+            # Should be ready to read
+            data = self.sock.recv(4096)
+        except BlockingIOError:
+            # Resource temporarily unavailable (errno EWOULDBLOCK)
+            pass
+        else:
+            if data:
+                self._recv_buffer += data
+            else:
+                raise RuntimeError("Peer closed.")
+
+    def processOpcHeader(self):
+        hdrlen = 4
+        #print("processing header... buffer size: {}".format(len(self._recv_buffer)))
+        if len(self._recv_buffer) >= hdrlen:
+            #print("Can process header")
+            header = self._recv_buffer[:hdrlen]
+            self.opc_header = header
+            self.channel = header[0]
+            self.message = header[1]
+            self.payload_expected = (header[2] << 8) | header[3]
+            # Strip header from buffer
+            self._recv_buffer = self._recv_buffer[hdrlen:]
+
+    def processMessageData(self):
+        content_len = self.payload_expected
+        if not len(self._recv_buffer) >= content_len:
+            return
+        data = self._recv_buffer[:content_len]
+        self._recv_buffer = self._recv_buffer[content_len:]
+        self.messageData = data
+
+        if self.callback is not None:
+            self.callback(data)
+        # Set selector to listen for write events, we're done reading.
+        self._set_selector_events_mask("w")
+        
+
     def read(self):
         self._read()
+
+        
+        if self.opc_header is None:
+                self.processOpcHeader()
+
+        if self.opc_header:
+            if self.messageData is None:
+                self.processMessageData()
+
+    def close(self):
+        print("closing connection to", self.addr)
+        try:
+            self.selector.unregister(self.sock)
+        except Exception as e:
+            print(
+                "error: selector.unregister() exception for {}: {}".format(self.addr, repr(e))
+            )
+
+        try:
+            self.sock.close()
+        except OSError as e:
+            print(
+                "error: socket.close() exception for {}: {}".format(self.addr, repr(e))
+            )
+        finally:
+            # Delete reference to socket object for garbage collection
+            self.sock = None
     
 
 def accept_wrapper(sock, callback):
     conn, addr = sock.accept()  # Should be ready to read
-    print("accepted connection from", addr)
+    #print("accepted connection from", addr)
     conn.setblocking(False)
     message = OPCMessage(sel, conn, addr, callback)
     sel.register(conn, selectors.EVENT_READ, data=message)
@@ -59,6 +153,7 @@ class Server(object):
         self._port = port
         self._socket = None
         self._thread = None
+        self._lastMessage = None
 
     
 
@@ -80,11 +175,18 @@ class Server(object):
             self._socket = None
             return False
 
-    def get_pixels(self):
+    def _pixelCallback(self, data):
+        #print("Callback received: {}".format(data))
+        pixels = np.frombuffer(data,dtype=np.uint8).reshape((-1,3)).T
+        #print("Pixels are: {}".format(pixels))
+        self._lastMessage = pixels
+
+    def get_pixels(self, block=False):
         isListening = self._ensure_listening()
         if not isListening:
             raise Exception("Server cannot listen")
-
-        conn, addr = self._socket.accept()
-        with conn:
-            print("")
+        if block:
+            while self._lastMessage is None:
+                print("Waiting for message...")
+                sleep(0.01)
+        return self._lastMessage
