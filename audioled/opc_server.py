@@ -2,20 +2,37 @@ import socket
 from time import sleep
 import threading
 import selectors
-import traceback
-import struct
 import numpy as np
 
 
-
 class OPCMessage:
-    def __init__(self, selector, sock, addr, callback):
+    """
+    Class for handling OPC messages (http://openpixelcontrol.org/).
+
+    Suppports multiple connections by using selectors.
+    Based on https://realpython.com/python-sockets/
+    """
+
+    def __init__(self, selector, sock, addr, callback, verbose=False):
+        """Constructor
+        
+        Arguments:
+            selector {[type]} -- Selector to use
+            sock {[type]} -- A TCP Socket (from socket.accept())
+            addr {[type]} -- Address of the client (from socket.accept())
+            callback {function} -- Callback to be called once a message is fully read
+        """
         self.selector = selector
         self.sock = sock
         self.addr = addr
-        self.callback = callback # this callback is called once a message is fully read
-        self.resetData()
+        self.callback = callback  # this callback is called once a message is fully read
+        self._verbose = verbose
+        self._resetData()
     
+    def _debug(self, message):
+        if self._verbose:
+            print(message)
+
     def _set_selector_events_mask(self, mode):
         """Set selector to listen for events: mode is 'r', 'w', or 'rw'."""
         if mode == "r":
@@ -28,7 +45,8 @@ class OPCMessage:
             raise ValueError("Invalid events mask mode {}".format(mode))
         self.selector.modify(self.sock, events, data=self)
 
-    def resetData(self):
+    def _resetData(self):
+        """Reset all state information in order to re-use the message instance"""
         self._recv_buffer = b""
         self._send_buffer = b""
         self.opc_header = None
@@ -39,16 +57,18 @@ class OPCMessage:
         self.messageData = None
 
     def process_events(self, mask):
+        """Main function to handle new events on the selector"""
         if mask & selectors.EVENT_READ:
             self.read()
         if mask & selectors.EVENT_WRITE:
             # don't think we need a write event...
-            #self.write()
+            # self.write()
             # Support long connections -> enter read mode again
-            self.resetData()
+            self._resetData()
             self._set_selector_events_mask('r')
 
     def _read(self):
+        """Read data from socket and store in self._recv_buffer"""
         try:
             # Should be ready to read
             data = self.sock.recv(4096)
@@ -62,11 +82,11 @@ class OPCMessage:
                 raise RuntimeError("Peer closed.")
 
     def processOpcHeader(self):
+        """Process OPC Header information and strip from self._recv_buffer if successful"""
         hdrlen = 4
-        #print("processing header... buffer size: {}".format(len(self._recv_buffer)))
         if len(self._recv_buffer) >= hdrlen:
-            #print("Can process header")
             header = self._recv_buffer[:hdrlen]
+            # Store state information
             self.opc_header = header
             self.channel = header[0]
             self.message = header[1]
@@ -75,23 +95,25 @@ class OPCMessage:
             self._recv_buffer = self._recv_buffer[hdrlen:]
 
     def processMessageData(self):
+        """Process OPC Data part of the message"""
         content_len = self.payload_expected
         if not len(self._recv_buffer) >= content_len:
             return
+        self._debug("Message fully read")
         data = self._recv_buffer[:content_len]
         self._recv_buffer = self._recv_buffer[content_len:]
+        # Store state information
         self.messageData = data
-
+        # Call the callback
         if self.callback is not None:
             self.callback(data)
         # Set selector to listen for write events, we're done reading.
         self._set_selector_events_mask("w")
-        
 
     def read(self):
+        """Method to handle the read event"""
         self._read()
 
-        
         if self.opc_header is None:
                 self.processOpcHeader()
 
@@ -100,7 +122,7 @@ class OPCMessage:
                 self.processMessageData()
 
     def close(self):
-        #print("closing connection to", self.addr)
+        self._debug("closing connection to", self.addr)
         try:
             self.selector.unregister(self.sock)
         except Exception as e:
@@ -119,67 +141,97 @@ class OPCMessage:
             self.sock = None
     
 
-
-
-
-
 class ServerThread(object):
-    def __init__(self, socket, callback):
+    """Thread object to continuously read messages from socket
+    """
+
+    def __init__(self, socket, callback, verbose=False):
+        """Constructor for thread object
+        
+        Arguments:
+            socket {[type]} -- Socket to connect (must be in listening state)
+            callback {function} -- Callback to call when OPC messages have been fully read
+        """
         self._socket = socket
         self._callback = callback
         self._thread = None
         self._stopSignal = None
+        self._verbose = verbose
         self.sel = selectors.DefaultSelector()
-    
+
+    def _debug(self, message):
+        if self._verbose:
+            print(message)
+
     def start(self):
+        """Start the server thread"""
         if self._thread is not None:
             return
         
         self._stopSignal = False
+        self._socket.listen()
+        print("FadeCandy Server thread listening.")
         self._thread = threading.Thread(target=self._process_thread, args=[self._socket, self._callback])
         self._thread.daemon = True
         self._thread.start()
     
-    def stop(self):
+    def stop(self, timeout=1):
+        """Stop the server thread
+        Raises TimeoutError """
         self._stopSignal = True
-        self._thread.join(timeout=1)
+        self._thread.join(timeout=timeout)
+        if self._thread.isAlive():
+            raise TimeoutError("thread.join timed out")
 
     def isAlive(self):
-        # Hard to find out :)
-        # ToDo: Implement
+        """Check whether the thread is alive.
+        Alive means that the background thread is running.
+        If the socket is closed, the background thread will exit
+        """
+        if self._thread is None:
+            return False
+        if not self._thread.isAlive():
+            return False
         return True
 
-    def accept_wrapper(self, sock, callback):
+    def _accept_wrapper(self, sock, callback):
         conn, addr = sock.accept()  # Should be ready to read
-        #print("accepted connection from", addr)
+        self._debug("accepted connection from {}".format(addr))
         conn.setblocking(False)
         message = OPCMessage(self.sel, conn, addr, callback)
         self.sel.register(conn, selectors.EVENT_READ, data=message)
 
     def _process_thread(self, lsock, callback):
+        # Method to run in background thread
         lsock.setblocking(False)
         self.sel.register(lsock, selectors.EVENT_READ, data=None)
-        print("FadeCandy Server: Background thread started")
+        self._debug("FadeCandy Server: Background thread started")
         try:
             while not self._stopSignal:
-                #print('Process')
+                # For error handling: unregister and register again so we can detect closed sockets
+                # Don't know if this can be done better...
+                self.sel.unregister(lsock)
+                self.sel.register(lsock, selectors.EVENT_READ, data=None)
+
+                # Use timeout in order to periodically check stop signal
                 events = self.sel.select(timeout=0.1)
                 for key, mask in events:
                     if key.data is None:
-                        self.accept_wrapper(key.fileobj, callback)
+                        self._accept_wrapper(key.fileobj, callback)
                     else:
                         message = key.data
                         try:
                             message.process_events(mask)
                         except Exception:
                             message.close()
-        except KeyboardInterrupt:
-            print("caught keyboard interrupt, exiting")
+                            self._debug("FadeCandy Server: Background thread exiting due to message exception")
+                            self._stopSignal = True
+        except Exception as e:
+            self._debug("FadeCandy Server: Background thread exiting due to exception: {}".format(e))
         finally:
-            print("Closing socket")
+            self._debug("FaceCandy Server: Background thread closing socket")
             self.sel.close()
             self._socket.close()
-        
 
 
 class Server(object):
@@ -188,21 +240,22 @@ class Server(object):
     sockets = []
     all_threads = []
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, verbose=False):
         self._host = host
         self._port = port
         self._socket = None
         self._thread = None
         self._lastMessage = None
+        self._verbose = verbose
 
     def __del__(self):
         # Destructors in python... I'm never complaining about C++ again...
 
-        # Basically this thing is (maybe) called at some point, 
+        # Basically this thing is (maybe) called at some point,
         # except if anyone manages to build cyclic references.
         if self._thread is not None:
             self._stopThread()
-    
+
     def _stopThread(self):
         # Stopping gracefully...
         # ToDo: Error handling
@@ -212,21 +265,21 @@ class Server(object):
 
     def stop(self):
         self._stopThread()
-    
+
     def _clean_threads(self):
         toCleanup = []
         for thread in self.all_threads:
             try:
                 thread._socket.getpeername()
-            except:
+            except Exception:
                 toCleanup.append(thread)
-        
+
         for thread in toCleanup:
             # ToDo: Error handling
             print("Cleaning up stale thread")
             thread.stop()
             self.all_threads.remove(thread)
-            
+
     def _get_threads(self, host, port):
         """
         Returns sockets with same host and port.
@@ -238,7 +291,7 @@ class Server(object):
                 (host, port) = thread._socket.getpeername()
                 if host == host and port == port:
                     sameThreads.append(thread)
-            except:
+            except Exception:
                 pass
         
         return sameThreads
@@ -254,13 +307,12 @@ class Server(object):
             for thread in same_socket_threads:
                 thread.stop()
                 self.all_threads.remove(thread)
-            
+
             _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             _socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _socket.bind((self._host, self._port))
-            _socket.listen()
-            print("FadeCandy Server listening on {}:{}".format(self._host, self._port))
-            self._thread = ServerThread(_socket, self._pixelCallback)
+            print("FadeCandy Server begin listening on {}:{}".format(self._host, self._port))
+            self._thread = ServerThread(_socket, self._pixelCallback, self._verbose)
             self.all_threads.append(self._thread)
             self._thread.start()
             return True
@@ -271,9 +323,8 @@ class Server(object):
             return False
 
     def _pixelCallback(self, data):
-        #print("Callback received: {}".format(data))
-        pixels = np.frombuffer(data,dtype=np.uint8).reshape((-1,3)).T
-        #print("Pixels are: {}".format(pixels))
+        # Transform byte array to pixel shape
+        pixels = np.frombuffer(data, dtype=np.uint8).reshape((-1, 3)).T
         self._lastMessage = pixels
 
     def get_pixels(self, block=False):
