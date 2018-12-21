@@ -341,16 +341,21 @@ if __name__ == '__main__':
     parser.add_argument('-N', '--num_pixels',  dest='num_pixels', type=int, default=300, help = 'number of pixels (default: 300)')
     parser.add_argument('-D', '--device', dest='device', default=deviceCandy, choices=[deviceRasp,deviceCandy], help = 'device to send RGB to')
     parser.add_argument('--device_candy_server', dest='device_candy_server', default='127.0.0.1:7890', help = 'Server for device FadeCandy')
+    parser.add_argument('-A', '--audio_device_index', dest='audio_device_index', type=int, default=None, help='Audio device index to use')
 
     args = parser.parse_args()
     num_pixels = args.num_pixels
-    # Initialize device
+    # Initialize LED device
     if args.device == deviceRasp:
         device = devices.RaspberryPi(num_pixels)
     elif args.device == deviceCandy:
         device = devices.FadeCandy(args.device_candy_server)
 
     devices.LEDOutput.overrideDevice = device
+
+    # Initialize Audio device
+    if args.audio_device_index is not None:
+        audio.AudioInput.overrideDeviceIndex = args.audio_device_index
 
     # strand test
     strandTest(device, num_pixels)

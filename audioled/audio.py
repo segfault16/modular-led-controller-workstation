@@ -19,10 +19,15 @@ def _open_input_stream(device_index=None, channels=1):
     """
     p = pyaudio.PyAudio()
     defaults = p.get_default_host_api_info()
+
     if device_index is None:
         print("No device_index for audio given. Using default.")
         device_index = defaults['defaultInputDevice']
-    
+        if device_index == -1:
+            err = 'No default audio device configured. '
+            err += 'Change default audio device or supply a specific device index. '
+            raise OSError(err)
+
     print("Using audio device {}".format(device_index))
     device_info = p.get_device_info_by_index(device_index)
 
@@ -96,6 +101,8 @@ def numInputChannels(device_index=None):
 
 
 class AudioInput(Effect):
+    overrideDeviceIndex = None
+
     """
     Outputs:
     0: Audio Channel 0
@@ -112,7 +119,10 @@ class AudioInput(Effect):
 
     def __initstate__(self):
         super(AudioInput, self).__initstate__()
-        self._audioStream, self._sampleRate = stream_audio(chunk_rate=self.chunk_rate, channels=self.num_channels)
+        deviceIndex = self.device_index
+        if self.overrideDeviceIndex is not None:
+            deviceIndex = self.overrideDeviceIndex
+        self._audioStream, self._sampleRate = stream_audio(chunk_rate=self.chunk_rate, channels=self.num_channels, device_index=deviceIndex)
         self._buffer = []
         self._chunk_size = int(self._sampleRate / self.chunk_rate)
         # increase cur_gain by percentage
