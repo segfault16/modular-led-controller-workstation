@@ -355,6 +355,10 @@ if __name__ == '__main__':
     # strand test
     strandTest(device, num_pixels)
 
+    # print audio information
+    print("The following audio devices are available:")
+    audio.print_audio_devices()
+
     # Initialize filtergraph
     #fg = configs.createSpectrumGraph(num_pixels, device)
     fg = configs.createMovingLightGraph(num_pixels, device)
