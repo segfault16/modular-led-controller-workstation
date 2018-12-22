@@ -174,10 +174,10 @@ def createVUPeakGraph(N_pixels, device):
     fg.addConnection(audio_in,0,vu_peak,0)
     fg.addConnection(color_wheel,0,interpCol,0)
     fg.addConnection(color_wheel2,0,interpCol,1)
-    fg.addConnection(interpCol,0,vu_peak,1)
+    #fg.addConnection(interpCol,0,vu_peak,1)
 
     fg.addConnection(audio_in,1,vu_peak_R,0)
-    fg.addConnection(interpCol,0,vu_peak_R,1)
+    #fg.addConnection(interpCol,0,vu_peak_R,1)
 
     fg.addConnection(vu_peak,0,append,0)
     fg.addConnection(vu_peak_R,0,append,1)
