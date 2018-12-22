@@ -85,6 +85,10 @@ cd library
 sudo python3.5 setup.py install
 ```
 
+## Audio configuration
+
+See [Audio setup on RaspberryPi](docs/audio_setup_pi.md).
+
 # Server 
 
 ```

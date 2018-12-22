@@ -6,7 +6,8 @@ import numpy as np
 import pyaudio
 from audioled.effects import Effect
 
-def _open_input_stream(device_index=None, channels = 1):
+
+def _open_input_stream(device_index=None, channels=1):
     """Opens a PyAudio audio input stream
 
     Parameters
@@ -18,8 +19,16 @@ def _open_input_stream(device_index=None, channels = 1):
     """
     p = pyaudio.PyAudio()
     defaults = p.get_default_host_api_info()
+
     if device_index is None:
+        print("No device_index for audio given. Using default.")
         device_index = defaults['defaultInputDevice']
+        if device_index == -1:
+            err = 'No default audio device configured. '
+            err += 'Change default audio device or supply a specific device index. '
+            raise OSError(err)
+
+    print("Using audio device {}".format(device_index))
     device_info = p.get_device_info_by_index(device_index)
 
     if device_info['maxInputChannels'] == 0:
@@ -45,7 +54,7 @@ def _open_input_stream(device_index=None, channels = 1):
     return stream, int(device_info['defaultSampleRate'])
 
 
-def stream_audio(chunk_rate=60, ignore_overflows=True, device_index=None, channels = 1):
+def stream_audio(chunk_rate=60, ignore_overflows=True, device_index=None, channels=1):
     audio_stream, samplerate = _open_input_stream(device_index, channels)
     chunk_length = int(samplerate // chunk_rate)
 
@@ -80,23 +89,26 @@ def print_audio_devices():
         print('\tMax output channels:', info['maxOutputChannels'])
     p.terminate()
 
+
 def numInputChannels(device_index=None):
     p = pyaudio.PyAudio()
     device = device_index
     defaults = p.get_default_host_api_info()
     if device_index is None:
-        device= defaults['defaultInputDevice']
+        device = defaults['defaultInputDevice']
     info = p.get_device_info_by_index(device)
     return info['maxInputChannels']
 
+
 class AudioInput(Effect):
+    overrideDeviceIndex = None
+
     """
     Outputs:
     0: Audio Channel 0
     1: Audio Channel 1...
-    
     """
-    def __init__(self, device_index=None, chunk_rate=60, num_channels = 2, autogain_max = 10.0, autogain = False, autogain_time = 10.0):
+    def __init__(self, device_index=None, chunk_rate=60, num_channels=2, autogain_max=10.0, autogain=False, autogain_time=10.0):
         self.device_index = device_index
         self.chunk_rate = chunk_rate
         self.num_channels = num_channels
@@ -107,22 +119,24 @@ class AudioInput(Effect):
 
     def __initstate__(self):
         super(AudioInput, self).__initstate__()
-        self._audioStream, self._sampleRate = stream_audio(chunk_rate=self.chunk_rate, channels=self.num_channels)
+        deviceIndex = self.device_index
+        if self.overrideDeviceIndex is not None:
+            deviceIndex = self.overrideDeviceIndex
+        self._audioStream, self._sampleRate = stream_audio(chunk_rate=self.chunk_rate, channels=self.num_channels, device_index=deviceIndex)
         self._buffer = []
         self._chunk_size = int(self._sampleRate / self.chunk_rate)
         # increase cur_gain by percentage
         # we want to get to self.autogain_max in approx. self.autogain_time seconds
-        min_value = 1. / self.autogain_max # the minimum input value we want to bring to 1.0
+        min_value = 1. / self.autogain_max  # the minimum input value we want to bring to 1.0
         N = self.chunk_rate * self.autogain_time  # N = chunks_per_second * autogain_time
         # min_value * (perc)^N = 1.0?
         # perc = root(1.0 / min_value, N) = (1./min_value)**(1/N)
-        self._autogain_perc = (1.0/min_value)**float(1/N)
+        self._autogain_perc = (1.0 / min_value)**float(1 / N)
         self._cur_gain = 1.0
-        
 
     def numOutputChannels(self):
         return self.num_channels
-    
+
     def numInputChannels(self):
         return 0
 
@@ -147,7 +161,7 @@ class AudioInput(Effect):
 
     def getSampleRate(self):
         return self._sampleRate
-    
+
     async def update(self, dt):
         await super(AudioInput, self).update(dt)
         self._buffer = next(self._audioStream)
@@ -155,14 +169,14 @@ class AudioInput(Effect):
     def process(self):
         if self.autogain:
             # determine max value -> in range 0,1
-            maxVal = np.max(self._buffer)    
+            maxVal = np.max(self._buffer)
             if maxVal * self._cur_gain > 1:
                 # reset cur_gain to prevent clipping
                 self._cur_gain = 1. / maxVal
             elif self._cur_gain < self.autogain_max:
                 self._cur_gain = min(self.autogain_max, self._cur_gain * self._autogain_perc)
-            #print("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
-        for i in range(0,self.num_channels):
+            # print("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
+        for i in range(0, self.num_channels):
             # layout for multiple channel is interleaved:
             # 00 01 .. 0n 10 11 .. 1n
             self._outputBuffer[i] = self._cur_gain * self._buffer[i::self.num_channels]
