@@ -5,6 +5,7 @@ from audioled import colors
 from audioled import audioreactive
 from audioled import generative
 from audioled import effects
+from audioled import input
 
 def createMovingLightGraph(N_pixels, device):
     fg = filtergraph.FilterGraph(recordTimings=True)
@@ -225,4 +226,16 @@ def createKeyboardGraph(N_pixels, device):
     fg.addEffectNode(PKeyboard)
 
     fg.addConnection(PKeyboard, 0, led_out, 0)
+    return fg
+
+def createProxyServerGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    candyIn = input.CandyServer(N_pixels)
+    fg.addEffectNode(candyIn)
+
+    fg.addConnection(candyIn, 0, led_out, 0)
     return fg
