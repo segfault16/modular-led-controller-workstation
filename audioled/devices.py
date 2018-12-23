@@ -51,10 +51,10 @@ class LEDController:
     
     def getBrightness(self):
         try:
-            return self.brightness
+            return min(1.0, self.brightness)
         except AttributeError:
             self.brightness = 1.0
-            return self.brightness
+            return min(1.0, self.brightness)
 
 
     def show(self, pixels):
