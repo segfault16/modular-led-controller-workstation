@@ -234,7 +234,7 @@ def createProxyServerGraph(N_pixels, device):
     led_out = devices.LEDOutput(device)
     fg.addEffectNode(led_out)
 
-    candyIn = input.CandyServer(N_pixels, '127.0.0.1', 7890)
+    candyIn = input.CandyServer(N_pixels)
     fg.addEffectNode(candyIn)
 
     fg.addConnection(candyIn, 0, led_out, 0)

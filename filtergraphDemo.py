@@ -113,6 +113,7 @@ if args.config == '':
     cur_graph = createFilterGraph(configChoices[config_idx], num_pixels, device)
 else:
     cur_graph = createFilterGraph(args.config, num_pixels, device)
+    saveAndLoad(args.config, cur_graph)
 
 while True:
     last_time = current_time
