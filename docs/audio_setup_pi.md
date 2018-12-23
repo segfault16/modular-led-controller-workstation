@@ -1,5 +1,43 @@
 # Audio Setup on RaspberryPi
 
+## Using USB audio device
+
+Any class-compliant USB interface should work.
+Tested and recommended: https://www.esi-audio.com/products/ugm96/
+
+In order to configure the USB audio device as default device:
+
+Create/edit `/etc/asound.conf`
+```
+sudo nano /etc/asound.conf
+```
+Set the file to the following text
+```
+pcm.!default {
+    type hw
+    card 1
+}
+ctl.!default {
+    type hw
+    card 1
+}
+```
+
+Next, set the USB device to as the default device by editing `/usr/share/alsa/alsa.conf`
+```
+sudo nano /usr/share/alsa/alsa.conf:
+```
+Change
+```
+defaults.ctl.card 0
+defaults.pcm.card 0
+```
+To
+```
+defaults.ctl.card 1
+defaults.pcm.card 1
+```
+
 ## Using virtual loopback device
 
 RaspberryPi has no audio input devices. See e.g. following output:
@@ -275,3 +313,7 @@ aplay SomeWav.wav
 Now the audio should be fed into server and still be playing from RaspberryPi audio output.
 
 Kudos to: https://raspberrypi.stackexchange.com/questions/26810/how-to-use-jack-or-similar-software-to-route-music-played-in-the-pi-as-audio-i
+
+### Known limitations
+
+Non-usb audio breaks LED output when using GPIO Pin 18.
