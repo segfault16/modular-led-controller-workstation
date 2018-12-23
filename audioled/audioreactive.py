@@ -11,6 +11,7 @@ import time
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.signal import lfilter
+import matplotlib as mpl
 
 import audioled.dsp as dsp
 import audioled.colors as colors
@@ -154,6 +155,7 @@ class VUMeterRMS(Effect):
         self.num_pixels = num_pixels
         self.db_range = db_range
         self.n_overlaps = n_overlaps
+        self._default_color = None
         self.__initstate__()
 
     def __initstate__(self):
@@ -162,6 +164,22 @@ class VUMeterRMS(Effect):
             self._hold_values
         except AttributeError:
             self._hold_values = []
+        # default color: VU Meter style
+        # green from -inf to -24
+        # green to red from -24 to 0
+        h_a,s_a,v_a = colorsys.rgb_to_hsv(0, 1, 0)
+        h_b,s_b,v_b = colorsys.rgb_to_hsv(1, 0, 0)
+        scal_value= (self.db_range + (-24))/self.db_range
+        index = int(self.num_pixels*scal_value)
+        num_pixels = self.num_pixels - index
+        interp_v = np.linspace(v_a, v_b, num_pixels)
+        interp_s = np.linspace(s_a, s_b, num_pixels)
+        interp_h = np.linspace(h_a, h_b, num_pixels)
+        hsv = np.array([interp_h, interp_s, interp_v]).T
+        
+        rgb = mpl.colors.hsv_to_rgb(hsv)
+        green = np.array([[0, 255.0, 0] for i in range(index)]).T
+        self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
 
 
     def numInputChannels(self):
@@ -198,8 +216,7 @@ class VUMeterRMS(Effect):
             return
         color = self._inputBuffer[1]
         if color is None:
-            # default color: all white
-            color = np.ones(self.num_pixels) * np.array([[255.0],[255.0],[255.0]])
+            color = self._default_color
         
         y = self._inputBuffer[0]
         N = len(y) # blocksize
@@ -210,9 +227,9 @@ class VUMeterRMS(Effect):
         self._hold_values.insert(0, rms)
         rms = dsp.rms(self._hold_values)
         db = 20 * math.log10(max(rms, 1e-16))
-
+        scal_value = (self.db_range+db)/self.db_range
         bar = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
-        index = int(self.num_pixels * rms)
+        index = int(self.num_pixels * scal_value)
         index = np.clip(index, 0, self.num_pixels-1)
         bar[0:3,0:index] = color[0:3,0:index]
         self._outputBuffer[0] = bar
@@ -230,6 +247,7 @@ class VUMeterPeak(Effect):
         self.num_pixels = num_pixels
         self.db_range = db_range
         self.n_overlaps = n_overlaps
+        self._default_color = None
         self.__initstate__()
 
     def __initstate__(self):
@@ -238,6 +256,22 @@ class VUMeterPeak(Effect):
             self._hold_values
         except AttributeError:
             self._hold_values = []
+        # default color: VU Meter style
+        # green from -inf to -24
+        # green to red from -24 to 0
+        h_a,s_a,v_a = colorsys.rgb_to_hsv(0, 1, 0)
+        h_b,s_b,v_b = colorsys.rgb_to_hsv(1, 0, 0)
+        scal_value= (self.db_range + (-24))/self.db_range
+        index = int(self.num_pixels*scal_value)
+        num_pixels = self.num_pixels - index
+        interp_v = np.linspace(v_a, v_b, num_pixels)
+        interp_s = np.linspace(s_a, s_b, num_pixels)
+        interp_h = np.linspace(h_a, h_b, num_pixels)
+        hsv = np.array([interp_h, interp_s, interp_v]).T
+        
+        rgb = mpl.colors.hsv_to_rgb(hsv)
+        green = np.array([[0, 255.0, 0] for i in range(index)]).T
+        self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
 
     def numInputChannels(self):
         return 2
@@ -274,8 +308,7 @@ class VUMeterPeak(Effect):
             return
         color = self._inputBuffer[1]
         if color is None:
-            # default color: all white
-            color = np.ones(self.num_pixels) * np.array([[255.0],[255.0],[255.0]])
+            color = self._default_color
 
         y = self._inputBuffer[0]
 
