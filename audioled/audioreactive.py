@@ -436,7 +436,10 @@ class MovingLight(Effect):
             self._pixel_state = gaussian_filter1d(self._pixel_state, sigma=0.5, axis=1)
             # new color at origin
             peak = np.max(y) * 1.0
-            peak = peak ** self.peak_filter
+            try:
+                peak = peak ** self.peak_filter
+            except Exception:
+                peak = peak
             peak = peak * self.peak_scale
             r,g,b = color[0,0], color[1,0], color[2,0]
             self._pixel_state[0][0] = r * peak + self.highlight * peak * 255.0
