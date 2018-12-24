@@ -254,8 +254,10 @@ class VUMeterPeak(Effect):
         super().__initstate__()
         try:
             self._hold_values
+            self._default_color
         except AttributeError:
             self._hold_values = []
+            self._default_color=None
         # default color: VU Meter style
         # green from -inf to -24
         # green to red from -24 to 0
@@ -270,8 +272,13 @@ class VUMeterPeak(Effect):
         hsv = np.array([interp_h, interp_s, interp_v]).T
         
         rgb = mpl.colors.hsv_to_rgb(hsv)
-        green = np.array([[0, 255.0, 0] for i in range(index)]).T
-        self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
+        if(index > 0):
+            green = np.array([[0, 255.0, 0] for i in range(index)]).T
+            self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
+        else:
+            self._default_color = rgb.T * 255.0
+        
+        
 
     def numInputChannels(self):
         return 2
@@ -308,6 +315,13 @@ class VUMeterPeak(Effect):
             return
         color = self._inputBuffer[1]
         if color is None:
+            try:
+                color = self._default_color
+            except Exception:
+                self.__initstate__()
+                color = self._default_color
+        if self.num_pixels != np.size(color, axis=1):
+            self.__initstate__()
             color = self._default_color
 
         y = self._inputBuffer[0]
