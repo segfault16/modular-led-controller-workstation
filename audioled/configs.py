@@ -222,7 +222,7 @@ def createKeyboardGraph(N_pixels, device):
     led_out = devices.LEDOutput(device)
     fg.addEffectNode(led_out)
 
-    PKeyboard = generative.PrimitiveKeyboard(N_pixels)
+    PKeyboard = generative.MidiKeyboard(N_pixels)
     fg.addEffectNode(PKeyboard)
 
     fg.addConnection(PKeyboard, 0, led_out, 0)

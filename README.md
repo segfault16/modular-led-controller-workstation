@@ -32,7 +32,7 @@ Install dependencies using pip and the conda package manager
 ```
 conda install numpy scipy
 
-pip install pyaudio matplotlib jsonpickle flask
+pip install pyaudio matplotlib jsonpickle flask mido python-rtmidi
 ```
 
 ## Visualization Server
@@ -75,7 +75,8 @@ python -m unittest tests.test_opc_server.Test_OPC_Server.test_serverReceives
 sudo apt-get remove python2.7
 sudo apt-get autoremove
 sudo apt-get update
-sudo apt-get install python3-numpy python3-scipy python3-pyaudio python3-matplotlib python3-jsonpickle
+sudo apt-get install python3-numpy python3-scipy python3-pyaudio python3-matplotlib python3-jsonpickle libasound-dev libjack-dev
+sudo pip install python-rtmidi
 ```
 
 ## Install rpi_ws281x

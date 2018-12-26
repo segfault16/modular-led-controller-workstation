@@ -7,7 +7,7 @@ import math
 import random
 import struct
 import time
-# import keyboard
+import mido
 
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
@@ -134,6 +134,44 @@ class DefenceMode(Effect):
             self._outputBuffer[0] = self._output.clip(0.0,255.0)
 
 
+class MidiKeyboard(Effect):
+    def __init__(self, num_pixels):
+        self.num_pixels = num_pixels
+        self.__initstate__()
+    
+
+    def __initstate__(self):
+        super(MidiKeyboard, self).__initstate__()
+        print(mido.get_input_names())
+        self._midi = mido.open_input('Seaboard RISE 49')
+        self._on_notes = []
+        self._pixel_state = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
+
+    def numInputChannels(self):
+        return 1
+    
+    def numOutputChannels(self):
+        return 1
+    
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        for msg in self._midi.iter_pending():
+            if msg.type == 'note_on':
+                self._on_notes.append(msg)
+            if msg.type == 'note_off':
+                toRemove = [note for note in self._on_notes if note.note == msg.note]
+                for note in toRemove:
+                    self._on_notes.remove(note)
+        # Draw
+        self._pixel_state = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
+        for note in self._on_notes:
+            index = int(max(0, min(self.num_pixels - 1, float(note.note) / 127.0 * self.num_pixels)))
+            self._pixel_state[0, index] = 255
+            self._pixel_state[1, index] = 255
+            self._pixel_state[2, index] = 255
+        self._outputBuffer[0] = self._pixel_state
+        
 
 # class PrimitiveKeyboard(Effect):
 #     #needs import keyboard and terminal run as sudo
