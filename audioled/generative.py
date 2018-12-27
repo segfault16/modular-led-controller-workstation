@@ -145,13 +145,41 @@ class MidiKeyboard(Effect):
         print(mido.get_input_names())
         self._midi = mido.open_input('Seaboard RISE 49')
         self._on_notes = []
-        self._pixel_state = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
+        self._pos = np.zeros(self.num_pixels)
+        self._vel = np.zeros(self.num_pixels)
 
     def numInputChannels(self):
         return 1
     
     def numOutputChannels(self):
         return 1
+
+    async def update(self, dt):
+        await super().update(dt)
+        dampening = 0.025
+        tension = 0.025
+        spread = 0.25
+        # Update springs
+        x = -self._pos
+        self._vel += tension * x - self._vel * dampening
+        self._pos += self._vel
+        # Pull on neighbours
+        lDeltas = np.zeros(self.num_pixels)
+        rDeltas = np.zeros(self.num_pixels)
+        for j in range(8):
+            for i in range(self.num_pixels):
+                if i > 0:
+                    lDeltas[i] = spread * (self._pos[i] - self._pos[i-1])
+                    self._vel[i-1] += lDeltas[i]
+                if i < self.num_pixels - 1:
+                    rDeltas[i] = spread * (self._pos[i] - self._pos[i+1])
+                    self._vel[i+1] += rDeltas[i]
+            
+            for i in range(self.num_pixels):
+                if i > 0:
+                    self._pos[i-1] += lDeltas[i]
+                if i < self.num_pixels - 1:
+                    self._pos[i+1] += rDeltas[i]
     
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -164,13 +192,11 @@ class MidiKeyboard(Effect):
                 for note in toRemove:
                     self._on_notes.remove(note)
         # Draw
-        self._pixel_state = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
         for note in self._on_notes:
-            index = int(max(0, min(self.num_pixels - 1, float(note.note) / 127.0 * self.num_pixels)))
-            self._pixel_state[0, index] = 255
-            self._pixel_state[1, index] = 255
-            self._pixel_state[2, index] = 255
-        self._outputBuffer[0] = self._pixel_state
+            index = int(max(0, min(self.num_pixels - 1, float(note.note) / 127.0 * self.num_pixels )))
+            self._pos[index] = 1
+        self._outputBuffer[0] = (0.5 + self._pos) * np.array([[255],[255],[255]])
+        
         
 
 # class PrimitiveKeyboard(Effect):
