@@ -131,59 +131,94 @@ class DefenceMode(Effect):
             else:
                 self._output = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
 
-            self._outputBuffer[0] = self._output.clip(0.0,255.0)
+            self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class MidiKeyboard(Effect):
-    def __init__(self, num_pixels):
+    def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, midiPort=''):
         self.num_pixels = num_pixels
+        self.dampening = dampening
+        self.tension = tension
+        self.spread = spread
+        self.midiPort = midiPort
         self.__initstate__()
     
 
     def __initstate__(self):
         super(MidiKeyboard, self).__initstate__()
         print(mido.get_input_names())
-        self._midi = mido.open_input('Seaboard RISE 49')
+        try:
+            self._midi.close()
+        except Exception:
+            pass
+        try:
+            self._midi = mido.open_input(self.midiPort)
+        except OSError:
+            self._midi = mido.open_input()
+            self.midiPort = self._midi.name
+            print(self.midiPort)
         self._on_notes = []
         self._pos = np.zeros(self.num_pixels)
         self._vel = np.zeros(self.num_pixels)
 
     def numInputChannels(self):
-        return 1
+        return 2
     
     def numOutputChannels(self):
         return 1
 
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": {
+                # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
+                "dampening": [0.99, 0.5, 1.0, 0.001],
+                "tension": [0.001, 0.0, 1.0, 0.001],
+                "spread": [0.1, 0.0, 1.0, 0.001],
+                "midiPort": mido.get_input_names()
+            }
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['dampening'][0] = self.dampening
+        definition['parameters']['tension'][0] = self.tension
+        definition['parameters']['spread'][0] = self.spread
+        definition['parameters']['midiPort'] = [self.midiPort] + [x for x in mido.get_input_names() if x!=self.midiPort]
+        return definition
+
     async def update(self, dt):
         await super().update(dt)
-        dampening = 0.025
-        tension = 0.025
-        spread = 0.25
-        # Update springs
-        x = -self._pos
-        self._vel += tension * x - self._vel * dampening
-        self._pos += self._vel
-        # Pull on neighbours
-        lDeltas = np.zeros(self.num_pixels)
-        rDeltas = np.zeros(self.num_pixels)
-        for j in range(8):
+
+        lDeltas = np.zeros(self.num_pixels) # force from left
+        rDeltas = np.zeros(self.num_pixels) # force from right
+        for j in range(4):
             for i in range(self.num_pixels):
                 if i > 0:
-                    lDeltas[i] = spread * (self._pos[i] - self._pos[i-1])
-                    self._vel[i-1] += lDeltas[i]
+                    lDeltas[i] = self.spread * (self._pos[i-1] - self._pos[i])
+                    
                 if i < self.num_pixels - 1:
-                    rDeltas[i] = spread * (self._pos[i] - self._pos[i+1])
-                    self._vel[i+1] += rDeltas[i]
-            
-            for i in range(self.num_pixels):
-                if i > 0:
-                    self._pos[i-1] += lDeltas[i]
-                if i < self.num_pixels - 1:
-                    self._pos[i+1] += rDeltas[i]
+                    rDeltas[i] = self.spread * (self._pos[i+1] - self._pos[i])
+            x = -self._pos
+            force = lDeltas + rDeltas + x * self.tension
+            acc = force / 1.0
+            self._vel = self.dampening * self._vel + acc
+            self._pos += self._vel
     
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
+        if not self._inputBufferValid(0):
+            baseCol = np.ones(self.num_pixels) * np.array([[255],[255],[255]])
+        else:
+            baseCol = self._inputBuffer[0]
+        if not self._inputBufferValid(1):
+            colGrad = None
+        else:
+            colGrad = self._inputBuffer[1]
         for msg in self._midi.iter_pending():
             if msg.type == 'note_on':
                 self._on_notes.append(msg)
@@ -193,9 +228,14 @@ class MidiKeyboard(Effect):
                     self._on_notes.remove(note)
         # Draw
         for note in self._on_notes:
-            index = int(max(0, min(self.num_pixels - 1, float(note.note) / 127.0 * self.num_pixels )))
-            self._pos[index] = 1
-        self._outputBuffer[0] = (0.5 + self._pos) * np.array([[255],[255],[255]])
+            index = int(max(0, min(self.num_pixels - 1, float(note.note) / 127.0 * self.num_pixels)))
+            self._pos[index] = -1 * note.velocity / 127.0
+        if colGrad is None:
+            self._outputBuffer[0] = np.multiply((0.5 + self._pos), baseCol)
+        else:
+            # Create lookup
+            index = np.clip((0.5 + 0.5 * self._pos) * self.num_pixels, 0, self.num_pixels - 1).astype(int)
+            self._outputBuffer[0] = np.multiply((0.5 + self._pos), colGrad[:, index])
         
         
 
