@@ -239,3 +239,14 @@ def createProxyServerGraph(N_pixels, device):
 
     fg.addConnection(candyIn, 0, led_out, 0)
     return fg
+def createBreathingGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    Breathing = generative.Breathing(N_pixels)
+    fg.addEffectNode(Breathing)
+
+    fg.addConnection(Breathing, 0, led_out, 0)
+    return fg

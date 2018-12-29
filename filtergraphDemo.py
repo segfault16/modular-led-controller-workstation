@@ -28,7 +28,9 @@ swimmingConf = 'swimming'
 defenceConf = 'defence'
 keyboardConf = 'keyboard'
 proxyConf = 'proxy'
-configChoices = [movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, keyboardConf, proxyConf]
+fallingConf = 'falling'
+breathingConf = 'breathing'
+configChoices = [movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, keyboardConf, proxyConf, fallingConf, breathingConf]
 
 deviceRasp = 'RaspberryPi'
 deviceCandy = 'FadeCandy'
@@ -76,6 +78,8 @@ def createFilterGraph(config, num_pixels, device):
         return configs.createKeyboardGraph(num_pixels, device)
     elif config == proxyConf:
         return configs.createProxyServerGraph(num_pixels, device)
+    elif config == breathingConf:
+        return configs.createBreathingGraph(num_pixels, device)
     else:
         raise NotImplementedError("Config not implemented")
 
