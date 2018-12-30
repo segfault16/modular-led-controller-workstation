@@ -250,3 +250,15 @@ def createBreathingGraph(N_pixels, device):
 
     fg.addConnection(Breathing, 0, led_out, 0)
     return fg
+
+def createHeartbeatGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    Heartbeat = generative.Heartbeat(N_pixels)
+    fg.addEffectNode(Heartbeat)
+
+    fg.addConnection(Heartbeat, 0, led_out, 0)
+    return fg

@@ -139,9 +139,9 @@ class DefenceMode(Effect):
 
 class Breathing(Effect):
 
-    def __init__(self, num_pixels, scale=0.2):
+    def __init__(self, num_pixels, cycle=5):
         self.num_pixels = num_pixels
-        self.scale = scale
+        self.cycle = cycle
         self.__initstate__()
 
     def __initstate__(self):
@@ -156,14 +156,79 @@ class Breathing(Effect):
 
     def oneStar(self, t, cycle):
         brightness = 0.5 * math.sin((2 * math.pi) / cycle * t) + 0.5
-
         return brightness
 
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": {
+                # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
+                "cycle": [5, 0.1, 10, 0.1],
+            }
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['cycle'][0] = self.cycle
+        return definition
 
     def process(self):
+        color = self._inputBuffer[0]
+        if color is None:
+            color = np.ones(self.num_pixels) * np.array([[255.0],[255.0],[255.0]])
         if self._outputBuffer is not None:
-            brightness = self.oneStar(self._t, 5)
-            self._output = np.ones(self.num_pixels) * np.array([[brightness * 255],[brightness * 255],[brightness * 255]])
+            brightness = self.oneStar(self._t, self.cycle)
+            self._output = np.multiply(color, np.ones(self.num_pixels) * np.array([[brightness],[brightness],[brightness]]))
         self._outputBuffer[0] = self._output.clip(0.0,255.0)
 
 
+
+class Heartbeat(Effect):
+
+    def __init__(self, num_pixels, speed=1):
+        self.num_pixels = num_pixels
+        self.speed = speed
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(Heartbeat, self).__initstate__()
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def oneStar(self, t, speed):
+        brightness = abs(math.sin(speed * t)**63 * math.sin(speed * t + 1.5)*8)
+        return brightness
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": {
+                # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
+                "speed": [1, 0.1, 100, 0.1],
+            }
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['speed'][0] = self.speed
+        return definition
+
+    def process(self):
+        color = self._inputBuffer[0]
+        if color is None:
+            color = np.ones(self.num_pixels) * np.array([[255.0],[0.0],[0.0]])
+        if self._outputBuffer is not None:
+            brightness = self.oneStar(self._t, self.speed)
+            self._output = np.multiply(color, np.ones(self.num_pixels) * np.array([[brightness],[brightness],[brightness]]))
+        self._outputBuffer[0] = self._output.clip(0.0,255.0)
