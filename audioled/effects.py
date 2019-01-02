@@ -249,14 +249,14 @@ class AfterGlow(Effect):
 
         if self._pixel_state is not None and np.size(self._pixel_state) == np.size(y):
             # keep previous state if new color is too dark
-            diff = (y - self._pixel_state).max(axis=0)
+            diff = np.nan_to_num((y - self._pixel_state).max(axis=0))
             mask = diff < 10
 
-            y [:,mask]= self._pixel_state[:,mask]
+            y[:, mask] = self._pixel_state[:, mask]
 
-        self._pixel_state = y
+        self._pixel_state = y.clip(0.0, 255.0)
 
-        self._outputBuffer[0] = y
+        self._outputBuffer[0] = y.clip(0.0, 255.0)
 
 class Mirror(Effect):
 
