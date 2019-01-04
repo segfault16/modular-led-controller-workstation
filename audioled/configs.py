@@ -216,18 +216,6 @@ def createDefenceGraph(N_pixels, device):
     fg.addConnection(Defence, 0, led_out, 0)
     return fg
 
-def createKeyboardGraph(N_pixels, device):
-    fg = filtergraph.FilterGraph(recordTimings=True)
-
-    led_out = devices.LEDOutput(device)
-    fg.addEffectNode(led_out)
-
-    PKeyboard = generative.PrimitiveKeyboard(N_pixels)
-    fg.addEffectNode(PKeyboard)
-
-    fg.addConnection(PKeyboard, 0, led_out, 0)
-    return fg
-
 def createProxyServerGraph(N_pixels, device):
     fg = filtergraph.FilterGraph(recordTimings=True)
 
@@ -239,6 +227,7 @@ def createProxyServerGraph(N_pixels, device):
 
     fg.addConnection(candyIn, 0, led_out, 0)
     return fg
+
 def createBreathingGraph(N_pixels, device):
     fg = filtergraph.FilterGraph(recordTimings=True)
 

@@ -26,12 +26,11 @@ spectrumConf = 'spectrum'
 vu_peakConf = 'vu_peak'
 swimmingConf = 'swimming'
 defenceConf = 'defence'
-keyboardConf = 'keyboard'
 proxyConf = 'proxy'
 fallingConf = 'falling'
 breathingConf = 'breathing'
 heartbeatConf = 'heartbeat'
-configChoices = [movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, keyboardConf, proxyConf, fallingConf, breathingConf, heartbeatConf]
+configChoices = [movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf, breathingConf, heartbeatConf]
 
 deviceRasp = 'RaspberryPi'
 deviceCandy = 'FadeCandy'
@@ -75,8 +74,6 @@ def createFilterGraph(config, num_pixels, device):
         return configs.createSwimmingPoolGraph(num_pixels,device)
     elif config == defenceConf:
         return configs.createDefenceGraph(num_pixels, device)
-    elif config == keyboardConf:
-        return configs.createKeyboardGraph(num_pixels, device)
     elif config == proxyConf:
         return configs.createProxyServerGraph(num_pixels, device)
     elif config == fallingConf:

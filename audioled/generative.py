@@ -7,7 +7,6 @@ import math
 import random
 import struct
 import time
-# import keyboard
 
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
