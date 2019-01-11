@@ -422,7 +422,7 @@ class MovingLight(Effect):
             dt_move = self._t - self._last_move_t
             if dt_move * self.speed > 1:
                 shift_pixels = int(dt_move * self.speed)
-                shift_pixels = np.clip(shift_pixels, 1, self.num_pixels-1)
+                shift_pixels = np.clip(shift_pixels, 1, self.num_pixels - 1)
                 self._pixel_state[:, shift_pixels:] = self._pixel_state[:, :-shift_pixels]
                 self._pixel_state[:, 0:shift_pixels] = self._pixel_state[:, shift_pixels:shift_pixels+1]
                 # convolve to smooth edges
@@ -445,4 +445,5 @@ class MovingLight(Effect):
             self._pixel_state[0][0] = r * peak + self.highlight * peak * 255.0
             self._pixel_state[1][0] = g * peak + self.highlight * peak * 255.0
             self._pixel_state[2][0] = b * peak + self.highlight * peak * 255.0
-            self._outputBuffer[0] = self._pixel_state.clip(0.0,255.0)
+            self._pixel_state = np.nan_to_num(self._pixel_state).clip(0.0, 255.0)
+            self._outputBuffer[0] = self._pixel_state
