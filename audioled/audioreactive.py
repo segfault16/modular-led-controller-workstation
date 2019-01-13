@@ -384,6 +384,7 @@ class MovingLight(Effect):
         definition = {
             "parameters": {
                 # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
                 "speed": [10.0, 1.0, 200.0, 1.0],
                 "dim_time": [1.0, 0.01, 10.0, 0.01],
                 "lowcut_hz": [50.0, 0.0, 8000.0, 1.0],
@@ -397,6 +398,7 @@ class MovingLight(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels'] # disable edit
         definition['parameters']['speed'][0] = self.speed
         definition['parameters']['dim_time'][0] = self.dim_time
         definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
