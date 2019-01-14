@@ -384,6 +384,7 @@ class MovingLight(Effect):
         definition = {
             "parameters": {
                 # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
                 "speed": [10.0, 1.0, 200.0, 1.0],
                 "dim_time": [1.0, 0.01, 10.0, 0.01],
                 "lowcut_hz": [50.0, 0.0, 8000.0, 1.0],
@@ -397,6 +398,7 @@ class MovingLight(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels'] # disable edit
         definition['parameters']['speed'][0] = self.speed
         definition['parameters']['dim_time'][0] = self.dim_time
         definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
@@ -422,7 +424,7 @@ class MovingLight(Effect):
             dt_move = self._t - self._last_move_t
             if dt_move * self.speed > 1:
                 shift_pixels = int(dt_move * self.speed)
-                shift_pixels = np.clip(shift_pixels, 1, self.num_pixels-1)
+                shift_pixels = np.clip(shift_pixels, 1, self.num_pixels - 1)
                 self._pixel_state[:, shift_pixels:] = self._pixel_state[:, :-shift_pixels]
                 self._pixel_state[:, 0:shift_pixels] = self._pixel_state[:, shift_pixels:shift_pixels+1]
                 # convolve to smooth edges
@@ -445,4 +447,5 @@ class MovingLight(Effect):
             self._pixel_state[0][0] = r * peak + self.highlight * peak * 255.0
             self._pixel_state[1][0] = g * peak + self.highlight * peak * 255.0
             self._pixel_state[2][0] = b * peak + self.highlight * peak * 255.0
-            self._outputBuffer[0] = self._pixel_state.clip(0.0,255.0)
+            self._pixel_state = np.nan_to_num(self._pixel_state).clip(0.0, 255.0)
+            self._outputBuffer[0] = self._pixel_state

@@ -133,14 +133,14 @@ class AudioInput(Effect):
             while True:
                 try:
                     if AudioInput.global_stream is None:
-                        AudioInput.global_stream, fs = self._open_input_stream(device_index)
+                        AudioInput.global_stream, fs = self._open_input_stream(device_index, channels=channels)
 
                     chunk = AudioInput.global_stream.read(chunk_length)
                 except IOError as e:
                     if e.errno == pyaudio.paInputOverflowed:
                         print('Audio buffer full')
                         if ignore_overflows:
-                            AudioInput.global_stream, fs = self._open_input_stream(device_index)
+                            AudioInput.global_stream, fs = self._open_input_stream(device_index, channels=channels)
                             continue
                         else:
                             raise e
@@ -163,7 +163,8 @@ class AudioInput(Effect):
                 # default, min, max, stepsize
                 "autogain_max": [1.0, 0.0, 50.0, 0.01],
                 "autogain_time": [30.0, 1.0, 100.0, 0.1],
-                "autogain": False
+                "autogain": False,
+                "num_channels": [2, 1, 100, 1]
             }
         }
         return definition
@@ -196,3 +197,4 @@ class AudioInput(Effect):
             # layout for multiple channel is interleaved:
             # 00 01 .. 0n 10 11 .. 1n
             self._outputBuffer[i] = self._cur_gain * self._buffer[i::self.num_channels]
+            #print("{}: {}".format(i, self._outputBuffer[i]))
