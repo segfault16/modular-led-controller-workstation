@@ -216,18 +216,6 @@ def createDefenceGraph(N_pixels, device):
     fg.addConnection(Defence, 0, led_out, 0)
     return fg
 
-def createKeyboardGraph(N_pixels, device):
-    fg = filtergraph.FilterGraph(recordTimings=True)
-
-    led_out = devices.LEDOutput(device)
-    fg.addEffectNode(led_out)
-
-    PKeyboard = generative.PrimitiveKeyboard(N_pixels)
-    fg.addEffectNode(PKeyboard)
-
-    fg.addConnection(PKeyboard, 0, led_out, 0)
-    return fg
-
 def createProxyServerGraph(N_pixels, device):
     fg = filtergraph.FilterGraph(recordTimings=True)
 
@@ -238,4 +226,40 @@ def createProxyServerGraph(N_pixels, device):
     fg.addEffectNode(candyIn)
 
     fg.addConnection(candyIn, 0, led_out, 0)
+    return fg
+
+def createBreathingGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    Breathing = generative.Breathing(N_pixels)
+    fg.addEffectNode(Breathing)
+
+    fg.addConnection(Breathing, 0, led_out, 0)
+    return fg
+
+def createHeartbeatGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    Heartbeat = generative.Heartbeat(N_pixels)
+    fg.addEffectNode(Heartbeat)
+
+    fg.addConnection(Heartbeat, 0, led_out, 0)
+    return fg
+
+def createFallingStarsGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    FallingStars = generative.FallingStars(N_pixels)
+    fg.addEffectNode(FallingStars)
+
+    fg.addConnection(FallingStars, 0, led_out, 0)
     return fg
