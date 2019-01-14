@@ -7,7 +7,7 @@ import math
 import random
 import struct
 import time
-# import keyboard
+import threading
 
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
@@ -135,8 +135,6 @@ class DefenceMode(Effect):
 
 
 
-
-
 class Breathing(Effect):
 
     def __init__(self, num_pixels, cycle=5):
@@ -231,4 +229,90 @@ class Heartbeat(Effect):
         if self._outputBuffer is not None:
             brightness = self.oneStar(self._t, self.speed)
             self._output = np.multiply(color, np.ones(self.num_pixels) * np.array([[brightness],[brightness],[brightness]]))
+        self._outputBuffer[0] = self._output.clip(0.0,255.0)
+
+
+
+class FallingStars(Effect):
+
+    def __init__(self, num_pixels, dim_speed=100, thickness=1, spawnTime=0.1, maxBrightness=1):
+        self.num_pixels = num_pixels
+        self.dim_speed = dim_speed
+        self.thickness = thickness #getting down with it
+        self.spawnTime = spawnTime
+        self.maxBrightness = maxBrightness
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        self._t0Array = []
+        self._spawnArray = []
+        self._starCounter = 0
+        self._spawnflag = True
+        super(FallingStars, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": {
+                # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
+                "dim_speed": [100, 1, 1000, 1],
+                "thickness": [1, 1, 300, 1],
+                "spawntime": [1, 0.01, 10, 0.01],
+                "maxBrightness": [1, 0, 1, 0.01],
+            }
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['dim_speed'][0] = self.dim_speed
+        definition['parameters']['thickness'][0] = self.thickness
+        definition['parameters']['spawntime'][0] = self.spawnTime
+        definition['parameters']['maxBrightness'][0] = self.maxBrightness
+        return definition
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def spawnStar(self):
+        self._starCounter += 1
+        self._t0Array.append(self._t)
+        self._spawnArray.append(random.randint(0,self.num_pixels-self.thickness))
+        if self._starCounter > 100:
+            self._starCounter -= 1
+            self._t0Array.pop(0)
+            self._spawnArray.pop(0)
+        threading.Timer(self.spawnTime, self.spawnStar).start()     #executes itself every *spawnTime* seconds
+
+
+    def allStars(self, t, dim_speed, thickness, t0, spawnSpot):
+        controlArray = []
+        for i in range(0,self._starCounter):
+            oneStarArray = np.zeros(self.num_pixels)
+            for j in range(0,thickness):
+                oneStarArray[spawnSpot[i]+j] = math.exp(- (100/dim_speed) * (self._t - t0[i]))
+            controlArray.append(oneStarArray)
+        return controlArray
+
+
+    def starControl(self, spawnTime):
+        if self._spawnflag == True:
+            self.spawnStar()
+            self._spawnflag = False
+        outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray)
+        return np.sum(outputArray, axis=0)
+    
+
+    def process(self):
+        color = self._inputBuffer[0]
+        if color is None:
+            color = np.ones(self.num_pixels) * np.array([[255.0],[255.0],[255.0]])
+        if self._outputBuffer is not None:
+            self._output = np.multiply(color, self.starControl(self.spawnTime) * np.array([[self.maxBrightness*1.0],[self.maxBrightness*1.0],[self.maxBrightness*1.0]]))
         self._outputBuffer[0] = self._output.clip(0.0,255.0)
