@@ -307,7 +307,7 @@ class FallingStars(Effect):
             self._spawnflag = False
         outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray)
         return np.sum(outputArray, axis=0)
-    
+
 
     def process(self):
         color = self._inputBuffer[0]
