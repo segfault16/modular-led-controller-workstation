@@ -235,12 +235,12 @@ class Heartbeat(Effect):
 
 class FallingStars(Effect):
 
-    def __init__(self, num_pixels, dim_speed=100, thickness=1, spawnTime=0.1, maxBrightness=1):
+    def __init__(self, num_pixels, dim_speed=100, thickness=1, spawnTime=0.1, max_brightness=1):
         self.num_pixels = num_pixels
         self.dim_speed = dim_speed
         self.thickness = thickness #getting down with it
         self.spawnTime = spawnTime
-        self.maxBrightness = maxBrightness
+        self.max_brightness = max_brightness
         self.__initstate__()
 
     def __initstate__(self):
@@ -260,7 +260,7 @@ class FallingStars(Effect):
                 "dim_speed": [100, 1, 1000, 1],
                 "thickness": [1, 1, 300, 1],
                 "spawntime": [1, 0.01, 10, 0.01],
-                "maxBrightness": [1, 0, 1, 0.01],
+                "max_brightness": [1, 0, 1, 0.01],
             }
         }
         return definition
@@ -271,7 +271,7 @@ class FallingStars(Effect):
         definition['parameters']['dim_speed'][0] = self.dim_speed
         definition['parameters']['thickness'][0] = self.thickness
         definition['parameters']['spawntime'][0] = self.spawnTime
-        definition['parameters']['maxBrightness'][0] = self.maxBrightness
+        definition['parameters']['max_brightness'][0] = self.maxBrightness
         return definition
 
     def numInputChannels(self):
@@ -316,3 +316,76 @@ class FallingStars(Effect):
         if self._outputBuffer is not None:
             self._output = np.multiply(color, self.starControl(self.spawnTime) * np.array([[self.maxBrightness*1.0],[self.maxBrightness*1.0],[self.maxBrightness*1.0]]))
         self._outputBuffer[0] = self._output.clip(0.0,255.0)
+
+
+
+class Pendulum(Effect):
+
+    def __init__(self, num_pixels, spread=10, location=150, displacement=50, heightactivator=True, lightflip=0.5):
+        self.num_pixels = num_pixels
+        self.spread = spread
+        self.location = location
+        self.displacement = displacement
+        self.heightactivator = heightactivator
+        self.lightflip = lightflip
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(Pendulum, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": {
+                # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
+                "location": [150, 0, 300, 1],
+                "displacement": [50, 1, 1000, 1],
+                "heightactivator": False,
+                "lightflip": [1, -1, 1, 2],
+            }
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['location'][0] = self.location
+        definition['parameters']['displacement'][0] = self.displacement
+        definition['parameters']['heightactivator'] = self.heightactivator
+        definition['parameters']['lightflip'][0] = self.lightflip
+        return definition
+
+    def createBlob(self, spread, location):
+        blobArray = np.zeros(self.num_pixels) 
+        for i in range(-spread, spread+1):
+            blobArray[location + i] = math.sin((math.pi/spread) * i)
+        return blobArray.clip(0.0,255.0)
+    
+    def moveBlob(self, blobArray, displacement):
+        outputArray = np.roll(blobArray, int(displacement * math.sin(self._t)))
+        return outputArray.clip(0.0,255.0)
+
+    def controlBlobs(self):
+        output = self.moveBlob(self.createBlob(self.spread, self.location), self.displacement)
+        return output
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._outputBuffer is not None:
+            color = self._inputBuffer[0]
+            if color == None:
+                color = np.ones(self.num_pixels) * np.array([[255.0],[255.0],[255.0]])
+            if self.heightactivator == True:
+                configArray = np.array([[self.lightflip*math.cos(2*self._t)],[self.lightflip*math.cos(2*self._t)],[self.lightflip*math.cos(2*self._t)]])
+            else:
+                configArray = np.array([[1.0],[1.0],[1.0]])
+            self._output = np.multiply(color, self.controlBlobs() * configArray)
+            self._outputBuffer[0] = self._output.clip(0.0,255.0)
+

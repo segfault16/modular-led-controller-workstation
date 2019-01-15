@@ -30,7 +30,8 @@ proxyConf = 'proxy'
 fallingConf = 'falling'
 breathingConf = 'breathing'
 heartbeatConf = 'heartbeat'
-configChoices = [movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf, breathingConf, heartbeatConf]
+pendulumConf = 'pendulum'
+configChoices = [movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf, breathingConf, heartbeatConf, pendulumConf]
 
 deviceRasp = 'RaspberryPi'
 deviceCandy = 'FadeCandy'
@@ -82,6 +83,8 @@ def createFilterGraph(config, num_pixels, device):
         return configs.createBreathingGraph(num_pixels, device)
     elif config == heartbeatConf:
         return configs.createHeartbeatGraph(num_pixels, device)
+    elif config == pendulumConf:
+        return configs.createPendulumGraph(num_pixels, device)
     else:
         raise NotImplementedError("Config not implemented")
 

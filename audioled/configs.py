@@ -263,3 +263,15 @@ def createFallingStarsGraph(N_pixels, device):
 
     fg.addConnection(FallingStars, 0, led_out, 0)
     return fg
+
+def createPendulumGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    Pendulum = generative.Pendulum(N_pixels)
+    fg.addEffectNode(Pendulum)
+
+    fg.addConnection(Pendulum, 0, led_out, 0)
+    return fg
