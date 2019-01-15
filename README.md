@@ -76,7 +76,7 @@ sudo apt-get remove python2.7
 sudo apt-get autoremove
 sudo apt-get update
 sudo apt-get install python3-numpy python3-scipy python3-pyaudio python3-matplotlib python3-jsonpickle libasound-dev libjack-dev
-sudo pip install python-rtmidi
+sudo pip3 install mido python-rtmidi
 ```
 
 ## Install rpi_ws281x
