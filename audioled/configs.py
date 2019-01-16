@@ -275,3 +275,15 @@ def createPendulumGraph(N_pixels, device):
 
     fg.addConnection(Pendulum, 0, led_out, 0)
     return fg
+
+def createRPendulumGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    RPendulum = generative.RPendulum(N_pixels)
+    fg.addEffectNode(RPendulum)
+
+    fg.addConnection(RPendulum, 0, led_out, 0)
+    return fg
