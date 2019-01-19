@@ -391,6 +391,12 @@ function addNode(data, cancelAction, callback) {
 }
 
 function editNode(uid, cancelAction, callback) {
+
+  var node = nodes.get(uid);
+  if(node.nodeType != 'node') {
+    return
+  }
+
   var effectDropdown = document.getElementById('node-effectDropdown');
   effectDropdown.style.display = 'none';
   var effectTable = document.getElementById('node-effectTable');
