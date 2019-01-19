@@ -136,12 +136,15 @@ class DefenceMode(Effect):
 
 
 class MidiKeyboard(Effect):
-    def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, midiPort=''):
+    def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, midiPort='', scale_low=1.0, scale_mid=1.0, scale_high=1.0):
         self.num_pixels = num_pixels
         self.dampening = dampening
         self.tension = tension
         self.spread = spread
         self.midiPort = midiPort
+        self.scale_low = scale_low
+        self.scale_mid = scale_mid
+        self.scale_high = scale_high
         self.__initstate__()
     
 
@@ -163,7 +166,7 @@ class MidiKeyboard(Effect):
         self._vel = np.zeros(self.num_pixels)
 
     def numInputChannels(self):
-        return 2
+        return 3 # low, mid, high
     
     def numOutputChannels(self):
         return 1
@@ -177,7 +180,10 @@ class MidiKeyboard(Effect):
                 "dampening": [0.99, 0.5, 1.0, 0.001],
                 "tension": [0.001, 0.0, 1.0, 0.001],
                 "spread": [0.1, 0.0, 1.0, 0.001],
-                "midiPort": mido.get_input_names()
+                "midiPort": mido.get_input_names(),
+                "scale_low": [1.0, 0.0, 1.0, 0.001],
+                "scale_mid": [1.0, 0.0, 1.0, 0.001],
+                "scale_high": [1.0, 0.0, 1.0, 0.001],
             }
         }
         return definition
@@ -189,6 +195,9 @@ class MidiKeyboard(Effect):
         definition['parameters']['tension'][0] = self.tension
         definition['parameters']['spread'][0] = self.spread
         definition['parameters']['midiPort'] = [self.midiPort] + [x for x in mido.get_input_names() if x!=self.midiPort]
+        definition['parameters']['scale_low'][0] = self.scale_low
+        definition['parameters']['scale_mid'][0] = self.scale_mid
+        definition['parameters']['scale_high'][0] = self.scale_high
         return definition
 
     async def update(self, dt):
@@ -210,13 +219,20 @@ class MidiKeyboard(Effect):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
         if not self._inputBufferValid(0):
-            baseCol = np.ones(self.num_pixels) * np.array([[255],[255],[255]])
+            lowCol = self.scale_low * np.ones(self.num_pixels) * np.array([[0], [0], [0]])
         else:
-            baseCol = self._inputBuffer[0]
+            lowCol = self.scale_low * self._inputBuffer[0]
+
         if not self._inputBufferValid(1):
-            colGrad = None
+            baseCol = self.scale_mid * np.ones(self.num_pixels) * np.array([[127], [127], [127]])
         else:
-            colGrad = self._inputBuffer[1]
+            baseCol = self.scale_mid * self._inputBuffer[1]
+
+        if not self._inputBufferValid(2):
+            highCol = self.scale_high * np.ones(self.num_pixels) * np.array([[255], [255], [255]])
+        else:
+            highCol = self.scale_high * self._inputBuffer[2]
+
         for msg in self._midi.iter_pending():
             if msg.type == 'note_on':
                 self._on_notes.append(msg)
@@ -228,12 +244,13 @@ class MidiKeyboard(Effect):
         for note in self._on_notes:
             index = int(max(0, min(self.num_pixels - 1, float(note.note) / 127.0 * self.num_pixels)))
             self._pos[index] = -1 * note.velocity / 127.0
-        if colGrad is None:
-            self._outputBuffer[0] = np.multiply((0.5 + self._pos), baseCol)
-        else:
-            # Create lookup
-            index = np.clip((0.5 + 0.5 * self._pos) * self.num_pixels, 0, self.num_pixels - 1).astype(int)
-            self._outputBuffer[0] = np.multiply((0.5 + self._pos), colGrad[:, index])
+        
+        # Output: Interpolate between low and mid for self._pos < 0, interpolate between mid and high for self._pos > 0
+        out = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
+        out[:, self._pos <= 0] = (np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
+        out[:, self._pos >= 0] = (np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
+        self._outputBuffer[0] = out
+
 
 class Breathing(Effect):
 

@@ -238,8 +238,8 @@ def createKeyboardGraph(N_pixels, device):
     fg.addConnection(color_wheel2, 0, interpCol, 1)
 
     fg.addConnection(PKeyboard, 0, led_out, 0)
-    fg.addConnection(color_wheel, 0, PKeyboard, 0)
-    fg.addConnection(interpCol, 0, PKeyboard, 1)
+    #fg.addConnection(color_wheel, 0, PKeyboard, 0)
+    #fg.addConnection(interpCol, 0, PKeyboard, 1)
     return fg
 
 def createProxyServerGraph(N_pixels, device):
