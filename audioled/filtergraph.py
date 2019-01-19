@@ -103,7 +103,7 @@ class Timing(object):
 
 class FilterGraph(object):
 
-    def __init__(self, recordTimings=False, asyncUpdate=False):
+    def __init__(self, recordTimings=False, asyncUpdate=True):
         self.recordTimings=recordTimings
         self.asyncUpdate=asyncUpdate
         self._filterConnections = []
