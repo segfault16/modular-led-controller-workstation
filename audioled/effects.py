@@ -359,3 +359,104 @@ class Mirror(Effect):
             mapMask[:,0:h,:] = self._genMirrorUpper(mapMask[:,0:h,:], recurse-1)
             mapMask[:,h:n,:] = self._genMirrorLower(mapMask[:,h:n,:], recurse-1)
         return mapMask
+
+
+class SpringCombine(Effect):
+    def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, scale_low=0.0, scale_mid=0.5, scale_high=1.0):
+        self.num_pixels = num_pixels
+        self.dampening = dampening
+        self.tension = tension
+        self.spread = spread
+        self.scale_low = scale_low
+        self.scale_mid = scale_mid
+        self.scale_high = scale_high
+        self.__initstate__()
+    
+
+    def __initstate__(self):
+        super(SpringCombine, self).__initstate__()
+        self._pos = np.zeros(self.num_pixels)
+        self._vel = np.zeros(self.num_pixels)
+
+    def numInputChannels(self):
+        return 4 # trigger, low, mid, high
+    
+    def numOutputChannels(self):
+        return 1
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": {
+                # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
+                "dampening": [0.99, 0.5, 1.0, 0.001],
+                "tension": [0.001, 0.0, 1.0, 0.001],
+                "spread": [0.1, 0.0, 1.0, 0.001],
+                "scale_low": [0.0, 0.0, 1.0, 0.001],
+                "scale_mid": [0.5, 0.0, 1.0, 0.001],
+                "scale_high": [1.0, 0.0, 1.0, 0.001],
+            }
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['dampening'][0] = self.dampening
+        definition['parameters']['tension'][0] = self.tension
+        definition['parameters']['spread'][0] = self.spread
+        definition['parameters']['scale_low'][0] = self.scale_low
+        definition['parameters']['scale_mid'][0] = self.scale_mid
+        definition['parameters']['scale_high'][0] = self.scale_high
+        return definition
+
+    async def update(self, dt):
+        await super().update(dt)
+
+        lDeltas = np.zeros(self.num_pixels) # force from left
+        rDeltas = np.zeros(self.num_pixels) # force from right
+        for j in range(4):
+            # calculate delta to left and right pixel
+            lDeltas[1:] = self.spread * (np.roll(self._pos,1)[1:] - self._pos[1:])
+            rDeltas[:-1] = self.spread * (np.roll(self._pos,-1)[:-1] - self._pos[:-1])
+            x = -self._pos
+            force = lDeltas + rDeltas + x * self.tension
+            acc = force / 1.0
+            self._vel = self.dampening * self._vel + acc
+            self._pos += self._vel
+    
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        
+        if not self._inputBufferValid(0):
+            trigger = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
+        else:
+            trigger = self._inputBuffer[0]
+
+        if not self._inputBufferValid(1):
+            lowCol = self.scale_low * np.ones(self.num_pixels) * np.array([[0], [0], [0]])
+        else:
+            lowCol = self.scale_low * self._inputBuffer[1]
+
+        if not self._inputBufferValid(2):
+            baseCol = self.scale_mid * np.ones(self.num_pixels) * np.array([[127], [127], [127]])
+        else:
+            baseCol = self.scale_mid * self._inputBuffer[2]
+
+        if not self._inputBufferValid(3):
+            highCol = self.scale_high * np.ones(self.num_pixels) * np.array([[255], [255], [255]])
+        else:
+            highCol = self.scale_high * self._inputBuffer[3]
+
+        
+        # Actuate on spring depending on trigger
+        trigger = np.sum(trigger, axis=0) / (3 * 255.0)
+        self._pos[trigger > 0.1] = trigger[trigger > 0.1]
+        
+        # Output: Interpolate between low and mid for self._pos < 0, interpolate between mid and high for self._pos > 0
+        out = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
+        out[:, self._pos <= 0] = (np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
+        out[:, self._pos >= 0] = (np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
+        self._outputBuffer[0] = out
