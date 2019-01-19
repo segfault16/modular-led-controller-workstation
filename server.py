@@ -27,8 +27,9 @@ num_pixels = 300
 device = None 
 fg = None
 default_values = {}
+record_timings = False
 
-POOL_TIME = 0.001 #Seconds
+POOL_TIME = 0.0 #Seconds
 
 # lock to control access to variable
 dataLock = threading.Lock()
@@ -40,6 +41,8 @@ current_time = None
 last_time = None
 # errors
 errors = []
+# count
+count = 0
 
 # @app.route('/', methods=['GET'])
 # def home():
@@ -259,12 +262,15 @@ def create_app():
         global last_time
         global current_time
         global errors
+        global count
+        global record_timings
         dt = 0
         try:
             with dataLock:
                 last_time = current_time
                 current_time = timer()
                 dt = current_time - last_time
+                count = count + 1
                 if event_loop is None:
                     event_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(event_loop)
@@ -281,10 +287,16 @@ def create_app():
         except Exception as e:
             print("Unknown error: {}".format(e))
         finally:
-            #fg.printProcessTimings()
             # Set the next thread to happen
             real_process_time = timer() - current_time
             timeToWait = max(POOL_TIME, 0.01-real_process_time)
+            if count == 100:
+                if record_timings:
+                    fg.printProcessTimings()
+                    fg.printUpdateTimings()
+                    print("Process time: {}".format(real_process_time))
+                    print("Waiting {}".format(timeToWait))
+                count = 0
             ledThread = threading.Timer(timeToWait, processLED, ())
             ledThread.start()   
 
@@ -343,6 +355,7 @@ if __name__ == '__main__':
     parser.add_argument('-D', '--device', dest='device', default=deviceCandy, choices=[deviceRasp,deviceCandy], help = 'device to send RGB to')
     parser.add_argument('--device_candy_server', dest='device_candy_server', default='127.0.0.1:7890', help = 'Server for device FadeCandy')
     parser.add_argument('-A', '--audio_device_index', dest='audio_device_index', type=int, default=None, help='Audio device index to use')
+    parser.add_argument('-P', '--process_timing', dest='process_timing', action='store_true', default=False, help='Print process timing')
 
     args = parser.parse_args()
     num_pixels = args.num_pixels
@@ -357,6 +370,9 @@ if __name__ == '__main__':
     # Initialize Audio device
     if args.audio_device_index is not None:
         audio.AudioInput.overrideDeviceIndex = args.audio_device_index
+
+    if args.process_timing:
+        record_timings = True
 
     # strand test
     strandTest(device, num_pixels)
