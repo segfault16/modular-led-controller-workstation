@@ -103,8 +103,9 @@ class Timing(object):
 
 class FilterGraph(object):
 
-    def __init__(self, recordTimings=False):
+    def __init__(self, recordTimings=False, asyncUpdate=False):
         self.recordTimings=recordTimings
+        self.asyncUpdate=asyncUpdate
         self._filterConnections = []
         self._filterNodes = []
         self._processOrder = []
@@ -115,16 +116,29 @@ class FilterGraph(object):
         #asyncio.set_event_loop(self._asyncLoop)
 
     def update(self, dt, event_loop = asyncio.get_event_loop()):
-        # gather all async updates
-        asyncio.set_event_loop(event_loop)
-        async def handle_async_exception(node, func, param):
-            try:
-                await func(param)
-            except Exception as e:
-                raise NodeException("{}".format(e), node, e)
-        all_tasks = asyncio.gather(*[asyncio.ensure_future(handle_async_exception(node, node.update, dt)) for node in self._processOrder])
-        # wait for completion
-        event_loop.run_until_complete(all_tasks)
+        if self.asyncUpdate:
+            time = timer()
+            # gather all async updates
+            asyncio.set_event_loop(event_loop)
+            async def handle_async_exception(node, func, param):
+                try:
+                    await func(param)
+                except Exception as e:
+                    raise NodeException("{}".format(e), node, e)
+            all_tasks = asyncio.gather(*[asyncio.ensure_future(handle_async_exception(node, node.update, dt)) for node in self._processOrder])
+            # wait for completion
+            event_loop.run_until_complete(all_tasks)
+            self.updateUpdateTiming("all_async", timer() - time)
+        else:
+            for node in self._processOrder:
+                try:
+                    if self.recordTimings:
+                        time = timer()
+                    event_loop.run_until_complete(node.update(dt))
+                    if self.recordTimings:
+                        self.updateUpdateTiming(str(node.effect), timer() - time)
+                except Exception as e:
+                    raise NodeException("{}".format(e), node, e)
     
 
     def process(self):
@@ -158,7 +172,7 @@ class FilterGraph(object):
             return
         print("Update timings:")
         for key, val in self._updateTimings.items():
-            print("{0}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(key.effect, val._min, val._max, val._avg))
+            print("{0:30s}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(key[0:30], val._min, val._max, val._avg))
     
     def printProcessTimings(self):
         if self._processTimings is None:
