@@ -1,0 +1,56 @@
+﻿{
+    "py/object": "audioled.filtergraph.FilterGraph",
+    "py/state": {
+        "nodes": [
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "uid": "3a20f41c2fe04dd0a21073ed2b4f6f4e",
+                    "numInputChannels": 1,
+                    "effect": {
+                        "py/object": "audioled.devices.LEDOutput",
+                        "py/state": {
+                            "controller": {
+                                "py/object": "audioled.devices.RaspberryPi",
+                                "py/state": {
+                                    "invert": false,
+                                    "pin": 18,
+                                    "dma": 5,
+                                    "brightness": 255,
+                                    "num_pixels": 300,
+                                    "freq_hz": 800000
+                                }
+                            }
+                        }
+                    },
+                    "numOutputChannels": 0
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "uid": "616d5c9f6018436db34d6341a67289af",
+                    "numInputChannels": 1,
+                    "effect": {
+                        "py/object": "audioled.generative.Breathing",
+                        "py/state": {
+                            "num_pixels": 300,
+                            "scale": 0.2
+                        }
+                    },
+                    "numOutputChannels": 1
+                }
+            }
+        ],
+        "recordTimings": true,
+        "connections": [
+            {
+                "from_node_uid": "616d5c9f6018436db34d6341a67289af",
+                "to_node_channel": 0,
+                "uid": "9b428b152e4a40c09cb653b6ad4fa526",
+                "to_node_uid": "3a20f41c2fe04dd0a21073ed2b4f6f4e",
+                "from_node_channel": 0
+            }
+        ]
+    }
+}
