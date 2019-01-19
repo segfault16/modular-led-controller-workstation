@@ -257,7 +257,10 @@ function createNetwork() {
             data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
             deleteNodeData(id);
           } else {
-            console.log("Cannot delete node")
+            console.log("Cannot delete node " + id)
+            // Clear callback data
+            data.nodes = []
+            data.edges = []
             return
           }
           console.debug("Deleted node",id);
