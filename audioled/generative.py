@@ -197,12 +197,9 @@ class MidiKeyboard(Effect):
         lDeltas = np.zeros(self.num_pixels) # force from left
         rDeltas = np.zeros(self.num_pixels) # force from right
         for j in range(4):
-            for i in range(self.num_pixels):
-                if i > 0:
-                    lDeltas[i] = self.spread * (self._pos[i-1] - self._pos[i])
-                    
-                if i < self.num_pixels - 1:
-                    rDeltas[i] = self.spread * (self._pos[i+1] - self._pos[i])
+            # calculate delta to left and right pixel
+            lDeltas[1:] = self.spread * (np.roll(self._pos,1)[1:] - self._pos[1:])
+            rDeltas[:-1] = self.spread * (np.roll(self._pos,-1)[:-1] - self._pos[:-1])
             x = -self._pos
             force = lDeltas + rDeltas + x * self.tension
             acc = force / 1.0
