@@ -257,7 +257,10 @@ function createNetwork() {
             data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
             deleteNodeData(id);
           } else {
-            console.log("Cannot delete node")
+            console.log("Cannot delete node " + id)
+            // Clear callback data
+            data.nodes = []
+            data.edges = []
             return
           }
           console.debug("Deleted node",id);
@@ -391,6 +394,12 @@ function addNode(data, cancelAction, callback) {
 }
 
 function editNode(uid, cancelAction, callback) {
+
+  var node = nodes.get(uid);
+  if(node.nodeType != 'node') {
+    return
+  }
+
   var effectDropdown = document.getElementById('node-effectDropdown');
   effectDropdown.style.display = 'none';
   var effectTable = document.getElementById('node-effectTable');
