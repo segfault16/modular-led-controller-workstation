@@ -32,6 +32,9 @@ class Node(object):
         self.effect.setInputBuffer(self._inputBuffer)
 
     def process(self):
+        # reset input buffer
+        for i in range(self.numInputChannels):
+            self._inputBuffer[i] = None
         # propagate values
         for con in self._incomingConnections:
             self._inputBuffer[con.toChannel] = con.fromNode._outputBuffer[con.fromChannel]
