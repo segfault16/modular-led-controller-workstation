@@ -362,6 +362,31 @@ class Mirror(Effect):
 
 
 class SpringCombine(Effect):
+    """Spring simulation effect that interpolates between three inputs based on displacement of the springs.
+    
+    The trigger input actuates on the springs (if value exceeds trigger_threshold).
+    Depending on the displacement of each spring, the output value is a linear interpolation between:
+    - Input 1 and Input 2 if displacement < 0
+    - Input 2 and Input 3 if displacement > 0
+
+    Inputs:
+        0 -- Trigger input
+        1 -- Pixel input for displacement in negative direction
+        2 -- Pixel input for no displacement
+        3 -- Pixel input for displacement in positive direction
+    
+    Parameters:
+        dampening           -- Dampening factory of the springs
+        tension             -- Tension of the springs
+        spread              -- Interaction between neighboring springs
+        scale_low           -- Scales input 1
+        scale_mid           -- Scales input 2
+        scale_high          -- Scales input 3
+        speed               -- Controls speed of spring simulation
+        trigger_threshold   -- Above this threshold springs are actuated based on input 0
+
+    """
+
     def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, scale_low=0.0, scale_mid=0.5, scale_high=1.0, speed = 50.0, trigger_threshold = 0.1):
         self.num_pixels = num_pixels
         self.dampening = dampening
