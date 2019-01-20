@@ -362,7 +362,7 @@ class Mirror(Effect):
 
 
 class SpringCombine(Effect):
-    def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, scale_low=0.0, scale_mid=0.5, scale_high=1.0):
+    def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, scale_low=0.0, scale_mid=0.5, scale_high=1.0, speed = 50.0):
         self.num_pixels = num_pixels
         self.dampening = dampening
         self.tension = tension
@@ -370,6 +370,7 @@ class SpringCombine(Effect):
         self.scale_low = scale_low
         self.scale_mid = scale_mid
         self.scale_high = scale_high
+        self.speed = speed
         self.__initstate__()
     
 
@@ -390,12 +391,13 @@ class SpringCombine(Effect):
             "parameters": {
                 # default, min, max, stepsize
                 "num_pixels": [300, 1, 1000, 1],
-                "dampening": [0.99, 0.5, 1.0, 0.001],
-                "tension": [0.001, 0.0, 1.0, 0.001],
+                "dampening": [0.99, 0.9, 1.0, 0.0001],
+                "tension": [0.0001, 0.0, 0.1, 0.0001],
                 "spread": [0.1, 0.0, 1.0, 0.001],
                 "scale_low": [0.0, 0.0, 1.0, 0.001],
                 "scale_mid": [0.5, 0.0, 1.0, 0.001],
                 "scale_high": [1.0, 0.0, 1.0, 0.001],
+                "speed": [50.0, 0.0, 100.0, 0.001]
             }
         }
         return definition
@@ -409,6 +411,7 @@ class SpringCombine(Effect):
         definition['parameters']['scale_low'][0] = self.scale_low
         definition['parameters']['scale_mid'][0] = self.scale_mid
         definition['parameters']['scale_high'][0] = self.scale_high
+        definition['parameters']['speed'][0] = self.speed
         return definition
 
     async def update(self, dt):
@@ -423,8 +426,8 @@ class SpringCombine(Effect):
             x = -self._pos
             force = lDeltas + rDeltas + x * self.tension
             acc = force / 1.0
-            self._vel = self.dampening * self._vel + acc
-            self._pos += self._vel
+            self._vel = self.dampening * self._vel + acc * (self.speed * dt)
+            self._pos += self._vel * (self.speed * dt)
     
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
