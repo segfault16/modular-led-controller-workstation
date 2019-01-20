@@ -172,9 +172,13 @@ def create_app():
             abort(403)
         class_ = getattr(importlib.import_module(module_name),class_name)
         argspec = inspect.getargspec(class_.__init__)
-        argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):],argspec.defaults))
+        if argspec.defaults is not None:
+            argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):],argspec.defaults))
+        else:
+            argsWithDefaults = dict()
         result = argsWithDefaults.copy()
-        result.update({key : None for key in argspec.args[1:len(argspec.args)-len(argspec.defaults)]}) # 1 removes self
+        if argspec.defaults is not None:
+            result.update({key : None for key in argspec.args[1:len(argspec.args)-len(argspec.defaults)]}) # 1 removes self
         
         result.update({key : default_values[key] for key in default_values if key in result})
         print(result)
