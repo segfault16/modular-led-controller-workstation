@@ -8,7 +8,7 @@ import random
 import struct
 import time
 import threading
-
+from collections import OrderedDict
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.signal import lfilter
@@ -40,16 +40,16 @@ class SwimmingPool(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "num_waves": [30, 1, 100, 1],
-                "scale": [0.2, 0.01, 1.0, 0.01],
-                "wavespread_low": [30, 1, 100, 1],
-                "wavespread_high": [70, 50, 150, 1],
-                "max_speed": [30, 1, 200, 1],
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("num_waves", [30, 1, 100, 1]),
+                ("scale", [0.2, 0.01, 1.0, 0.01]),
+                ("wavespread_low", [30, 1, 100, 1]),
+                ("wavespread_high", [70, 50, 150, 1]),
+                ("max_speed", [30, 1, 200, 1]),
 
-            }
+            ])
         }
         return definition
 
@@ -159,11 +159,11 @@ class Breathing(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "cycle": [5, 0.1, 10, 0.1],
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("cycle", [5, 0.1, 10, 0.1]),
+            ])
         }
         return definition
 
@@ -208,11 +208,11 @@ class Heartbeat(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "speed": [1, 0.1, 100, 0.1],
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("speed", [1, 0.1, 100, 0.1]),
+            ])
         }
         return definition
 
@@ -254,14 +254,14 @@ class FallingStars(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "dim_speed": [100, 1, 1000, 1],
-                "thickness": [1, 1, 300, 1],
-                "spawntime": [1, 0.01, 10, 0.01],
-                "maxBrightness": [1, 0, 1, 0.01],
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("dim_speed", [100, 1, 1000, 1]),
+                ("thickness", [1, 1, 300, 1]),
+                ("spawntime", [1, 0.01, 10, 0.01]),
+                ("maxBrightness", [1, 0, 1, 0.01]),
+            ])
         }
         return definition
 

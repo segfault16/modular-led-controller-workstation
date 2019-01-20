@@ -8,6 +8,8 @@ import random
 import struct
 import time
 
+from collections import OrderedDict
+
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.signal import lfilter
@@ -66,15 +68,15 @@ class Spectrum(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "fs": [48000, 44100, 96000, 100],
-                "n_overlaps": [4, 0, 20, 1],
-                "chunk_rate": [60, 30, 100, 1],
-                "fft_bins": [64, 32, 128, 1],
-                "col_blend": colors.blend_modes
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("fs", [48000, 44100, 96000, 100]),
+                ("n_overlaps", [4, 0, 20, 1]),
+                ("chunk_rate", [60, 30, 100, 1]),
+                ("fft_bins", [64, 32, 128, 1]),
+                ("col_blend", colors.blend_modes)
+            ])
         }
         return definition
 
@@ -190,12 +192,12 @@ class VUMeterRMS(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "db_range": [60.0, 20.0, 100.0, 1.0],
-                "n_overlaps": [1, 0, 20, 1]
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("db_range", [60.0, 20.0, 100.0, 1.0]),
+                ("n_overlaps", [1, 0, 20, 1])
+            ])
         }
         return definition
 
@@ -289,12 +291,12 @@ class VUMeterPeak(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "db_range": [60.0, 20.0, 100.0, 1.0],
-                "n_overlaps": [1, 0, 20, 1]
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("db_range", [60.0, 20.0, 100.0, 1.0]),
+                ("n_overlaps", [1, 0, 20, 1])
+            ])
         }
         return definition
 
@@ -382,17 +384,17 @@ class MovingLight(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "speed": [10.0, 1.0, 200.0, 1.0],
-                "dim_time": [1.0, 0.01, 10.0, 0.01],
-                "lowcut_hz": [50.0, 0.0, 8000.0, 1.0],
-                "highcut_hz": [100.0, 0.0, 8000.0, 1.0],
-                "peak_filter": [1.0, 0.0, 10.0, .01],
-                "peak_scale": [1.0, 0.0, 5.0, .01],
-                "highlight": [0.0, 0.0, 1.0, 0.01]
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("speed", [10.0, 1.0, 200.0, 1.0]),
+                ("dim_time", [1.0, 0.01, 10.0, 0.01]),
+                ("lowcut_hz", [50.0, 0.0, 8000.0, 1.0]),
+                ("highcut_hz", [100.0, 0.0, 8000.0, 1.0]),
+                ("peak_filter", [1.0, 0.0, 10.0, .01]),
+                ("peak_scale", [1.0, 0.0, 5.0, .01]),
+                ("highlight", [0.0, 0.0, 1.0, 0.01])
+            ])
         }
         return definition
 

@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from audioled import effect
 from audioled import opc_server
 class CandyServer(effect.Effect):
@@ -20,11 +21,11 @@ class CandyServer(effect.Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "port": [7891, 1000, 10000, 1]
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("port", [7891, 1000, 10000, 1])
+            ])
         }
         return definition
 

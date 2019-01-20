@@ -8,6 +8,8 @@ import random
 import struct
 import time
 
+from collections import OrderedDict
+
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.signal import lfilter
@@ -48,10 +50,10 @@ class Shift(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "speed": [100.0, 0.0, 1000.0, 1.0],
-            }
+                ("speed", [100.0, 0.0, 1000.0, 1.0]),
+            ])
         }
         return definition
 
@@ -102,18 +104,18 @@ class Append(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_channels": [2, 1, 8, 1],
-                "flip0": False,
-                "flip1": False,
-                "flip2": False,
-                "flip3": False,
-                "flip4": False,
-                "flip5": False,
-                "flip6": False,
-                "flip7": False,
-            }
+                ("num_channels", [2, 1, 8, 1]),
+                ("flip0", False),
+                ("flip1", False),
+                ("flip2", False),
+                ("flip3", False),
+                ("flip4", False),
+                ("flip5", False),
+                ("flip6", False),
+                ("flip7", False),
+            ])
         }
         return definition
 
@@ -160,9 +162,9 @@ class Combine(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
-                "mode": colors.blend_modes
-            }
+            "parameters": OrderedDict([
+                ("mode", colors.blend_modes)
+            ])
         }
         return definition
 
@@ -214,10 +216,10 @@ class AfterGlow(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "glow_time": [1.0, 0.0, 10.0, 0.01],
-            }
+                ("glow_time", [1.0, 0.0, 10.0, 0.01]),
+            ])
         }
         return definition
 
@@ -280,11 +282,11 @@ class Mirror(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
-                "mirror_lower": True,
+            "parameters": OrderedDict([
+                ("mirror_lower", True),
                 # default, min, max, stepsize
-                "recursion": [1, 0, 8, 1],
-            }
+                ("recursion", [1, 0, 8, 1]),
+            ])
         }
         return definition
 
