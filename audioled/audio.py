@@ -2,6 +2,7 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
+from collections import OrderedDict
 import numpy as np
 import pyaudio
 import time
@@ -159,13 +160,13 @@ class AudioInput(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "autogain_max": [1.0, 0.0, 50.0, 0.01],
-                "autogain_time": [30.0, 1.0, 100.0, 0.1],
-                "autogain": False,
-                "num_channels": [2, 1, 100, 1]
-            }
+                ("num_channels", [2, 1, 100, 1]),
+                ("autogain", False),
+                ("autogain_max", [1.0, 0.0, 50.0, 0.01]),
+                ("autogain_time", [30.0, 1.0, 100.0, 0.1]),
+            ])
         }
         return definition
 

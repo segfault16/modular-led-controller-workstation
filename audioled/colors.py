@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
+from collections import OrderedDict
 import time
 import struct
 import colorsys
@@ -85,12 +86,12 @@ class StaticRGBColor(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "r": [255.0, 0.0, 255.0, 1.0],
-                "g": [255.0, 0.0, 255.0, 1.0],
-                "b": [255.0, 0.0, 255.0, 1.0],
-            }
+                ("r", [255.0, 0.0, 255.0, 1.0]),
+                ("g", [255.0, 0.0, 255.0, 1.0]),
+                ("b", [255.0, 0.0, 255.0, 1.0]),
+            ])
         }
         return definition
     
@@ -143,16 +144,16 @@ class ColorWheel(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [1, 1, 1000, 1],
-                "cycle_time": [30.0, 0, 100, 0.1],
-                "offset": [0.0, 0, 1, 0.01],
-                "luminocity": [0.5, 0, 1, 0.01],
-                "saturation": [1.0, 0, 1, 0.01],
-                "wiggle_time": [0.0, 0, 10, 0.1],
-                "wiggle_amplitude": [0.0, 0, 1, 0.01],
-            }
+                ("num_pixels", [1, 1, 1000, 1]),
+                ("cycle_time", [30.0, 0, 100, 0.1]),
+                ("offset", [0.0, 0, 1, 0.01]),
+                ("luminocity", [0.5, 0, 1, 0.01]),
+                ("saturation", [1.0, 0, 1, 0.01]),
+                ("wiggle_time", [0.0, 0, 10, 0.1]),
+                ("wiggle_amplitude", [0.0, 0, 1, 0.01]),
+            ])
         }
         return definition
     

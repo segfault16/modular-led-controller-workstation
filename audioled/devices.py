@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
+from collections import OrderedDict
 import time
 import numpy as np
 from audioled.effect import Effect
@@ -350,10 +351,10 @@ class LEDOutput(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "brightness": [1.0, 0.0, 1.0, 0.01],
-            }
+                ("brightness", [1.0, 0.0, 1.0, 0.01]),
+            ])
         }
         return definition
 
