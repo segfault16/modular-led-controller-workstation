@@ -91,10 +91,11 @@ class Test_FilterGraph(unittest.TestCase):
         ef1 = MockEffect()
         n1 = fg.addEffectNode(ef1)
         ef1._inputBuffer[0] = 'test'
+        # Process effect
         ef1.process()
         self.assertEqual(ef1._outputBuffer[0], 'test')
-
-        n1._inputBuffer[0] = 'test2'
+        # Set static value for processing node
+        ef1.outputValue = 'test2'
         fg.process()
         self.assertEqual(ef1._outputBuffer[0], 'test2')
         self.assertEqual(n1._outputBuffer[0], 'test2')
@@ -102,14 +103,14 @@ class Test_FilterGraph(unittest.TestCase):
 
     def test_valuePropagation_works(self):
         fg = filtergraph.FilterGraph()
-        ef1 = MockEffect()
+        ef1 = MockEffect('test')
         ef2 = MockEffect()
 
         n1 = fg.addEffectNode(ef1)
         n2 = fg.addEffectNode(ef2)
         fg.addConnection(ef1,0,ef2,1)
 
-        n1._inputBuffer[0] = 'test'
+        
         fg.process()
 
         self.assertEqual(n1._outputBuffer[0], 'test')
@@ -118,9 +119,10 @@ class Test_FilterGraph(unittest.TestCase):
 
 class MockEffect(object):
 
-    def __init__(self):
+    def __init__(self, outputValue = None):
         self._outputBuffer = None
         self._inputBuffer = None
+        self.outputValue = outputValue
 
     def numOutputChannels(self):
         return 5
@@ -141,5 +143,7 @@ class MockEffect(object):
         self._outputBuffer[4] = 4
 
         for i in range(0,5):
-            if self._inputBuffer[i] != None:
+            if self._inputBuffer[i] is not None:
                 self._outputBuffer[i] = self._inputBuffer[i]
+            elif self.outputValue is not None:
+                self._outputBuffer[i] = self.outputValue

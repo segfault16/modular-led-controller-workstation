@@ -332,6 +332,10 @@ class LEDOutput(Effect):
     def __init__(self, controller):
         self.controller = controller
         self.__initstate__()
+    
+    def __initstate__(self):
+        super().__initstate__()
+        self._num_pixels = None
 
     def __setstate__(self, state):
         # override __setstate__ from Effect:
@@ -367,7 +371,12 @@ class LEDOutput(Effect):
     def process(self):
         if self._inputBuffer != None:
             if self._inputBuffer[0] is not None:
+                self._num_pixels = np.size(self._inputBuffer[0], axis=1)
                 self.controller.show(self._inputBuffer[0])
+            else:
+                # show black
+                if self._num_pixels is not None:
+                    self.controller.show(np.zeros(self._num_pixels) * np.array([[0],[0],[0]]))
 
 # # Execute this file to run a LED strand test
 # # If everything is working, you should see a red, green, and blue pixel scroll

@@ -361,3 +361,135 @@ class Mirror(Effect):
             mapMask[:,0:h,:] = self._genMirrorUpper(mapMask[:,0:h,:], recurse-1)
             mapMask[:,h:n,:] = self._genMirrorLower(mapMask[:,h:n,:], recurse-1)
         return mapMask
+
+
+class SpringCombine(Effect):
+    """Spring simulation effect that interpolates between three inputs based on displacement of the springs.
+    
+    The trigger input actuates on the springs (if value exceeds trigger_threshold).
+    Depending on the displacement of each spring, the output value is a linear interpolation between:
+    - Input 1 and Input 2 if displacement < 0
+    - Input 2 and Input 3 if displacement > 0
+
+    Inputs:
+        0 -- Trigger input
+        1 -- Pixel input for displacement in negative direction
+        2 -- Pixel input for no displacement
+        3 -- Pixel input for displacement in positive direction
+    
+    Parameters:
+        dampening           -- Dampening factory of the springs
+        tension             -- Tension of the springs
+        spread              -- Interaction between neighboring springs
+        scale_low           -- Scales input 1
+        scale_mid           -- Scales input 2
+        scale_high          -- Scales input 3
+        speed               -- Controls speed of spring simulation
+        trigger_threshold   -- Above this threshold springs are actuated based on input 0
+
+    """
+
+    def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, scale_low=0.0, scale_mid=0.5, scale_high=1.0, speed = 50.0, trigger_threshold = 0.1):
+        self.num_pixels = num_pixels
+        self.dampening = dampening
+        self.tension = tension
+        self.spread = spread
+        self.scale_low = scale_low
+        self.scale_mid = scale_mid
+        self.scale_high = scale_high
+        self.speed = speed
+        self.trigger_threshold = trigger_threshold
+        self.__initstate__()
+    
+
+    def __initstate__(self):
+        super(SpringCombine, self).__initstate__()
+        self._pos = np.zeros(self.num_pixels)
+        self._vel = np.zeros(self.num_pixels)
+
+    def numInputChannels(self):
+        return 4 # trigger, low, mid, high
+    
+    def numOutputChannels(self):
+        return 1
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": {
+                # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
+                "dampening": [0.99, 0.9, 1.0, 0.0001],
+                "tension": [0.0001, 0.0, 0.1, 0.0001],
+                "spread": [0.1, 0.0, 1.0, 0.001],
+                "scale_low": [0.0, 0.0, 1.0, 0.001],
+                "scale_mid": [0.5, 0.0, 1.0, 0.001],
+                "scale_high": [1.0, 0.0, 1.0, 0.001],
+                "speed": [50.0, 0.0, 100.0, 0.001],
+                "trigger_threshold": [0.1, 0.01, 1.0, 0.01]
+            }
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['dampening'][0] = self.dampening
+        definition['parameters']['tension'][0] = self.tension
+        definition['parameters']['spread'][0] = self.spread
+        definition['parameters']['scale_low'][0] = self.scale_low
+        definition['parameters']['scale_mid'][0] = self.scale_mid
+        definition['parameters']['scale_high'][0] = self.scale_high
+        definition['parameters']['speed'][0] = self.speed
+        definition['parameters']['trigger_threshold'][0] = self.trigger_threshold
+        return definition
+
+    async def update(self, dt):
+        await super().update(dt)
+
+        lDeltas = np.zeros(self.num_pixels) # force from left
+        rDeltas = np.zeros(self.num_pixels) # force from right
+        for j in range(4):
+            # calculate delta to left and right pixel
+            lDeltas[1:] = self.spread * (np.roll(self._pos,1)[1:] - self._pos[1:])
+            rDeltas[:-1] = self.spread * (np.roll(self._pos,-1)[:-1] - self._pos[:-1])
+            x = -self._pos
+            force = lDeltas + rDeltas + x * self.tension
+            acc = force / 1.0
+            self._vel = self.dampening * self._vel + acc * (self.speed * dt)
+            self._pos += self._vel * (self.speed * dt)
+    
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        
+        if not self._inputBufferValid(0):
+            trigger = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
+        else:
+            trigger = self._inputBuffer[0]
+
+        if not self._inputBufferValid(1):
+            lowCol = self.scale_low * np.ones(self.num_pixels) * np.array([[0], [0], [0]])
+        else:
+            lowCol = self.scale_low * self._inputBuffer[1]
+
+        if not self._inputBufferValid(2):
+            baseCol = self.scale_mid * np.ones(self.num_pixels) * np.array([[127], [127], [127]])
+        else:
+            baseCol = self.scale_mid * self._inputBuffer[2]
+
+        if not self._inputBufferValid(3):
+            highCol = self.scale_high * np.ones(self.num_pixels) * np.array([[255], [255], [255]])
+        else:
+            highCol = self.scale_high * self._inputBuffer[3]
+
+        
+        # Actuate on spring depending on trigger
+        trigger = np.sum(trigger, axis=0) / (3 * 255.0)
+        self._pos[trigger > self.trigger_threshold] = trigger[trigger > self.trigger_threshold]
+        
+        # Output: Interpolate between low and mid for self._pos < 0, interpolate between mid and high for self._pos > 0
+        out = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
+        out[:, self._pos <= 0] = (np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
+        out[:, self._pos >= 0] = (np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
+        self._outputBuffer[0] = out

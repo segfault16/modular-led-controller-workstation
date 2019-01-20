@@ -7,6 +7,7 @@ import math
 import random
 import struct
 import time
+import mido
 import threading
 from collections import OrderedDict
 import numpy as np
@@ -133,6 +134,127 @@ class DefenceMode(Effect):
 
             self._outputBuffer[0] = self._output.clip(0.0,255.0)
 
+
+class MidiKeyboard(Effect):
+
+    class Note(object):
+        def __init__(self, note, velocity, spawn_time):
+            self.note = note
+            self.velocity = velocity
+            self.spawn_time = spawn_time
+            self.active = True
+            self.value = 0.0
+            self.release_time = 0.0
+            
+
+    def __init__(self, num_pixels, midiPort='', attack=0.0, decay=0.0, sustain=1.0, release=0.0):
+        self.num_pixels = num_pixels
+        self.midiPort = midiPort
+        self.attack = attack
+        self.decay = decay
+        self.sustain = sustain
+        self.release = release
+        self.__initstate__()
+    
+
+    def __initstate__(self):
+        super(MidiKeyboard, self).__initstate__()
+        print(mido.get_input_names())
+        try:
+            self._midi.close()
+        except Exception:
+            pass
+        try:
+            self._midi = mido.open_input(self.midiPort)
+        except OSError:
+            self._midi = mido.open_input()
+            self.midiPort = self._midi.name
+            print(self.midiPort)
+        self._on_notes = []
+        
+    def numInputChannels(self):
+        return 1 # color
+    
+    def numOutputChannels(self):
+        return 1
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": {
+                # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
+                "midiPort": mido.get_input_names(),
+                "attack": [0.0, 0.0, 5.0, 0.01],
+                "decay": [0.0, 0.0, 5.0, 0.01],
+                "sustain": [1.0, 0.0, 1.0, 0.01],
+                "release": [0.0, 0.0, 5.0, 0.01],
+            }
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['midiPort'] = [self.midiPort] + [x for x in mido.get_input_names() if x!=self.midiPort]
+        definition['parameters']['attack'][0] = self.attack
+        definition['parameters']['decay'][0] = self.decay
+        definition['parameters']['sustain'][0] = self.sustain
+        definition['parameters']['release'][0] = self.release
+        return definition
+
+    async def update(self, dt):
+        await super().update(dt)
+        # Process midi notes
+        for msg in self._midi.iter_pending():
+            if msg.type == 'note_on':
+                self._on_notes.append(MidiKeyboard.Note(msg.note, msg.velocity, self._t))
+            if msg.type == 'note_off':
+                toRemove = [note for note in self._on_notes if note.note == msg.note]
+                for note in toRemove:
+                    note.active = False
+                    note.release_time = self._t
+                    
+        # Process note states
+        for note in self._on_notes:
+            if note.active:
+                
+                if self._t - note.spawn_time < self.attack:
+                    # attack phase
+                    note.value = note.velocity * (self._t - note.spawn_time) / self.attack
+                elif self._t - note.spawn_time < self.attack + self.decay:
+                    # decay phase
+                    # time since attack phase ended: self._t - note.spawn_time - self.attack
+                    decay_fact = 1.0 - (self._t - note.spawn_time - self.attack) / self.decay
+                    # linear interpolation
+                    # decay_fact = 0.0: decay beginning -> 1.0
+                    # decay_fact = 1.0: decay ending -> sustain
+                    note.value = note.velocity * (self.sustain + (1.0 - self.sustain) * decay_fact)
+                else:
+                    # sustain phase
+                    note.value = note.velocity * self.sustain
+            else:
+                # release phase
+                if self._t - note.release_time < self.release:
+                    note.value = note.velocity * (1.0 - (self._t - note.release_time) / self.release) * self.sustain
+                else:
+                    self._on_notes.remove(note)
+    
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            col = np.ones(self.num_pixels) * np.array([[255], [255], [255]])
+        else:
+            col = self._inputBuffer[0]
+
+
+        # Draw
+        pos = np.zeros(self.num_pixels)
+        for note in self._on_notes:
+            index = int(max(0, min(self.num_pixels - 1, float(note.note) / 127.0 * self.num_pixels)))
+            pos[index] = 1 * note.value / 127.0
+        self._outputBuffer[0] = np.multiply(pos, col)
 
 
 class Breathing(Effect):
