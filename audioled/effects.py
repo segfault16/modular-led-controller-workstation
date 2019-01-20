@@ -362,7 +362,7 @@ class Mirror(Effect):
 
 
 class SpringCombine(Effect):
-    def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, scale_low=0.0, scale_mid=0.5, scale_high=1.0, speed = 50.0):
+    def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, scale_low=0.0, scale_mid=0.5, scale_high=1.0, speed = 50.0, trigger_threshold = 0.1):
         self.num_pixels = num_pixels
         self.dampening = dampening
         self.tension = tension
@@ -371,6 +371,7 @@ class SpringCombine(Effect):
         self.scale_mid = scale_mid
         self.scale_high = scale_high
         self.speed = speed
+        self.trigger_threshold = trigger_threshold
         self.__initstate__()
     
 
@@ -397,7 +398,8 @@ class SpringCombine(Effect):
                 "scale_low": [0.0, 0.0, 1.0, 0.001],
                 "scale_mid": [0.5, 0.0, 1.0, 0.001],
                 "scale_high": [1.0, 0.0, 1.0, 0.001],
-                "speed": [50.0, 0.0, 100.0, 0.001]
+                "speed": [50.0, 0.0, 100.0, 0.001],
+                "trigger_threshold": [0.1, 0.01, 1.0, 0.01]
             }
         }
         return definition
@@ -412,6 +414,7 @@ class SpringCombine(Effect):
         definition['parameters']['scale_mid'][0] = self.scale_mid
         definition['parameters']['scale_high'][0] = self.scale_high
         definition['parameters']['speed'][0] = self.speed
+        definition['parameters']['trigger_threshold'][0] = self.trigger_threshold
         return definition
 
     async def update(self, dt):
@@ -456,7 +459,7 @@ class SpringCombine(Effect):
         
         # Actuate on spring depending on trigger
         trigger = np.sum(trigger, axis=0) / (3 * 255.0)
-        self._pos[trigger > 0.1] = trigger[trigger > 0.1]
+        self._pos[trigger > self.trigger_threshold] = trigger[trigger > self.trigger_threshold]
         
         # Output: Interpolate between low and mid for self._pos < 0, interpolate between mid and high for self._pos > 0
         out = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
