@@ -225,6 +225,18 @@ def createKeyboardGraph(N_pixels, device):
     PKeyboard = generative.MidiKeyboard(N_pixels)
     fg.addEffectNode(PKeyboard)
 
+    fg.addConnection(PKeyboard, 0, led_out, 0)
+    return fg
+
+def createKeyboardSpringGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    PKeyboard = generative.MidiKeyboard(N_pixels)
+    fg.addEffectNode(PKeyboard)
+
     color_wheel = colors.ColorWheel(N_pixels)
     fg.addEffectNode(color_wheel)
 
