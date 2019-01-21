@@ -1,29 +1,26 @@
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from collections import OrderedDict
-import time
-import struct
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import colorsys
-import numpy as np
-import audioled.dsp as dsp
-import audioled.filtergraph as filtergraph
 import math
+from collections import OrderedDict
+
 import matplotlib as mpl
+import numpy as np
+
 from audioled.effect import Effect
 
-blend_modes = ['lightenOnly', 'darkenOnly', 'addition', 'multiply', 'screen','overlay','softLight']
+blend_modes = ['lightenOnly', 'darkenOnly', 'addition', 'multiply', 'screen', 'overlay', 'softLight']
 blend_mode_default = 'lightenOnly'
+
 
 def blend(pixel_a, pixel_b, blend_mode):
     if pixel_a is None and pixel_b is None:
         return None
-    elif not pixel_a is None and pixel_b is None:
+    elif pixel_a is not None and pixel_b is None:
         return pixel_a
-    elif pixel_a is None and not pixel_b is None:
+    elif pixel_a is None and pixel_b is not None:
         return pixel_b
-    
 
     if blend_mode == 'lightenOnly':
         return np.maximum(pixel_a, pixel_b)
@@ -45,22 +42,21 @@ def blend(pixel_a, pixel_b, blend_mode):
         mask = pA >= 0.5
 
         blended = np.zeros(np.shape(pA))
-        blended[~mask] = (2*pA*pB)[~mask]
-        blended[mask] = (1-2*(1-pA)*(1-pB))[mask]
+        blended[~mask] = (2 * pA * pB)[~mask]
+        blended[mask] = (1 - 2 * (1 - pA) * (1 - pB))[mask]
         return 255.0 * blended
     elif blend_mode == 'softLight':
         # pegtop
         pA = pixel_a / 255.0
         pB = pixel_b / 255.0
-        blended = (1-2*pB) * pA * pA + 2*pB*pA
+        blended = (1 - 2 * pB) * pA * pA + 2 * pB * pA
         return 255.0 * blended
-    
+
     return pixel_a
 
 
-
-
 # New Filtergraph Style effects
+
 
 class StaticRGBColor(Effect):
     def __init__(self, num_pixels, r=255.0, g=255.0, b=255.0):
@@ -71,10 +67,9 @@ class StaticRGBColor(Effect):
         self.__initstate__()
 
     def __initstate__(self):
-        # state 
+        # state
         self._color = None
         super(StaticRGBColor, self).__initstate__()
-    
 
     def numInputChannels(self):
         return 0
@@ -82,11 +77,11 @@ class StaticRGBColor(Effect):
     def numOutputChannels(self):
         return 1
 
-
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": OrderedDict([
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
                 ("r", [255.0, 0.0, 255.0, 1.0]),
                 ("g", [255.0, 0.0, 255.0, 1.0]),
@@ -94,9 +89,9 @@ class StaticRGBColor(Effect):
             ])
         }
         return definition
-    
+
     def getParameter(self):
-        definition = self.getParameterDefinition()       
+        definition = self.getParameterDefinition()
         definition['parameters']['r'][0] = self.r
         definition['parameters']['g'][0] = self.g
         definition['parameters']['b'][0] = self.b
@@ -107,20 +102,28 @@ class StaticRGBColor(Effect):
 
     def setOutputBuffer(self, buffer):
         self._outputBuffer = buffer
-    
+
     async def update(self, dt):
         await super(StaticRGBColor, self).update(dt)
         if self._color is None:
-            self._color = np.ones(self.num_pixels) * np.array([[self.r],[self.g],[self.b]])
+            self._color = np.ones(self.num_pixels) * np.array([[self.r], [self.g], [self.b]])
 
     def process(self):
         self._outputBuffer[0] = self._color
+
 
 class ColorWheel(Effect):
     """ Generates colors
     """
 
-    def __init__(self, num_pixels = 1, cycle_time = 30.0, offset = 0.0, luminocity = 0.5, saturation = 1.0, wiggle_amplitude = 0.0, wiggle_time = 0.0):
+    def __init__(self,
+                 num_pixels=1,
+                 cycle_time=30.0,
+                 offset=0.0,
+                 luminocity=0.5,
+                 saturation=1.0,
+                 wiggle_amplitude=0.0,
+                 wiggle_time=0.0):
         self.cycle_time = cycle_time
         self.offset = offset
         self.wiggle_amplitude = wiggle_amplitude
@@ -144,7 +147,8 @@ class ColorWheel(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": OrderedDict([
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
                 ("num_pixels", [1, 1, 1000, 1]),
                 ("cycle_time", [30.0, 0, 100, 0.1]),
@@ -156,9 +160,9 @@ class ColorWheel(Effect):
             ])
         }
         return definition
-    
+
     def getParameter(self):
-        definition = self.getParameterDefinition()       
+        definition = self.getParameterDefinition()
         del definition['parameters']['num_pixels']
         definition['parameters']['cycle_time'][0] = self.cycle_time
         definition['parameters']['offset'][0] = self.offset
@@ -187,16 +191,15 @@ class ColorWheel(Effect):
         if self.wiggle_time > 0:
             h = h + math.sin(2 * math.pi / self.wiggle_time * t) * self.wiggle_amplitude
 
-        r, g, b = colorsys.hls_to_rgb(h, self.luminocity, self.saturation) 
-        
-        return np.array([[r* 255.0], [g* 255.0], [b* 255.0]])
-    
+        r, g, b = colorsys.hls_to_rgb(h, self.luminocity, self.saturation)
+
+        return np.array([[r * 255.0], [g * 255.0], [b * 255.0]])
+
     def get_color_array(self, t, num_pixels):
         return np.ones(num_pixels) * self.get_color(t, -1)
 
 
 class ColorWheel2_gen(Effect):
-
     def __init__(self, num_pixels, cycle_time=30.0, offset=0.0, cycle_time_dim=10.0):
         self.num_pixels = num_pixels
         self.cycle_time = cycle_time
@@ -241,7 +244,7 @@ class ColorDimEffect(Effect):
         self.cycle_time = cycle_time
         self.offset = offset
         self.num_pixels = num_pixels
-        
+
     def __initstate__(self):
         # state
         self._color = None
@@ -265,7 +268,7 @@ class ColorDimEffect(Effect):
         if self.cycle_time == 0:
             dim = self.offset
         else:
-            dim = abs(math.sin((2*math.pi*t / self.cycle_time) + self.offset))
+            dim = abs(math.sin((2 * math.pi * t / self.cycle_time) + self.offset))
 
         return np.array([[dim * 255.0], [dim * 255.0], [dim * 255.0]])
 
@@ -283,18 +286,19 @@ class InterpolateRGB(Effect):
 
     def numOutputChannels(self):
         return 1
-    
+
     def process(self):
         if self._inputBuffer is not None and self._outputBuffer is not None:
             a = self._inputBuffer[0]
             b = self._inputBuffer[1]
             if a is not None and b is not None:
                 fact = np.linspace(0., 1., self.num_pixels)
-                self._outputBuffer[0] = a + np.multiply((b-a), fact)
+                self._outputBuffer[0] = a + np.multiply((b - a), fact)
             elif a is not None:
                 self._outputBuffer[0] = a
             elif b is not None:
                 self._outputBuffer[0] = b
+
 
 class InterpolateHSV(Effect):
     def __init__(self, num_pixels):
@@ -306,23 +310,23 @@ class InterpolateHSV(Effect):
 
     def numOutputChannels(self):
         return 1
-    
+
     def process(self):
         if self._inputBuffer is not None and self._outputBuffer is not None:
             a = self._inputBuffer[0]
             b = self._inputBuffer[1]
-            
+
             if a is not None and b is not None:
-                rgb_a = 1./255. * a[0:3,0]
-                rgb_b = 1./255. * b[0:3,0]
-                h_a,s_a,v_a = colorsys.rgb_to_hsv(rgb_a[0], rgb_a[1], rgb_a[2])
-                h_b,s_b,v_b = colorsys.rgb_to_hsv(rgb_b[0], rgb_b[1], rgb_b[2])
+                rgb_a = 1. / 255. * a[0:3, 0]
+                rgb_b = 1. / 255. * b[0:3, 0]
+                h_a, s_a, v_a = colorsys.rgb_to_hsv(rgb_a[0], rgb_a[1], rgb_a[2])
+                h_b, s_b, v_b = colorsys.rgb_to_hsv(rgb_b[0], rgb_b[1], rgb_b[2])
 
                 interp_v = np.linspace(v_a, v_b, self.num_pixels)
                 interp_s = np.linspace(s_a, s_b, self.num_pixels)
                 interp_h = np.linspace(h_a, h_b, self.num_pixels)
                 hsv = np.array([interp_h, interp_s, interp_v]).T
-                
+
                 rgb = mpl.colors.hsv_to_rgb(hsv)
-                
+
                 self._outputBuffer[0] = rgb.T * 255.0
