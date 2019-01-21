@@ -195,9 +195,9 @@ function createNetwork() {
     layout: {
       hierarchical: {
         enabled: true,
-        levelSeparation: 70,
-        direction: "UD",
-        nodeSpacing: 80,
+        levelSeparation: 100,
+        direction: "LR",
+        nodeSpacing: 100,
         sortMethod: 'directed',
 
       },
