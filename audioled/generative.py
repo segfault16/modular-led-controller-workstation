@@ -18,6 +18,7 @@ import audioled.dsp as dsp
 import audioled.filtergraph as filtergraph
 from audioled.effect import Effect
 
+from PIL import Image, ImageSequence
 
 class SwimmingPool(Effect):
 
@@ -438,3 +439,64 @@ class FallingStars(Effect):
         if self._outputBuffer is not None:
             self._output = np.multiply(color, self.starControl(self.spawnTime) * np.array([[self.maxBrightness*1.0],[self.maxBrightness*1.0],[self.maxBrightness*1.0]]))
         self._outputBuffer[0] = self._output.clip(0.0,255.0)
+
+class GIFPlayer(Effect):
+
+    def __init__(self, num_pixels, gif_file, fps=30):
+        self.num_pixels = num_pixels
+        self.file = gif_file
+        self.fps = fps
+        self.__initstate__()
+    
+    def __initstate__(self):
+        super(GIFPlayer, self).__initstate__()
+        self._last_t = 0.0
+        self._gif = Image.open(self.file)
+        self._cur_index = 0
+        self._cur_image = None
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": OrderedDict([
+                # default, min, max, stepsize
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("fps", [30, 0, 120, 0.1]),
+            ])
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['fps'][0] = self.fps
+        return definition
+
+    def numInputChannels(self):
+        return 0
+
+    def numOutputChannels(self):
+        return 1
+
+    async def update(self, dt):
+        await super().update(dt)
+        if self._t - self._last_t > 1.0 / self.fps:
+            # go to next image
+            try: 
+                self._gif.seek(self._gif.tell() + 1)
+            except EOFError:
+                self._gif = Image.open(self.file)
+            # update time
+            self._cur_image = self._gif.convert('RGB')
+            self._last_t = self._t
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if self._cur_image is not None:
+            
+            img = np.asarray(self._cur_image, dtype=np.uint8)
+            img = img.reshape(-1, img.shape[-1]).T
+            self._outputBuffer[0] = img.astype(int)
+        
+        

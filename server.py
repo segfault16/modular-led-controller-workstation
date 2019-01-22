@@ -390,8 +390,9 @@ if __name__ == '__main__':
     #fg = configs.createMovingLightGraph(num_pixels, device)
     #fg = configs.createMovingLightsGraph(num_pixels, device)
     #fg = configs.createVUPeakGraph(num_pixels, device)
-    fg = configs.createSwimmingPoolGraph(num_pixels, device)
+    #fg = configs.createSwimmingPoolGraph(num_pixels, device)
     #fg = configs.createKeyboardGraph(num_pixels, device)
+    fg = configs.createGifPlayerGraph(num_pixels, device)
 
     # Init defaults
     default_values['fs'] = 48000 # ToDo: How to provide fs information to downstream effects?

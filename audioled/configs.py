@@ -297,3 +297,17 @@ def createFallingStarsGraph(N_pixels, device):
 
     fg.addConnection(FallingStars, 0, led_out, 0)
     return fg
+
+
+def createGifPlayerGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    gifPlayer = generative.GIFPlayer(N_pixels, "gifs/test.gif")
+    fg.addEffectNode(gifPlayer)
+
+    fg.addConnection(gifPlayer, 0, led_out, 0)
+
+    return fg
