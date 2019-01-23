@@ -1,30 +1,17 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import asyncio
-import colorsys
-import math
-import random
-import struct
-import time
-
 from collections import OrderedDict
 
 import numpy as np
-from scipy.ndimage.filters import gaussian_filter1d
-from scipy.signal import lfilter
 
-import audioled.dsp as dsp
 import audioled.colors as colors
-import audioled.filtergraph as filtergraph
 from audioled.effect import Effect
 
 SHORT_NORMALIZE = 1.0 / 32768.0
 
 
-
 class Shift(Effect):
-
     def __init__(self, speed=100.0):
         self.speed = speed
         self.__initstate__()
@@ -35,7 +22,7 @@ class Shift(Effect):
             self._shift_pixels
         except AttributeError:
             self._shift_pixels = 0
-        try: 
+        try:
             self._last_t
         except AttributeError:
             self._last_t = 0.0
@@ -74,12 +61,20 @@ class Shift(Effect):
         if dt_move * self.speed > 1:
             self._shift_pixels = int(self._shift_pixels + dt_move * self.speed) % np.size(y, axis=1)
         self._last_t = self._t
-        self._outputBuffer[0] = np.roll(y,self._shift_pixels, axis=1)
-
+        self._outputBuffer[0] = np.roll(y, self._shift_pixels, axis=1)
 
 
 class Append(Effect):
-    def __init__(self, num_channels=2, flip0=False, flip1=False, flip2=False, flip3=False, flip4=False, flip5=False, flip6=False, flip7=False):
+    def __init__(self,
+                 num_channels=2,
+                 flip0=False,
+                 flip1=False,
+                 flip2=False,
+                 flip3=False,
+                 flip4=False,
+                 flip5=False,
+                 flip6=False,
+                 flip7=False):
         self.num_channels = num_channels
         self.flip0 = flip0
         self.flip1 = flip1
@@ -93,7 +88,9 @@ class Append(Effect):
 
     def __initstate__(self):
         super().__initstate__()
-        self._flipMask = [self.flip0,self.flip1,self.flip2,self.flip3,self.flip4,self.flip5,self.flip6,self.flip7]
+        self._flipMask = [
+            self.flip0, self.flip1, self.flip2, self.flip3, self.flip4, self.flip5, self.flip6, self.flip7
+        ]
 
     def numInputChannels(self):
         return self.num_channels
@@ -104,7 +101,8 @@ class Append(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": OrderedDict([
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
                 ("num_channels", [2, 1, 8, 1]),
                 ("flip0", False),
@@ -121,7 +119,7 @@ class Append(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_channels'] # not editable at runtime
+        del definition['parameters']['num_channels']  # not editable at runtime
         definition['parameters']['flip0'] = self.flip0
         definition['parameters']['flip1'] = self.flip1
         definition['parameters']['flip2'] = self.flip2
@@ -139,14 +137,15 @@ class Append(Effect):
         if self._inputBuffer[0] is None:
             self._outputBuffer[0] = None
             return
-        state = np.zeros((3,0))
-        for i in range(0,self.num_channels):
+        state = np.zeros((3, 0))
+        for i in range(0, self.num_channels):
             if self._inputBuffer[i] is not None:
                 if self._flipMask is not None and self._flipMask[i] > 0:
-                    state = np.concatenate((state, self._inputBuffer[i][:,::-1]),axis=1)
+                    state = np.concatenate((state, self._inputBuffer[i][:, ::-1]), axis=1)
                 else:
-                    state = np.concatenate((state, self._inputBuffer[i]),axis=1)
+                    state = np.concatenate((state, self._inputBuffer[i]), axis=1)
         self._outputBuffer[0] = state
+
 
 class Combine(Effect):
     def __init__(self, mode=colors.blend_mode_default):
@@ -161,16 +160,12 @@ class Combine(Effect):
 
     @staticmethod
     def getParameterDefinition():
-        definition = {
-            "parameters": OrderedDict([
-                ("mode", colors.blend_modes)
-            ])
-        }
+        definition = {"parameters": OrderedDict([("mode", colors.blend_modes)])}
         return definition
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        definition['parameters']['mode'] = [self.mode] + [x for x in colors.blend_modes if x!=self.mode]
+        definition['parameters']['mode'] = [self.mode] + [x for x in colors.blend_modes if x != self.mode]
         return definition
 
     def process(self):
@@ -260,16 +255,16 @@ class AfterGlow(Effect):
 
         self._outputBuffer[0] = y.clip(0.0, 255.0)
 
-class Mirror(Effect):
 
-    def __init__(self, mirror_lower = True, recursion = 0):
+class Mirror(Effect):
+    def __init__(self, mirror_lower=True, recursion=0):
         self.mirror_lower = mirror_lower
         self.recursion = recursion
         self.__initstate__()
 
     def __initstate__(self):
         # state
-        self._mirrorLower = None 
+        self._mirrorLower = None
         self._mirrorUpper = None
         super(Mirror, self).__initstate__()
 
@@ -282,7 +277,8 @@ class Mirror(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": OrderedDict([
+            "parameters":
+            OrderedDict([
                 ("mirror_lower", True),
                 # default, min, max, stepsize
                 ("recursion", [1, 0, 8, 1]),
@@ -303,63 +299,61 @@ class Mirror(Effect):
             self._outputBuffer[0] = None
             return
         num_pixels = np.size(self._inputBuffer[0], 1)
-        if self._mirrorLower is None or np.size(self._mirrorLower,1) != num_pixels:
-            self._mirrorLower = self._genMirrorLowerMap(num_pixels,self.recursion)
-        if self._mirrorUpper is None or np.size(self._mirrorUpper,1) != num_pixels:
-            self._mirrorUpper = self._genMirrorUpperMap(num_pixels,self.recursion)
+        if self._mirrorLower is None or np.size(self._mirrorLower, 1) != num_pixels:
+            self._mirrorLower = self._genMirrorLowerMap(num_pixels, self.recursion)
+        if self._mirrorUpper is None or np.size(self._mirrorUpper, 1) != num_pixels:
+            self._mirrorUpper = self._genMirrorUpperMap(num_pixels, self.recursion)
         buffer = self._inputBuffer[0]
         # 0 .. h .. n
         #   h    n-h
         if self.mirror_lower:
-            self._outputBuffer[0] = buffer[self._mirrorLower[:,:,0],self._mirrorLower[:,:,1]]
+            self._outputBuffer[0] = buffer[self._mirrorLower[:, :, 0], self._mirrorLower[:, :, 1]]
         else:
-            self._outputBuffer[0] = buffer[self._mirrorUpper[:,:,0],self._mirrorUpper[:,:,1]]
+            self._outputBuffer[0] = buffer[self._mirrorUpper[:, :, 0], self._mirrorUpper[:, :, 1]]
 
     def _genMirrorLowerMap(self, n, recursion):
-        h = int(n/2)
-        mapMask = np.array([[[0,i] for i in range(0,n)],
-                                [[1,i] for i in range(0,n)],
-                                [[2,i] for i in range(0,n)]],dtype=np.int64)
-        mapMask = self._genMirrorLower(mapMask,recursion)
+        mapMask = np.array(
+            [[[0, i] for i in range(0, n)], [[1, i] for i in range(0, n)], [[2, i] for i in range(0, n)]],
+            dtype=np.int64)
+        mapMask = self._genMirrorLower(mapMask, recursion)
         return mapMask
 
     def _genMirrorLower(self, mask, recurse=0):
         mapMask = mask.copy()
         n = mapMask.shape[1]
-        if n%2 == 1:
-            n=n-1
-        h = int(n/2)
-        temp = mapMask[:,0:h,:]
-        temp = temp[:,::-1,:]
-        mapMask[:,h:n,:] = temp[:,0:h,:]
+        if n % 2 == 1:
+            n = n - 1
+        h = int(n / 2)
+        temp = mapMask[:, 0:h, :]
+        temp = temp[:, ::-1, :]
+        mapMask[:, h:n, :] = temp[:, 0:h, :]
         if recurse > 0:
-            mapMask[:,0:h,:] = self._genMirrorLower(mapMask[:,0:h,:], recurse-1)
-            mapMask[:,h:n,:] = self._genMirrorUpper(mapMask[:,h:n,:], recurse-1)
+            mapMask[:, 0:h, :] = self._genMirrorLower(mapMask[:, 0:h, :], recurse - 1)
+            mapMask[:, h:n, :] = self._genMirrorUpper(mapMask[:, h:n, :], recurse - 1)
         return mapMask
 
     def _genMirrorUpperMap(self, n, recursion):
-        h = int(n/2)
-        mapMask = np.array([[[0,i] for i in range(0,n)],
-                                [[1,i] for i in range(0,n)],
-                                [[2,i] for i in range(0,n)]],dtype=np.int64)
-        mapMask = self._genMirrorUpper(mapMask,recursion)
+        mapMask = np.array(
+            [[[0, i] for i in range(0, n)], [[1, i] for i in range(0, n)], [[2, i] for i in range(0, n)]],
+            dtype=np.int64)
+        mapMask = self._genMirrorUpper(mapMask, recursion)
         return mapMask
 
-    def _genMirrorUpper(self,mask, recurse=0):
+    def _genMirrorUpper(self, mask, recurse=0):
         mapMask = mask.copy()
-        n=mapMask.shape[1]
-        if n%2 == 1:
-            n=n-1
-        h = int(n/2)
+        n = mapMask.shape[1]
+        if n % 2 == 1:
+            n = n - 1
+        h = int(n / 2)
         # take upper part
-        temp = mapMask[:,h:n,:]
+        temp = mapMask[:, h:n, :]
         # revert
-        temp = temp[:,::-1,:]
+        temp = temp[:, ::-1, :]
         # assign to lower part
-        mapMask[:,0:n-h,:] = temp[:,0:n-h,:]
+        mapMask[:, 0:n - h, :] = temp[:, 0:n - h, :]
         if recurse > 0:
-            mapMask[:,0:h,:] = self._genMirrorUpper(mapMask[:,0:h,:], recurse-1)
-            mapMask[:,h:n,:] = self._genMirrorLower(mapMask[:,h:n,:], recurse-1)
+            mapMask[:, 0:h, :] = self._genMirrorUpper(mapMask[:, 0:h, :], recurse - 1)
+            mapMask[:, h:n, :] = self._genMirrorLower(mapMask[:, h:n, :], recurse - 1)
         return mapMask
 
 
@@ -389,7 +383,16 @@ class SpringCombine(Effect):
 
     """
 
-    def __init__(self, num_pixels, dampening=0.99, tension=0.001, spread=0.1, scale_low=0.0, scale_mid=0.5, scale_high=1.0, speed = 50.0, trigger_threshold = 0.1):
+    def __init__(self,
+                 num_pixels,
+                 dampening=0.99,
+                 tension=0.001,
+                 spread=0.1,
+                 scale_low=0.0,
+                 scale_mid=0.5,
+                 scale_high=1.0,
+                 speed=50.0,
+                 trigger_threshold=0.1):
         self.num_pixels = num_pixels
         self.dampening = dampening
         self.tension = tension
@@ -400,7 +403,6 @@ class SpringCombine(Effect):
         self.speed = speed
         self.trigger_threshold = trigger_threshold
         self.__initstate__()
-    
 
     def __initstate__(self):
         super(SpringCombine, self).__initstate__()
@@ -408,8 +410,8 @@ class SpringCombine(Effect):
         self._vel = np.zeros(self.num_pixels)
 
     def numInputChannels(self):
-        return 4 # trigger, low, mid, high
-    
+        return 4  # trigger, low, mid, high
+
     def numOutputChannels(self):
         return 1
 
@@ -447,24 +449,24 @@ class SpringCombine(Effect):
     async def update(self, dt):
         await super().update(dt)
 
-        lDeltas = np.zeros(self.num_pixels) # force from left
-        rDeltas = np.zeros(self.num_pixels) # force from right
+        lDeltas = np.zeros(self.num_pixels)  # force from left
+        rDeltas = np.zeros(self.num_pixels)  # force from right
         for j in range(4):
             # calculate delta to left and right pixel
-            lDeltas[1:] = self.spread * (np.roll(self._pos,1)[1:] - self._pos[1:])
-            rDeltas[:-1] = self.spread * (np.roll(self._pos,-1)[:-1] - self._pos[:-1])
+            lDeltas[1:] = self.spread * (np.roll(self._pos, 1)[1:] - self._pos[1:])
+            rDeltas[:-1] = self.spread * (np.roll(self._pos, -1)[:-1] - self._pos[:-1])
             x = -self._pos
             force = lDeltas + rDeltas + x * self.tension
             acc = force / 1.0
             self._vel = self.dampening * self._vel + acc * (self.speed * dt)
             self._pos += self._vel * (self.speed * dt)
-    
+
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
-        
+
         if not self._inputBufferValid(0):
-            trigger = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
+            trigger = np.zeros(self.num_pixels) * np.array([[0], [0], [0]])
         else:
             trigger = self._inputBuffer[0]
 
@@ -483,13 +485,14 @@ class SpringCombine(Effect):
         else:
             highCol = self.scale_high * self._inputBuffer[3]
 
-        
         # Actuate on spring depending on trigger
         trigger = np.sum(trigger, axis=0) / (3 * 255.0)
         self._pos[trigger > self.trigger_threshold] = trigger[trigger > self.trigger_threshold]
-        
+
         # Output: Interpolate between low and mid for self._pos < 0, interpolate between mid and high for self._pos > 0
-        out = np.zeros(self.num_pixels) * np.array([[0],[0],[0]])
-        out[:, self._pos <= 0] = (np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
-        out[:, self._pos >= 0] = (np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
+        out = np.zeros(self.num_pixels) * np.array([[0], [0], [0]])
+        out[:, self._pos <= 0] = (
+            np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
+        out[:, self._pos >= 0] = (
+            np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
         self._outputBuffer[0] = out

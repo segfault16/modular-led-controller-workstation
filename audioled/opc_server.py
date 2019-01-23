@@ -1,7 +1,8 @@
-import socket
-from time import sleep
-import threading
 import selectors
+import socket
+import threading
+from time import sleep
+
 import numpy as np
 
 
@@ -28,7 +29,7 @@ class OPCMessage:
         self.callback = callback  # this callback is called once a message is fully read
         self._verbose = verbose
         self._resetData()
-    
+
     def _debug(self, message):
         if self._verbose:
             print(message)
@@ -115,7 +116,7 @@ class OPCMessage:
         self._read()
 
         if self.opc_header is None:
-                self.processOpcHeader()
+            self.processOpcHeader()
 
         if self.opc_header:
             if self.messageData is None:
@@ -126,20 +127,16 @@ class OPCMessage:
         try:
             self.selector.unregister(self.sock)
         except Exception as e:
-            print(
-                "error: selector.unregister() exception for {}: {}".format(self.addr, repr(e))
-            )
+            print("error: selector.unregister() exception for {}: {}".format(self.addr, repr(e)))
 
         try:
             self.sock.close()
         except OSError as e:
-            print(
-                "error: socket.close() exception for {}: {}".format(self.addr, repr(e))
-            )
+            print("error: socket.close() exception for {}: {}".format(self.addr, repr(e)))
         finally:
             # Delete reference to socket object for garbage collection
             self.sock = None
-    
+
 
 class ServerThread(object):
     """Thread object to continuously read messages from socket
@@ -167,14 +164,14 @@ class ServerThread(object):
         """Start the server thread"""
         if self._thread is not None:
             return
-        
+
         self._stopSignal = False
         self._socket.listen()
         print("FadeCandy Server thread listening.")
         self._thread = threading.Thread(target=self._process_thread, args=[self._socket, self._callback])
         self._thread.daemon = True
         self._thread.start()
-    
+
     def stop(self, timeout=1):
         """Stop the server thread
         Raises TimeoutError """
@@ -293,7 +290,7 @@ class Server(object):
                     sameThreads.append(thread)
             except Exception:
                 pass
-        
+
         return sameThreads
 
     def _ensure_listening(self):

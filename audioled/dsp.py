@@ -1,13 +1,11 @@
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from scipy.signal import butter
-from scipy.signal import lfilter_zi
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import itertools
-import numpy as np
 import math
 
+import numpy as np
+from scipy.signal import butter, lfilter_zi
 
 
 def rollwin(signal, n_overlaps):
@@ -17,7 +15,7 @@ def rollwin(signal, n_overlaps):
     frame = next(signal)
     N = len(frame)
     window = np.zeros(N * n_overlaps)
-    window[-N:] = frame # last N points
+    window[-N:] = frame  # last N points
     for data in signal:
         S = len(data)
         window[:-S] = window[S:]
@@ -151,6 +149,7 @@ def memoize(function):
             rv = function(*args)
             memo[args] = rv
             return rv
+
     return wrapper
 
 
@@ -172,9 +171,9 @@ def filter_bank(n_filters, n_fft, fs, fmin_hz, fmax_hz, scale):
     # Construct the filter bank
     filters = np.zeros((n_filters, n_fft // 2 + 1))
     for m in range(1, n_filters + 1):
-        f_m_minus = int(bins[m - 1])   # left
-        f_m = int(bins[m])             # center
-        f_m_plus = int(bins[m + 1])    # right
+        f_m_minus = int(bins[m - 1])  # left
+        f_m = int(bins[m])  # center
+        f_m_plus = int(bins[m + 1])  # right
         for k in range(f_m_minus, f_m):
             filters[m - 1, k] = (k - bins[m - 1]) / (bins[m] - bins[m - 1])
         for k in range(f_m, f_m_plus):
@@ -203,19 +202,21 @@ def preprocess(audio, fs, fmax, n_overlaps):
     hanning_window = np.hanning(len(next(audio)))
     # Apply hanning window
     audio = (x * hanning_window for x in audio)
-    # Don't know what this should do but breaks processing if no audio input present... 
-    #audio = (x for x in audio if np.sqrt(np.mean(np.square(x))) > 1e-5)
+    # Don't know what this should do but breaks processing if no audio input present...
+    # audio = (x for x in audio if np.sqrt(np.mean(np.square(x))) > 1e-5)
     audio = pad_zeros(audio)
     return audio, fs
 
+
 def rms(normalized_sample_points):
     N = len(normalized_sample_points)
-    sum_squares = sum(s**2  for s in normalized_sample_points)
+    sum_squares = sum(s**2 for s in normalized_sample_points)
     return math.sqrt(sum_squares / (N / 2))
 
+
 def design_filter(lowcut, highcut, fs, order=3):
-    nyq = 0.5*fs
-    low = lowcut/nyq
-    high = highcut/nyq
-    b,a = butter(order, [low,high], btype='band')
-    return b,a,lfilter_zi(b, a)
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    b, a = butter(order, [low, high], btype='band')
+    return b, a, lfilter_zi(b, a)
