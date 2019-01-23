@@ -16,10 +16,11 @@ import numpy as np
 from flask import Flask, abort, jsonify, request, send_from_directory
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, configs, devices, effects, filtergraph
+from audioled import audio, configs, devices, effects, filtergraph, project
 
 num_pixels = 300
 device = None
+proj = None
 fg = None
 default_values = {}
 record_timings = False
@@ -230,6 +231,16 @@ def create_app():
             abort(400)
         fg = jsonpickle.decode(request.json)
         return "OK"
+    
+    @app.route('/project/activeSlot', methods=['POST'])
+    def project_activeSlot_post():
+        global proj
+        global fg
+        print(request.args)
+        value = int(request.args.get('value'))
+        print("Activating slot {}".format(value))
+        fg = proj.activateSlot(value)
+        return "OK"
 
     @app.route('/remote/brightness', methods=['POST'])
     def remote_brightness_post():
@@ -273,8 +284,8 @@ def create_app():
                     event_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(event_loop)
 
-                fg.update(dt, event_loop)
-                fg.process()
+                proj.update(dt, event_loop)
+                proj.process()
                 # clear errors (if any have occured in the current run, we wouldn't reach this)
                 errors.clear()
 
@@ -398,13 +409,21 @@ if __name__ == '__main__':
     print("The following audio devices are available:")
     audio.print_audio_devices()
 
+    # Initialize project
+    proj = project.Project()
+
     # Initialize filtergraph
     # fg = configs.createSpectrumGraph(num_pixels, device)
     # fg = configs.createMovingLightGraph(num_pixels, device)
     # fg = configs.createMovingLightsGraph(num_pixels, device)
     # fg = configs.createVUPeakGraph(num_pixels, device)
-    fg = configs.createSwimmingPoolGraph(num_pixels, device)
+    initial = configs.createSwimmingPoolGraph(num_pixels, device)
+    second = configs.createDefenceGraph(num_pixels, device)
     # fg = configs.createKeyboardGraph(num_pixels, device)
+
+    proj.setFiltergraphForSlot(0, initial)
+    proj.setFiltergraphForSlot(1, second)
+    fg = proj.activateSlot(0)
 
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
