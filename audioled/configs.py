@@ -367,3 +367,16 @@ def createBonfireGraph(N_pixels, device):
 
     fg.addConnection(bonfire, 0, led_out, 0)
     return fg
+
+
+def createGenerateWavesGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    GenerateWaves = generative.GenerateWaves(N_pixels, wavemode='square')
+    fg.addEffectNode(GenerateWaves)
+
+    fg.addConnection(GenerateWaves, 0, led_out, 0)
+    return fg

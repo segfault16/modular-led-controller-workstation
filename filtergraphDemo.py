@@ -30,10 +30,11 @@ pendulumConf = 'pendulum'
 rpendulumConf = 'rpendulum'
 testblobConf = 'testblob'
 bonfireConf = 'bonfire'
+generatewavesConf = 'generatewaves'
 configChoices = [
     movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf,
     fallingConf, breathingConf, heartbeatConf, pendulumConf, rpendulumConf, keyboardConf, keyboardSpringConf,
-    testblobConf, bonfireConf
+    testblobConf, bonfireConf, generatewavesConf
     ]
 
 deviceRasp = 'RaspberryPi'
@@ -107,6 +108,8 @@ def createFilterGraph(config, num_pixels, device):
         return configs.createTestBlobGraph(num_pixels, device)
     elif config == bonfireConf:
         return configs.createBonfireGraph(num_pixels, device)
+    elif config == generatewavesConf:
+        return configs.createGenerateWavesGraph(num_pixels, device)
     else:
         raise NotImplementedError("Config not implemented")
 

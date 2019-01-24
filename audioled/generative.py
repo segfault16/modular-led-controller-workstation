@@ -8,8 +8,12 @@ from collections import OrderedDict
 
 import mido
 import numpy as np
+from scipy import signal
 
 from audioled.effect import Effect
+
+wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
+wave_mode_default = 'sin'
 
 
 class SwimmingPool(Effect):
@@ -453,15 +457,16 @@ class Pendulum(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "location": [150, 0, 300, 1],
-                "displacement": [50, 1, 1000, 1],
-                "heightactivator": False,
-                "lightflip": [1, -1, 1, 2],
-                "swingspeed": [1, 0, 5, 0.01],
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("location", [150, 0, 300, 1]),
+                ("displacement", [50, 1, 1000, 1]),
+                ("swingspeed", [1, 0, 5, 0.01]),
+                ("heightactivator", False),
+                ("lightflip", [1, -1, 1, 2]),
+            ])
         }
         return definition
 
@@ -540,12 +545,13 @@ class RPendulum(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "num_pendulums": [20, 1, 300, 1],
-                "dim": [1, 0, 1, 0.01],
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("num_pendulums", [20, 1, 300, 1]),
+                ("dim", [1, 0, 1, 0.01]),
+            ])
         }
         return definition
 
@@ -613,15 +619,13 @@ class TestBlob(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "location": [150, 0, 300, 1],
-                "displacement": [50, 1, 1000, 1],
-                "heightactivator": False,
-                "lightflip": [1, -1, 1, 2],
-                "swingspeed": [1, 0, 5, 0.01],
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("location", [150, 0, 300, 1]),
+                ("spread", [50, 1, 300, 1]),
+            ])
         }
         return definition
 
@@ -629,9 +633,7 @@ class TestBlob(Effect):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_pixels']
         definition['parameters']['location'][0] = self.location
-        definition['parameters']['displacement'][0] = self.displacement
-        definition['parameters']['lightflip'][0] = self.lightflip
-        definition['parameters']['swingspeed'][0] = self.swingspeed
+        definition['parameters']['spread'][0] = self.spread
         return definition
 
     def createBlob(self, spread, location):
@@ -654,5 +656,89 @@ class TestBlob(Effect):
 
             self._output = np.multiply(color, self.createBlob(self.spread,
                                                               self.location) * np.array([[1.0], [1.0], [1.0]]))
+
+            self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+
+
+class GenerateWaves(Effect):
+    """Effect for displaying different wave forms."""
+    
+    def __init__(self, num_pixels, wavemode=wave_mode_default, period=20, scale=1, ):
+        self.num_pixels = num_pixels
+        self.period = period
+        self.scale = scale
+        self.wavemode = wavemode
+        self._wavearray = np.zeros(self.num_pixels)
+        self._outputarray = []
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        if self.wavemode == 'sin':
+            self._wavearray = self.createSin(self.period, self.scale)
+        elif self.wavemode == 'sawtooth':
+            self._wavearray = self.createSawtooth(self.period, self.scale)
+        elif self.wavemode == 'sawtooth_reversed':
+            self._wavearray = self.createSawtoothReversed(self.period, self.scale)
+        elif self.wavemode == 'square':
+            self._wavearray = self.createSquare(self.period, self.scale)
+        super(GenerateWaves, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("period", [20, 1, 300, 1]),
+                ("scale", [1, 0.01, 1, 0.01]),
+                ("wavemode", wave_modes),
+            ])
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['period'][0] = self.period
+        definition['parameters']['scale'][0] = self.scale
+        definition['parameters']['wavemode'] = [self.wavemode] + [x for x in wave_modes if x != self.wavemode]
+        return definition
+
+    def createSin(self, period, scale):
+        outputarray = np.zeros(self.num_pixels)
+        for i in range(0, self.num_pixels):
+            outputarray[i] = 0.5 * scale - math.sin(math.pi / self.period * i) * 0.5 * scale
+        return outputarray
+    
+    def createSawtooth(self, period, scale):
+        outputarray = np.linspace(0,300,300)
+        outputarray = 0.5 * scale - signal.sawtooth(outputarray * math.pi / self.period, width=1) * 0.5 * scale
+        return outputarray
+
+    def createSawtoothReversed(self, period, scale):
+        outputarray = np.linspace(0,300,300)
+        outputarray = 0.5 * scale - signal.sawtooth(outputarray * math.pi / self.period, width=0) * 0.5 * scale
+        return outputarray
+    
+    def createSquare(self, period, scale):
+        outputarray = np.linspace(0,300,300)
+        outputarray = 0.5 * scale - signal.square(outputarray * math.pi / self.period) * 0.5 * scale
+        return outputarray
+    
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._outputBuffer is not None:
+            color = self._inputBuffer[0]
+            if color is None:
+                color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+
+            self._output = np.multiply(color, self._wavearray * np.array([[1.0], [1.0], [1.0]]))
 
             self._outputBuffer[0] = self._output.clip(0.0, 255.0)
