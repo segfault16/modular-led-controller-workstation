@@ -461,7 +461,6 @@ class MovingLight(Effect):
             self._outputBuffer[0] = self._pixel_state
 
 
-
 class Bonfire(Effect):
     """ Effect for audio-reactive color splitting of an existing pixel array.
     Compare searchlight and bonfireSearchlight WebUIConfigs.
@@ -515,9 +514,9 @@ class Bonfire(Effect):
         audiobuffer = self._inputBuffer[0]
         pixelbuffer = self._inputBuffer[1]
 
-        y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audiobuffer), zi=self._filter_zi) 
+        y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audiobuffer), zi=self._filter_zi)
         peak = np.max(y) * 1.0
-        
+
         pixelbuffer[0] = np.roll(pixelbuffer[0], -int(self.spread * peak))
         pixelbuffer[2] = np.roll(pixelbuffer[2], int(self.spread * peak))
         self._outputBuffer[0] = pixelbuffer

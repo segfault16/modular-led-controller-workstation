@@ -306,6 +306,7 @@ def createFallingStarsGraph(N_pixels, device):
     fg.addConnection(FallingStars, 0, led_out, 0)
     return fg
 
+
 def createPendulumGraph(N_pixels, device):
     fg = filtergraph.FilterGraph(recordTimings=True)
 
@@ -317,6 +318,7 @@ def createPendulumGraph(N_pixels, device):
 
     fg.addConnection(Pendulum, 0, led_out, 0)
     return fg
+
 
 def createRPendulumGraph(N_pixels, device):
     fg = filtergraph.FilterGraph(recordTimings=True)
@@ -330,6 +332,7 @@ def createRPendulumGraph(N_pixels, device):
     fg.addConnection(RPendulum, 0, led_out, 0)
     return fg
 
+
 def createTestBlobGraph(N_pixels, device):
     fg = filtergraph.FilterGraph(recordTimings=True)
 
@@ -341,6 +344,7 @@ def createTestBlobGraph(N_pixels, device):
 
     fg.addConnection(TestBlob, 0, led_out, 0)
     return fg
+
 
 def createBonfireGraph(N_pixels, device):
 
@@ -360,6 +364,6 @@ def createBonfireGraph(N_pixels, device):
 
     fg.addConnection(testblob, 0, bonfire, 1)
     fg.addConnection(audio_in, 0, bonfire, 0)
- 
+
     fg.addConnection(bonfire, 0, led_out, 0)
     return fg
