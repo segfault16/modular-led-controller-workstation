@@ -463,7 +463,8 @@ class MovingLight(Effect):
 
 
 class Bonfire(Effect):
-    """ Effect for audioreactive color shifting to an existing pixels array
+    """ Effect for audio-reactive color splitting of an existing pixel array.
+    Compare searchlight and bonfireSearchlight WebUIConfigs.
     Inputs:
     - 0: Audio
     - 1: Pixels
