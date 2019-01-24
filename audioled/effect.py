@@ -1,4 +1,6 @@
 import inspect
+
+
 class Effect(object):
     """
     Base class for effects
@@ -9,6 +11,7 @@ class Effect(object):
     Input values can be accessed by self._inputBuffer[channelNumber], output values
     are to be written into self_outputBuffer[channelNumber].
     """
+
     def __init__(self):
         self.__initstate__()
 
@@ -25,10 +28,10 @@ class Effect(object):
         # make sure all default values are set (basic backwards compatibility)
         argspec = inspect.getargspec(self.__init__)
         if argspec.defaults is not None:
-            argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):],argspec.defaults))
+            argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
             for key in argsWithDefaults:
-                if not key in self.__dict__:
-                    print("Backwards compatibility: Adding default value {}={}".format(key,argsWithDefaults[key]))
+                if key not in self.__dict__:
+                    print("Backwards compatibility: Adding default value {}={}".format(key, argsWithDefaults[key]))
                     self.__dict__[key] = argsWithDefaults[key]
 
     def numOutputChannels(self):
@@ -43,7 +46,7 @@ class Effect(object):
         """
         raise NotImplementedError('numInputChannels() was not implemented')
 
-    def setOutputBuffer(self,buffer):
+    def setOutputBuffer(self, buffer):
         """
         Set output buffer where processed data is to be written
         """
@@ -109,4 +112,3 @@ class Effect(object):
         if self._inputBuffer[index] is None:
             return False
         return True
-

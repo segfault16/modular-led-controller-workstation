@@ -94,8 +94,15 @@ See [Audio setup on RaspberryPi](docs/audio_setup_pi.md).
 
 ## Server 
 
+For runtime configuration there is a REST webserver with a web UI.
+
+![web UI](images/server-ui.png)
+
 ```
+# Run on local machine
 python3 server.py
+# Run on Raspberry Pi
+sudo python3 server.py -D RaspberryPi
 ```
 
 ## Run as service

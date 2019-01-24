@@ -1,11 +1,12 @@
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
+import time
 from collections import OrderedDict
+
 import numpy as np
 import pyaudio
-import time
+
 from audioled.effects import Effect
 
 
@@ -41,7 +42,14 @@ class AudioInput(Effect):
     0: Audio Channel 0
     1: Audio Channel 1...
     """
-    def __init__(self, device_index=None, chunk_rate=60, num_channels=2, autogain_max=10.0, autogain=False, autogain_time=10.0):
+
+    def __init__(self,
+                 device_index=None,
+                 chunk_rate=60,
+                 num_channels=2,
+                 autogain_max=10.0,
+                 autogain=False,
+                 autogain_time=10.0):
         self.device_index = device_index
         self.chunk_rate = chunk_rate
         self.num_channels = num_channels
@@ -55,7 +63,8 @@ class AudioInput(Effect):
         deviceIndex = self.device_index
         if self.overrideDeviceIndex is not None:
             deviceIndex = self.overrideDeviceIndex
-        self._audioStream, self._sampleRate = self.stream_audio(chunk_rate=self.chunk_rate, channels=self.num_channels, device_index=deviceIndex)
+        self._audioStream, self._sampleRate = self.stream_audio(
+            chunk_rate=self.chunk_rate, channels=self.num_channels, device_index=deviceIndex)
         self._buffer = []
         self._chunk_size = int(self._sampleRate / self.chunk_rate)
         # increase cur_gain by percentage
@@ -80,8 +89,6 @@ class AudioInput(Effect):
         p = pyaudio.PyAudio()
         defaults = p.get_default_host_api_info()
 
-
-
         print("Using audio device {}".format(device_index))
         device_info = p.get_device_info_by_index(device_index)
 
@@ -92,14 +99,15 @@ class AudioInput(Effect):
             raise OSError(err)
 
         try:
-            stream = p.open(format=pyaudio.paFloat32,
-                            channels=channels,
-                            rate=int(device_info['defaultSampleRate']),
-                            input=True,
-                            input_device_index=device_index,
-                            frames_per_buffer=0)
+            stream = p.open(
+                format=pyaudio.paFloat32,
+                channels=channels,
+                rate=int(device_info['defaultSampleRate']),
+                input=True,
+                input_device_index=device_index,
+                frames_per_buffer=0)
         except OSError as e:
-            if retry==5:
+            if retry == 5:
                 err = 'Error occurred while attempting to open audio device. '
                 err += 'Check your operating system\'s audio device configuration. '
                 err += 'Audio device information: \n'
@@ -107,9 +115,8 @@ class AudioInput(Effect):
                 print(err)
                 raise e
             time.sleep(retry)
-            return self._open_input_stream(device_index=device_index, channels=channels, retry=retry+1)
+            return self._open_input_stream(device_index=device_index, channels=channels, retry=retry + 1)
         return stream, int(device_info['defaultSampleRate'])
-
 
     def stream_audio(self, chunk_rate=60, ignore_overflows=True, device_index=None, channels=1):
         if device_index is None:
@@ -147,9 +154,8 @@ class AudioInput(Effect):
                             raise e
                 chunk = np.fromstring(chunk, np.float32).astype(np.float)
                 yield chunk
+
         return audio_chunks(), samplerate
-
-
 
     def numOutputChannels(self):
         return self.num_channels
@@ -160,7 +166,8 @@ class AudioInput(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": OrderedDict([
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
                 ("num_channels", [2, 1, 100, 1]),
                 ("autogain", False),
@@ -198,4 +205,4 @@ class AudioInput(Effect):
             # layout for multiple channel is interleaved:
             # 00 01 .. 0n 10 11 .. 1n
             self._outputBuffer[i] = self._cur_gain * self._buffer[i::self.num_channels]
-            #print("{}: {}".format(i, self._outputBuffer[i]))
+            # print("{}: {}".format(i, self._outputBuffer[i]))

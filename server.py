@@ -1,35 +1,30 @@
 #!flask/bin/python
+import argparse
+import asyncio
+import atexit
+import colorsys
 import importlib
 import inspect
-import time
-import random
-import threading
-import atexit
-import asyncio
 import json
-import argparse
-import colorsys
-import numpy as np
 import os.path
-from flask import Flask, jsonify, abort, send_from_directory, request
-from audioled import filtergraph
-from audioled import audio
-from audioled import effects
-from audioled import colors
-from audioled import devices
-from audioled import configs
-from audioled import input
-import jsonpickle
+import threading
+import time
 from timeit import default_timer as timer
+
+import jsonpickle
+import numpy as np
+from flask import Flask, abort, jsonify, request, send_from_directory
 from werkzeug.serving import is_running_from_reloader
 
+from audioled import audio, configs, devices, effects, filtergraph
+
 num_pixels = 300
-device = None 
+device = None
 fg = None
 default_values = {}
 record_timings = False
 
-POOL_TIME = 0.0 #Seconds
+POOL_TIME = 0.0  # Seconds
 
 # lock to control access to variable
 dataLock = threading.Lock()
@@ -48,8 +43,9 @@ count = 0
 # def home():
 #     return app.send_static_file('index.html')
 
+
 def create_app():
-    app = Flask(__name__,  static_url_path='/')
+    app = Flask(__name__, static_url_path='/')
 
     def interrupt():
         print('cancelling LED thread')
@@ -73,8 +69,6 @@ def create_app():
         nodes = [node for node in fg._filterNodes]
         return jsonpickle.encode(nodes)
 
-
-
     @app.route('/node/<nodeUid>', methods=['GET'])
     def node_uid_get(nodeUid):
         global fg
@@ -82,7 +76,7 @@ def create_app():
             node = next(node for node in fg._filterNodes if node.uid == nodeUid)
             return jsonpickle.encode(node)
         except StopIteration:
-            abort(404,"Node not found")
+            abort(404, "Node not found")
 
     @app.route('/node/<nodeUid>', methods=['DELETE'])
     def node_uid_delete(nodeUid):
@@ -101,7 +95,7 @@ def create_app():
             abort(400)
         try:
             node = next(node for node in fg._filterNodes if node.uid == nodeUid)
-            #data =  json.loads(request.json)
+            # data =  json.loads(request.json)
             print(request.json)
             node.effect.updateParameter(request.json)
             return jsonpickle.encode(node)
@@ -123,7 +117,7 @@ def create_app():
         if not request.json:
             abort(400)
         full_class_name = request.json[0]
-        parameters = request.json[1] 
+        parameters = request.json[1]
         print(parameters)
         module_name, class_name = None, None
         try:
@@ -147,8 +141,9 @@ def create_app():
         if not request.json:
             abort(400)
         json = request.json
-        connection = fg.addNodeConnection(json['from_node_uid'], int(json['from_node_channel']), json['to_node_uid'], int(json['to_node_channel']))
-        
+        connection = fg.addNodeConnection(json['from_node_uid'], int(json['from_node_channel']), json['to_node_uid'],
+                                          int(json['to_node_channel']))
+
         return jsonpickle.encode(connection)
 
     @app.route('/connection/<connectionUid>', methods=['DELETE'])
@@ -156,7 +151,8 @@ def create_app():
         global fg
         try:
             connection = next(connection for connection in fg._filterConnections if connection.uid == connectionUid)
-            fg.removeConnection(connection.fromNode.effect, connection.fromChannel, connection.toNode.effect, connection.toChannel)
+            fg.removeConnection(connection.fromNode.effect, connection.fromChannel, connection.toNode.effect,
+                                connection.toChannel)
             return "OK"
         except StopIteration:
             abort(404, "Node not found")
@@ -173,20 +169,21 @@ def create_app():
             module_name, class_name = getModuleAndClassName(full_class_name)
         except RuntimeError:
             abort(403)
-        class_ = getattr(importlib.import_module(module_name),class_name)
+        class_ = getattr(importlib.import_module(module_name), class_name)
         argspec = inspect.getargspec(class_.__init__)
         if argspec.defaults is not None:
-            argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):],argspec.defaults))
+            argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
         else:
             argsWithDefaults = dict()
         result = argsWithDefaults.copy()
         if argspec.defaults is not None:
-            result.update({key : None for key in argspec.args[1:len(argspec.args)-len(argspec.defaults)]}) # 1 removes self
-        
-        result.update({key : default_values[key] for key in default_values if key in result})
+            result.update({key: None
+                           for key in argspec.args[1:len(argspec.args) - len(argspec.defaults)]})  # 1 removes self
+
+        result.update({key: default_values[key] for key in default_values if key in result})
         print(result)
         return jsonify(result)
-    
+
     @app.route('/effect/<full_class_name>/parameter', methods=['GET'])
     def effect_effectname_parameters_get(full_class_name):
         module_name, class_name = None, None
@@ -194,7 +191,7 @@ def create_app():
             module_name, class_name = getModuleAndClassName(full_class_name)
         except RuntimeError:
             abort(403)
-        class_ = getattr(importlib.import_module(module_name),class_name)
+        class_ = getattr(importlib.import_module(module_name), class_name)
         return json.dumps(class_.getParameterDefinition())
 
     def getModuleAndClassName(full_class_name):
@@ -213,7 +210,7 @@ def create_app():
                     subclasses.add(child)
                     work.append(child)
         return subclasses
-    
+
     @app.route('/errors', methods=['GET'])
     def errors_get():
         result = {}
@@ -225,7 +222,7 @@ def create_app():
     def configuration_get():
         config = jsonpickle.encode(fg)
         return config
-    
+
     @app.route('/configuration', methods=['POST'])
     def configuration_post():
         global fg
@@ -238,7 +235,7 @@ def create_app():
     def remote_brightness_post():
         global device
         value = int(request.args.get('value'))
-        floatVal = float(value/100)
+        floatVal = float(value / 100)
         print("Setting brightness: {}".format(floatVal))
         device.setBrightness(floatVal)
         return "OK"
@@ -248,17 +245,14 @@ def create_app():
         filename = "favorites/{}.json".format(id)
         global fg
         if os.path.isfile(filename):
-            with open(filename,"r") as f:
+            with open(filename, "r") as f:
                 fg = jsonpickle.decode(f.read())
                 return "OK"
         else:
             print("Favorite not found: {}".format(filename))
-        
-        abort(404)
-        
-            
 
-    
+        abort(404)
+
     def processLED():
         global fg
         global ledThread
@@ -278,12 +272,12 @@ def create_app():
                 if event_loop is None:
                     event_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(event_loop)
-                
+
                 fg.update(dt, event_loop)
                 fg.process()
                 # clear errors (if any have occured in the current run, we wouldn't reach this)
                 errors.clear()
-                
+
         except filtergraph.NodeException as ne:
             print("NodeError: {}".format(ne))
             errors.clear()
@@ -293,7 +287,7 @@ def create_app():
         finally:
             # Set the next thread to happen
             real_process_time = timer() - current_time
-            timeToWait = max(POOL_TIME, 0.01-real_process_time)
+            timeToWait = max(POOL_TIME, 0.01 - real_process_time)
             if count == 100:
                 if record_timings:
                     fg.printProcessTimings()
@@ -302,7 +296,7 @@ def create_app():
                     print("Waiting {}".format(timeToWait))
                 count = 0
             ledThread = threading.Timer(timeToWait, processLED, ())
-            ledThread.start()   
+            ledThread.start()
 
     def startLEDThread():
         # Do initialisation stuff here
@@ -319,47 +313,66 @@ def create_app():
         global fg
         fg = jsonpickle.decode(json)
 
-    
-
     # Initiate
-    
-    if is_running_from_reloader() == False: 
+
+    if is_running_from_reloader() is False:
         startLEDThread()
     # When you kill Flask (SIGTERM), clear the trigger for the next thread
     atexit.register(interrupt)
     return app
 
+
 def strandTest(device, num_pixels):
-    pixels = np.zeros(int(num_pixels/2)) * np.array([[255.0],[255.0],[255.0]])
+    pixels = np.zeros(int(num_pixels / 2)) * np.array([[255.0], [255.0], [255.0]])
     t = 0.0
     dt = 0.001
-    for i in range(0,int(num_pixels*1.2)):
+    for i in range(0, int(num_pixels * 1.2)):
         h = t / dt / num_pixels
-        r,g,b, = 0,0,0
-        if i < num_pixels/2:
+        r, g, b, = 0, 0, 0
+        if i < num_pixels / 2:
             r, g, b = colorsys.hls_to_rgb(h, 0.5, 1.0)
         pixels = np.roll(pixels, -1, axis=1)
         pixels[0][0] = r * 255.0
         pixels[1][0] = g * 255.0
         pixels[2][0] = b * 255.0
-        device.show(np.concatenate((pixels, pixels[:,::-1]), axis=1))
-        t = t+dt
+        device.show(np.concatenate((pixels, pixels[:, ::-1]), axis=1))
+        t = t + dt
         time.sleep(dt)
-    
 
-
-    
 
 if __name__ == '__main__':
     deviceRasp = 'RaspberryPi'
     deviceCandy = 'FadeCandy'
 
     parser = argparse.ArgumentParser(description='Audio Reactive LED Strip Server')
-    parser.add_argument('-N', '--num_pixels',  dest='num_pixels', type=int, default=300, help = 'number of pixels (default: 300)')
-    parser.add_argument('-D', '--device', dest='device', default=deviceCandy, choices=[deviceRasp,deviceCandy], help = 'device to send RGB to')
-    parser.add_argument('--device_candy_server', dest='device_candy_server', default='127.0.0.1:7890', help = 'Server for device FadeCandy')
-    parser.add_argument('-A', '--audio_device_index', dest='audio_device_index', type=int, default=None, help='Audio device index to use')
-    parser.add_argument('-P', '--process_timing', dest='process_timing', action='store_true', default=False, help='Print process timing')
+    parser.add_argument(
+        '-N', '--num_pixels', dest='num_pixels', type=int, default=300, help='number of pixels (default: 300)')
+    parser.add_argument(
+        '-D',
+        '--device',
+        dest='device',
+        default=deviceCandy,
+        choices=[deviceRasp, deviceCandy],
+        help='device to send RGB to')
+    parser.add_argument(
+        '--device_candy_server',
+        dest='device_candy_server',
+        default='127.0.0.1:7890',
+        help='Server for device FadeCandy')
+    parser.add_argument(
+        '-A',
+        '--audio_device_index',
+        dest='audio_device_index',
+        type=int,
+        default=None,
+        help='Audio device index to use')
+    parser.add_argument(
+        '-P',
+        '--process_timing',
+        dest='process_timing',
+        action='store_true',
+        default=False,
+        help='Print process timing')
 
     args = parser.parse_args()
     num_pixels = args.num_pixels
@@ -386,18 +399,18 @@ if __name__ == '__main__':
     audio.print_audio_devices()
 
     # Initialize filtergraph
-    #fg = configs.createSpectrumGraph(num_pixels, device)
-    #fg = configs.createMovingLightGraph(num_pixels, device)
-    #fg = configs.createMovingLightsGraph(num_pixels, device)
-    #fg = configs.createVUPeakGraph(num_pixels, device)
-    #fg = configs.createSwimmingPoolGraph(num_pixels, device)
-    #fg = configs.createKeyboardGraph(num_pixels, device)
+
+    # fg = configs.createSpectrumGraph(num_pixels, device)
+    # fg = configs.createMovingLightGraph(num_pixels, device)
+    # fg = configs.createMovingLightsGraph(num_pixels, device)
+    # fg = configs.createVUPeakGraph(num_pixels, device)
+    # fg = configs.createSwimmingPoolGraph(num_pixels, device)
+    # fg = configs.createKeyboardGraph(num_pixels, device)
     fg = configs.createGifPlayerGraph(num_pixels, device)
 
     # Init defaults
-    default_values['fs'] = 48000 # ToDo: How to provide fs information to downstream effects?
+    default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = num_pixels
-
 
     app = create_app()
     app.run(debug=False, host="0.0.0.0")
