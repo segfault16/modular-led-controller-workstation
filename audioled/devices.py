@@ -2,30 +2,23 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
+from collections import OrderedDict
 import time
 import numpy as np
 from audioled.effect import Effect
 
-_GAMMA_TABLE = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
-                1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5,
-                5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11,
-                11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17,
-                18, 18, 19, 19, 20, 20, 21, 21, 22, 23, 23, 24, 24, 25,
-                26, 26, 27, 28, 28, 29, 30, 30, 31, 32, 32, 33, 34, 35,
-                35, 36, 37, 38, 38, 39, 40, 41, 42, 42, 43, 44, 45, 46,
-                47, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 56, 57, 58,
-                59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 73,
-                74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88,
-                89, 91, 92, 93, 94, 95, 97, 98, 99, 100, 102, 103, 104,
-                105, 107, 108, 109, 111, 112, 113, 115, 116, 117, 119,
-                120, 121, 123, 124, 126, 127, 128, 130, 131, 133, 134,
-                136, 137, 139, 140, 142, 143, 145, 146, 148, 149, 151,
-                152, 154, 155, 157, 158, 160, 162, 163, 165, 166, 168,
-                170, 171, 173, 175, 176, 178, 180, 181, 183, 185, 186,
-                188, 190, 192, 193, 195, 197, 199, 200, 202, 204, 206,
-                207, 209, 211, 213, 215, 217, 218, 220, 222, 224, 226,
-                228, 230, 232, 233, 235, 237, 239, 241, 243, 245, 247,
-                249, 251, 253, 255]
+_GAMMA_TABLE = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6,
+    6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19,
+    20, 20, 21, 21, 22, 23, 23, 24, 24, 25, 26, 26, 27, 28, 28, 29, 30, 30, 31, 32, 32, 33, 34, 35, 35, 36, 37, 38, 38,
+    39, 40, 41, 42, 42, 43, 44, 45, 46, 47, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 56, 57, 58, 59, 60, 61, 62, 63, 64,
+    65, 66, 67, 68, 69, 70, 71, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 91, 92, 93, 94, 95, 97,
+    98, 99, 100, 102, 103, 104, 105, 107, 108, 109, 111, 112, 113, 115, 116, 117, 119, 120, 121, 123, 124, 126, 127,
+    128, 130, 131, 133, 134, 136, 137, 139, 140, 142, 143, 145, 146, 148, 149, 151, 152, 154, 155, 157, 158, 160, 162,
+    163, 165, 166, 168, 170, 171, 173, 175, 176, 178, 180, 181, 183, 185, 186, 188, 190, 192, 193, 195, 197, 199, 200,
+    202, 204, 206, 207, 209, 211, 213, 215, 217, 218, 220, 222, 224, 226, 228, 230, 232, 233, 235, 237, 239, 241, 243,
+    245, 247, 249, 251, 253, 255
+]
 _GAMMA_TABLE = np.array(_GAMMA_TABLE)
 
 
@@ -45,17 +38,16 @@ class LEDController:
 
     def __init__(self, brightness=1.0):
         self.brightness = brightness
-    
+
     def setBrightness(self, value):
         self.brightness = value
-    
+
     def getBrightness(self):
         try:
             return min(1.0, self.brightness)
         except AttributeError:
             self.brightness = 1.0
             return min(1.0, self.brightness)
-
 
     def show(self, pixels):
         """Set LED pixels to the values given in the array
@@ -102,7 +94,6 @@ class LEDController:
 
 
 class ESP8266(LEDController):
-
     def __init__(self, ip='192.168.0.150', port=7777):
         """Initialize object for communicating with as ESP8266
 
@@ -135,12 +126,11 @@ class ESP8266(LEDController):
             g (0 to 255): Green value of LED
             b (0 to 255): Blue value of LED
         """
-        message = (pixels*self.getBrightness()).T.clip(0, 255).astype(np.uint8).ravel().tostring()
+        message = (pixels * self.getBrightness()).T.clip(0, 255).astype(np.uint8).ravel().tostring()
         self._sock.sendto(message, (self._ip, self._port))
 
 
 class FadeCandy(LEDController):
-
     def __init__(self, server='localhost:7890'):
         """Initializes object for communicating with a FadeCandy device
 
@@ -158,11 +148,10 @@ class FadeCandy(LEDController):
             print('Ensure that fcserver is running and try again.')
 
     def show(self, pixels):
-        self.client.put_pixels((pixels*self.getBrightness()).T.clip(0, 255).astype(int).tolist())
+        self.client.put_pixels((pixels * self.getBrightness()).T.clip(0, 255).astype(int).tolist())
 
 
 class BlinkStick(LEDController):
-
     def __init__(self):
         """Initializes a BlinkStick controller"""
         try:
@@ -180,7 +169,7 @@ class BlinkStick(LEDController):
         """
         # Truncate values and cast to integer
         n_pixels = pixels.shape[1]
-        pixels = (pixels*self.getBrightness()).clip(0, 255).astype(int)
+        pixels = (pixels * self.getBrightness()).clip(0, 255).astype(int)
         pixels = _GAMMA_TABLE[pixels]
         # Read the rgb values
         r = pixels[0][:].astype(int)
@@ -200,9 +189,7 @@ class BlinkStick(LEDController):
 
 
 class RaspberryPi(LEDController):
-
-    def __init__(self, pixels, pin=18, invert_logic=False,
-                 freq=800000, dma=5):
+    def __init__(self, pixels, pin=18, invert_logic=False, freq=800000, dma=5):
         """Creates a Raspberry Pi output device
 
         Parameters
@@ -228,17 +215,22 @@ class RaspberryPi(LEDController):
         self.freq_hz = freq
         self.dma = dma
         self.invert = invert_logic
-        self.brightness=255
+        self.brightness = 255
         self.__initstate__()
-    
+
     def __initstate__(self):
         try:
             import rpi_ws281x
             print('init')
-            self._strip = rpi_ws281x.PixelStrip(num=self.num_pixels, pin=self.pin, freq_hz=self.freq_hz, dma=self.dma,
-                                                    invert=self.invert, brightness=self.brightness)
+            self._strip = rpi_ws281x.PixelStrip(
+                num=self.num_pixels,
+                pin=self.pin,
+                freq_hz=self.freq_hz,
+                dma=self.dma,
+                invert=self.invert,
+                brightness=self.brightness)
             self._strip.begin()
-        except ImportError as e:
+        except ImportError:
             url = 'learn.adafruit.com/neopixels-on-raspberry-pi/software'
             print('Could not import the neopixel library')
             print('For installation instructions, see {}'.format(url))
@@ -246,9 +238,7 @@ class RaspberryPi(LEDController):
             print('------------------------------------------')
             print('Otherwise rely on dependency injection')
             print('Disconnecting Device.')
-            
-        
-    
+
     def __cleanState__(self, stateDict):
         """
         Cleans given state dictionary from state objects beginning with __
@@ -257,7 +247,7 @@ class RaspberryPi(LEDController):
             if k.startswith('_'):
                 stateDict.pop(k)
         return stateDict
-        
+
     def __getstate__(self):
         """
         Default implementation of __getstate__ that deletes buffer, call __cleanState__ when overloading
@@ -276,10 +266,10 @@ class RaspberryPi(LEDController):
         Raspberry Pi uses the rpi_ws281x to control the LED strip directly.
         This function updates the LED strip with new values.
         """
-            
+
         # Truncate values and cast to integer
         n_pixels = pixels.shape[1]
-        pixels = (pixels*self.getBrightness()).clip(0, 255).astype(int)
+        pixels = (pixels * self.getBrightness()).clip(0, 255).astype(int)
         # Optional gamma correction
         pixels = _GAMMA_TABLE[pixels]
         # Encode 24-bit LED values in 32 bit integers
@@ -288,14 +278,13 @@ class RaspberryPi(LEDController):
         b = pixels[2][:].astype(int)
         rgb = np.bitwise_or(np.bitwise_or(g, r), b)
         # Update the pixels
-        
+
         for i in range(n_pixels):
-            self._strip.setPixelColor(i,int(rgb[i]))
+            self._strip.setPixelColor(i, int(rgb[i]))
         self._strip.show()
 
 
 class DotStar(LEDController):
-
     def __init__(self, pixels, brightness=31):
         """Creates an APA102-based output device
 
@@ -313,17 +302,18 @@ class DotStar(LEDController):
             print('Could not import the apa102 library')
             print('For installation instructions, see {}'.format(url))
             raise e
-        self._strip = apa102.APA102(numLEDs=pixels, globalBrightness=brightness) # Initialize the strip
+        self._strip = apa102.APA102(numLEDs=pixels, globalBrightness=brightness)  # Initialize the strip
         led_data = np.array(self._strip.leds, dtype=np.uint8)
         # memoryview preserving the first 8 bits of LED frames (w/ global brightness)
         self._strip.leds = led_data.data
         # 2D view of led_data
-        self.led_data = led_data.reshape((pixels, 4)) # or (-1, 4)
+        self.led_data = led_data.reshape((pixels, 4))  # or (-1, 4)
 
     def show(self, pixels):
-        bgr = [2,1,0]
-        self.led_data[0:,1:4] = (pixels*self.getBrightness())[bgr].T.clip(0,255)
+        bgr = [2, 1, 0]
+        self.led_data[0:, 1:4] = (pixels * self.getBrightness())[bgr].T.clip(0, 255)
         self._strip.show()
+
 
 class LEDOutput(Effect):
     overrideDevice = None
@@ -331,6 +321,10 @@ class LEDOutput(Effect):
     def __init__(self, controller):
         self.controller = controller
         self.__initstate__()
+
+    def __initstate__(self):
+        super().__initstate__()
+        self._num_pixels = None
 
     def __setstate__(self, state):
         # override __setstate__ from Effect:
@@ -341,15 +335,15 @@ class LEDOutput(Effect):
         if 'brightness' in state:
             floatVal = float(state['brightness'])
             self.controller.setBrightness(floatVal)
-        super().__setstate__(state)    
+        super().__setstate__(state)
 
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
-                "brightness": [1.0, 0.0, 1.0, 0.01],
-            }
+                ("brightness", [1.0, 0.0, 1.0, 0.01]),
+            ])
         }
         return definition
 
@@ -357,16 +351,23 @@ class LEDOutput(Effect):
         definition = self.getParameterDefinition()
         definition['parameters']['brightness'][0] = self.controller.getBrightness()
         return definition
-    
+
     def numInputChannels(self):
         return 1
+
     def numOutputChannels(self):
         return 0
-        
+
     def process(self):
-        if self._inputBuffer != None:
+        if self._inputBuffer is not None:
             if self._inputBuffer[0] is not None:
+                self._num_pixels = np.size(self._inputBuffer[0], axis=1)
                 self.controller.show(self._inputBuffer[0])
+            else:
+                # show black
+                if self._num_pixels is not None:
+                    self.controller.show(np.zeros(self._num_pixels) * np.array([[0], [0], [0]]))
+
 
 # # Execute this file to run a LED strand test
 # # If everything is working, you should see a red, green, and blue pixel scroll

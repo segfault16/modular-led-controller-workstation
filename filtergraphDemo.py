@@ -1,23 +1,17 @@
-from audioled import opc
-from audioled import devices
-from audioled import audio
-from audioled import effects
-from audioled import colors
-from audioled import filtergraph
-from audioled import configs
-from timeit import default_timer as timer
-import numpy as np
-import time
-import math 
-import jsonpickle
-import os
-import errno
 import argparse
+import errno
 import json
+import os
+import time
+from timeit import default_timer as timer
+
+import jsonpickle
+
+from audioled import configs, devices, filtergraph
 
 num_pixels = 300
 device = None
-switch_time = 10 #seconds
+switch_time = 10  # seconds
 
 # define configs (add other configs here)
 movingLightConf = 'movingLight'
@@ -26,24 +20,43 @@ spectrumConf = 'spectrum'
 vu_peakConf = 'vu_peak'
 swimmingConf = 'swimming'
 defenceConf = 'defence'
+keyboardConf = 'keyboard'
+keyboardSpringConf = 'keyboardSpring'
 proxyConf = 'proxy'
 fallingConf = 'falling'
 breathingConf = 'breathing'
 heartbeatConf = 'heartbeat'
 pendulumConf = 'pendulum'
 rpendulumConf = 'rpendulum'
-configChoices = [movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf, breathingConf, heartbeatConf, pendulumConf, rpendulumConf]
+configChoices = [
+    movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf,
+    fallingConf, breathingConf, heartbeatConf, pendulumConf, rpendulumConf, keyboardConf, keyboardSpringConf
+    ]
 
 deviceRasp = 'RaspberryPi'
 deviceCandy = 'FadeCandy'
 
 parser = argparse.ArgumentParser(description='Audio Reactive LED Strip')
 
-parser.add_argument('-N', '--num_pixels',  dest='num_pixels', type=int, default=300, help = 'number of pixels (default: 300)')
-parser.add_argument('-D', '--device', dest='device', default=deviceCandy, choices=[deviceRasp,deviceCandy], help = 'device to send RGB to')
-parser.add_argument('--device_candy_server', dest='device_candy_server', default='127.0.0.1:7890', help = 'Server for device FadeCandy')
-parser.add_argument('-C', '--config', dest='config', default='', choices=configChoices, help = 'config to use, default is rolling through all configs')
-parser.add_argument('-s', '--save_config', dest='save_config', type=bool, default=False, help = 'Save config to config/')
+parser.add_argument(
+    '-N', '--num_pixels', dest='num_pixels', type=int, default=300, help='number of pixels (default: 300)')
+parser.add_argument(
+    '-D',
+    '--device',
+    dest='device',
+    default=deviceCandy,
+    choices=[deviceRasp, deviceCandy],
+    help='device to send RGB to')
+parser.add_argument(
+    '--device_candy_server', dest='device_candy_server', default='127.0.0.1:7890', help='Server for device FadeCandy')
+parser.add_argument(
+    '-C',
+    '--config',
+    dest='config',
+    default='',
+    choices=configChoices,
+    help='config to use, default is rolling through all configs')
+parser.add_argument('-s', '--save_config', dest='save_config', type=bool, default=False, help='Save config to config/')
 args = parser.parse_args()
 
 num_pixels = args.num_pixels
@@ -54,13 +67,8 @@ if args.device == deviceRasp:
 elif args.device == deviceCandy:
     device = devices.FadeCandy(args.device_candy_server)
 
-
-
-
-
 # select config to show
 config = args.config
-
 
 
 def createFilterGraph(config, num_pixels, device):
@@ -73,9 +81,13 @@ def createFilterGraph(config, num_pixels, device):
     elif config == vu_peakConf:
         return configs.createVUPeakGraph(num_pixels, device)
     elif config == swimmingConf:
-        return configs.createSwimmingPoolGraph(num_pixels,device)
+        return configs.createSwimmingPoolGraph(num_pixels, device)
     elif config == defenceConf:
         return configs.createDefenceGraph(num_pixels, device)
+    elif config == keyboardConf:
+        return configs.createKeyboardGraph(num_pixels, device)
+    elif config == keyboardSpringConf:
+        return configs.createKeyboardSpringGraph(num_pixels, device)
     elif config == proxyConf:
         return configs.createProxyServerGraph(num_pixels, device)
     elif config == fallingConf:
@@ -91,14 +103,15 @@ def createFilterGraph(config, num_pixels, device):
     else:
         raise NotImplementedError("Config not implemented")
 
+
 def saveAndLoad(config, fg):
-    if(args.save_config):
+    if (args.save_config):
         # save filtergraph to json
         filename = "configs/{}.json".format(config)
         if not os.path.exists(os.path.dirname(filename)):
             try:
                 os.makedirs(os.path.dirname(filename))
-            except OSError as exc: # Guard against race condition
+            except OSError as exc:  # Guard against race condition
                 if exc.errno != errno.EEXIST:
                     raise
 
@@ -106,13 +119,12 @@ def saveAndLoad(config, fg):
         temp = json.loads(saveJson)
         saveJson = json.dumps(temp, sort_keys=True)
 
-        with open(filename,"w") as f:
+        with open(filename, "w") as f:
             f.write(saveJson)
 
         # load filtergraph from json in case there are any issues with saving/loading
         fg = jsonpickle.decode(saveJson)
     return fg
-
 
 
 current_time = timer()
@@ -149,6 +161,5 @@ while True:
         count = 0
     count = count + 1
     if dt < 0.015:
-        sleeptime = 0.015-dt
+        sleeptime = 0.015 - dt
         time.sleep(sleeptime)
-    

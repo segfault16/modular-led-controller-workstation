@@ -1,7 +1,10 @@
-from audioled import effect
-from audioled import opc_server
+from collections import OrderedDict
+
+from audioled import effect, opc_server
+
+
 class CandyServer(effect.Effect):
-    def __init__(self, num_pixels, host = '', port = 7891):
+    def __init__(self, num_pixels, host='', port=7891):
         self.num_pixels = num_pixels
         self.host = host
         self.port = port
@@ -20,11 +23,12 @@ class CandyServer(effect.Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "port": [7891, 1000, 10000, 1]
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("port", [7891, 1000, 10000, 1])
+            ])
         }
         return definition
 
@@ -33,7 +37,7 @@ class CandyServer(effect.Effect):
         definition['parameters']['num_pixels'][0] = self.num_pixels
         definition['parameters']['port'][0] = self.port
         return definition
-    
+
     def process(self):
         if self._outputBuffer is None:
             return

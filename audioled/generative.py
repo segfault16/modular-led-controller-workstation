@@ -1,25 +1,18 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import asyncio
-import colorsys
 import math
 import random
-import struct
-import time
 import threading
+from collections import OrderedDict
 
+import mido
 import numpy as np
-from scipy.ndimage.filters import gaussian_filter1d
-from scipy.signal import lfilter
 
-import audioled.dsp as dsp
-import audioled.filtergraph as filtergraph
 from audioled.effect import Effect
 
 
 class SwimmingPool(Effect):
-
     def __init__(self, num_pixels, num_waves=30, scale=0.2, wavespread_low=30, wavespread_high=70, max_speed=30):
         self.num_pixels = num_pixels
         self.num_waves = num_waves
@@ -34,22 +27,23 @@ class SwimmingPool(Effect):
         self._pixel_state = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
         self._last_t = 0.0
         self._output = np.copy(self._pixel_state)
-        self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.scale, self.wavespread_low, self.wavespread_high, self.max_speed)
+        self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.scale, self.wavespread_low,
+                                                            self.wavespread_high, self.max_speed)
         super(SwimmingPool, self).__initstate__()
 
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "num_waves": [30, 1, 100, 1],
-                "scale": [0.2, 0.01, 1.0, 0.01],
-                "wavespread_low": [30, 1, 100, 1],
-                "wavespread_high": [70, 50, 150, 1],
-                "max_speed": [30, 1, 200, 1],
-
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("num_waves", [30, 1, 100, 1]),
+                ("scale", [0.2, 0.01, 1.0, 0.01]),
+                ("wavespread_low", [30, 1, 100, 1]),
+                ("wavespread_high", [70, 50, 150, 1]),
+                ("max_speed", [30, 1, 200, 1]),
+            ])
         }
         return definition
 
@@ -65,24 +59,22 @@ class SwimmingPool(Effect):
 
     def _SinArray(self, _spread, _scale, _wavehight):
         _CArray = []
-        _offset = random.randint(0,300)
-        for i in range(-_spread, _spread+1):
-            _CArray.append(math.sin((math.pi/_spread) * i) * _scale * _wavehight)
+        for i in range(-_spread, _spread + 1):
+            _CArray.append(math.sin((math.pi / _spread) * i) * _scale * _wavehight)
             _output = np.copy(self._pixel_state)
             _output[0][:len(_CArray)] += _CArray
             _output[1][:len(_CArray)] += _CArray
             _output[2][:len(_CArray)] += _CArray
-        return _output.clip(0.0,255.0)
+        return _output.clip(0.0, 255.0)
 
     def _CreateWaves(self, num_waves, scale, wavespread_low=10, wavespread_high=50, max_speed=30):
         _WaveArray = []
-        _WaveArraySpec = []
-        _wavespread = np.random.randint(wavespread_low,wavespread_high,num_waves)
-        _WaveArraySpecSpeed = np.random.randint(-max_speed,max_speed,num_waves)
+        _wavespread = np.random.randint(wavespread_low, wavespread_high, num_waves)
+        _WaveArraySpecSpeed = np.random.randint(-max_speed, max_speed, num_waves)
         _WaveArraySpecHeight = np.random.rand(num_waves)
         for i in range(0, num_waves):
             _WaveArray.append(self._SinArray(_wavespread[i], scale, _WaveArraySpecHeight[i]))
-        return _WaveArray, _WaveArraySpecSpeed;
+        return _WaveArray, _WaveArraySpecSpeed
 
     def numInputChannels(self):
         return 2
@@ -93,18 +85,16 @@ class SwimmingPool(Effect):
     def process(self):
         if self._outputBuffer is not None:
             color = self._inputBuffer[0]
-            self._output =  np.multiply(color, 0.5 * np.zeros(self.num_pixels))
+            self._output = np.multiply(color, 0.5 * np.zeros(self.num_pixels))
 
-            for i in range(0,self.num_waves):
+            for i in range(0, self.num_waves):
                 step = np.multiply(color, np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1))
                 self._output += step
 
-            self._outputBuffer[0] = self._output.clip(0.0,255.0)
-
+            self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class DefenceMode(Effect):
-
     def __init__(self, num_pixels, scale=0.2):
         self.num_pixels = num_pixels
         self.scale = scale
@@ -124,19 +114,137 @@ class DefenceMode(Effect):
 
     def process(self):
         if self._outputBuffer is not None:
-            #color = self._inputBuffer[0]
-            A = random.choice([True,False,False])
-            if A == True:
-                self._output = np.ones(self.num_pixels) * np.array([[random.randint(0.0,255.0)], [random.randint(0.0,255.0)], [random.randint(0.0,255.0)]])
+            # color = self._inputBuffer[0]
+            A = random.choice([True, False, False])
+            if A is True:
+                self._output = np.ones(self.num_pixels) * np.array([[random.randint(
+                    0.0, 255.0)], [random.randint(0.0, 255.0)], [random.randint(0.0, 255.0)]])
             else:
                 self._output = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
 
-            self._outputBuffer[0] = self._output.clip(0.0,255.0)
+            self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
+
+class MidiKeyboard(Effect):
+    class Note(object):
+        def __init__(self, note, velocity, spawn_time):
+            self.note = note
+            self.velocity = velocity
+            self.spawn_time = spawn_time
+            self.active = True
+            self.value = 0.0
+            self.release_time = 0.0
+
+    def __init__(self, num_pixels, midiPort='', attack=0.0, decay=0.0, sustain=1.0, release=0.0):
+        self.num_pixels = num_pixels
+        self.midiPort = midiPort
+        self.attack = attack
+        self.decay = decay
+        self.sustain = sustain
+        self.release = release
+        self.__initstate__()
+
+    def __initstate__(self):
+        super(MidiKeyboard, self).__initstate__()
+        print(mido.get_input_names())
+        try:
+            self._midi.close()
+        except Exception:
+            pass
+        try:
+            self._midi = mido.open_input(self.midiPort)
+        except OSError:
+            self._midi = mido.open_input()
+            self.midiPort = self._midi.name
+            print(self.midiPort)
+        self._on_notes = []
+
+    def numInputChannels(self):
+        return 1  # color
+
+    def numOutputChannels(self):
+        return 1
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": {
+                # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
+                "midiPort": mido.get_input_names(),
+                "attack": [0.0, 0.0, 5.0, 0.01],
+                "decay": [0.0, 0.0, 5.0, 0.01],
+                "sustain": [1.0, 0.0, 1.0, 0.01],
+                "release": [0.0, 0.0, 5.0, 0.01],
+            }
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['midiPort'] = [self.midiPort
+                                                ] + [x for x in mido.get_input_names() if x != self.midiPort]
+        definition['parameters']['attack'][0] = self.attack
+        definition['parameters']['decay'][0] = self.decay
+        definition['parameters']['sustain'][0] = self.sustain
+        definition['parameters']['release'][0] = self.release
+        return definition
+
+    async def update(self, dt):
+        await super().update(dt)
+        # Process midi notes
+        for msg in self._midi.iter_pending():
+            if msg.type == 'note_on':
+                self._on_notes.append(MidiKeyboard.Note(msg.note, msg.velocity, self._t))
+            if msg.type == 'note_off':
+                toRemove = [note for note in self._on_notes if note.note == msg.note]
+                for note in toRemove:
+                    note.active = False
+                    note.release_time = self._t
+
+        # Process note states
+        for note in self._on_notes:
+            if note.active:
+
+                if self._t - note.spawn_time < self.attack:
+                    # attack phase
+                    note.value = note.velocity * (self._t - note.spawn_time) / self.attack
+                elif self._t - note.spawn_time < self.attack + self.decay:
+                    # decay phase
+                    # time since attack phase ended: self._t - note.spawn_time - self.attack
+                    decay_fact = 1.0 - (self._t - note.spawn_time - self.attack) / self.decay
+                    # linear interpolation
+                    # decay_fact = 0.0: decay beginning -> 1.0
+                    # decay_fact = 1.0: decay ending -> sustain
+                    note.value = note.velocity * (self.sustain + (1.0 - self.sustain) * decay_fact)
+                else:
+                    # sustain phase
+                    note.value = note.velocity * self.sustain
+            else:
+                # release phase
+                if self._t - note.release_time < self.release:
+                    note.value = note.velocity * (1.0 - (self._t - note.release_time) / self.release) * self.sustain
+                else:
+                    self._on_notes.remove(note)
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            col = np.ones(self.num_pixels) * np.array([[255], [255], [255]])
+        else:
+            col = self._inputBuffer[0]
+
+        # Draw
+        pos = np.zeros(self.num_pixels)
+        for note in self._on_notes:
+            index = int(max(0, min(self.num_pixels - 1, float(note.note) / 127.0 * self.num_pixels)))
+            pos[index] = 1 * note.value / 127.0
+        self._outputBuffer[0] = np.multiply(pos, col)
 
 
 class Breathing(Effect):
-
     def __init__(self, num_pixels, cycle=5):
         self.num_pixels = num_pixels
         self.cycle = cycle
@@ -159,11 +267,12 @@ class Breathing(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "cycle": [5, 0.1, 10, 0.1],
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("cycle", [5, 0.1, 10, 0.1]),
+            ])
         }
         return definition
 
@@ -176,16 +285,15 @@ class Breathing(Effect):
     def process(self):
         color = self._inputBuffer[0]
         if color is None:
-            color = np.ones(self.num_pixels) * np.array([[255.0],[255.0],[255.0]])
+            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self._outputBuffer is not None:
             brightness = self.oneStar(self._t, self.cycle)
-            self._output = np.multiply(color, np.ones(self.num_pixels) * np.array([[brightness],[brightness],[brightness]]))
-        self._outputBuffer[0] = self._output.clip(0.0,255.0)
-
+            self._output = np.multiply(color,
+                                       np.ones(self.num_pixels) * np.array([[brightness], [brightness], [brightness]]))
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class Heartbeat(Effect):
-
     def __init__(self, num_pixels, speed=1):
         self.num_pixels = num_pixels
         self.speed = speed
@@ -202,17 +310,18 @@ class Heartbeat(Effect):
         return 1
 
     def oneStar(self, t, speed):
-        brightness = abs(math.sin(speed * t)**63 * math.sin(speed * t + 1.5)*8)
+        brightness = abs(math.sin(speed * t)**63 * math.sin(speed * t + 1.5) * 8)
         return brightness
 
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "speed": [1, 0.1, 100, 0.1],
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("speed", [1, 0.1, 100, 0.1]),
+            ])
         }
         return definition
 
@@ -225,12 +334,12 @@ class Heartbeat(Effect):
     def process(self):
         color = self._inputBuffer[0]
         if color is None:
-            color = np.ones(self.num_pixels) * np.array([[255.0],[0.0],[0.0]])
+            color = np.ones(self.num_pixels) * np.array([[255.0], [0.0], [0.0]])
         if self._outputBuffer is not None:
             brightness = self.oneStar(self._t, self.speed)
-            self._output = np.multiply(color, np.ones(self.num_pixels) * np.array([[brightness],[brightness],[brightness]]))
-        self._outputBuffer[0] = self._output.clip(0.0,255.0)
-
+            self._output = np.multiply(color,
+                                       np.ones(self.num_pixels) * np.array([[brightness], [brightness], [brightness]]))
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class FallingStars(Effect):
@@ -238,7 +347,7 @@ class FallingStars(Effect):
     def __init__(self, num_pixels, dim_speed=100, thickness=1, spawnTime=0.1, max_brightness=1):
         self.num_pixels = num_pixels
         self.dim_speed = dim_speed
-        self.thickness = thickness #getting down with it
+        self.thickness = thickness  # getting down with it
         self.spawnTime = spawnTime
         self.max_brightness = max_brightness
         self.__initstate__()
@@ -254,14 +363,15 @@ class FallingStars(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": {
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
-                "dim_speed": [100, 1, 1000, 1],
-                "thickness": [1, 1, 300, 1],
-                "spawntime": [1, 0.01, 10, 0.01],
-                "max_brightness": [1, 0, 1, 0.01],
-            }
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("dim_speed", [100, 1, 1000, 1]),
+                ("thickness", [1, 1, 300, 1]),
+                ("spawntime", [1, 0.01, 10, 0.01]),
+                ("maxBrightness", [1, 0, 1, 0.01]),
+            ])
         }
         return definition
 
@@ -283,36 +393,33 @@ class FallingStars(Effect):
     def spawnStar(self):
         self._starCounter += 1
         self._t0Array.append(self._t)
-        self._spawnArray.append(random.randint(0,self.num_pixels-self.thickness))
+        self._spawnArray.append(random.randint(0, self.num_pixels - self.thickness))
         if self._starCounter > 100:
             self._starCounter -= 1
             self._t0Array.pop(0)
             self._spawnArray.pop(0)
-        threading.Timer(self.spawnTime, self.spawnStar).start()     #executes itself every *spawnTime* seconds
-
+        threading.Timer(self.spawnTime, self.spawnStar).start()  # executes itself every *spawnTime* seconds
 
     def allStars(self, t, dim_speed, thickness, t0, spawnSpot):
         controlArray = []
-        for i in range(0,self._starCounter):
+        for i in range(0, self._starCounter):
             oneStarArray = np.zeros(self.num_pixels)
-            for j in range(0,thickness):
-                oneStarArray[spawnSpot[i]+j] = math.exp(- (100/dim_speed) * (self._t - t0[i]))
+            for j in range(0, thickness):
+                oneStarArray[spawnSpot[i] + j] = math.exp(-(100 / dim_speed) * (self._t - t0[i]))
             controlArray.append(oneStarArray)
         return controlArray
 
-
     def starControl(self, spawnTime):
-        if self._spawnflag == True:
+        if self._spawnflag is True:
             self.spawnStar()
             self._spawnflag = False
         outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray)
         return np.sum(outputArray, axis=0)
 
-
     def process(self):
         color = self._inputBuffer[0]
         if color is None:
-            color = np.ones(self.num_pixels) * np.array([[255.0],[255.0],[255.0]])
+            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self._outputBuffer is not None:
             self._output = np.multiply(color, self.starControl(self.spawnTime) * np.array([[self.maxBrightness*1.0],[self.maxBrightness*1.0],[self.maxBrightness*1.0]]))
         self._outputBuffer[0] = self._output.clip(0.0,255.0)
@@ -361,11 +468,11 @@ class Pendulum(Effect):
         return definition
 
     def createBlob(self, spread, location):
-        blobArray = np.zeros(self.num_pixels) 
+        blobArray = np.zeros(self.num_pixels)
         for i in range(-spread, spread+1):
             blobArray[location + i] = math.sin((math.pi/spread) * i)
         return blobArray.clip(0.0,255.0)
-    
+
     def moveBlob(self, blobArray, displacement, swingspeed):
         outputArray = np.roll(blobArray, int(displacement * math.sin(self._t * swingspeed)))
         return outputArray.clip(0.0,255.0)
@@ -441,11 +548,11 @@ class RPendulum(Effect):
         return definition
 
     def createBlob(self, spread, location):
-        blobArray = np.zeros(self.num_pixels) 
+        blobArray = np.zeros(self.num_pixels)
         for i in range(-spread, spread+1):
             blobArray[location + i] = math.sin((math.pi/spread) * i)
         return blobArray.clip(0.0,255.0)
-    
+
     def moveBlob(self, blobArray, displacement, offset, swingspeed):
         outputArray = np.roll(blobArray, int(displacement * math.sin((self._t * swingspeed) + offset)))
         return outputArray.clip(0.0,255.0)
