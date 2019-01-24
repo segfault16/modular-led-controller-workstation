@@ -341,3 +341,25 @@ def createTestBlobGraph(N_pixels, device):
 
     fg.addConnection(TestBlob, 0, led_out, 0)
     return fg
+
+def createBonfireGraph(N_pixels, device):
+
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    audio_in = audio.AudioInput(num_channels=2)
+    fg.addEffectNode(audio_in)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    bonfire = audioreactive.Bonfire(N_pixels, fs=audio_in.getSampleRate())
+    fg.addEffectNode(bonfire)
+
+    testblob = generative.TestBlob(N_pixels)
+    fg.addEffectNode(testblob)
+
+    fg.addConnection(testblob, 0, bonfire, 1)
+    fg.addConnection(audio_in, 0, bonfire, 0)
+ 
+    fg.addConnection(bonfire, 0, led_out, 0)
+    return fg
