@@ -503,7 +503,6 @@ class Swing(Effect):
     """PendulumEffect with pixel input.
     Inputs:
     - 0: Pixels
-    - 1: Color
     """
     def __init__(self,
                  num_pixels,
@@ -539,7 +538,7 @@ class Swing(Effect):
         return definition
 
     def numInputChannels(self):
-        return 2
+        return 1
 
     def numOutputChannels(self):
         return 1
@@ -547,12 +546,8 @@ class Swing(Effect):
     def process(self):
         if self._outputBuffer is not None:
             pixels = self._inputBuffer[0]
-            color = self._inputBuffer[1]
-            if color is None:
-                color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
-
-            configArray = np.array([[1.0], [1.0], [1.0]])
+            
             outputArray = np.roll(pixels, int(self.displacement * math.sin(self._t * self.swingspeed)))
-            self._output = np.multiply(color, outputArray * configArray)
+            self._output =  outputArray * np.array([[255.0], [255.0], [255.0]])
 
             self._outputBuffer[0] = self._output.clip(0.0, 255.0)
