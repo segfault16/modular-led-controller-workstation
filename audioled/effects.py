@@ -360,7 +360,7 @@ class Mirror(Effect):
 
 class SpringCombine(Effect):
     """Spring simulation effect that interpolates between three inputs based on displacement of the springs.
-    
+
     The trigger input actuates on the springs (if value exceeds trigger_threshold).
     Depending on the displacement of each spring, the output value is a linear interpolation between:
     - Input 1 and Input 2 if displacement < 0
@@ -371,7 +371,7 @@ class SpringCombine(Effect):
         1 -- Pixel input for displacement in negative direction
         2 -- Pixel input for no displacement
         3 -- Pixel input for displacement in positive direction
-    
+
     Parameters:
         dampening           -- Dampening factory of the springs
         tension             -- Tension of the springs
@@ -546,8 +546,8 @@ class Swing(Effect):
     def process(self):
         if self._outputBuffer is not None:
             pixels = self._inputBuffer[0]
-            
+
             outputArray = np.roll(pixels, int(self.displacement * math.sin(self._t * self.swingspeed)))
-            self._output =  outputArray * np.array([[255.0], [255.0], [255.0]])
+            self._output = outputArray * np.array([[255.0], [255.0], [255.0]])
 
             self._outputBuffer[0] = self._output.clip(0.0, 255.0)

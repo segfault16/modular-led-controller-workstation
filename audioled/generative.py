@@ -662,7 +662,7 @@ class TestBlob(Effect):
 
 class GenerateWaves(Effect):
     """Effect for displaying different wave forms."""
-    
+
     def __init__(self, num_pixels, wavemode=wave_mode_default, period=20, scale=1, ):
         self.num_pixels = num_pixels
         self.period = period
@@ -711,22 +711,22 @@ class GenerateWaves(Effect):
         for i in range(0, self.num_pixels):
             outputarray[i] = 0.5 * scale - math.sin(math.pi / self.period * i) * 0.5 * scale
         return outputarray
-    
+
     def createSawtooth(self, period, scale):
-        outputarray = np.linspace(0,300,300)
+        outputarray = np.linspace(0, 300, 300)
         outputarray = 0.5 * scale - signal.sawtooth(outputarray * math.pi / self.period, width=1) * 0.5 * scale
         return outputarray
 
     def createSawtoothReversed(self, period, scale):
-        outputarray = np.linspace(0,300,300)
+        outputarray = np.linspace(0, 300, 300)
         outputarray = 0.5 * scale - signal.sawtooth(outputarray * math.pi / self.period, width=0) * 0.5 * scale
         return outputarray
-    
+
     def createSquare(self, period, scale):
-        outputarray = np.linspace(0,300,300)
+        outputarray = np.linspace(0, 300, 300)
         outputarray = 0.5 * scale - signal.square(outputarray * math.pi / self.period) * 0.5 * scale
         return outputarray
-    
+
     def numInputChannels(self):
         return 1
 
