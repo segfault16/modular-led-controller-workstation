@@ -329,3 +329,15 @@ def createRPendulumGraph(N_pixels, device):
 
     fg.addConnection(RPendulum, 0, led_out, 0)
     return fg
+
+def createTestBlobGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    TestBlob = generative.TestBlob(N_pixels)
+    fg.addEffectNode(TestBlob)
+
+    fg.addConnection(TestBlob, 0, led_out, 0)
+    return fg

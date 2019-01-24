@@ -581,3 +581,63 @@ class RPendulum(Effect):
                     configArray = np.array([[1.0*self.dim],[1.0*self.dim],[1.0*self.dim]])
                 self._output += np.multiply(color, self.controlBlobs(self._spread[i], self._location[i], self._displacement[i], self._offset[i], self._swingspeed[i]) * configArray)
             self._outputBuffer[0] = self._output.clip(0.0,255.0)
+
+
+
+class TestBlob(Effect):
+
+    def __init__(self, num_pixels, spread=50, location=150):
+        self.num_pixels = num_pixels
+        self.spread = spread
+        self.location = location
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(TestBlob, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": {
+                # default, min, max, stepsize
+                "num_pixels": [300, 1, 1000, 1],
+                "location": [150, 0, 300, 1],
+                "displacement": [50, 1, 1000, 1],
+                "heightactivator": False,
+                "lightflip": [1, -1, 1, 2],
+                "swingspeed":[1, 0, 5, 0.01],
+            }
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['location'][0] = self.location
+        definition['parameters']['displacement'][0] = self.displacement
+        definition['parameters']['lightflip'][0] = self.lightflip
+        definition['parameters']['swingspeed'][0] = self.swingspeed
+        return definition
+
+    def createBlob(self, spread, location):
+        blobArray = np.zeros(self.num_pixels)
+        for i in range(-spread, spread+1):
+            blobArray[location + i] = math.sin((math.pi/spread) * i)
+        return blobArray.clip(0.0,255.0)
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._outputBuffer is not None:
+            color = self._inputBuffer[0]
+            if color == None:
+                color = np.ones(self.num_pixels) * np.array([[255.0],[255.0],[255.0]])
+
+            self._output = np.multiply(color, self.createBlob(self.spread, self.location) * np.array([[1.0],[1.0],[1.0]]))
+
+            self._outputBuffer[0] = self._output.clip(0.0,255.0)
