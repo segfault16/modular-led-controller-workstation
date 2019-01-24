@@ -547,7 +547,6 @@ class Swing(Effect):
         if self._outputBuffer is not None:
             pixels = self._inputBuffer[0]
 
-            outputArray = np.roll(pixels, int(self.displacement * math.sin(self._t * self.swingspeed)))
-            self._output = outputArray * np.array([[255.0], [255.0], [255.0]])
+            pixels = np.roll(pixels, int(self.displacement * math.sin(self._t * self.swingspeed)))
 
-            self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+            self._outputBuffer[0] = pixels.clip(0.0, 255.0)
