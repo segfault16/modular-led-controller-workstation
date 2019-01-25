@@ -190,31 +190,31 @@ class App extends React.Component {
             callback(data);
             
           },
-          addEdge: function (data, callback) {
+          addEdge: (data, callback) => {
             if (data.from == data.to) {
               callback(null);
               return;
             }
-            var fromNode = nodes.get(data.from);
-            var toNode = nodes.get(data.to);
+            var fromNode = this.state.graph.nodes.find(item => item.id === data.from);
+            var toNode = this.state.graph.nodes.find(item => item.id === data.to);
             if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in' ) {
               console.log("could add edge")
-              postEdgeData(fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback )
+              this.postEdgeData(fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback )
             } else {
               console.log("could not add edge")
             }
             return;
             document.getElementById('edge-operation').innerHTML = "Add Edge";
-            editEdgeWithoutDrag(data, callback);
+            this.editEdgeWithoutDrag(data, callback);
           },
-          deleteEdge: function(data, callback) {
+          deleteEdge: (data, callback) => {
             data.edges.forEach(edgeUid => {
-              var edge = edges.get(edgeUid);
-              var fromNode = nodes.get(edge.from);
-              var toNode = nodes.get(edge.to);
+              var edge = this.state.graph.edges.find(item => item.id === edgeUid);
+              var fromNode = this.state.graph.nodes.find(item => item.id === edge.from);
+              var toNode = this.state.graph.nodes.find(item => item.id === edge.to);
               if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in' ) {
               
-                deleteEdgeData(edgeUid);
+                this.deleteEdgeData(edgeUid);
                 
                 console.debug("Deleted edge",edge);
               } else {
@@ -641,15 +641,8 @@ class App extends React.Component {
     document.getElementById('edge-popUp').style.display = 'block';
   }
   
-  clearEdgePopUp() {
-    document.getElementById('edge-saveButton').onclick = null;
-    document.getElementById('edge-cancelButton').onclick = null;
-    document.getElementById('edge-popUp').style.display = 'none';
-  }
-  cancelEdgeEdit(callback) {
-    clearEdgePopUp();
-    callback(null);
-  }
+  
+  
   async saveEdgeData(data, callback) {
     if (typeof data.to === 'object') {
       data.to = data.to.id
@@ -679,19 +672,16 @@ class App extends React.Component {
     .then(
       connection => {
         console.debug('Create connection successful:',data);
-        updateVisConnection(data, connection)
+        this.updateVisConnection(data, connection)
         callback(data);
       })
     .catch(error => {
       console.error('Error on creating connection:', error);
-    })
-    .finally(() => {
-      clearEdgePopUp();
     });
   }
   
   async deleteEdgeData(data) {
-    var edge = edges.get(data);
+    var edge = this.state.graph.edges.find(item => item.id === data);
     var id = edge.id;
     await fetch('./connection/'+id, {
       method: 'DELETE'
