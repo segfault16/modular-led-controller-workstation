@@ -45,6 +45,8 @@ var icons = {
 
 }
 
+var configurator = null
+
 class Emitter {
   constructor(emit) {
     this.emit = emit
@@ -61,7 +63,6 @@ class ConfigurationWrapper {
   constructor(nodeUid, body, parameters, state, callback) {
     this.nodeUid = nodeUid;
     this.body = new Body(this.emit);
-    this.configurator = configurator;
     this.configurator = new Configurator(this, body, parameters);
     this.configurator.setOptions(true);
     this.configurator.setModuleOptions(state);
@@ -101,6 +102,9 @@ class App extends React.Component {
       },
       events: {
         select: ({ nodes, edges }) => {
+          if(nodes.length == 1) {
+            this.editNode(nodes[0], this.clearNodePopUp, this.clearNodePopUp)
+          }
           console.log("Selected nodes:");
           console.log(nodes);
           console.log("Selected edges:");
@@ -158,23 +162,22 @@ class App extends React.Component {
         },
         manipulation: {
           enabled: true,
-          addNode: function (data, callback) {
+          addNode: (data, callback) => {
             // filling in the popup DOM elements
             document.getElementById('node-operation').innerHTML = "Add Node";
-            addNode(data, clearNodePopUp, callback);
+            this.addGraphNode(data, this.clearNodePopUp, callback);
           },
-          deleteNode: function(data, callback) {
+          deleteNode: (data, callback) => {
             data.nodes.forEach(id => {
-              var node = nodes.get(id)
+              var node = this.state.graph.nodes.find(node => node.id == id)
+              if(node == null) {
+                console.error("Cannot find node " + id)
+              }
               if(node.nodeType == 'node') {
                 // update callback data to include all input and output nodes for this node
-                var inputOutputNodes = nodes.get({
-                  filter: function (item) {
-                    return item.nodeType == 'channel' && item.nodeUid == id;
-                  }
-                });
+                var inputOutputNodes = this.state.graph.nodes.filter( item => item.nodeType == 'channel' && item.nodeUid == id );
                 data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
-                deleteNodeData(id);
+                this.deleteNodeData(id);
               } else {
                 console.log("Cannot delete node " + id)
                 // Clear callback data
@@ -410,7 +413,7 @@ class App extends React.Component {
   }
   
   
-  addNode(data, cancelAction, callback) {
+  addGraphNode(data, cancelAction, callback) {
     var effectDropdown = document.getElementById('node-effectDropdown');
     effectDropdown.style.display = 'inherit';
     var effectTable = document.getElementById('node-effectTable');
@@ -432,25 +435,28 @@ class App extends React.Component {
         });
         sortSelect(effectDropdown);
         effectDropdown.selectedIndex = 0;
-        updateNodeArgs();
+        this.updateNodeArgs();
       }).catch( err => {
-        showError("Error fetching effects. See console for details");
+        this.showError("Error fetching effects. See console for details");
         console.error("Error fetching effects:",err);
       })
     }
     fetchEffects();
   
-    document.getElementById('node-saveButton').onclick = saveNodeData.bind(this, data, callback);
+    document.getElementById('node-saveButton').onclick = this.saveNodeData.bind(this, data, callback);
     document.getElementById('node-cancelButton').onclick = cancelAction.bind(this, callback);
     document.getElementById('node-popUp').style.display = 'block';
-    document.getElementById('node-effectDropdown').onchange = updateNodeArgs.bind(this);
-    updateNodeArgs();
+    document.getElementById('node-effectDropdown').onchange = this.updateNodeArgs.bind(this);
+    this.updateNodeArgs();
   
   }
   
   editNode(uid, cancelAction, callback) {
-  
-    var node = nodes.get(uid);
+    var node = this.state.graph.nodes.find( node => node.id === uid);
+    if(node == null) {
+      console.error("Cannot find node " + node);
+      return
+    }
     if(node.nodeType != 'node') {
       return
     }
@@ -532,7 +538,7 @@ class App extends React.Component {
     .then(node => {
       console.debug('Create node successful:', JSON.stringify(node));
       //updateVisNode(data, node);
-      addVisNode(node);
+      this.addVisNode(node);
       callback(null); // can't use callback since we alter nodes in updateVisNode
     })
     .catch(error => {
@@ -540,7 +546,7 @@ class App extends React.Component {
       console.error('Error on creating node:', error);
     })
     .finally(() => {
-      clearNodePopUp();
+      this.clearNodePopUp();
     });
   }
   
@@ -575,14 +581,11 @@ class App extends React.Component {
     }).catch(error => {
       console.error('Error on deleting node:', error)
     }).finally(() => {
-      clearNodePopUp();
+      this.clearNodePopUp();
     })
   }
   
-  cancelNodeEdit(callback) {
-    clearNodePopUp();
-    callback(null);
-  }
+  
   
   clearNodePopUp() {
     if(configurator) {
@@ -795,6 +798,10 @@ class App extends React.Component {
     this.readSingleFile(event)
   }
 
+  handleNodeEditCancel = (event) => {
+    this.clearNodePopUp();
+  }
+
   render() {
     const graph = this.state.graph;
     const options = this.state.options;
@@ -805,6 +812,22 @@ class App extends React.Component {
         <input type="button" value="save" id="config-saveButton" onClick={this.handleSaveClick}/>
         load: <input type="file" id="file-input" onChange={this.handleLoadConfig} />
         <Graph graph={graph} options={options} events={events} style={{ height: "640px" }} />
+        <div id="node-popUp">
+          <h2 id="node-operation">node</h2>
+          <div id="node-effectTable">
+            <div className="vis-configuration vis-config-header">effect</div>
+            <div className="vis-configuration vis-config-item vis-config-s2"><select className="form-control" id='node-effectDropdown' name='node-effectDropdown'></select></div>
+          </div>
+          <div id="node-configuration"></div>
+          <table style={{margin: "auto"}}>
+            <tbody>
+              <tr>
+                <td><input type="button" value="save" id="node-saveButton" /></td>
+                <td><input type="button" value="cancel" id="node-cancelButton" onClick={this.handleNodeEditCancel} /></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }
