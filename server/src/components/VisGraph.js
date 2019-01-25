@@ -96,6 +96,7 @@ class VisGraph extends React.Component {
     super(props);
     this.state = {
       counter: 0,
+      network: {},
       graph: {
         nodes: [],
         edges: []
@@ -273,6 +274,11 @@ class VisGraph extends React.Component {
   async componentDidMount() {
     await this.createNodesFromBackend();
     await this.createEdgesFromBackend();
+    window.addEventListener("resize", this.updateDimensions);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("resize", this.updateDimensions);
   }
 
   addStateNode(node) {
@@ -792,6 +798,13 @@ class VisGraph extends React.Component {
     this.clearNodePopUp();
   }
 
+  updateDimensions = (event) => {
+    console.log("update dimensions")
+    console.log(window.innerHeight);
+    console.log(window.innerWidth);
+    this.state.network.redraw();
+  }
+
   render() {
     const graph = this.state.graph;
     const options = this.state.options;
@@ -801,7 +814,7 @@ class VisGraph extends React.Component {
         <h1>FilterGraph:</h1>
         <input type="button" value="save" id="config-saveButton" onClick={this.handleSaveClick}/>
         load: <input type="file" id="file-input" onChange={this.handleLoadConfig} />
-        <Graph graph={graph} options={options} events={events} style={{ height: "640px" }} />
+        <Graph graph={graph} options={options} events={events} style={{ height: "640px" }} getNetwork={network => this.setState({network })} />
         <div id="node-popUp">
           <h2 id="node-operation">node</h2>
           <div id="node-effectTable">
