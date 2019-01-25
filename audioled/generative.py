@@ -425,8 +425,8 @@ class FallingStars(Effect):
         if self._outputBuffer is not None:
             self._output = np.multiply(
                 color,
-                self.starControl(self.spawnTime) * np.array([[self.maxBrightness * 1.0], [self.maxBrightness * 1.0],
-                                                             [self.maxBrightness * 1.0]]))
+                self.starControl(self.spawnTime) * np.array([[self.max_brightness * 1.0], [self.max_brightness * 1.0],
+                                                             [self.max_brightness * 1.0]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
