@@ -459,3 +459,74 @@ class MovingLight(Effect):
             self._pixel_state[2][0] = b * peak + self.highlight * peak * 255.0
             self._pixel_state = np.nan_to_num(self._pixel_state).clip(0.0, 255.0)
             self._outputBuffer[0] = self._pixel_state
+
+
+class Bonfire(Effect):
+    """ Effect for audio-reactive color splitting of an existing pixel array.
+    Compare searchlight and bonfireSearchlight WebUIConfigs.
+    Inputs:
+    - 0: Audio
+    - 1: Pixels
+    """
+
+    def __init__(self, num_pixels, fs, spread=100, lowcut_hz=50.0, highcut_hz=200.0):
+        self.num_pixels = num_pixels
+        self.spread = spread
+        self.lowcut_hz = lowcut_hz
+        self.highcut_hz = highcut_hz
+        self.fs = fs
+        self._default_color = None
+        self.__initstate__()
+
+    def __initstate__(self):
+        self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, self.fs, 3)
+        super(Bonfire, self).__initstate__()
+
+    def numInputChannels(self):
+        return 2
+
+    def numOutputChannels(self):
+        return 1
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("spread", [100.0, 0.0, 1000.0, 1.0]),
+                ("lowcut_hz", [50.0, 0.0, 8000.0, 1.0]),
+                ("highcut_hz", [100.0, 0.0, 8000.0, 1.0]),
+            ])
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']  # disable edit
+        definition['parameters']['spread'][0] = self.spread
+        definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
+        definition['parameters']['highcut_hz'][0] = self.highcut_hz
+        return definition
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if self._inputBufferValid(1):
+            pixelbuffer = self._inputBuffer[1]
+        else:
+            # default color: all white
+            pixelbuffer = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = pixelbuffer
+            return
+
+        audiobuffer = self._inputBuffer[0]
+
+        y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audiobuffer), zi=self._filter_zi)
+        peak = np.max(y) * 1.0
+
+        pixelbuffer[0] = np.roll(pixelbuffer[0], -int(self.spread * peak))
+        pixelbuffer[2] = np.roll(pixelbuffer[2], int(self.spread * peak))
+        self._outputBuffer[0] = pixelbuffer
