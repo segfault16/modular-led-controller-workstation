@@ -1,0 +1,14 @@
+body {
+    div#root{
+      background-color: #222;
+      color: #8EE4AF;
+      display: flex;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+    div {
+      border: 1px solid red;
+      margin: 2px;
+      box-sizing: border-box
+    }
+  }
