@@ -1,0 +1,81 @@
+﻿{
+    "py/object": "audioled.filtergraph.FilterGraph",
+    "py/state": {
+        "recordTimings": true,
+        "connections": [
+            {
+                "to_node_uid": "3a2551f9637e4df993ae77bef083661c",
+                "to_node_channel": 0,
+                "uid": "47cdf2506ca3402a98262732fda5a345",
+                "from_node_uid": "0d9e450fe68b4afc80d6593626a88eda",
+                "from_node_channel": 0
+            },
+            {
+                "to_node_uid": "af73c0ddc6dc42948bd333b7dd049fb1",
+                "to_node_channel": 0,
+                "uid": "3749c7a0e399474e937e14a69cc7c500",
+                "from_node_uid": "3a2551f9637e4df993ae77bef083661c",
+                "from_node_channel": 0
+            }
+        ],
+        "nodes": [
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.devices.LEDOutput",
+                        "py/state": {
+                            "controller": {
+                                "py/object": "audioled.devices.RaspberryPi",
+                                "py/state": {
+                                    "freq_hz": 800000,
+                                    "pin": 18,
+                                    "num_pixels": 300,
+                                    "brightness": 255,
+                                    "invert": false,
+                                    "dma": 5
+                                }
+                            }
+                        }
+                    },
+                    "uid": "af73c0ddc6dc42948bd333b7dd049fb1",
+                    "numOutputChannels": 0,
+                    "numInputChannels": 1
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.generative.Pendulum",
+                        "py/state": {
+                            "location": 151,
+                            "spread": 10,
+                            "num_pixels": 300,
+                            "heightactivator": false,
+                            "displacement": 51,
+                            "lightflip": 1
+                        }
+                    },
+                    "uid": "0d9e450fe68b4afc80d6593626a88eda",
+                    "numOutputChannels": 1,
+                    "numInputChannels": 1
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.effects.Shift",
+                        "py/state": {
+                            "speed": 71
+                        }
+                    },
+                    "uid": "3a2551f9637e4df993ae77bef083661c",
+                    "numOutputChannels": 1,
+                    "numInputChannels": 1
+                }
+            }
+        ]
+    }
+}
