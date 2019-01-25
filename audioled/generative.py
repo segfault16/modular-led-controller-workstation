@@ -482,8 +482,8 @@ class Pendulum(Effect):
 
     def createBlob(self, spread, location):
         blobArray = np.zeros(self.num_pixels)
-        for i in range(-spread, spread+1):
-            blobArray[location + i] = math.sin((math.pi/spread) * i)
+        for i in range(-spread, spread + 1):
+            blobArray[location + i] = math.sin((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
 
     def moveBlob(self, blobArray, displacement, swingspeed):
@@ -501,18 +501,21 @@ class Pendulum(Effect):
         return 1
 
     def process(self):
-        if self._outputBuffer is not None:
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if self._inputBufferValid(0):
             color = self._inputBuffer[0]
-            if color is None:
-                color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
-            if self.heightactivator is True:
-                configArray = np.array([[self.lightflip*math.cos(2*self._t)],
-                                        [self.lightflip*math.cos(2*self._t)],
-                                        [self.lightflip*math.cos(2*self._t)]])
-            else:
-                configArray = np.array([[1.0], [1.0], [1.0]])
-            self._output = np.multiply(color, self.controlBlobs() * configArray)
-            self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+        else:
+            # default: all white
+            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        if self.heightactivator is True:
+            configArray = np.array([[self.lightflip * math.cos(2 * self._t)],
+                                    [self.lightflip * math.cos(2 * self._t)],
+                                    [self.lightflip * math.cos(2 * self._t)]])
+        else:
+            configArray = np.array([[1.0], [1.0], [1.0]])
+        self._output = np.multiply(color, self.controlBlobs() * configArray)
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class RPendulum(Effect):
