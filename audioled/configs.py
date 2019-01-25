@@ -339,7 +339,7 @@ def createTestBlobGraph(N_pixels, device):
     led_out = devices.LEDOutput(device)
     fg.addEffectNode(led_out)
 
-    TestBlob = generative.TestBlob(N_pixels)
+    TestBlob = generative.StaticBlob(N_pixels)
     fg.addEffectNode(TestBlob)
 
     fg.addConnection(TestBlob, 0, led_out, 0)
@@ -359,7 +359,7 @@ def createBonfireGraph(N_pixels, device):
     bonfire = audioreactive.Bonfire(N_pixels, fs=audio_in.getSampleRate())
     fg.addEffectNode(bonfire)
 
-    testblob = generative.TestBlob(N_pixels)
+    testblob = generative.StaticBlob(N_pixels)
     fg.addEffectNode(testblob)
 
     fg.addConnection(testblob, 0, bonfire, 1)

@@ -609,7 +609,7 @@ class RandomPendulums(Effect):
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
-class TestBlob(Effect):
+class StaticBlob(Effect):
 
     def __init__(self, num_pixels, spread=50, location=150):
         self.num_pixels = num_pixels
@@ -619,7 +619,7 @@ class TestBlob(Effect):
 
     def __initstate__(self):
         # state
-        super(TestBlob, self).__initstate__()
+        super(StaticBlob, self).__initstate__()
 
     @staticmethod
     def getParameterDefinition():
@@ -643,8 +643,8 @@ class TestBlob(Effect):
 
     def createBlob(self, spread, location):
         blobArray = np.zeros(self.num_pixels)
-        for i in range(-spread, spread+1):
-            blobArray[location + i] = math.sin((math.pi/spread) * i)
+        for i in range(-spread, spread + 1):
+            blobArray[location + i] = math.sin((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
 
     def numInputChannels(self):
@@ -654,15 +654,17 @@ class TestBlob(Effect):
         return 1
 
     def process(self):
-        if self._outputBuffer is not None:
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if self._inputBufferValid(0):
             color = self._inputBuffer[0]
-            if color is None:
-                color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        else:
+            # default: all white
+            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
 
-            self._output = np.multiply(color, self.createBlob(self.spread,
-                                                              self.location) * np.array([[1.0], [1.0], [1.0]]))
+        self._output = np.multiply(color, self.createBlob(self.spread, self.location) * np.array([[1.0], [1.0], [1.0]]))
 
-            self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class GenerateWaves(Effect):
