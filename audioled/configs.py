@@ -326,7 +326,7 @@ def createRPendulumGraph(N_pixels, device):
     led_out = devices.LEDOutput(device)
     fg.addEffectNode(led_out)
 
-    RPendulum = generative.RPendulum(N_pixels)
+    RPendulum = generative.RandomPendulums(N_pixels)
     fg.addEffectNode(RPendulum)
 
     fg.addConnection(RPendulum, 0, led_out, 0)

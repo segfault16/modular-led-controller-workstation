@@ -518,12 +518,17 @@ class Pendulum(Effect):
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
-class RPendulum(Effect):
+class RandomPendulums(Effect):
 
     def __init__(self, num_pixels, num_pendulums=100, dim=0.1):
         self.num_pixels = num_pixels
         self.num_pendulums = num_pendulums
         self.dim = dim
+        self.__initstate__()
+
+    def __initstate__(self):
+        super(RandomPendulums, self).__initstate__()
+        # state
         self._spread = []
         self._location = []
         self._displacement = []
@@ -531,19 +536,14 @@ class RPendulum(Effect):
         self._lightflip = []
         self._offset = []
         self._swingspeed = []
-        self.__initstate__()
-
-    def __initstate__(self):
-        # state
         for i in range(self.num_pendulums):
             self._spread.append(random.randint(2, 10))
-            self._location.append(random.randint(0, self.num_pixels-self._spread[i]-1))
+            self._location.append(random.randint(0, self.num_pixels - self._spread[i] - 1))
             self._displacement.append(random.randint(5, 50))
             self._heightactivator.append(random.choice([True, False]))
             self._lightflip.append(random.choice([-1, 1]))
             self._offset.append(random.uniform(0, 6.5))
             self._swingspeed.append(random.uniform(0, 1))
-        super(RPendulum, self).__initstate__()
 
     @staticmethod
     def getParameterDefinition():
@@ -567,8 +567,8 @@ class RPendulum(Effect):
 
     def createBlob(self, spread, location):
         blobArray = np.zeros(self.num_pixels)
-        for i in range(-spread, spread+1):
-            blobArray[location + i] = math.sin((math.pi/spread) * i)
+        for i in range(-spread, spread + 1):
+            blobArray[location + i] = math.sin((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
 
     def moveBlob(self, blobArray, displacement, offset, swingspeed):
@@ -586,25 +586,27 @@ class RPendulum(Effect):
         return 1
 
     def process(self):
-        if self._outputBuffer is not None:
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if self._inputBufferValid(0):
             color = self._inputBuffer[0]
-            if color is None:
-                color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        else:
+            # default: all white
+            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
 
-            self._output = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
-            for i in range(self.num_pendulums):
-                if self._heightactivator[i] is True:
-                    configArray = np.array([[self._lightflip[i]*self.dim*math.cos(2*self._t+self._offset[i])],
-                                            [self._lightflip[i]*self.dim*math.cos(2*self._t+self._offset[i])],
-                                            [self._lightflip[i]*self.dim*math.cos(2*self._t+self._offset[i])]])
-                else:
-                    configArray = np.array([[1.0*self.dim], [1.0*self.dim], [1.0*self.dim]])
-                self._output += np.multiply(color, self.controlBlobs(self._spread[i],
-                                                                     self._location[i],
-                                                                     self._displacement[i],
-                                                                     self._offset[i],
-                                                                     self._swingspeed[i]) * configArray)
-            self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+        self._output = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
+        for i in range(self.num_pendulums):
+            if self._heightactivator[i] is True:
+                configArray = np.array([[self._lightflip[i] * self.dim * math.cos(2 * self._t + self._offset[i])],
+                                        [self._lightflip[i] * self.dim * math.cos(2 * self._t + self._offset[i])],
+                                        [self._lightflip[i] * self.dim * math.cos(2 * self._t + self._offset[i])]])
+            else:
+                configArray = np.array([[1.0 * self.dim], [1.0 * self.dim], [1.0 * self.dim]])
+            self._output += np.multiply(
+                color,
+                self.controlBlobs(self._spread[i], self._location[i], self._displacement[i], self._offset[i],
+                                  self._swingspeed[i]) * configArray)
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class TestBlob(Effect):
