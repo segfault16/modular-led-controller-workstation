@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import math
 import random
@@ -347,7 +346,6 @@ class Heartbeat(Effect):
 
 
 class FallingStars(Effect):
-
     def __init__(self, num_pixels, dim_speed=100, thickness=1, spawnTime=0.1, max_brightness=1):
         self.num_pixels = num_pixels
         self.dim_speed = dim_speed
@@ -425,14 +423,14 @@ class FallingStars(Effect):
         if color is None:
             color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self._outputBuffer is not None:
-            self._output = np.multiply(color, self.starControl(self.spawnTime) * np.array([[self.maxBrightness*1.0],
-                                                                                           [self.maxBrightness*1.0],
-                                                                                           [self.maxBrightness*1.0]]))
+            self._output = np.multiply(
+                color,
+                self.starControl(self.spawnTime) * np.array([[self.maxBrightness * 1.0], [self.maxBrightness * 1.0],
+                                                             [self.maxBrightness * 1.0]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class Pendulum(Effect):
-
     def __init__(self,
                  num_pixels,
                  spread=10,
@@ -509,8 +507,7 @@ class Pendulum(Effect):
             # default: all white
             color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self.heightactivator is True:
-            configArray = np.array([[self.lightflip * math.cos(2 * self._t)],
-                                    [self.lightflip * math.cos(2 * self._t)],
+            configArray = np.array([[self.lightflip * math.cos(2 * self._t)], [self.lightflip * math.cos(2 * self._t)],
                                     [self.lightflip * math.cos(2 * self._t)]])
         else:
             configArray = np.array([[1.0], [1.0], [1.0]])
@@ -519,7 +516,6 @@ class Pendulum(Effect):
 
 
 class RandomPendulums(Effect):
-
     def __init__(self, num_pixels, num_pendulums=100, dim=0.1):
         self.num_pixels = num_pixels
         self.num_pendulums = num_pendulums
@@ -610,7 +606,6 @@ class RandomPendulums(Effect):
 
 
 class StaticBlob(Effect):
-
     def __init__(self, num_pixels, spread=50, location=150):
         self.num_pixels = num_pixels
         self.spread = spread
@@ -670,7 +665,13 @@ class StaticBlob(Effect):
 class GenerateWaves(Effect):
     """Effect for displaying different wave forms."""
 
-    def __init__(self, num_pixels, wavemode=wave_mode_default, period=20, scale=1, ):
+    def __init__(
+            self,
+            num_pixels,
+            wavemode=wave_mode_default,
+            period=20,
+            scale=1,
+    ):
         self.num_pixels = num_pixels
         self.period = period
         self.scale = scale
