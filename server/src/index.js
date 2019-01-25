@@ -2,7 +2,7 @@ import Graph from "react-graph-vis";
 // import Graph from "../../lib";
 import React from "react";
 import ReactDOM from "react-dom";
-
+import './index.css'
 import { DataSet, Network } from 'vis/index-network';
 import 'vis/dist/vis-network.min.css';
 var Configurator = require("vis/lib/shared/Configurator").default;
@@ -409,182 +409,6 @@ class App extends React.Component {
     edge.arrows = 'to'
   }
   
-  createNetwork() {
-    // create an array with nodes
-    nodes = new DataSet();
-  
-    // create an array with edges
-    edges = new DataSet();
-  
-    // create a network
-    var container = document.getElementById('network');
-    data = {
-      nodes: nodes,
-      edges: edges
-    };
-    options = {
-      layout: {
-        hierarchical: {
-          enabled: true,
-          levelSeparation: 100,
-          direction: "LR",
-          nodeSpacing: 100,
-          sortMethod: 'directed',
-  
-        },
-      },
-      physics: {
-        enabled: true,
-        barnesHut: {
-          gravitationalConstant: -2000,
-          centralGravity: 0.3,
-          springLength: 25,
-          springConstant: 0.5,
-          damping: 0.88,
-          avoidOverlap: 1
-        },
-        hierarchicalRepulsion: {
-          centralGravity: .05,
-          nodeDistance: 150,
-          springLength: 100,
-          springConstant: 0.5,
-          damping: 0.8,
-        },
-        forceAtlas2Based: {
-          gravitationalConstant: -26,
-          centralGravity: 0.005,
-          springLength: 100,
-          springConstant: 0.18
-        },
-        maxVelocity: 146,
-        timestep: 0.35,
-        solver: 'barnesHut',
-        stabilization: {
-          enabled: false,
-          onlyDynamicEdges: true
-        },
-      },
-      interaction: {
-        navigationButtons: false,
-        hover:true
-      },
-      manipulation: {
-        enabled: true,
-        addNode: function (data, callback) {
-          // filling in the popup DOM elements
-          document.getElementById('node-operation').innerHTML = "Add Node";
-          addNode(data, clearNodePopUp, callback);
-        },
-        deleteNode: function(data, callback) {
-          data.nodes.forEach(id => {
-            var node = nodes.get(id)
-            if(node.nodeType == 'node') {
-              // update callback data to include all input and output nodes for this node
-              var inputOutputNodes = nodes.get({
-                filter: function (item) {
-                  return item.nodeType == 'channel' && item.nodeUid == id;
-                }
-              });
-              data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
-              deleteNodeData(id);
-            } else {
-              console.log("Cannot delete node " + id)
-              // Clear callback data
-              data.nodes = []
-              data.edges = []
-              return
-            }
-            console.debug("Deleted node",id);
-          });
-          callback(data);
-          
-        },
-        addEdge: function (data, callback) {
-          if (data.from == data.to) {
-            callback(null);
-            return;
-          }
-          var fromNode = nodes.get(data.from);
-          var toNode = nodes.get(data.to);
-          if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in' ) {
-            console.log("could add edge")
-            postEdgeData(fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback )
-          } else {
-            console.log("could not add edge")
-          }
-          return;
-          document.getElementById('edge-operation').innerHTML = "Add Edge";
-          editEdgeWithoutDrag(data, callback);
-        },
-        deleteEdge: function(data, callback) {
-          data.edges.forEach(edgeUid => {
-            var edge = edges.get(edgeUid);
-            var fromNode = nodes.get(edge.from);
-            var toNode = nodes.get(edge.to);
-            if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in' ) {
-            
-              deleteEdgeData(edgeUid);
-              
-              console.debug("Deleted edge",edge);
-            } else {
-              console.log("could not delete edge")
-              // Remove edge from callback data
-              var index = data.edges.indexOf(edgeUid);
-              if (index > -1) {
-                data.edges.splice(index, 1);
-              }
-            }
-          });
-          callback(data);
-        },
-        editEdge: false,
-      },
-      nodes: {
-        borderWidth:4,
-        size:64,
-        color: {
-          border: '#222222',
-          background: '#666666'
-        },
-        font:{color:'#eeeeee'}
-      },
-      edges: {
-        color: 'lightgray'
-      },
-      groups: {
-        ok: {
-          color: {
-            border: '#222222',
-            background: '#666666'
-          },
-          mass: 10
-        }, error: {
-          color: {
-            border: '#ee0000',
-            background: '#666666'
-          },
-          mass: 10
-        },
-        in: {
-          //physics: false
-          mass: 1
-        },
-        out: {
-          //physics: false
-          mass: 1
-        }
-      }
-    };
-    network = new Network(container, data, options);
-    network.on("selectNode", function (params) {
-      document.getElementById('node-operation').innerHTML = "Edit Node";
-      editNode(params.nodes[0], clearNodePopUp, clearNodePopUp);
-    });
-    network.on("deselectNode", function () {
-      clearNodePopUp();
-    });
-  }
-  
   
   addNode(data, cancelAction, callback) {
     var effectDropdown = document.getElementById('node-effectDropdown');
@@ -901,11 +725,6 @@ class App extends React.Component {
       console.err("Error updating node configuration:",err);
     });
   }
-
-  createOther() {
-    document.getElementById('config-saveButton').onclick = saveConfig.bind(this);
-    document.getElementById('file-input').addEventListener('change', readSingleFile, false);
-  }
   
   readSingleFile(e) {
     var file = e.target.files[0];
@@ -913,9 +732,9 @@ class App extends React.Component {
       return;
     }
     var reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = e => {
       var contents = e.target.result;
-      displayContents(contents);
+      this.displayContents(contents);
     };
     reader.readAsText(file);
   }
@@ -968,12 +787,23 @@ class App extends React.Component {
     error.style.display='none';
   }
 
+  handleSaveClick = async (event) => {
+    await this.saveConfig();
+  }
+
+  handleLoadConfig = (event) => {
+    this.readSingleFile(event)
+  }
+
   render() {
     const graph = this.state.graph;
     const options = this.state.options;
     const events = this.state.events;
     return (
       <div>
+        <h1>FilterGraph:</h1>
+        <input type="button" value="save" id="config-saveButton" onClick={this.handleSaveClick}/>
+        load: <input type="file" id="file-input" onChange={this.handleLoadConfig} />
         <Graph graph={graph} options={options} events={events} style={{ height: "640px" }} />
       </div>
     );
