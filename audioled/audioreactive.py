@@ -511,8 +511,18 @@ class Bonfire(Effect):
         return definition
 
     def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if self._inputBufferValid(1):
+            pixelbuffer = self._inputBuffer[1]
+        else:
+            # default color: all white
+            pixelbuffer = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = pixelbuffer
+            return
+
         audiobuffer = self._inputBuffer[0]
-        pixelbuffer = self._inputBuffer[1]
 
         y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audiobuffer), zi=self._filter_zi)
         peak = np.max(y) * 1.0
