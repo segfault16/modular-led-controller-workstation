@@ -61,3 +61,4 @@ Temporary Items
 
 *node_modules
 .cache
+*.code-workspace
