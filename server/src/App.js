@@ -9,7 +9,6 @@ class App extends Component {
       <div id="content">
         <NavBar />
         <VisGraph />
-        <div></div>
       </div>
     );
   }

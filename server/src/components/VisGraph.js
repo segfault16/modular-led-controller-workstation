@@ -101,6 +101,7 @@ class VisGraph extends React.Component {
         nodes: [],
         edges: []
       },
+      style: { height: "640px" },
       events: {
         select: ({ nodes, edges }) => {
           if(nodes.length == 1) {
@@ -800,8 +801,22 @@ class VisGraph extends React.Component {
 
   updateDimensions = (event) => {
     console.log("update dimensions")
-    console.log(window.innerHeight);
-    console.log(window.innerWidth);
+    
+    let container = document.getElementById('vis-container');
+    let other = document.getElementById('vis-other');
+    let content = document.getElementById('vis-content');
+    console.log(container.clientHeight);
+    console.log(other.clientHeight);
+    console.log(this);
+    this.setState(state => {
+      return {
+        style: {
+          height: "320px"
+        }
+      }
+    })
+    console.log(content.getElementsByTagName('div')[0].style.height)
+    content.getElementsByTagName('div')[0].style.height = (container.clientHeight - other.clientHeight)+"px"
     this.state.network.redraw();
   }
 
@@ -809,12 +824,17 @@ class VisGraph extends React.Component {
     const graph = this.state.graph;
     const options = this.state.options;
     const events = this.state.events;
+    const style = this.state.style;
     return (
-      <div>
-        <h1>FilterGraph:</h1>
-        <input type="button" value="save" id="config-saveButton" onClick={this.handleSaveClick}/>
-        load: <input type="file" id="file-input" onChange={this.handleLoadConfig} />
-        <Graph graph={graph} options={options} events={events} style={{ height: "640px" }} getNetwork={network => this.setState({network })} />
+      <div id="vis-container">
+        <div id="vis-other">
+          <h1>FilterGraph:</h1>
+          <input type="button" value="save" id="config-saveButton" onClick={this.handleSaveClick}/>
+          load: <input type="file" id="file-input" onChange={this.handleLoadConfig} />
+        </div>
+        <div id="vis-content">
+          <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({network })} />
+        </div>
         <div id="node-popUp">
           <h2 id="node-operation">node</h2>
           <div id="node-effectTable">
