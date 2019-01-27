@@ -9,6 +9,7 @@ var Configurator = require("vis/lib/shared/Configurator").default;
 let util = require('vis/lib/util');
 
 import ConfigurationService from "../services/ConfigurationService";
+import FilterGraphService from "../services/FilterGraphService";
 import "@babel/polyfill";
 import Button from '@material-ui/core/Button';
 import SaveIcon from '@material-ui/icons/Save';
@@ -208,13 +209,14 @@ class VisGraph extends React.Component {
             var toNode = this.state.graph.nodes.find(item => item.id === data.to);
             if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in' ) {
               console.log("could add edge")
-              this.postEdgeData(fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback )
+              FilterGraphService.postEdgeData(fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback ).then(connection => {
+                this.updateVisConnection(data, connection)
+                callback(data);
+              });
             } else {
               console.log("could not add edge")
             }
             return;
-            document.getElementById('edge-operation').innerHTML = "Add Edge";
-            this.editEdgeWithoutDrag(data, callback);
           },
           deleteEdge: (data, callback) => {
             data.edges.forEach(edgeUid => {
@@ -681,28 +683,9 @@ class VisGraph extends React.Component {
     var from_node_channel = fromChannelDropdown.options[fromChannelDropdown.selectedIndex].value;
     var toChannelDropdown = document.getElementById('edge-toChannelDropdown');
     var to_node_channel = toChannelDropdown.options[toChannelDropdown.selectedIndex].value;
-    await postEdgeData(data.from, from_node_channel, data.to, to_node_channel, data, callback);
-  }
-  async postEdgeData(from_node_uid, from_node_channel, to_node_uid, to_node_channel, data, callback) {
-    var postData = {from_node_uid: from_node_uid, from_node_channel: from_node_channel, to_node_uid: to_node_uid, to_node_channel: to_node_channel};
-  
-    // Save node in backend
-    await fetch('./connection', {
-      method: 'POST', // or 'PUT'
-      body: JSON.stringify(postData), // data can be `string` or {object}!
-      headers:{
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(res => res.json())
-    .then(
-      connection => {
-        console.debug('Create connection successful:',data);
-        this.updateVisConnection(data, connection)
-        callback(data);
-      })
-    .catch(error => {
-      console.error('Error on creating connection:', error);
+    await FilterGraphService.postEdgeData(data.from, from_node_channel, data.to, to_node_channel, data, callback).then(connection => {
+      this.updateVisConnection(data, connection)
+      callback(data);
     });
   }
   
