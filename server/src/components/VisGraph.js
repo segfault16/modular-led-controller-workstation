@@ -612,10 +612,6 @@ class VisGraph extends React.Component {
     document.getElementById('node-popUp').style.display = 'none';
   }
 
-  async fetchNode(uid) {
-    return fetch('./node/' + uid).then(response => response.json())
-  }
-
   editEdgeWithoutDrag(data, callback) {
     // clean up
     var fromChannelDropdown = document.getElementById('edge-fromChannelDropdown');
@@ -633,7 +629,7 @@ class VisGraph extends React.Component {
     var toNodeUid = data.to;
 
     const fetchFromNode = async () => {
-      var node = await fetchNode(fromNodeUid);
+      var node = await FilterGraphService.getNode(fromNodeUid);
       var numFromChannels = node['py/state']['numOutputChannels'];
       for (var i = 0; i < numFromChannels; i++) {
         fromChannelDropdown.add(new Option(i));
@@ -641,7 +637,7 @@ class VisGraph extends React.Component {
     }
     fetchFromNode();
     const fetchToNode = async () => {
-      var node = await fetchNode(toNodeUid);
+      var node = await FilterGraphService.getNode(toNodeUid);
       var numToChannels = node['py/state']['numInputChannels'];
       for (var i = 0; i < numToChannels; i++) {
         toChannelDropdown.add(new Option(i));
@@ -679,12 +675,8 @@ class VisGraph extends React.Component {
   async updateNodeArgs() {
     var effectDropdown = document.getElementById('node-effectDropdown');
     var selectedEffect = effectDropdown.options[effectDropdown.selectedIndex].value;
-
-    const response = await fetch('./effect/' + selectedEffect + '/parameter');
-    const json = response.json();
-    const defaultReponse = await fetch('./effect/' + selectedEffect + '/args');
-    const defaultJson = defaultReponse.json();
-
+    const json = await FilterGraphService.getEffectParameters(selectedEffect);
+    const defaultJson = await FilterGraphService.getEffectArguments(selectedEffect);
     if (configurator) {
       configurator.clear();
     }

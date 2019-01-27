@@ -1,3 +1,5 @@
+import { func } from "prop-types";
+
 const FilterGraphService = {
     getAllConnections: function() {
         return fetch('./connections').then(res => res.json())
@@ -32,6 +34,9 @@ const FilterGraphService = {
     getAllNodes: function() {
         return fetch('./nodes').then(res => res.json());
     },
+    getNode: function(id) {
+        return fetch('./node/' + uid).then(res => res.json())
+    },
     deleteNode: function (id) {
         return fetch('./node/' + id, {
             method: 'DELETE'
@@ -40,6 +45,12 @@ const FilterGraphService = {
         }).catch(error => {
             console.error('Error on deleting node:', error)
         })
+    },
+    getEffectParameters: function(selectedEffect) {
+        return fetch('./effect/' + selectedEffect + '/parameter').then(res => res.json());
+    },
+    getEffectArguments: function(selectedEffect) {
+        return fetch('./effect/' + selectedEffect + '/args').then(res => res.json());
     }
 }
 
