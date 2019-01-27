@@ -9,6 +9,9 @@ var Configurator = require("vis/lib/shared/Configurator").default;
 let util = require('vis/lib/util');
 import { saveAs } from 'file-saver';
 import "@babel/polyfill";
+import Button from '@material-ui/core/Button';
+import SaveIcon from '@material-ui/icons/Save';
+import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import audioInputIcon from '../../img/audioled.audio.AudioInput.png'
 import spectrumIcon from '../../img/audioled.audioreactive.Spectrum.png'
 import vuIcon from '../../img/audioled.audioreactive.VUMeterPeak.png'
@@ -818,8 +821,17 @@ class VisGraph extends React.Component {
       <div id="vis-container">
         <div id="vis-other">
           <h1>FilterGraph:</h1>
-          <input type="button" value="save" id="config-saveButton" onClick={this.handleSaveClick}/>
-          load: <input type="file" id="file-input" onChange={this.handleLoadConfig} />
+          <Button variant="contained" onClick={this.handleSaveClick}>
+            <SaveIcon />
+            Download Config
+          </Button>
+          <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }}/>
+          <label htmlFor="file-input">
+            <Button variant="contained" component="span">
+            <CloudUploadIcon />
+            Upload Config
+          </Button>
+      </label>
         </div>
         <div id="vis-content">
           <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({network })} />
