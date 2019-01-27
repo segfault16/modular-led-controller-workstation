@@ -35,7 +35,28 @@ const FilterGraphService = {
         return fetch('./nodes').then(res => res.json());
     },
     getNode: function(id) {
-        return fetch('./node/' + uid).then(res => res.json())
+        return fetch('./node/' + id).then(res => res.json())
+    },
+    getNodeParameter: function(id) {
+        return fetch('./node/' + id + '/parameter').then(res => res.json());
+    },
+    addNode: function(selectedEffect, options) {
+        return fetch('./node', {
+            method: 'POST', // or 'PUT'
+            body: JSON.stringify([selectedEffect, options]), // data can be `string` or {object}!
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }).then(res => res.json())
+    },
+    updateNode: function(data, options) {
+        return fetch('./node/' + data, {
+            method: 'UPDATE', // or 'PUT'
+            body: JSON.stringify(options), // data can be `string` or {object}!
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }).then(res => res.json())
     },
     deleteNode: function (id) {
         return fetch('./node/' + id, {
@@ -45,6 +66,9 @@ const FilterGraphService = {
         }).catch(error => {
             console.error('Error on deleting node:', error)
         })
+    },
+    getAllEffects: function() {
+        return fetch('./effects').then(res => res.json());
     },
     getEffectParameters: function(selectedEffect) {
         return fetch('./effect/' + selectedEffect + '/parameter').then(res => res.json());

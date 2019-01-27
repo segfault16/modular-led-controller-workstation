@@ -454,10 +454,7 @@ class VisGraph extends React.Component {
       effectDropdown.remove(i);
     }
     const fetchEffects = async () => {
-      const response = await fetch('./effects');
-      const json = response.json();
-
-      json.then(values => {
+      await FilterGraphService.getAllEffects().then(values => {
         values.forEach(element => {
           effectDropdown.add(new Option(element["py/type"]))
         });
@@ -497,22 +494,14 @@ class VisGraph extends React.Component {
     saveBtn.style.display = 'none';
 
     const fetchAndShow = async () => {
-      const stateResponse = await fetch('/node/' + uid);
-      const stateJson = stateResponse.json();
-      const response = await fetch('./node/' + uid + '/parameter');
-      const json = response.json();
+      const stateJson = await FilterGraphService.getNode(uid);
+      const json = await FilterGraphService.getNodeParameter(uid);
       Promise.all([stateJson, json]).then(result => {
         var effect = result[0]["py/state"]["effect"]["py/state"];
         var values = result[1];
         configurator = new ConfigurationWrapper(uid, document.getElementById('node-configuration'), values, effect, async (nodeUid, data) => {
           console.log("emitting", data['parameters']);
-          await fetch('./node/' + nodeUid, {
-            method: 'UPDATE', // or 'PUT'
-            body: JSON.stringify(data['parameters']), // data can be `string` or {object}!
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          }).then(res => res.json())
+          await FilterGraphService.updateNode(nodeUid, data['parameters']).then(res => res.json())
             .then(node => {
               console.debug('Update node successful:', JSON.stringify(node));
               // updateVisNode(data, node); // TODO: Needed?
@@ -556,13 +545,7 @@ class VisGraph extends React.Component {
     var options = configurator.getState();
     console.log(options);
     // Save node in backend
-    await fetch('./node', {
-      method: 'POST', // or 'PUT'
-      body: JSON.stringify([selectedEffect, options]), // data can be `string` or {object}!
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }).then(res => res.json())
+    await FilterGraphService.addNode(selectedEffect, option)
       .then(node => {
         console.debug('Create node successful:', JSON.stringify(node));
         //updateVisNode(data, node);
@@ -581,13 +564,7 @@ class VisGraph extends React.Component {
   async updateNodeData(data, callback) {
     var options = document.getElementById('node-args').value;
     // Save node in backend
-    await fetch('./node/' + data, {
-      method: 'UPDATE', // or 'PUT'
-      body: JSON.stringify(options), // data can be `string` or {object}!
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }).then(res => res.json())
+    await FilterGraphService.updateNode(data, options)
       .then(node => {
         console.debug('Update node successful:', JSON.stringify(node));
         // updateVisNode(data, node); // TODO: Needed?
