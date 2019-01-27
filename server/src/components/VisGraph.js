@@ -101,7 +101,10 @@ class VisGraph extends React.Component {
         nodes: [],
         edges: []
       },
-      style: { height: "640px" },
+      style: { 
+        flex: "1",
+        display: "block"
+       },
       events: {
         select: ({ nodes, edges }) => {
           if(nodes.length == 1) {
@@ -276,6 +279,7 @@ class VisGraph extends React.Component {
     await this.createNodesFromBackend();
     await this.createEdgesFromBackend();
     window.addEventListener("resize", this.updateDimensions);
+    await this.updateDimensions()
   }
 
   componentWillUnmount() {
@@ -368,7 +372,6 @@ class VisGraph extends React.Component {
     var numInputChannels = json['py/state']['numInputChannels'];
     for(var i=0; i<numOutputChannels; i++) {
       uid = this.conUid('out', i, visNode.id);
-      console.log(this.state.graph.nodes);
       if(!this.state.graph.nodes.some(el => el.uid === uid)) {
         var outNode = {};
         outNode.group = 'out';
@@ -384,7 +387,6 @@ class VisGraph extends React.Component {
     }
     for(var i=0; i < numInputChannels; i++) {
       uid = this.conUid('in', i, visNode.id);
-      console.log(this.state.graph.nodes);
       if(!this.state.graph.nodes.some(el => el.uid === uid)) {
         var inNode = {};
         inNode.group = 'in';
@@ -800,24 +802,11 @@ class VisGraph extends React.Component {
   }
 
   updateDimensions = (event) => {
-    console.log("update dimensions")
-    
-    let container = document.getElementById('vis-container');
-    let other = document.getElementById('vis-other');
+
     let content = document.getElementById('vis-content');
-    console.log(container.clientHeight);
-    console.log(other.clientHeight);
-    console.log(this);
-    this.setState(state => {
-      return {
-        style: {
-          height: "320px"
-        }
-      }
-    })
-    console.log(content.getElementsByTagName('div')[0].style.height)
-    content.getElementsByTagName('div')[0].style.height = (container.clientHeight - other.clientHeight)+"px"
+    content.getElementsByTagName('div')[0].style.height = (content.clientHeight)+"px"
     this.state.network.redraw();
+    this.state.network.fit();
   }
 
   render() {
