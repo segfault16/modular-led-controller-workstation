@@ -5,9 +5,9 @@ import ReactDOM from "react-dom";
 import './VisGraph.css'
 import { DataSet, Network } from 'vis/index-network';
 import 'vis/dist/vis-network.min.css';
-var Configurator = require("vis/lib/shared/Configurator").default;
-let util = require('vis/lib/util');
 
+
+import NodePopup from './NodePopup';
 import ConfigurationService from "../services/ConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
 import "@babel/polyfill";
@@ -50,50 +50,8 @@ var icons = {
 
 }
 
-var configurator = null
 
-class Emitter {
-  constructor(emit) {
-    this.emit = emit
-  }
-}
 
-class Body {
-  constructor(emit) {
-    this.emitter = new Emitter(emit);
-  }
-}
-
-class ConfigurationWrapper {
-  constructor(nodeUid, body, parameters, state, callback) {
-    this.nodeUid = nodeUid;
-    this.body = new Body(this.emit);
-    this.configurator = new Configurator(this, body, parameters);
-    this.configurator.setOptions(true);
-    this.configurator.setModuleOptions(state);
-    this.state = state;
-    this.callback = callback;
-  }
-
-  async emit(identifier, data) {
-
-  }
-
-  clear() {
-    util.recursiveDOMDelete(this.configurator.wrapper);
-  }
-
-  getState() {
-    return this.state;
-  }
-
-  // is called by Configurator once values change
-  async setOptions(data) {
-    util.deepExtend(this.state, data['parameters']);
-    this.callback(this.nodeUid, data);
-  }
-
-}
 
 class VisGraph extends React.Component {
 
@@ -110,18 +68,19 @@ class VisGraph extends React.Component {
         flex: "1",
         display: "block"
       },
+      editNodePopup: {
+        isShown: false,
+        nodeUid: 0,
+      },
       events: {
         select: ({ nodes, edges }) => {
+          this.clearNodePopUp()
           if (nodes.length == 1) {
-            this.editNode(nodes[0], this.clearNodePopUp, this.clearNodePopUp)
+            this.editNode(nodes[0])
           }
-          console.log("Selected nodes:");
-          console.log(nodes);
-          console.log("Selected edges:");
-          console.log(edges);
         },
         doubleClick: ({ pointer: { canvas } }) => {
-          this.createNode(canvas.x, canvas.y);
+          this.addGraphNode();
         }
       },
       options: {
@@ -173,9 +132,7 @@ class VisGraph extends React.Component {
         manipulation: {
           enabled: true,
           addNode: (data, callback) => {
-            // filling in the popup DOM elements
-            document.getElementById('node-operation').innerHTML = "Add Node";
-            this.addGraphNode(data, this.clearNodePopUp, callback);
+            this.addGraphNode();
           },
           deleteNode: (data, callback) => {
             data.nodes.forEach(id => {
@@ -316,27 +273,6 @@ class VisGraph extends React.Component {
     })
   }
 
-  createNode(x, y) {
-    const color = randomColor();
-    this.setState(({ graph: { nodes, edges }, counter }) => {
-      const id = counter + 1;
-      const from = Math.floor(Math.random() * (counter - 1)) + 1;
-      return {
-        graph: {
-          nodes: [
-            ...nodes,
-            { id, label: `Node ${id}`, color, x, y }
-          ],
-          edges: [
-            ...edges,
-            { from, to: id }
-          ]
-        },
-        counter: id
-      }
-    });
-  }
-
   async createNetwork() {
     this.setState(state => {
       return {
@@ -352,16 +288,16 @@ class VisGraph extends React.Component {
 
   async createNodesFromBackend() {
     await FilterGraphService.getAllNodes()
-    .then(values => values.forEach(element => {
-      this.addVisNode(element);
-    }));
+      .then(values => values.forEach(element => {
+        this.addVisNode(element);
+      }));
   }
 
   async createEdgesFromBackend() {
     await FilterGraphService.getAllConnections()
-    .then(values => values.forEach(element => {
-      this.addVisConnection(element);
-    }));
+      .then(values => values.forEach(element => {
+        this.addVisConnection(element);
+      }));
   }
 
   conUid(inout, index, uid) {
@@ -442,41 +378,18 @@ class VisGraph extends React.Component {
   }
 
 
-  addGraphNode(data, cancelAction, callback) {
-    var effectDropdown = document.getElementById('node-effectDropdown');
-    effectDropdown.style.display = 'inherit';
-    var effectTable = document.getElementById('node-effectTable');
-    effectTable.style.display = 'inherit';
-    var saveBtn = document.getElementById('node-saveButton');
-    saveBtn.style.display = 'inherit';
-    var i;
-    for (i = effectDropdown.options.length - 1; i >= 0; i--) {
-      effectDropdown.remove(i);
-    }
-    const fetchEffects = async () => {
-      await FilterGraphService.getAllEffects().then(values => {
-        values.forEach(element => {
-          effectDropdown.add(new Option(element["py/type"]))
-        });
-        sortSelect(effectDropdown);
-        effectDropdown.selectedIndex = 0;
-        this.updateNodeArgs();
-      }).catch(err => {
-        this.showError("Error fetching effects. See console for details");
-        console.error("Error fetching effects:", err);
-      })
-    }
-    fetchEffects();
-
-    document.getElementById('node-saveButton').onclick = this.saveNodeData.bind(this, data, callback);
-    document.getElementById('node-cancelButton').onclick = cancelAction.bind(this, callback);
-    document.getElementById('node-popUp').style.display = 'block';
-    document.getElementById('node-effectDropdown').onchange = this.updateNodeArgs.bind(this);
-    this.updateNodeArgs();
-
+  addGraphNode() {
+    this.setState(state => {
+      return {
+        editNodePopup: {
+          isShown: true,
+          mode: "add",
+        }
+      }
+    })
   }
 
-  editNode(uid, cancelAction, callback) {
+  editNode(uid) {
     var node = this.state.graph.nodes.find(node => node.id === uid);
     if (node == null) {
       console.error("Cannot find node " + node);
@@ -486,107 +399,47 @@ class VisGraph extends React.Component {
       return
     }
 
-    var effectDropdown = document.getElementById('node-effectDropdown');
-    effectDropdown.style.display = 'none';
-    var effectTable = document.getElementById('node-effectTable');
-    effectTable.style.display = 'none';
-    var saveBtn = document.getElementById('node-saveButton');
-    saveBtn.style.display = 'none';
+    this.setState(state => {
+      return {
+        editNodePopup: {
+          isShown: true,
+          mode: "edit",
+          nodeUid: uid
+        }
+      }
+    })
 
-    const fetchAndShow = async () => {
-      const stateJson = await FilterGraphService.getNode(uid);
-      const json = await FilterGraphService.getNodeParameter(uid);
-      Promise.all([stateJson, json]).then(result => {
-        var effect = result[0]["py/state"]["effect"]["py/state"];
-        var values = result[1];
-        configurator = new ConfigurationWrapper(uid, document.getElementById('node-configuration'), values, effect, async (nodeUid, data) => {
-          console.log("emitting", data['parameters']);
-          await FilterGraphService.updateNode(nodeUid, data['parameters']).then(res => res.json())
-            .then(node => {
-              console.debug('Update node successful:', JSON.stringify(node));
-              // updateVisNode(data, node); // TODO: Needed?
-            })
-            .catch(error => {
-              showError("Error on updating node. See console for details.")
-              console.error('Error on updating node:', error);
-            })
-        });
-
-      });
-    }
-    fetchAndShow();
-    document.getElementById('node-cancelButton').onclick = cancelAction.bind(this, callback);
-    document.getElementById('node-effectDropdown').onchange = null;
-    document.getElementById('node-popUp').style.display = 'block';
   }
 
-  sortSelect(selElem) {
-    var tmpAry = new Array();
-    for (var i = 0; i < selElem.options.length; i++) {
-      tmpAry[i] = new Array();
-      tmpAry[i][0] = selElem.options[i].text;
-      tmpAry[i][1] = selElem.options[i].value;
-    }
-    tmpAry.sort();
-    while (selElem.options.length > 0) {
-      selElem.options[0] = null;
-    }
-    for (var i = 0; i < tmpAry.length; i++) {
-      var op = new Option(tmpAry[i][0], tmpAry[i][1]);
-      selElem.options[i] = op;
-    }
-    return;
-  }
 
-  async saveNodeData(data, callback) {
-    // gather data
-    var effectDropdown = document.getElementById('node-effectDropdown')
-    var selectedEffect = effectDropdown.options[effectDropdown.selectedIndex].value;
-    var options = configurator.getState();
-    console.log(options);
+
+  saveNodeCallback = async (selectedEffect, option) => {
+    console.log(option);
     // Save node in backend
     await FilterGraphService.addNode(selectedEffect, option)
       .then(node => {
         console.debug('Create node successful:', JSON.stringify(node));
         //updateVisNode(data, node);
         this.addVisNode(node);
-        callback(null); // can't use callback since we alter nodes in updateVisNode
       })
       .catch(error => {
-        showError("Error on creating node. See console for details");
         console.error('Error on creating node:', error);
+        this.showError("Error on creating node. See console for details");
       })
       .finally(() => {
         this.clearNodePopUp();
       });
   }
 
-  async updateNodeData(data, callback) {
-    var options = document.getElementById('node-args').value;
-    // Save node in backend
-    await FilterGraphService.updateNode(data, options)
-      .then(node => {
-        console.debug('Update node successful:', JSON.stringify(node));
-        // updateVisNode(data, node); // TODO: Needed?
-        callback(data);
-      })
-      .catch(error => {
-        console.error('Error on updating node:', error);
-      })
-      .finally(() => {
-        clearNodePopUp();
-      });
-  }
+  clearNodePopUp = () => {
+    this.setState(state => {
+      return {
+        editNodePopup: {
+          isShown: false
+        }
+      }
+    })
 
-
-
-  clearNodePopUp() {
-    if (configurator) {
-      configurator.clear();
-    }
-    document.getElementById('node-saveButton').onclick = null;
-    document.getElementById('node-cancelButton').onclick = null;
-    document.getElementById('node-popUp').style.display = 'none';
   }
 
   editEdgeWithoutDrag(data, callback) {
@@ -621,56 +474,9 @@ class VisGraph extends React.Component {
       }
     }
     fetchToNode();
-
-    // filling in the popup DOM elements
-    document.getElementById('edge-saveButton').onclick = saveEdgeData.bind(this, data, callback);
-    document.getElementById('edge-cancelButton').onclick = cancelEdgeEdit.bind(this, callback);
-    document.getElementById('edge-popUp').style.display = 'block';
   }
 
 
-
-  async saveEdgeData(data, callback) {
-    if (typeof data.to === 'object') {
-      data.to = data.to.id
-    }
-    if (typeof data.from === 'object') {
-      data.from = data.from.id
-    }
-
-    var fromChannelDropdown = document.getElementById('edge-fromChannelDropdown');
-    var from_node_channel = fromChannelDropdown.options[fromChannelDropdown.selectedIndex].value;
-    var toChannelDropdown = document.getElementById('edge-toChannelDropdown');
-    var to_node_channel = toChannelDropdown.options[toChannelDropdown.selectedIndex].value;
-    await FilterGraphService.addConnection(data.from, from_node_channel, data.to, to_node_channel, data, callback)
-      .then(connection => {
-        this.updateVisConnection(data, connection)
-        callback(data);
-      });
-  }
-
-  async updateNodeArgs() {
-    var effectDropdown = document.getElementById('node-effectDropdown');
-    var selectedEffect = effectDropdown.options[effectDropdown.selectedIndex].value;
-    const json = await FilterGraphService.getEffectParameters(selectedEffect);
-    const defaultJson = await FilterGraphService.getEffectArguments(selectedEffect);
-    if (configurator) {
-      configurator.clear();
-    }
-
-    Promise.all([json, defaultJson]).then(result => {
-      var parameters = result[0];
-      var defaults = result[1];
-      console.log(parameters);
-      console.log(defaults);
-      configurator = new ConfigurationWrapper(selectedEffect, document.getElementById('node-configuration'), parameters, defaults, async (nodeUid, data) => {
-        // do nothing
-      });
-    }).catch(err => {
-      showError("Error updating node configuration. See console for details.");
-      console.err("Error updating node configuration:", err);
-    });
-  }
 
   showError(message) {
     var error = document.getElementById('alert');
@@ -728,22 +534,7 @@ class VisGraph extends React.Component {
         <div id="vis-content">
           <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
         </div>
-        <div id="node-popUp">
-          <h2 id="node-operation">node</h2>
-          <div id="node-effectTable">
-            <div className="vis-configuration vis-config-header">effect</div>
-            <div className="vis-configuration vis-config-item vis-config-s2"><select className="form-control" id='node-effectDropdown' name='node-effectDropdown'></select></div>
-          </div>
-          <div id="node-configuration"></div>
-          <table style={{ margin: "auto" }}>
-            <tbody>
-              <tr>
-                <td><input type="button" value="save" id="node-saveButton" /></td>
-                <td><input type="button" value="cancel" id="node-cancelButton" onClick={this.handleNodeEditCancel} /></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {this.state.editNodePopup.isShown ? <NodePopup mode={this.state.editNodePopup.mode} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null}
       </div>
     );
   }
