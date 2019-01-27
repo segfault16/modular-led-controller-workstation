@@ -1,34 +1,29 @@
-import Graph from "react-graph-vis";
-// import Graph from "../../lib";
-import React from "react";
-import ReactDOM from "react-dom";
-import './VisGraph.css'
-import { DataSet, Network } from 'vis/index-network';
-import 'vis/dist/vis-network.min.css';
-
-
-import NodePopup from './NodePopup';
-import ConfigurationService from "../services/ConfigurationService";
-import FilterGraphService from "../services/FilterGraphService";
 import "@babel/polyfill";
 import Button from '@material-ui/core/Button';
-import SaveIcon from '@material-ui/icons/Save';
 import CloudUploadIcon from '@material-ui/icons/CloudUpload';
-import audioInputIcon from '../../img/audioled.audio.AudioInput.png'
-import spectrumIcon from '../../img/audioled.audioreactive.Spectrum.png'
-import vuIcon from '../../img/audioled.audioreactive.VUMeterPeak.png'
-import movingIcon from '../../img/audioled.audioreactive.MovingLight.png'
-import colorWheelIcon from '../../img/audioled.colors.ColorWheel.png'
-import colorIcon from '../../img/audioled.colors.Color.png'
-import ledIcon from '../../img/audioled.devices.LEDOutput.png'
-import combineIcon from '../../img/audioled.effects.Combine.png'
-import appendIcon from '../../img/audioled.effects.Append.png'
-import glowIcon from '../../img/audioled.effects.AfterGlow.png'
-import mirrorIcon from '../../img/audioled.effects.Mirror.png'
-import swimmingPoolIcon from '../../img/audioled.generative.SwimmingPool.png'
-import shiftIcon from '../../img/audioled.effects.Shift.png'
-import defenceIcon from '../../img/audioled.generative.DefenceMode.png'
-import interpolateHSV from '../../img/audioled.colors.InterpolateHSV.png'
+import SaveIcon from '@material-ui/icons/Save';
+import React from "react";
+import Graph from "react-graph-vis";
+import 'vis/dist/vis-network.min.css';
+import audioInputIcon from '../../img/audioled.audio.AudioInput.png';
+import movingIcon from '../../img/audioled.audioreactive.MovingLight.png';
+import spectrumIcon from '../../img/audioled.audioreactive.Spectrum.png';
+import vuIcon from '../../img/audioled.audioreactive.VUMeterPeak.png';
+import colorIcon from '../../img/audioled.colors.Color.png';
+import colorWheelIcon from '../../img/audioled.colors.ColorWheel.png';
+import interpolateHSV from '../../img/audioled.colors.InterpolateHSV.png';
+import ledIcon from '../../img/audioled.devices.LEDOutput.png';
+import glowIcon from '../../img/audioled.effects.AfterGlow.png';
+import appendIcon from '../../img/audioled.effects.Append.png';
+import combineIcon from '../../img/audioled.effects.Combine.png';
+import mirrorIcon from '../../img/audioled.effects.Mirror.png';
+import shiftIcon from '../../img/audioled.effects.Shift.png';
+import defenceIcon from '../../img/audioled.generative.DefenceMode.png';
+import swimmingPoolIcon from '../../img/audioled.generative.SwimmingPool.png';
+import ConfigurationService from "../services/ConfigurationService";
+import FilterGraphService from "../services/FilterGraphService";
+import NodePopup from './NodePopup';
+import './VisGraph.css';
 
 var icons = {
   'audioled.audio.AudioInput': audioInputIcon,
@@ -49,9 +44,6 @@ var icons = {
   'audioled.colors.InterpolateHSV': interpolateHSV
 
 }
-
-
-
 
 class VisGraph extends React.Component {
 
@@ -308,8 +300,6 @@ class VisGraph extends React.Component {
     var visNode = {};
     this.updateVisNode(visNode, json);
     this.addStateNode(visNode);
-
-
   }
 
   updateVisNode(visNode, json) {
@@ -398,7 +388,6 @@ class VisGraph extends React.Component {
     if (node.nodeType != 'node') {
       return
     }
-
     this.setState(state => {
       return {
         editNodePopup: {
@@ -408,10 +397,7 @@ class VisGraph extends React.Component {
         }
       }
     })
-
   }
-
-
 
   saveNodeCallback = async (selectedEffect, option) => {
     console.log(option);
@@ -439,44 +425,7 @@ class VisGraph extends React.Component {
         }
       }
     })
-
   }
-
-  editEdgeWithoutDrag(data, callback) {
-    // clean up
-    var fromChannelDropdown = document.getElementById('edge-fromChannelDropdown');
-    var i;
-    for (i = fromChannelDropdown.options.length - 1; i >= 0; i--) {
-      fromChannelDropdown.remove(i);
-    }
-    var toChannelDropdown = document.getElementById('edge-toChannelDropdown');
-    var i;
-    for (i = toChannelDropdown.options.length - 1; i >= 0; i--) {
-      toChannelDropdown.remove(i);
-    }
-
-    var fromNodeUid = data.from;
-    var toNodeUid = data.to;
-
-    const fetchFromNode = async () => {
-      var node = await FilterGraphService.getNode(fromNodeUid);
-      var numFromChannels = node['py/state']['numOutputChannels'];
-      for (var i = 0; i < numFromChannels; i++) {
-        fromChannelDropdown.add(new Option(i));
-      }
-    }
-    fetchFromNode();
-    const fetchToNode = async () => {
-      var node = await FilterGraphService.getNode(toNodeUid);
-      var numToChannels = node['py/state']['numInputChannels'];
-      for (var i = 0; i < numToChannels; i++) {
-        toChannelDropdown.add(new Option(i));
-      }
-    }
-    fetchToNode();
-  }
-
-
 
   showError(message) {
     var error = document.getElementById('alert');
@@ -503,7 +452,6 @@ class VisGraph extends React.Component {
   }
 
   updateDimensions = (event) => {
-
     let content = document.getElementById('vis-content');
     content.getElementsByTagName('div')[0].style.height = (content.clientHeight) + "px"
     this.state.network.redraw();
