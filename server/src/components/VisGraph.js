@@ -7,7 +7,8 @@ import { DataSet, Network } from 'vis/index-network';
 import 'vis/dist/vis-network.min.css';
 var Configurator = require("vis/lib/shared/Configurator").default;
 let util = require('vis/lib/util');
-import { saveAs } from 'file-saver';
+
+import ConfigurationService from "../services/ConfigurationService";
 import "@babel/polyfill";
 import Button from '@material-ui/core/Button';
 import SaveIcon from '@material-ui/icons/Save';
@@ -744,51 +745,6 @@ class VisGraph extends React.Component {
     });
   }
   
-  readSingleFile(e) {
-    var file = e.target.files[0];
-    if (!file) {
-      return;
-    }
-    var reader = new FileReader();
-    reader.onload = e => {
-      var contents = e.target.result;
-      this.loadConfig(contents);
-    };
-    reader.readAsText(file);
-  }
-  
-  async saveConfig() {
-    try {
-      var isFileSaverSupported = !!new Blob;
-    } catch (e) {
-      console.error("FileSaver not supported")
-    }
-    await fetch('./configuration').then(response => response.json()).then(json => {
-      var blob = new Blob([JSON.stringify(json, null, 4)], {type: "text/plain;charset=utf-8"});
-      saveAs(blob, "configuration.json");
-    })
-  }
-  
-  loadConfig(contents) {
-    console.log(contents);
-    const postData = async () => fetch('./configuration', {
-      method: 'POST', // or 'PUT'
-      body: JSON.stringify(contents), // data can be `string` or {object}!
-      headers:{
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(
-      () => {
-        console.log("Successfully loaded");
-        this.createNetwork()
-      })
-    .catch(error => {
-      console.error('Error on loading configuration:', error);
-    })
-    postData();
-  }
-  
   showError(message) {
     var error = document.getElementById('alert');
     var errorInfo = document.getElementById('alert-info');
@@ -801,12 +757,12 @@ class VisGraph extends React.Component {
     error.style.display='none';
   }
 
-  handleSaveClick = async (event) => {
-    await this.saveConfig();
+  handleSaveConfig = async (event) => {
+    await ConfigurationService.saveConfig();
   }
 
-  handleLoadConfig = (event) => {
-    this.readSingleFile(event)
+  handleLoadConfig = async (event) => {
+    await ConfigurationService.loadConfig(event).finally(() => this.createNetwork());
   }
 
   handleNodeEditCancel = (event) => {
@@ -830,7 +786,7 @@ class VisGraph extends React.Component {
       <div id="vis-container">
         <div id="vis-other">
           <h1>FilterGraph:</h1>
-          <Button variant="contained" onClick={this.handleSaveClick}>
+          <Button variant="contained" onClick={this.handleSaveConfig}>
             <SaveIcon />
             Download Config
           </Button>
