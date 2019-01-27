@@ -351,17 +351,15 @@ class VisGraph extends React.Component {
   }
 
   async createNodesFromBackend() {
-    const response = await fetch('./nodes');
-    const json = response.json();
-    json.then(values => values.forEach(element => {
+    await FilterGraphService.getAllNodes()
+    .then(values => values.forEach(element => {
       this.addVisNode(element);
     }));
   }
 
   async createEdgesFromBackend() {
-    const response = await fetch('./connections');
-    const json = response.json();
-    json.then(values => values.forEach(element => {
+    await FilterGraphService.getAllConnections()
+    .then(values => values.forEach(element => {
       this.addVisConnection(element);
     }));
   }

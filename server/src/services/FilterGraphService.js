@@ -1,4 +1,7 @@
 const FilterGraphService = {
+    getAllConnections: function() {
+        return fetch('./connections').then(res => res.json())
+    },
     addConnection: function (from_node_uid, from_node_channel, to_node_uid, to_node_channel, data, callback) {
         var postData = { from_node_uid: from_node_uid, from_node_channel: from_node_channel, to_node_uid: to_node_uid, to_node_channel: to_node_channel };
 
@@ -9,17 +12,15 @@ const FilterGraphService = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        })
-            .then(res => res.json())
-            .then(connection => {
-                console.debug('Create connection successful:', data);
-                return connection
-            })
-            .catch(error => {
-                console.error('Error on creating connection:', error);
-            });
+        }).then(res => res.json()
+        ).then(connection => {
+            console.debug('Create connection successful:', data);
+            return connection
+        }).catch(error => {
+            console.error('Error on creating connection:', error);
+        });
     },
-    deleteConnection: function(id) {
+    deleteConnection: function (id) {
         return fetch('./connection/' + id, {
             method: 'DELETE'
         }).then(res => {
@@ -27,6 +28,9 @@ const FilterGraphService = {
         }).catch(error => {
             console.error('Error on deleting connection:', error)
         })
+    },
+    getAllNodes: function() {
+        return fetch('./nodes').then(res => res.json());
     },
     deleteNode: function (id) {
         return fetch('./node/' + id, {
