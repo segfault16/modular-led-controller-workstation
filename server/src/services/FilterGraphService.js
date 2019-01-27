@@ -18,6 +18,15 @@ const FilterGraphService = {
         .catch(error => {
         console.error('Error on creating connection:', error);
         });
+    },
+    deleteNodeData: function(id) {
+        return fetch('./node/'+id, {
+            method: 'DELETE'
+          }).then(res => {
+            console.debug('Delete node successful:', id);
+          }).catch(error => {
+            console.error('Error on deleting node:', error)
+          })
     }
 }
 

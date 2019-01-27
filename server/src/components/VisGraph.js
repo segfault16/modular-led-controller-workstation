@@ -187,7 +187,9 @@ class VisGraph extends React.Component {
                 // update callback data to include all input and output nodes for this node
                 var inputOutputNodes = this.state.graph.nodes.filter( item => item.nodeType == 'channel' && item.nodeUid == id );
                 data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
-                this.deleteNodeData(id);
+                FilterGraphService.deleteNodeData(id).finally(() => {
+                  this.clearNodePopUp();
+                })
               } else {
                 console.log("Cannot delete node " + id)
                 // Clear callback data
@@ -599,18 +601,6 @@ class VisGraph extends React.Component {
     .finally(() => {
       clearNodePopUp();
     });
-  }
-  
-  async deleteNodeData(id) {
-    await fetch('./node/'+id, {
-      method: 'DELETE'
-    }).then(res => {
-      console.debug('Delete node successful:', id);
-    }).catch(error => {
-      console.error('Error on deleting node:', error)
-    }).finally(() => {
-      this.clearNodePopUp();
-    })
   }
   
   
