@@ -31,22 +31,22 @@ import defenceIcon from '../../img/audioled.generative.DefenceMode.png'
 import interpolateHSV from '../../img/audioled.colors.InterpolateHSV.png'
 
 var icons = {
-  'audioled.audio.AudioInput':audioInputIcon,
-  'audioled.audioreactive.Spectrum':spectrumIcon,
-  'audioled.audioreactive.MovingLight':movingIcon,
-  'audioled.audioreactive.VUMeterPeak':vuIcon,
-  'audioled.audioreactive.VUMeterRMS':vuIcon,
+  'audioled.audio.AudioInput': audioInputIcon,
+  'audioled.audioreactive.Spectrum': spectrumIcon,
+  'audioled.audioreactive.MovingLight': movingIcon,
+  'audioled.audioreactive.VUMeterPeak': vuIcon,
+  'audioled.audioreactive.VUMeterRMS': vuIcon,
   'audioled.colors.ColorWheel': colorWheelIcon,
   'audioled.colors.StaticRGBColor': colorIcon,
-  'audioled.devices.LEDOutput':ledIcon,
-  'audioled.effects.Combine':combineIcon,
-  'audioled.effects.Append':appendIcon,
-  'audioled.effects.AfterGlow':glowIcon,
-  'audioled.effects.Mirror':mirrorIcon,
-  'audioled.generative.SwimmingPool':swimmingPoolIcon,
-  'audioled.effects.Shift':shiftIcon,
-  'audioled.generative.DefenceMode':defenceIcon,
-  'audioled.colors.InterpolateHSV':interpolateHSV
+  'audioled.devices.LEDOutput': ledIcon,
+  'audioled.effects.Combine': combineIcon,
+  'audioled.effects.Append': appendIcon,
+  'audioled.effects.AfterGlow': glowIcon,
+  'audioled.effects.Mirror': mirrorIcon,
+  'audioled.generative.SwimmingPool': swimmingPoolIcon,
+  'audioled.effects.Shift': shiftIcon,
+  'audioled.generative.DefenceMode': defenceIcon,
+  'audioled.colors.InterpolateHSV': interpolateHSV
 
 }
 
@@ -76,7 +76,7 @@ class ConfigurationWrapper {
   }
 
   async emit(identifier, data) {
-    
+
   }
 
   clear() {
@@ -106,13 +106,13 @@ class VisGraph extends React.Component {
         nodes: [],
         edges: []
       },
-      style: { 
+      style: {
         flex: "1",
         display: "block"
-       },
+      },
       events: {
         select: ({ nodes, edges }) => {
-          if(nodes.length == 1) {
+          if (nodes.length == 1) {
             this.editNode(nodes[0], this.clearNodePopUp, this.clearNodePopUp)
           }
           console.log("Selected nodes:");
@@ -132,7 +132,7 @@ class VisGraph extends React.Component {
             direction: "LR",
             nodeSpacing: 100,
             sortMethod: 'directed',
-    
+
           },
         },
         physics: {
@@ -168,7 +168,7 @@ class VisGraph extends React.Component {
         },
         interaction: {
           navigationButtons: false,
-          hover:true
+          hover: true
         },
         manipulation: {
           enabled: true,
@@ -180,14 +180,14 @@ class VisGraph extends React.Component {
           deleteNode: (data, callback) => {
             data.nodes.forEach(id => {
               var node = this.state.graph.nodes.find(node => node.id == id)
-              if(node == null) {
+              if (node == null) {
                 console.error("Cannot find node " + id)
               }
-              if(node.nodeType == 'node') {
+              if (node.nodeType == 'node') {
                 // update callback data to include all input and output nodes for this node
-                var inputOutputNodes = this.state.graph.nodes.filter( item => item.nodeType == 'channel' && item.nodeUid == id );
+                var inputOutputNodes = this.state.graph.nodes.filter(item => item.nodeType == 'channel' && item.nodeUid == id);
                 data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
-                FilterGraphService.deleteNodeData(id).finally(() => {
+                FilterGraphService.deleteNode(id).finally(() => {
                   this.clearNodePopUp();
                 })
               } else {
@@ -197,10 +197,10 @@ class VisGraph extends React.Component {
                 data.edges = []
                 return
               }
-              console.debug("Deleted node",id);
+              console.debug("Deleted node", id);
             });
             callback(data);
-            
+
           },
           addEdge: (data, callback) => {
             if (data.from == data.to) {
@@ -209,9 +209,9 @@ class VisGraph extends React.Component {
             }
             var fromNode = this.state.graph.nodes.find(item => item.id === data.from);
             var toNode = this.state.graph.nodes.find(item => item.id === data.to);
-            if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in' ) {
+            if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in') {
               console.log("could add edge")
-              FilterGraphService.postEdgeData(fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback ).then(connection => {
+              FilterGraphService.addConnection(fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback).then(connection => {
                 this.updateVisConnection(data, connection)
                 callback(data);
               });
@@ -225,11 +225,12 @@ class VisGraph extends React.Component {
               var edge = this.state.graph.edges.find(item => item.id === edgeUid);
               var fromNode = this.state.graph.nodes.find(item => item.id === edge.from);
               var toNode = this.state.graph.nodes.find(item => item.id === edge.to);
-              if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in' ) {
-              
-                this.deleteEdgeData(edgeUid);
-                
-                console.debug("Deleted edge",edge);
+              if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in') {
+                var edge = this.state.graph.edges.find(item => item.id === edgeUid);
+                var id = edge.id;
+                FilterGraphService.deleteConnection(id);
+
+                console.debug("Deleted edge", edge);
               } else {
                 console.log("could not delete edge")
                 // Remove edge from callback data
@@ -244,13 +245,13 @@ class VisGraph extends React.Component {
           editEdge: false,
         },
         nodes: {
-          borderWidth:4,
-          size:64,
+          borderWidth: 4,
+          size: 64,
           color: {
             border: '#222222',
             background: '#666666'
           },
-          font:{color:'#eeeeee'}
+          font: { color: '#eeeeee' }
         },
         edges: {
           color: 'lightgray'
@@ -280,7 +281,7 @@ class VisGraph extends React.Component {
         }
       }
     };
-    
+
   }
 
   async componentDidMount() {
@@ -356,7 +357,7 @@ class VisGraph extends React.Component {
       this.addVisNode(element);
     }));
   }
-  
+
   async createEdgesFromBackend() {
     const response = await fetch('./connections');
     const json = response.json();
@@ -364,19 +365,19 @@ class VisGraph extends React.Component {
       this.addVisConnection(element);
     }));
   }
-  
+
   conUid(inout, index, uid) {
     return inout + '_' + index + '_' + uid;
   }
-  
+
   addVisNode(json) {
     var visNode = {};
     this.updateVisNode(visNode, json);
     this.addStateNode(visNode);
-    
-    
+
+
   }
-  
+
   updateVisNode(visNode, json) {
     console.debug('Update Vis Node:', json["py/state"]);
     var uid = json["py/state"]["uid"];
@@ -391,9 +392,9 @@ class VisGraph extends React.Component {
     // update input and output nodes
     var numOutputChannels = json['py/state']['numOutputChannels'];
     var numInputChannels = json['py/state']['numInputChannels'];
-    for(var i=0; i<numOutputChannels; i++) {
+    for (var i = 0; i < numOutputChannels; i++) {
       uid = this.conUid('out', i, visNode.id);
-      if(!this.state.graph.nodes.some(el => el.uid === uid)) {
+      if (!this.state.graph.nodes.some(el => el.uid === uid)) {
         var outNode = {};
         outNode.group = 'out';
         outNode.id = uid;
@@ -403,12 +404,12 @@ class VisGraph extends React.Component {
         outNode.nodeUid = visNode.id;
         outNode.nodeChannel = i;
         this.addStateNode(outNode);
-        this.addStateEdge({id: outNode.id, from: visNode.id, to: outNode.id});
+        this.addStateEdge({ id: outNode.id, from: visNode.id, to: outNode.id });
       }
     }
-    for(var i=0; i < numInputChannels; i++) {
+    for (var i = 0; i < numInputChannels; i++) {
       uid = this.conUid('in', i, visNode.id);
-      if(!this.state.graph.nodes.some(el => el.uid === uid)) {
+      if (!this.state.graph.nodes.some(el => el.uid === uid)) {
         var inNode = {};
         inNode.group = 'in';
         inNode.id = uid;
@@ -418,19 +419,19 @@ class VisGraph extends React.Component {
         inNode.nodeUid = visNode.id;
         inNode.nodeChannel = i;
         this.addStateNode(inNode);
-        this.addStateEdge({id: inNode.id, from:inNode.id, to: visNode.id});
+        this.addStateEdge({ id: inNode.id, from: inNode.id, to: visNode.id });
       }
     }
   }
-  
+
   addVisConnection(con) {
     var edge = {};
     this.updateVisConnection(edge, con);
     this.addStateEdge(edge)
   }
-  
+
   updateVisConnection(edge, json) {
-    console.debug('Update Vis Connection:',json["py/state"]);
+    console.debug('Update Vis Connection:', json["py/state"]);
     var state = json["py/state"];
     edge.id = state["uid"];
     //edge.from = state["from_node_uid"];
@@ -441,24 +442,23 @@ class VisGraph extends React.Component {
     edge.to_channel = state["to_node_channel"];
     edge.arrows = 'to'
   }
-  
-  
+
+
   addGraphNode(data, cancelAction, callback) {
     var effectDropdown = document.getElementById('node-effectDropdown');
     effectDropdown.style.display = 'inherit';
     var effectTable = document.getElementById('node-effectTable');
     effectTable.style.display = 'inherit';
     var saveBtn = document.getElementById('node-saveButton');
-    saveBtn.style.display='inherit';
+    saveBtn.style.display = 'inherit';
     var i;
-    for(i = effectDropdown.options.length - 1 ; i >= 0 ; i--)
-    {
+    for (i = effectDropdown.options.length - 1; i >= 0; i--) {
       effectDropdown.remove(i);
     }
-    const fetchEffects = async() => {
+    const fetchEffects = async () => {
       const response = await fetch('./effects');
       const json = response.json();
-  
+
       json.then(values => {
         values.forEach(element => {
           effectDropdown.add(new Option(element["py/type"]))
@@ -466,91 +466,91 @@ class VisGraph extends React.Component {
         sortSelect(effectDropdown);
         effectDropdown.selectedIndex = 0;
         this.updateNodeArgs();
-      }).catch( err => {
+      }).catch(err => {
         this.showError("Error fetching effects. See console for details");
-        console.error("Error fetching effects:",err);
+        console.error("Error fetching effects:", err);
       })
     }
     fetchEffects();
-  
+
     document.getElementById('node-saveButton').onclick = this.saveNodeData.bind(this, data, callback);
     document.getElementById('node-cancelButton').onclick = cancelAction.bind(this, callback);
     document.getElementById('node-popUp').style.display = 'block';
     document.getElementById('node-effectDropdown').onchange = this.updateNodeArgs.bind(this);
     this.updateNodeArgs();
-  
+
   }
-  
+
   editNode(uid, cancelAction, callback) {
-    var node = this.state.graph.nodes.find( node => node.id === uid);
-    if(node == null) {
+    var node = this.state.graph.nodes.find(node => node.id === uid);
+    if (node == null) {
       console.error("Cannot find node " + node);
       return
     }
-    if(node.nodeType != 'node') {
+    if (node.nodeType != 'node') {
       return
     }
-  
+
     var effectDropdown = document.getElementById('node-effectDropdown');
     effectDropdown.style.display = 'none';
     var effectTable = document.getElementById('node-effectTable');
     effectTable.style.display = 'none';
     var saveBtn = document.getElementById('node-saveButton');
-    saveBtn.style.display='none';
-    
+    saveBtn.style.display = 'none';
+
     const fetchAndShow = async () => {
-      const stateResponse = await fetch('/node/'+uid);
+      const stateResponse = await fetch('/node/' + uid);
       const stateJson = stateResponse.json();
-      const response = await fetch('./node/'+uid+'/parameter');
+      const response = await fetch('./node/' + uid + '/parameter');
       const json = response.json();
-      Promise.all([stateJson, json]).then(result => { 
+      Promise.all([stateJson, json]).then(result => {
         var effect = result[0]["py/state"]["effect"]["py/state"];
         var values = result[1];
         configurator = new ConfigurationWrapper(uid, document.getElementById('node-configuration'), values, effect, async (nodeUid, data) => {
           console.log("emitting", data['parameters']);
-          await fetch('./node/'+nodeUid, {
+          await fetch('./node/' + nodeUid, {
             method: 'UPDATE', // or 'PUT'
             body: JSON.stringify(data['parameters']), // data can be `string` or {object}!
-            headers:{
+            headers: {
               'Content-Type': 'application/json'
             }
           }).then(res => res.json())
-          .then(node => {
-            console.debug('Update node successful:', JSON.stringify(node));
-            // updateVisNode(data, node); // TODO: Needed?
-          })
-          .catch(error => {
-            showError("Error on updating node. See console for details.")
-            console.error('Error on updating node:', error);
-          })
+            .then(node => {
+              console.debug('Update node successful:', JSON.stringify(node));
+              // updateVisNode(data, node); // TODO: Needed?
+            })
+            .catch(error => {
+              showError("Error on updating node. See console for details.")
+              console.error('Error on updating node:', error);
+            })
         });
-        
-      }) ;
+
+      });
     }
     fetchAndShow();
     document.getElementById('node-cancelButton').onclick = cancelAction.bind(this, callback);
     document.getElementById('node-effectDropdown').onchange = null;
     document.getElementById('node-popUp').style.display = 'block';
   }
-  
+
   sortSelect(selElem) {
     var tmpAry = new Array();
-    for (var i=0;i<selElem.options.length;i++) {
-        tmpAry[i] = new Array();
-        tmpAry[i][0] = selElem.options[i].text;
-        tmpAry[i][1] = selElem.options[i].value;
+    for (var i = 0; i < selElem.options.length; i++) {
+      tmpAry[i] = new Array();
+      tmpAry[i][0] = selElem.options[i].text;
+      tmpAry[i][1] = selElem.options[i].value;
     }
     tmpAry.sort();
     while (selElem.options.length > 0) {
-        selElem.options[0] = null;
+      selElem.options[0] = null;
     }
-    for (var i=0;i<tmpAry.length;i++) {
-        var op = new Option(tmpAry[i][0], tmpAry[i][1]);
-        selElem.options[i] = op;
+    for (var i = 0; i < tmpAry.length; i++) {
+      var op = new Option(tmpAry[i][0], tmpAry[i][1]);
+      selElem.options[i] = op;
     }
     return;
   }
-  
+
   async saveNodeData(data, callback) {
     // gather data
     var effectDropdown = document.getElementById('node-effectDropdown')
@@ -561,106 +561,104 @@ class VisGraph extends React.Component {
     await fetch('./node', {
       method: 'POST', // or 'PUT'
       body: JSON.stringify([selectedEffect, options]), // data can be `string` or {object}!
-      headers:{
+      headers: {
         'Content-Type': 'application/json'
       }
     }).then(res => res.json())
-    .then(node => {
-      console.debug('Create node successful:', JSON.stringify(node));
-      //updateVisNode(data, node);
-      this.addVisNode(node);
-      callback(null); // can't use callback since we alter nodes in updateVisNode
-    })
-    .catch(error => {
-      showError("Error on creating node. See console for details");
-      console.error('Error on creating node:', error);
-    })
-    .finally(() => {
-      this.clearNodePopUp();
-    });
+      .then(node => {
+        console.debug('Create node successful:', JSON.stringify(node));
+        //updateVisNode(data, node);
+        this.addVisNode(node);
+        callback(null); // can't use callback since we alter nodes in updateVisNode
+      })
+      .catch(error => {
+        showError("Error on creating node. See console for details");
+        console.error('Error on creating node:', error);
+      })
+      .finally(() => {
+        this.clearNodePopUp();
+      });
   }
-  
+
   async updateNodeData(data, callback) {
     var options = document.getElementById('node-args').value;
     // Save node in backend
-    await fetch('./node/'+data, {
+    await fetch('./node/' + data, {
       method: 'UPDATE', // or 'PUT'
       body: JSON.stringify(options), // data can be `string` or {object}!
-      headers:{
+      headers: {
         'Content-Type': 'application/json'
       }
     }).then(res => res.json())
-    .then(node => {
-      console.debug('Update node successful:', JSON.stringify(node));
-      // updateVisNode(data, node); // TODO: Needed?
-      callback(data);
-    })
-    .catch(error => {
-      console.error('Error on updating node:', error);
-    })
-    .finally(() => {
-      clearNodePopUp();
-    });
+      .then(node => {
+        console.debug('Update node successful:', JSON.stringify(node));
+        // updateVisNode(data, node); // TODO: Needed?
+        callback(data);
+      })
+      .catch(error => {
+        console.error('Error on updating node:', error);
+      })
+      .finally(() => {
+        clearNodePopUp();
+      });
   }
-  
-  
-  
+
+
+
   clearNodePopUp() {
-    if(configurator) {
+    if (configurator) {
       configurator.clear();
     }
     document.getElementById('node-saveButton').onclick = null;
     document.getElementById('node-cancelButton').onclick = null;
     document.getElementById('node-popUp').style.display = 'none';
   }
-  
+
   async fetchNode(uid) {
-    return fetch('./node/'+uid).then(response => response.json())
+    return fetch('./node/' + uid).then(response => response.json())
   }
-  
+
   editEdgeWithoutDrag(data, callback) {
     // clean up
     var fromChannelDropdown = document.getElementById('edge-fromChannelDropdown');
     var i;
-    for(i = fromChannelDropdown.options.length - 1 ; i >= 0 ; i--)
-    {
+    for (i = fromChannelDropdown.options.length - 1; i >= 0; i--) {
       fromChannelDropdown.remove(i);
     }
     var toChannelDropdown = document.getElementById('edge-toChannelDropdown');
     var i;
-    for(i = toChannelDropdown.options.length - 1 ; i >= 0 ; i--)
-    {
+    for (i = toChannelDropdown.options.length - 1; i >= 0; i--) {
       toChannelDropdown.remove(i);
     }
-  
+
     var fromNodeUid = data.from;
     var toNodeUid = data.to;
-  
-    const fetchFromNode = async() => {
+
+    const fetchFromNode = async () => {
       var node = await fetchNode(fromNodeUid);
       var numFromChannels = node['py/state']['numOutputChannels'];
-      for(var i=0; i<numFromChannels; i++) {
+      for (var i = 0; i < numFromChannels; i++) {
         fromChannelDropdown.add(new Option(i));
       }
     }
     fetchFromNode();
-    const fetchToNode = async() => {
+    const fetchToNode = async () => {
       var node = await fetchNode(toNodeUid);
       var numToChannels = node['py/state']['numInputChannels'];
-      for(var i=0; i<numToChannels; i++) {
+      for (var i = 0; i < numToChannels; i++) {
         toChannelDropdown.add(new Option(i));
       }
     }
     fetchToNode();
-  
+
     // filling in the popup DOM elements
     document.getElementById('edge-saveButton').onclick = saveEdgeData.bind(this, data, callback);
-    document.getElementById('edge-cancelButton').onclick = cancelEdgeEdit.bind(this,callback);
+    document.getElementById('edge-cancelButton').onclick = cancelEdgeEdit.bind(this, callback);
     document.getElementById('edge-popUp').style.display = 'block';
   }
-  
-  
-  
+
+
+
   async saveEdgeData(data, callback) {
     if (typeof data.to === 'object') {
       data.to = data.to.id
@@ -668,43 +666,32 @@ class VisGraph extends React.Component {
     if (typeof data.from === 'object') {
       data.from = data.from.id
     }
-  
+
     var fromChannelDropdown = document.getElementById('edge-fromChannelDropdown');
     var from_node_channel = fromChannelDropdown.options[fromChannelDropdown.selectedIndex].value;
     var toChannelDropdown = document.getElementById('edge-toChannelDropdown');
     var to_node_channel = toChannelDropdown.options[toChannelDropdown.selectedIndex].value;
-    await FilterGraphService.postEdgeData(data.from, from_node_channel, data.to, to_node_channel, data, callback).then(connection => {
-      this.updateVisConnection(data, connection)
-      callback(data);
-    });
+    await FilterGraphService.addConnection(data.from, from_node_channel, data.to, to_node_channel, data, callback)
+      .then(connection => {
+        this.updateVisConnection(data, connection)
+        callback(data);
+      });
   }
-  
-  async deleteEdgeData(data) {
-    var edge = this.state.graph.edges.find(item => item.id === data);
-    var id = edge.id;
-    await fetch('./connection/'+id, {
-      method: 'DELETE'
-    }).then(res => {
-      console.debug('Delete connection successful:', id);
-    }).catch(error => {
-      console.error('Error on deleting connection:', error)
-    })
-  }
-  
+
   async updateNodeArgs() {
     var effectDropdown = document.getElementById('node-effectDropdown');
     var selectedEffect = effectDropdown.options[effectDropdown.selectedIndex].value;
-  
-    const response = await fetch('./effect/'+selectedEffect+'/parameter');
+
+    const response = await fetch('./effect/' + selectedEffect + '/parameter');
     const json = response.json();
-    const defaultReponse = await fetch('./effect/'+selectedEffect+'/args');
+    const defaultReponse = await fetch('./effect/' + selectedEffect + '/args');
     const defaultJson = defaultReponse.json();
-  
-    if(configurator) {
+
+    if (configurator) {
       configurator.clear();
     }
-  
-    Promise.all([json,defaultJson]).then(result => { 
+
+    Promise.all([json, defaultJson]).then(result => {
       var parameters = result[0];
       var defaults = result[1];
       console.log(parameters);
@@ -714,20 +701,20 @@ class VisGraph extends React.Component {
       });
     }).catch(err => {
       showError("Error updating node configuration. See console for details.");
-      console.err("Error updating node configuration:",err);
+      console.err("Error updating node configuration:", err);
     });
   }
-  
+
   showError(message) {
     var error = document.getElementById('alert');
     var errorInfo = document.getElementById('alert-info');
-    error.style.display='inherit';
-    errorInfo.innerHTML = "<strong>Danger!</strong> "+ message;
+    error.style.display = 'inherit';
+    errorInfo.innerHTML = "<strong>Danger!</strong> " + message;
   }
-  
+
   hideError() {
     var error = document.getElementById('alert');
-    error.style.display='none';
+    error.style.display = 'none';
   }
 
   handleSaveConfig = async (event) => {
@@ -745,7 +732,7 @@ class VisGraph extends React.Component {
   updateDimensions = (event) => {
 
     let content = document.getElementById('vis-content');
-    content.getElementsByTagName('div')[0].style.height = (content.clientHeight)+"px"
+    content.getElementsByTagName('div')[0].style.height = (content.clientHeight) + "px"
     this.state.network.redraw();
     this.state.network.fit();
   }
@@ -763,16 +750,16 @@ class VisGraph extends React.Component {
             <SaveIcon />
             Download Config
           </Button>
-          <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }}/>
+          <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
           <label htmlFor="file-input">
             <Button variant="contained" component="span">
-            <CloudUploadIcon />
-            Upload Config
+              <CloudUploadIcon />
+              Upload Config
           </Button>
-      </label>
+          </label>
         </div>
         <div id="vis-content">
-          <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({network })} />
+          <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
         </div>
         <div id="node-popUp">
           <h2 id="node-operation">node</h2>
@@ -781,7 +768,7 @@ class VisGraph extends React.Component {
             <div className="vis-configuration vis-config-item vis-config-s2"><select className="form-control" id='node-effectDropdown' name='node-effectDropdown'></select></div>
           </div>
           <div id="node-configuration"></div>
-          <table style={{margin: "auto"}}>
+          <table style={{ margin: "auto" }}>
             <tbody>
               <tr>
                 <td><input type="button" value="save" id="node-saveButton" /></td>
