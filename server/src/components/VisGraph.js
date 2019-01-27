@@ -279,8 +279,7 @@ class VisGraph extends React.Component {
   }
 
   async componentDidMount() {
-    await this.createNodesFromBackend();
-    await this.createEdgesFromBackend();
+    await this.createNetwork();
     window.addEventListener("resize", this.updateDimensions);
     await this.updateDimensions()
   }
@@ -331,6 +330,20 @@ class VisGraph extends React.Component {
       }
     });
   }
+
+  async createNetwork() {
+    this.setState(state => {
+      return {
+        graph: {
+          nodes: [],
+          edges: [],
+        }
+      }
+    })
+    await this.createNodesFromBackend();
+    await this.createEdgesFromBackend();
+  }
+
   async createNodesFromBackend() {
     const response = await fetch('./nodes');
     const json = response.json();
@@ -739,7 +752,7 @@ class VisGraph extends React.Component {
     var reader = new FileReader();
     reader.onload = e => {
       var contents = e.target.result;
-      this.displayContents(contents);
+      this.loadConfig(contents);
     };
     reader.readAsText(file);
   }
@@ -756,7 +769,7 @@ class VisGraph extends React.Component {
     })
   }
   
-  displayContents(contents) {
+  loadConfig(contents) {
     console.log(contents);
     const postData = async () => fetch('./configuration', {
       method: 'POST', // or 'PUT'
@@ -768,16 +781,12 @@ class VisGraph extends React.Component {
     .then(
       () => {
         console.log("Successfully loaded");
-        location.reload();
+        this.createNetwork()
       })
     .catch(error => {
       console.error('Error on loading configuration:', error);
     })
     postData();
-  }
-  
-  async loadConfig() {
-    await fetch()
   }
   
   showError(message) {
