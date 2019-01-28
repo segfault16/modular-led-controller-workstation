@@ -5,6 +5,9 @@ import FormControl from '@material-ui/core/FormControl'
 import FormGroup from '@material-ui/core/FormGroup'
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
+import InputLabel from '@material-ui/core/InputLabel';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@material-ui/core/Select';
 import FormControlLabel from '@material-ui/core/FormControlLabel'
 import FilterGraphService from "../services/FilterGraphService";
 import './NodePopup.css'
@@ -115,19 +118,6 @@ class NodePopup extends React.Component {
                         }
                     }
                 })
-                configurator = new ConfigurationWrapper(uid, document.getElementById('node-configuration'), values, effect, async (nodeUid, data) => {
-                    console.log("emitting", data['parameters']);
-                    await FilterGraphService.updateNode(nodeUid, data['parameters'])
-                        .then(node => {
-                            console.debug('Update node successful:', JSON.stringify(node));
-                            // updateVisNode(data, node); // TODO: Needed?
-                        })
-                        .catch(error => {
-                            //showError("Error on updating node. See console for details.")
-                            console.error('Error on updating node:', error);
-                        })
-                });
-
             });
         }
         fetchAndShow();
@@ -173,18 +163,20 @@ class NodePopup extends React.Component {
         var selectedEffect = effectDropdown.options[effectDropdown.selectedIndex].value;
         const json = await FilterGraphService.getEffectParameters(selectedEffect);
         const defaultJson = await FilterGraphService.getEffectArguments(selectedEffect);
-        if (configurator) {
-            configurator.clear();
-        }
 
         Promise.all([json, defaultJson]).then(result => {
             var parameters = result[0];
             var defaults = result[1];
             console.log(parameters);
             console.log(defaults);
-            configurator = new ConfigurationWrapper(selectedEffect, document.getElementById('node-configuration'), parameters, defaults, async (nodeUid, data) => {
-                // do nothing
-            });
+            this.setState(state => {
+                return {
+                    config: {
+                        parameters: parameters.parameters,
+                        values: defaults
+                    }
+                }
+            })
         }).catch(err => {
             showError("Error updating node configuration. See console for details.");
             console.err("Error updating node configuration:", err);
@@ -197,7 +189,7 @@ class NodePopup extends React.Component {
     handleNodeEditSave = async (event) => {
         var effectDropdown = document.getElementById('node-effectDropdown')
         var selectedEffect = effectDropdown.options[effectDropdown.selectedIndex].value;
-        var options = configurator.getState();
+        var options = this.state.config.values;
         this.state.onSave(selectedEffect, options)
     }
 
@@ -220,30 +212,65 @@ class NodePopup extends React.Component {
     }
 
     handleChange = (value, parameter) => {
+        let newState = Object.assign({}, this.state);    //creating copy of object
+        newState.config.values[parameter] = value;
+        if(this.state.mode === "edit") {
+            FilterGraphService.updateNode(this.state.nodeUid, {[parameter]: value})
+        }
+        this.setState(newState);
       };
 
     render() {
-        console.log(Object.keys(this.state.config.parameters))
         let parameters = this.state.config.parameters;
         let values = this.state.config.values;
         let configList = Object.keys(parameters).map( (data, index) => {
+            let control;
+            console.log(data)
+            if(parameters[data] instanceof Array ) {
+                if(parameters[data].some(isNaN)) {
+                    let items = parameters[data].map((option, idx) => {
+                        return (
+                            <MenuItem value={option}>{option}</MenuItem>
+                        )
+                    })
+                    control = <React.Fragment>
+                            <Grid item xs={9}>
+                                <InputLabel htmlFor={data}/>
+                                <Select
+                                    value={values[data]}
+                                    onChange={(e, val)=>this.handleChange(val.props.value, data)}
+                                    inputProps={{
+                                        name: data,
+                                        id: data,
+                                    }}>
+                                    {items}
+                                </Select>
+                            </Grid>
+                        </React.Fragment>
+                } else if(!parameters[data].some(isNaN)) {
+                    console.log("Slider")
+                    control = <React.Fragment>
+                            <Grid item xs={7}>
+                                <Slider id={data} value={values[data]} min={parameters[data][1]} max={parameters[data][2]} step={parameters[data][3]} onChange={(e, val)=>this.handleChange(val, data)}/>
+                            </Grid>
+                            <Grid item xs={2}>
+                                {values[data]}
+                            </Grid>
+                        </React.Fragment>
+                }
+            }
+            if(control) {
             return (
                 <Grid container spacing={24}>
-                
-                {/* <div className="vis-configuration vis-config-item vis-config-s2"> */}
-                <Grid item xs={3}>
-                {data}:
-                </Grid>
-                <Grid item xs={7}>
-                    <Slider id={data} value={values[data]} min={parameters[data][1]} max={parameters[data][2]} step={parameters[data][3]} onChange={(e, val)=>this.handleChange(val, data)}/> 
-                </Grid>
-                <Grid item xs={2}>
-                {values[data]}
-                </Grid>
-                {/* </div> */}
-                
+                    <Grid item xs={3}>
+                        {data}:
+                    </Grid>
+                    {control}                    
                 </Grid>
             )
+            } else {
+                return "undefined"
+            }
         });
         return (
             <div id="node-popUp">
@@ -252,7 +279,6 @@ class NodePopup extends React.Component {
                     <div className="vis-configuration vis-config-header">effect</div>
                     <div className="vis-configuration vis-config-item vis-config-s2"><select className="form-control" id='node-effectDropdown' name='node-effectDropdown'></select></div>
                 </div>
-                <div id="node-configuration"></div>
                 <div id="node-grid">
                 {configList}
                 </div>
