@@ -1,4 +1,4 @@
-#node-popUp {
+/* #node-popUp {
     display: none;
     position: absolute;
     top: 350px;
@@ -13,7 +13,7 @@
     padding: 10px;
     text-align: center;
     color: white;
-}
+} */
 
 div.vis-configuration-wrapper {
     width: 500px !important;

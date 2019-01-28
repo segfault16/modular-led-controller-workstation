@@ -5,6 +5,7 @@ import SaveIcon from '@material-ui/icons/Save';
 import React from "react";
 import Graph from "react-graph-vis";
 import 'vis/dist/vis-network.min.css';
+import Modal from '@material-ui/core/Modal';
 import audioInputIcon from '../../img/audioled.audio.AudioInput.png';
 import movingIcon from '../../img/audioled.audioreactive.MovingLight.png';
 import spectrumIcon from '../../img/audioled.audioreactive.Spectrum.png';
@@ -481,7 +482,9 @@ class VisGraph extends React.Component {
         <div id="vis-content">
           <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
         </div>
-        {this.state.editNodePopup.isShown ? <NodePopup mode={this.state.editNodePopup.mode} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null}
+        <Modal open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp}>
+          <NodePopup mode={this.state.editNodePopup.mode} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
+        </Modal>
       </div>
     );
   }

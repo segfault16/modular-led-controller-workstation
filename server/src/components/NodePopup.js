@@ -1,6 +1,13 @@
 import React from "react";
+import PropTypes from 'prop-types';
+import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
 import Slider from '@material-ui/lab/Slider';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogContentText from '@material-ui/core/DialogContentText';
+import DialogTitle from '@material-ui/core/DialogTitle';
 import FormControl from '@material-ui/core/FormControl'
 import FormGroup from '@material-ui/core/FormGroup'
 import Paper from '@material-ui/core/Paper';
@@ -10,7 +17,25 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Select from '@material-ui/core/Select';
 import FormControlLabel from '@material-ui/core/FormControlLabel'
 import FilterGraphService from "../services/FilterGraphService";
+
 import './NodePopup.css'
+
+
+  
+  
+  
+  const styles = theme => ({
+    paper: {
+      position: 'absolute',
+      top: '350px',
+      left: '170px',
+      width: theme.spacing.unit * 80,
+      backgroundColor: theme.palette.background.paper,
+      boxShadow: theme.shadows[5],
+      padding: theme.spacing.unit * 4,
+      outline: 'none',
+    },
+  });
 
 class NodePopup extends React.Component {
     constructor(props) {
@@ -36,7 +61,7 @@ class NodePopup extends React.Component {
     }
 
     componentWillUnmount() {
-        document.getElementById('node-popUp').style.display = 'none';
+        // document.getElementById('node-popUp').style.display = 'none';
     }
 
     showEdit() {
@@ -70,7 +95,7 @@ class NodePopup extends React.Component {
         }
         fetchAndShow();
         document.getElementById('node-effectDropdown').onchange = null;
-        document.getElementById('node-popUp').style.display = 'block';
+        // document.getElementById('node-popUp').style.display = 'block';
     }
 
     showAdd() {
@@ -98,7 +123,7 @@ class NodePopup extends React.Component {
         }
         fetchEffects();
 
-        document.getElementById('node-popUp').style.display = 'block';
+        // document.getElementById('node-popUp').style.display = 'block';
         document.getElementById('node-effectDropdown').onchange = this.updateNodeArgs.bind(this);
         this.updateNodeArgs();
     }
@@ -159,7 +184,7 @@ class NodePopup extends React.Component {
         return;
     }
 
-    handleChange = (value, parameter) => {
+    handleParameterChange = (value, parameter) => {
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.config.values[parameter] = value;
         if (this.state.mode === "edit") {
@@ -169,6 +194,7 @@ class NodePopup extends React.Component {
     };
 
     render() {
+        const { classes } = this.props;
         let parameters = this.state.config.parameters;
         let values = this.state.config.values;
         let configList = null
@@ -189,7 +215,7 @@ class NodePopup extends React.Component {
                                 <InputLabel htmlFor={data} />
                                 <Select
                                     value={values[data]}
-                                    onChange={(e, val) => this.handleChange(val.props.value, data)}
+                                    onChange={(e, val) => this.handleParameterChange(val.props.value, data)}
                                     inputProps={{
                                         name: data,
                                         id: data,
@@ -203,7 +229,7 @@ class NodePopup extends React.Component {
                         console.log("Slider")
                         control = <React.Fragment>
                             <Grid item xs={7}>
-                                <Slider id={data} value={values[data]} min={parameters[data][1]} max={parameters[data][2]} step={parameters[data][3]} onChange={(e, val) => this.handleChange(val, data)} />
+                                <Slider id={data} value={values[data]} min={parameters[data][1]} max={parameters[data][2]} step={parameters[data][3]} onChange={(e, val) => this.handleParameterChange(val, data)} />
                             </Grid>
                             <Grid item xs={2}>
                                 {values[data]}
@@ -226,7 +252,7 @@ class NodePopup extends React.Component {
             });
         }
         return (
-            <div id="node-popUp">
+            <div className={classes.paper}>
                 <h2 id="node-operation">{this.state.mode}</h2>
                 <div id="node-effectTable">
                     <div className="vis-configuration vis-config-header">effect</div>
@@ -248,4 +274,8 @@ class NodePopup extends React.Component {
     }
 }
 
-export default NodePopup;
+NodePopup.propTypes = {
+    classes: PropTypes.object.isRequired,
+  };
+
+export default withStyles(styles)(NodePopup);
