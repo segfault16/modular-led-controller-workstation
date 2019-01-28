@@ -11,53 +11,6 @@ import Select from '@material-ui/core/Select';
 import FormControlLabel from '@material-ui/core/FormControlLabel'
 import FilterGraphService from "../services/FilterGraphService";
 import './NodePopup.css'
-var Configurator = require("vis/lib/shared/Configurator").default;
-let util = require('vis/lib/util');
-
-class Emitter {
-    constructor(emit) {
-        this.emit = emit
-    }
-}
-
-class Body {
-    constructor(emit) {
-        this.emitter = new Emitter(emit);
-    }
-}
-
-class ConfigurationWrapper {
-    constructor(nodeUid, body, parameters, state, callback) {
-        this.nodeUid = nodeUid;
-        this.body = new Body(this.emit);
-        this.configurator = new Configurator(this, body, parameters);
-        this.configurator.setOptions(true);
-        this.configurator.setModuleOptions(state);
-        this.state = state;
-        this.callback = callback;
-    }
-
-    async emit(identifier, data) {
-
-    }
-
-    clear() {
-        util.recursiveDOMDelete(this.configurator.wrapper);
-    }
-
-    getState() {
-        return this.state;
-    }
-
-    // is called by Configurator once values change
-    async setOptions(data) {
-        util.deepExtend(this.state, data['parameters']);
-        this.callback(this.nodeUid, data);
-    }
-
-}
-
-var configurator = null
 
 class NodePopup extends React.Component {
     constructor(props) {
@@ -83,11 +36,6 @@ class NodePopup extends React.Component {
     }
 
     componentWillUnmount() {
-        if (configurator) {
-            configurator.clear();
-        }
-        document.getElementById('node-saveButton').onclick = null;
-        document.getElementById('node-cancelButton').onclick = null;
         document.getElementById('node-popUp').style.display = 'none';
     }
 
@@ -214,31 +162,34 @@ class NodePopup extends React.Component {
     handleChange = (value, parameter) => {
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.config.values[parameter] = value;
-        if(this.state.mode === "edit") {
-            FilterGraphService.updateNode(this.state.nodeUid, {[parameter]: value})
+        if (this.state.mode === "edit") {
+            FilterGraphService.updateNode(this.state.nodeUid, { [parameter]: value })
         }
         this.setState(newState);
-      };
+    };
 
     render() {
         let parameters = this.state.config.parameters;
         let values = this.state.config.values;
-        let configList = Object.keys(parameters).map( (data, index) => {
-            let control;
-            console.log(data)
-            if(parameters[data] instanceof Array ) {
-                if(parameters[data].some(isNaN)) {
-                    let items = parameters[data].map((option, idx) => {
-                        return (
-                            <MenuItem value={option}>{option}</MenuItem>
-                        )
-                    })
-                    control = <React.Fragment>
+        let configList = null
+        if (parameters) {
+            configList = Object.keys(parameters).map((data, index) => {
+                let control;
+                console.log(data)
+                if (parameters[data] instanceof Array) {
+                    if (parameters[data].some(isNaN)) {
+                        // Array of non-numbers -> DropDown
+                        let items = parameters[data].map((option, idx) => {
+                            return (
+                                <MenuItem value={option}>{option}</MenuItem>
+                            )
+                        })
+                        control = <React.Fragment>
                             <Grid item xs={9}>
-                                <InputLabel htmlFor={data}/>
+                                <InputLabel htmlFor={data} />
                                 <Select
                                     value={values[data]}
-                                    onChange={(e, val)=>this.handleChange(val.props.value, data)}
+                                    onChange={(e, val) => this.handleChange(val.props.value, data)}
                                     inputProps={{
                                         name: data,
                                         id: data,
@@ -247,31 +198,33 @@ class NodePopup extends React.Component {
                                 </Select>
                             </Grid>
                         </React.Fragment>
-                } else if(!parameters[data].some(isNaN)) {
-                    console.log("Slider")
-                    control = <React.Fragment>
+                    } else if (!parameters[data].some(isNaN)) {
+                        // Array of numbers -> Slider
+                        console.log("Slider")
+                        control = <React.Fragment>
                             <Grid item xs={7}>
-                                <Slider id={data} value={values[data]} min={parameters[data][1]} max={parameters[data][2]} step={parameters[data][3]} onChange={(e, val)=>this.handleChange(val, data)}/>
+                                <Slider id={data} value={values[data]} min={parameters[data][1]} max={parameters[data][2]} step={parameters[data][3]} onChange={(e, val) => this.handleChange(val, data)} />
                             </Grid>
                             <Grid item xs={2}>
                                 {values[data]}
                             </Grid>
                         </React.Fragment>
+                    }
                 }
-            }
-            if(control) {
-            return (
-                <Grid container spacing={24}>
-                    <Grid item xs={3}>
-                        {data}:
+                if (control) {
+                    return (
+                        <Grid container spacing={24}>
+                            <Grid item xs={3}>
+                                {data}:
                     </Grid>
-                    {control}                    
-                </Grid>
-            )
-            } else {
-                return "undefined"
-            }
-        });
+                            {control}
+                        </Grid>
+                    )
+                } else {
+                    return "undefined"
+                }
+            });
+        }
         return (
             <div id="node-popUp">
                 <h2 id="node-operation">{this.state.mode}</h2>
@@ -280,7 +233,7 @@ class NodePopup extends React.Component {
                     <div className="vis-configuration vis-config-item vis-config-s2"><select className="form-control" id='node-effectDropdown' name='node-effectDropdown'></select></div>
                 </div>
                 <div id="node-grid">
-                {configList}
+                    {configList}
                 </div>
                 <table style={{ margin: "auto" }}>
                     <tbody>
