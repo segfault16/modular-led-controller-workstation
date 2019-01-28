@@ -47,3 +47,7 @@ div.vis-configuration.vis-config-item.vis-config-s4 {
     padding-left: 5px;
     border-radius: 3px;
 }
+
+#node-grid {
+    flex-grow: 1;
+}
