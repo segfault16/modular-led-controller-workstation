@@ -48,7 +48,9 @@ class NodePopup extends React.Component {
             config: {
                 parameters: [],
                 values: []
-            }
+            },
+            effects: [],
+            selectedEffect: null
         }
     }
 
@@ -67,13 +69,6 @@ class NodePopup extends React.Component {
     showEdit() {
 
         const uid = this.state.nodeUid;
-
-        var effectDropdown = document.getElementById('node-effectDropdown');
-        effectDropdown.style.display = 'none';
-        var effectTable = document.getElementById('node-effectTable');
-        effectTable.style.display = 'none';
-        var saveBtn = document.getElementById('node-saveButton');
-        saveBtn.style.display = 'none';
 
         const fetchAndShow = async () => {
             const stateJson = await FilterGraphService.getNode(uid);
@@ -94,46 +89,32 @@ class NodePopup extends React.Component {
             });
         }
         fetchAndShow();
-        document.getElementById('node-effectDropdown').onchange = null;
-        // document.getElementById('node-popUp').style.display = 'block';
     }
 
     showAdd() {
-        var effectDropdown = document.getElementById('node-effectDropdown');
-        effectDropdown.style.display = 'inherit';
-        var effectTable = document.getElementById('node-effectTable');
-        effectTable.style.display = 'inherit';
-        var saveBtn = document.getElementById('node-saveButton');
-        saveBtn.style.display = 'inherit';
-        var i;
-        for (i = effectDropdown.options.length - 1; i >= 0; i--) {
-            effectDropdown.remove(i);
-        }
+
         const fetchEffects = async () => {
             await FilterGraphService.getAllEffects().then(values => {
-                values.forEach(element => {
-                    effectDropdown.add(new Option(element["py/type"]))
-                });
-                this.sortSelect(effectDropdown);
-                effectDropdown.selectedIndex = 0;
-                this.updateNodeArgs();
+                let effects = values.map(element => element["py/type"])
+                this.setState(state => {
+                    return {
+                        effects: effects,
+                        selectedEffect: effects[0]
+                    }
+                })
+                this.updateNodeArgs(effects[0]);
             }).catch(err => {
                 console.error("Error fetching effects:", err);
             })
         }
         fetchEffects();
-
-        // document.getElementById('node-popUp').style.display = 'block';
-        document.getElementById('node-effectDropdown').onchange = this.updateNodeArgs.bind(this);
-        this.updateNodeArgs();
     }
 
-    async updateNodeArgs() {
-        var effectDropdown = document.getElementById('node-effectDropdown');
-        if (effectDropdown.selectedIndex <= 0) {
+    async updateNodeArgs(selectedEffect) {
+        
+        if(selectedEffect == null) {
             return
         }
-        var selectedEffect = effectDropdown.options[effectDropdown.selectedIndex].value;
         const json = await FilterGraphService.getEffectParameters(selectedEffect);
         const defaultJson = await FilterGraphService.getEffectArguments(selectedEffect);
 
@@ -142,7 +123,7 @@ class NodePopup extends React.Component {
             var defaults = result[1];
             console.log(parameters);
             console.log(defaults);
-            this.setState(state => {
+            return this.setState(state => {
                 return {
                     config: {
                         parameters: parameters.parameters,
@@ -159,9 +140,9 @@ class NodePopup extends React.Component {
     handleNodeEditCancel = async (event) => {
         this.state.onCancel()
     }
+
     handleNodeEditSave = async (event) => {
-        var effectDropdown = document.getElementById('node-effectDropdown')
-        var selectedEffect = effectDropdown.options[effectDropdown.selectedIndex].value;
+        var selectedEffect = this.state.selectedEffect;
         var options = this.state.config.values;
         this.state.onSave(selectedEffect, options)
     }
@@ -193,7 +174,17 @@ class NodePopup extends React.Component {
         this.setState(newState);
     };
 
+    handleEffectChange = (effect) => {
+        this.setState(state => {
+            return {
+                selectedEffect: effect
+            }
+        })
+        this.updateNodeArgs(effect);
+    }
+
     render() {
+        console.log(this.state)
         const { classes } = this.props;
         let parameters = this.state.config.parameters;
         let values = this.state.config.values;
@@ -201,7 +192,6 @@ class NodePopup extends React.Component {
         if (parameters) {
             configList = Object.keys(parameters).map((data, index) => {
                 let control;
-                console.log(data)
                 if (parameters[data] instanceof Array) {
                     if (parameters[data].some(isNaN)) {
                         // Array of non-numbers -> DropDown
@@ -211,6 +201,7 @@ class NodePopup extends React.Component {
                             )
                         })
                         control = <React.Fragment>
+                            
                             <Grid item xs={9}>
                                 <InputLabel htmlFor={data} />
                                 <Select
@@ -226,7 +217,6 @@ class NodePopup extends React.Component {
                         </React.Fragment>
                     } else if (!parameters[data].some(isNaN)) {
                         // Array of numbers -> Slider
-                        console.log("Slider")
                         control = <React.Fragment>
                             <Grid item xs={7}>
                                 <Slider id={data} value={values[data]} min={parameters[data][1]} max={parameters[data][2]} step={parameters[data][3]} onChange={(e, val) => this.handleParameterChange(val, data)} />
@@ -239,6 +229,7 @@ class NodePopup extends React.Component {
                 }
                 if (control) {
                     return (
+                        
                         <Grid container spacing={24}>
                             <Grid item xs={3}>
                                 {data}:
@@ -251,14 +242,36 @@ class NodePopup extends React.Component {
                 }
             });
         }
+        let effectDropdown = null;
+        if(this.state.mode === 'add') {
+            let items = this.state.effects.map((effect, id) => {
+                return (
+                    <MenuItem value={effect}>{effect}</MenuItem>
+                )
+            })
+            effectDropdown=<React.Fragment>
+                <h3>Effects:</h3>
+                <InputLabel htmlFor="effect-dropdown" />
+            <Select
+                value={this.state.selectedEffect}
+                onChange={(e, val) => this.handleEffectChange(val.props.value)}
+                inputProps={{
+                    name: "effect-dropdown",
+                    id: "effect-dropdown",
+                }}>
+                {items}
+            </Select>
+            </React.Fragment>
+        }
         return (
             <div className={classes.paper}>
                 <h2 id="node-operation">{this.state.mode}</h2>
-                <div id="node-effectTable">
-                    <div className="vis-configuration vis-config-header">effect</div>
-                    <div className="vis-configuration vis-config-item vis-config-s2"><select className="form-control" id='node-effectDropdown' name='node-effectDropdown'></select></div>
+                <div id="effects">
+                
+                    {effectDropdown}
                 </div>
                 <div id="node-grid">
+                <h3>Parameters:</h3>
                     {configList}
                 </div>
                 <table style={{ margin: "auto" }}>
