@@ -466,7 +466,6 @@ class VisGraph extends React.Component {
     return (
       <div id="vis-container">
         <div id="vis-other">
-          <h1>FilterGraph:</h1>
           <Button variant="contained" onClick={this.handleSaveConfig}>
             <SaveIcon />
             Download Config
