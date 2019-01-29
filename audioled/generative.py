@@ -346,11 +346,11 @@ class Heartbeat(Effect):
 
 
 class FallingStars(Effect):
-    def __init__(self, num_pixels, dim_speed=100, thickness=1, spawnTime=0.1, max_brightness=1):
+    def __init__(self, num_pixels, dim_speed=100, thickness=1, spawntime=0.1, max_brightness=1):
         self.num_pixels = num_pixels
         self.dim_speed = dim_speed
         self.thickness = thickness  # getting down with it
-        self.spawnTime = spawnTime
+        self.spawntime = spawntime
         self.max_brightness = max_brightness
         self.__initstate__()
 
@@ -372,7 +372,7 @@ class FallingStars(Effect):
                 ("dim_speed", [100, 1, 1000, 1]),
                 ("thickness", [1, 1, 300, 1]),
                 ("spawntime", [1, 0.01, 10, 0.01]),
-                ("maxBrightness", [1, 0, 1, 0.01]),
+                ("max_brightness", [1, 0, 1, 0.01]),
             ])
         }
         return definition
@@ -382,8 +382,8 @@ class FallingStars(Effect):
         del definition['parameters']['num_pixels']
         definition['parameters']['dim_speed'][0] = self.dim_speed
         definition['parameters']['thickness'][0] = self.thickness
-        definition['parameters']['spawntime'][0] = self.spawnTime
-        definition['parameters']['max_brightness'][0] = self.maxBrightness
+        definition['parameters']['spawntime'][0] = self.spawntime
+        definition['parameters']['max_brightness'][0] = self.max_brightness
         return definition
 
     def numInputChannels(self):
@@ -400,7 +400,7 @@ class FallingStars(Effect):
             self._starCounter -= 1
             self._t0Array.pop(0)
             self._spawnArray.pop(0)
-        threading.Timer(self.spawnTime, self.spawnStar).start()  # executes itself every *spawnTime* seconds
+        threading.Timer(self.spawntime, self.spawnStar).start()  # executes itself every *spawnTime* seconds
 
     def allStars(self, t, dim_speed, thickness, t0, spawnSpot):
         controlArray = []
@@ -425,7 +425,7 @@ class FallingStars(Effect):
         if self._outputBuffer is not None:
             self._output = np.multiply(
                 color,
-                self.starControl(self.spawnTime) * np.array([[self.max_brightness * 1.0], [self.max_brightness * 1.0],
+                self.starControl(self.spawntime) * np.array([[self.max_brightness * 1.0], [self.max_brightness * 1.0],
                                                              [self.max_brightness * 1.0]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
