@@ -237,30 +237,21 @@ class VisGraph extends React.Component {
   async componentDidMount() {
     await this.createNetwork();
     window.addEventListener("resize", this.updateDimensions);
-    await this.updateDimensions()
+    await this.updateDimensions();
+    await this.createFromBackend();
   }
 
   componentWillUnmount() {
     window.removeEventListener("resize", this.updateDimensions);
   }
 
-  addStateNode(node) {
-    this.setState(state => {
-      return {
-        graph: {
-          nodes: [...state.graph.nodes, node],
-          edges: [...state.graph.edges]
-        }
-      }
-    })
-  }
 
-  addStateEdge(edge) {
+  addStateNodesAndEdges(nodes, edges) {
     this.setState(state => {
       return {
         graph: {
-          nodes: [...state.graph.nodes],
-          edges: [...state.graph.edges, edge]
+          nodes: [...state.graph.nodes, ...nodes],
+          edges: [...state.graph.edges, ...edges]
         }
       }
     })
@@ -275,32 +266,106 @@ class VisGraph extends React.Component {
         }
       }
     })
-    await this.createNodesFromBackend();
-    await this.createEdgesFromBackend();
+  }
+  async createFromBackend() {
+    const nodeCreate = await this.createNodesFromBackend();
+    const edgeCreate = await this.createEdgesFromBackend();
+    return Promise.all([nodeCreate, edgeCreate]).then(result => {
+      console.log(result)
+      var nodes = [];
+      var edges = [];
+      var {allNodes, allEdges} = result[0];
+      var additionalEdges = result[1];
+      nodes = nodes.concat(allNodes);
+      edges = edges.concat(allEdges);
+      edges = edges.concat(additionalEdges);
+      this.addStateNodesAndEdges(nodes, edges);
+      this.state.network.fit();
+    })
   }
 
   async createNodesFromBackend() {
-    await FilterGraphService.getAllNodes()
-      .then(values => values.forEach(element => {
-        this.addVisNode(element);
-      }));
+    return FilterGraphService.getAllNodes()
+      .then(values => {
+        // gather all nodes to add
+        var allNodes = [];
+        var allEdges = [];
+        values.forEach(element => {
+          var {nodes, edges} = this.createVisNodesAndEdges(element);
+          allNodes = allNodes.concat(nodes);
+          allEdges = allEdges.concat(edges);
+        })
+        
+        return {allNodes, allEdges};
+      })
   }
 
   async createEdgesFromBackend() {
-    await FilterGraphService.getAllConnections()
-      .then(values => values.forEach(element => {
-        this.addVisConnection(element);
-      }));
+    return FilterGraphService.getAllConnections()
+      .then(values => {
+        var allEdges = [];
+        values.forEach(element => {
+          var edge = this.createVisConnection(element);
+          allEdges.push(edge);
+      })
+      return allEdges;
+    })
   }
 
   conUid(inout, index, uid) {
     return inout + '_' + index + '_' + uid;
   }
 
-  addVisNode(json) {
+  createVisNode(json) {
     var visNode = {};
     this.updateVisNode(visNode, json);
-    this.addStateNode(visNode);
+    return visNode;
+  }
+
+  createVisNodesAndEdges(json) {
+    var allNodes = [];
+    var allEdges = [];
+    var visNode = this.createVisNode(json);
+    allNodes.push(visNode);
+    var {nodes, edges} = this.createInputOutputNodesAndEdges(json, visNode);
+    allNodes = allNodes.concat(nodes);
+    allEdges = allEdges.concat(edges);
+    return {nodes: allNodes, edges: allEdges}
+  }
+
+  createInputOutputNodesAndEdges(json, visNode) {
+    // update input and output nodes
+    var numOutputChannels = json['py/state']['numOutputChannels'];
+    var numInputChannels = json['py/state']['numInputChannels'];
+    var nodes = [];
+    var edges = [];
+    for (var i = 0; i < numOutputChannels; i++) {
+      var uid = this.conUid('out', i, visNode.id);
+        var outNode = {};
+        outNode.group = 'out';
+        outNode.id = uid;
+        outNode.label = `${i}`;
+        outNode.shape = 'circle';
+        outNode.nodeType = 'channel';
+        outNode.nodeUid = visNode.id;
+        outNode.nodeChannel = i;
+        nodes.push(outNode);
+        edges.push({ id: outNode.id, from: visNode.id, to: outNode.id });
+    }
+    for (var i = 0; i < numInputChannels; i++) {
+      var uid = this.conUid('in', i, visNode.id);
+        var inNode = {};
+        inNode.group = 'in';
+        inNode.id = uid;
+        inNode.label = `${i}`;
+        inNode.shape = 'circle';
+        inNode.nodeType = 'channel';
+        inNode.nodeUid = visNode.id;
+        inNode.nodeChannel = i;
+        nodes.push(inNode);
+        edges.push({ id: inNode.id, from: inNode.id, to: visNode.id });
+    }
+    return {nodes, edges};
   }
 
   updateVisNode(visNode, json) {
@@ -314,45 +379,13 @@ class VisGraph extends React.Component {
     visNode.nodeType = 'node';
     var icon = icons[name];
     visNode.image = icon ? icon : '';
-    // update input and output nodes
-    var numOutputChannels = json['py/state']['numOutputChannels'];
-    var numInputChannels = json['py/state']['numInputChannels'];
-    for (var i = 0; i < numOutputChannels; i++) {
-      uid = this.conUid('out', i, visNode.id);
-      if (!this.state.graph.nodes.some(el => el.uid === uid)) {
-        var outNode = {};
-        outNode.group = 'out';
-        outNode.id = uid;
-        outNode.label = `${i}`;
-        outNode.shape = 'circle';
-        outNode.nodeType = 'channel';
-        outNode.nodeUid = visNode.id;
-        outNode.nodeChannel = i;
-        this.addStateNode(outNode);
-        this.addStateEdge({ id: outNode.id, from: visNode.id, to: outNode.id });
-      }
-    }
-    for (var i = 0; i < numInputChannels; i++) {
-      uid = this.conUid('in', i, visNode.id);
-      if (!this.state.graph.nodes.some(el => el.uid === uid)) {
-        var inNode = {};
-        inNode.group = 'in';
-        inNode.id = uid;
-        inNode.label = `${i}`;
-        inNode.shape = 'circle';
-        inNode.nodeType = 'channel';
-        inNode.nodeUid = visNode.id;
-        inNode.nodeChannel = i;
-        this.addStateNode(inNode);
-        this.addStateEdge({ id: inNode.id, from: inNode.id, to: visNode.id });
-      }
-    }
+    
   }
 
-  addVisConnection(con) {
+  createVisConnection(con) {
     var edge = {};
     this.updateVisConnection(edge, con);
-    this.addStateEdge(edge)
+    return edge;
   }
 
   updateVisConnection(edge, json) {
@@ -407,7 +440,8 @@ class VisGraph extends React.Component {
       .then(node => {
         console.debug('Create node successful:', JSON.stringify(node));
         //updateVisNode(data, node);
-        this.addVisNode(node);
+        var {nodes, edges} = this.createVisNodesAndEdges(node);
+        this.addStateNodesAndEdges(nodes, edges);
       })
       .catch(error => {
         console.error('Error on creating node:', error);
@@ -455,8 +489,10 @@ class VisGraph extends React.Component {
   updateDimensions = (event) => {
     let content = document.getElementById('vis-content');
     content.getElementsByTagName('div')[0].style.height = (content.clientHeight) + "px"
-    this.state.network.redraw();
-    this.state.network.fit();
+    if(this.state.network) {
+      this.state.network.redraw();
+      this.state.network.fit();
+    }
   }
 
   render() {
