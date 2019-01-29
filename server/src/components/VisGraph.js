@@ -235,7 +235,7 @@ class VisGraph extends React.Component {
   }
 
   async componentDidMount() {
-    await this.createNetwork();
+    await this.resetNetwork();
     window.addEventListener("resize", this.updateDimensions);
     await this.updateDimensions();
     await this.createFromBackend();
@@ -257,7 +257,7 @@ class VisGraph extends React.Component {
     })
   }
 
-  async createNetwork() {
+  async resetNetwork() {
     this.setState(state => {
       return {
         graph: {
@@ -267,7 +267,9 @@ class VisGraph extends React.Component {
       }
     })
   }
+
   async createFromBackend() {
+    await this.resetNetwork();
     const nodeCreate = await this.createNodesFromBackend();
     const edgeCreate = await this.createEdgesFromBackend();
     return Promise.all([nodeCreate, edgeCreate]).then(result => {
@@ -479,7 +481,7 @@ class VisGraph extends React.Component {
   }
 
   handleLoadConfig = async (event) => {
-    await ConfigurationService.loadConfig(event).finally(() => this.createNetwork());
+    await ConfigurationService.loadConfig(event).finally(() => this.createFromBackend());
   }
 
   handleNodeEditCancel = (event) => {
@@ -491,7 +493,6 @@ class VisGraph extends React.Component {
     content.getElementsByTagName('div')[0].style.height = (content.clientHeight) + "px"
     if(this.state.network) {
       this.state.network.redraw();
-      this.state.network.fit();
     }
   }
 
