@@ -140,8 +140,6 @@ class NodePopup extends React.Component {
     }
 
     handleParameterChange = (value, parameter) => {
-        console.log(value)
-        console.log(parameter)
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.config.values[parameter] = value;
         if (this.state.mode === "edit") {
