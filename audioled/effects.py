@@ -4,6 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 from collections import OrderedDict
 
 import numpy as np
+import math
 
 import audioled.colors as colors
 from audioled.effect import Effect
@@ -359,7 +360,7 @@ class Mirror(Effect):
 
 class SpringCombine(Effect):
     """Spring simulation effect that interpolates between three inputs based on displacement of the springs.
-    
+
     The trigger input actuates on the springs (if value exceeds trigger_threshold).
     Depending on the displacement of each spring, the output value is a linear interpolation between:
     - Input 1 and Input 2 if displacement < 0
@@ -370,7 +371,7 @@ class SpringCombine(Effect):
         1 -- Pixel input for displacement in negative direction
         2 -- Pixel input for no displacement
         3 -- Pixel input for displacement in positive direction
-    
+
     Parameters:
         dampening           -- Dampening factory of the springs
         tension             -- Tension of the springs
@@ -496,3 +497,56 @@ class SpringCombine(Effect):
         out[:, self._pos >= 0] = (
             np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
         self._outputBuffer[0] = out
+
+
+class Swing(Effect):
+    """PendulumEffect with pixel input.
+    Inputs:
+    - 0: Pixels
+    """
+    def __init__(self,
+                 num_pixels,
+                 displacement=50,
+                 swingspeed=1):
+        self.num_pixels = num_pixels
+        self.displacement = displacement
+        self.swingspeed = swingspeed
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(Swing, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("displacement", [50, 1, 1000, 1]),
+                ("swingspeed", [1, 0, 5, 0.01]),
+            ])
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['displacement'][0] = self.displacement
+        definition['parameters']['swingspeed'][0] = self.swingspeed
+        return definition
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._outputBuffer is not None:
+            pixels = self._inputBuffer[0]
+
+            pixels = np.roll(pixels, int(self.displacement * math.sin(self._t * self.swingspeed)))
+
+            self._outputBuffer[0] = pixels.clip(0.0, 255.0)

@@ -1,0 +1,9 @@
+
+
+  #content {
+    display: flex;
+    margin: 0 auto;
+    flex: 1;
+    width: 100%;
+    flex-direction: column;
+  }
