@@ -1,41 +1,29 @@
 import React from "react";
-import PropTypes from 'prop-types';
+import PropTypes, { bool } from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
 import Slider from '@material-ui/lab/Slider';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import FormControl from '@material-ui/core/FormControl'
-import FormGroup from '@material-ui/core/FormGroup'
-import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 import Select from '@material-ui/core/Select';
-import FormControlLabel from '@material-ui/core/FormControlLabel'
+import Checkbox from '@material-ui/core/Checkbox';
 import FilterGraphService from "../services/FilterGraphService";
 
 import './NodePopup.css'
 
-
-  
-  
-  
-  const styles = theme => ({
+const styles = theme => ({
     paper: {
-      position: 'absolute',
-      top: '350px',
-      left: '170px',
-      width: theme.spacing.unit * 80,
-      backgroundColor: theme.palette.background.paper,
-      boxShadow: theme.shadows[5],
-      padding: theme.spacing.unit * 4,
-      outline: 'none',
+        position: 'absolute',
+        top: '350px',
+        left: '170px',
+        width: theme.spacing.unit * 80,
+        backgroundColor: theme.palette.background.paper,
+        boxShadow: theme.shadows[5],
+        padding: theme.spacing.unit * 4,
+        outline: 'none',
     },
-  });
+});
 
 class NodePopup extends React.Component {
     constructor(props) {
@@ -54,11 +42,11 @@ class NodePopup extends React.Component {
         }
     }
 
-    componentDidMount() {
+    async componentDidMount() {
         if (this.state.mode === "edit") {
-            this.showEdit()
+            await this.showEdit()
         } else if (this.state.mode === "add") {
-            this.showAdd()
+            await this.showAdd()
         }
     }
 
@@ -66,53 +54,53 @@ class NodePopup extends React.Component {
         // document.getElementById('node-popUp').style.display = 'none';
     }
 
-    showEdit() {
+    async showEdit() {
 
         const uid = this.state.nodeUid;
 
-        const fetchAndShow = async () => {
-            const stateJson = await FilterGraphService.getNode(uid);
-            const json = await FilterGraphService.getNodeParameter(uid);
-            Promise.all([stateJson, json]).then(result => {
-                var effect = result[0]["py/state"]["effect"]["py/state"];
-                var values = result[1];
-                console.log(effect)
-                console.log(values)
-                this.setState(state => {
-                    return {
-                        config: {
-                            parameters: values.parameters,
-                            values: effect
-                        }
+        
+        const stateJson = await FilterGraphService.getNode(uid);
+        const json = await FilterGraphService.getNodeParameter(uid);
+        await Promise.all([stateJson, json]).then(result => {
+            var effect = result[0]["py/state"]["effect"]["py/state"];
+            var values = result[1];
+            console.log(effect)
+            console.log(values)
+            this.setState(state => {
+                return {
+                    config: {
+                        parameters: values.parameters,
+                        values: effect
                     }
-                })
-            });
-        }
-        fetchAndShow();
+                }
+            })
+        });
+        
+        
     }
 
-    showAdd() {
+    async showAdd() {
 
-        const fetchEffects = async () => {
-            await FilterGraphService.getAllEffects().then(values => {
-                let effects = values.map(element => element["py/type"])
-                this.setState(state => {
-                    return {
-                        effects: effects,
-                        selectedEffect: effects[0]
-                    }
-                })
-                this.updateNodeArgs(effects[0]);
-            }).catch(err => {
-                console.error("Error fetching effects:", err);
+        
+        await FilterGraphService.getAllEffects().then(values => {
+            let effects = values.map(element => element["py/type"]).sort()
+            this.setState(state => {
+                return {
+                    effects: effects,
+                    selectedEffect: effects[0]
+                }
             })
-        }
-        fetchEffects();
+            this.updateNodeArgs(effects[0]);
+        }).catch(err => {
+            console.error("Error fetching effects:", err);
+        })
+    
+        
     }
 
     async updateNodeArgs(selectedEffect) {
-        
-        if(selectedEffect == null) {
+
+        if (selectedEffect == null) {
             return
         }
         const json = await FilterGraphService.getEffectParameters(selectedEffect);
@@ -166,6 +154,8 @@ class NodePopup extends React.Component {
     }
 
     handleParameterChange = (value, parameter) => {
+        console.log(value)
+        console.log(parameter)
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.config.values[parameter] = value;
         if (this.state.mode === "edit") {
@@ -185,6 +175,7 @@ class NodePopup extends React.Component {
 
     render() {
         console.log(this.state)
+        console.log(this.props)
         const { classes } = this.props;
         let parameters = this.state.config.parameters;
         let values = this.state.config.values;
@@ -201,7 +192,7 @@ class NodePopup extends React.Component {
                             )
                         })
                         control = <React.Fragment>
-                            
+
                             <Grid item xs={9}>
                                 <InputLabel htmlFor={data} />
                                 <Select
@@ -226,11 +217,23 @@ class NodePopup extends React.Component {
                             </Grid>
                         </React.Fragment>
                     }
+                } else if(typeof(parameters[data]) === "boolean") {
+                    //ToDo: Implement Bool Switch
+                    control = <React.Fragment>
+                        <Grid item xs={9}>
+                            <Checkbox
+                                checked={values[data]}
+                                onChange={(e, val) => this.handleParameterChange(val, data)}
+                                value={data}
+                                color="primary"
+                            />
+                        </Grid>
+                    </React.Fragment>
                 }
                 if (control) {
                     return (
-                        
-                        <Grid container spacing={24}>
+
+                        <Grid key={index} container spacing={24}>
                             <Grid item xs={3}>
                                 {data}:
                     </Grid>
@@ -238,46 +241,46 @@ class NodePopup extends React.Component {
                         </Grid>
                     )
                 } else {
-                    return "undefined"
+                    console.error("undefined control for data", parameters[data])
+                    return null
                 }
             });
         }
         let effectDropdown = null;
-        if(this.state.mode === 'add') {
+        if (this.state.mode === 'add' && this.state.effects.length > 0) {
             let items = this.state.effects.map((effect, id) => {
                 return (
-                    <MenuItem value={effect}>{effect}</MenuItem>
+                    <MenuItem key={id} value={effect}>{effect}</MenuItem>
                 )
             })
-            effectDropdown=<React.Fragment>
-                <h3>Effects:</h3>
+            effectDropdown = <React.Fragment>
+                <h3>Select Effect:</h3>
                 <InputLabel htmlFor="effect-dropdown" />
-            <Select
-                value={this.state.selectedEffect}
-                onChange={(e, val) => this.handleEffectChange(val.props.value)}
-                inputProps={{
-                    name: "effect-dropdown",
-                    id: "effect-dropdown",
-                }}>
-                {items}
-            </Select>
+                <Select
+                    value={this.state.selectedEffect}
+                    onChange={(e, val) => this.handleEffectChange(val.props.value)}
+                    inputProps={{
+                        name: "effect-dropdown",
+                        id: "effect-dropdown",
+                    }}>
+                    {items}
+                </Select>
             </React.Fragment>
         }
         return (
             <div className={classes.paper}>
-                <h2 id="node-operation">{this.state.mode}</h2>
+                <h2 id="node-operation">{this.state.mode === "edit" ? "Edit Node" : "Add Node"}</h2>
                 <div id="effects">
-                
                     {effectDropdown}
                 </div>
                 <div id="node-grid">
-                <h3>Parameters:</h3>
+                    <h3>Parameters:</h3>
                     {configList}
                 </div>
                 <table style={{ margin: "auto" }}>
                     <tbody>
                         <tr>
-                            <td><Button variant="contained" id="node-saveButton" onClick={this.handleNodeEditSave}>save</Button></td>
+                            {this.state.mode === "add" ? <td><Button variant="contained" id="node-saveButton" onClick={this.handleNodeEditSave}>save</Button></td> : null}
                             <td><Button variant="contained" id="node-cancelButton" onClick={this.handleNodeEditCancel}>cancel</Button></td>
                         </tr>
                     </tbody>
@@ -289,6 +292,6 @@ class NodePopup extends React.Component {
 
 NodePopup.propTypes = {
     classes: PropTypes.object.isRequired,
-  };
+};
 
 export default withStyles(styles)(NodePopup);
