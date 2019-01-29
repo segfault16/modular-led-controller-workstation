@@ -56,17 +56,12 @@ class NodePopup extends React.Component {
     }
 
     async showEdit() {
-
         const uid = this.state.nodeUid;
-
-
         const stateJson = await FilterGraphService.getNode(uid);
         const json = await FilterGraphService.getNodeParameter(uid);
         await Promise.all([stateJson, json]).then(result => {
             var effect = result[0]["py/state"]["effect"]["py/state"];
             var values = result[1];
-            console.log(effect)
-            console.log(values)
             this.setState(state => {
                 return {
                     config: {
@@ -76,13 +71,9 @@ class NodePopup extends React.Component {
                 }
             })
         });
-
-
     }
 
     async showAdd() {
-
-
         await FilterGraphService.getAllEffects().then(values => {
             let effects = values.map(element => element["py/type"]).sort()
             this.setState(state => {
@@ -95,23 +86,17 @@ class NodePopup extends React.Component {
         }).catch(err => {
             console.error("Error fetching effects:", err);
         })
-
-
     }
 
     async updateNodeArgs(selectedEffect) {
-
         if (selectedEffect == null) {
             return
         }
         const json = await FilterGraphService.getEffectParameters(selectedEffect);
         const defaultJson = await FilterGraphService.getEffectArguments(selectedEffect);
-
         Promise.all([json, defaultJson]).then(result => {
             var parameters = result[0];
             var defaults = result[1];
-            console.log(parameters);
-            console.log(defaults);
             return this.setState(state => {
                 return {
                     config: {
@@ -182,7 +167,7 @@ class NodePopup extends React.Component {
         })
         return <React.Fragment>
 
-            <Grid item xs={7} justify="flex-end">
+            <Grid item xs={7} >
                 <InputLabel htmlFor={parameterName} />
                 <Select
                     value={values[parameterName]}
@@ -293,8 +278,6 @@ class NodePopup extends React.Component {
     }
 
     render() {
-        console.log(this.state)
-        console.log(this.props)
         const { classes } = this.props;
         let parameters = this.state.config.parameters;
         let values = this.state.config.values;
