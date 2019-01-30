@@ -3,11 +3,6 @@ import { ListItemIcon, ListItemText, Divider, IconButton, MenuList, MenuItem, Dr
 import { Link, withRouter } from 'react-router-dom';
 import { withStyles } from '@material-ui/core/styles';
 import PropTypes from 'prop-types';
-import List from '@material-ui/core/List';
-import Typography from '@material-ui/core/Typography';
-import ListItem from '@material-ui/core/ListItem';
-import InboxIcon from '@material-ui/icons/MoveToInbox';
-import MailIcon from '@material-ui/icons/Mail';
 
 import Routes from '../routes/Routes';
 

@@ -12,7 +12,6 @@ import Routes from './routes/Routes'
 import { Switch } from 'react-router-dom';
 import { renderRoutes } from 'react-router-config';
 
-const drawerWidth = 240;
 
 const styles = theme => ({
 
@@ -21,15 +20,7 @@ const styles = theme => ({
     minHeight: '100vh',
   },
   appBar: {
-    width: `calc(100% - ${drawerWidth}px)`,
-    marginLeft: drawerWidth,
-  },
-  drawer: {
-    width: drawerWidth,
-    flexShrink: 0,
-  },
-  drawerPaper: {
-    width: drawerWidth,
+    zIndex: theme.zIndex.drawer + 1,
   },
   toolbar: theme.mixins.toolbar,
   content: {
@@ -52,13 +43,14 @@ class App extends Component {
         <AppBar position="fixed" className={classes.appBar}>
           <Toolbar>
             <Typography variant="h6" color="inherit" noWrap>
-              Permanent drawer
+              Audio Reactive LED Strip
           </Typography>
           </Toolbar>
         </AppBar>
         <SideBar />
-        <div className={classes.toolbar} />
+        
         <div id="content">
+        <div className={classes.toolbar} />
 
           <Switch>
             {renderRoutes(Routes)}
