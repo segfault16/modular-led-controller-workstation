@@ -10,6 +10,7 @@ import Select from '@material-ui/core/Select';
 import Checkbox from '@material-ui/core/Checkbox';
 import Divider from '@material-ui/core/Divider';
 import FilterGraphService from "../services/FilterGraphService";
+import Typography from '@material-ui/core/Typography';
 
 import './NodePopup.css'
 
@@ -195,7 +196,9 @@ class NodePopup extends React.Component {
                     onChange={(e, val) => this.handleParameterChange(val, parameterName)} />
             </Grid>
             <Grid item xs={2}>
-                {values[parameterName]}
+            <Typography>
+                {values[parameterName].toFixed(Math.abs(Math.log10(parameters[parameterName][3])))}
+            </Typography>
             </Grid>
         </React.Fragment>
     }
@@ -211,7 +214,9 @@ class NodePopup extends React.Component {
                 />
             </Grid>
             <Grid item xs={2}>
+            <Typography>
                 {values[parameterName]}
+            </Typography>
             </Grid>
         </React.Fragment>
     }
@@ -237,7 +242,9 @@ class NodePopup extends React.Component {
                     return (
                         <Grid key={index} container spacing={24}   alignItems="center" justify="center">
                             <Grid item xs={3} >
+                            <Typography>
                                 {data}:
+                            </Typography>
                             </Grid>
                             {control}
                         </Grid>
