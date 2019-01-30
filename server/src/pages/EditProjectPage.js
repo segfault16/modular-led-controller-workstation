@@ -18,7 +18,7 @@ class EditProjectPage extends Component {
   constructor(props) {
     super(props)
       this.state = {
-          activeNotes: [44, 47, 54]
+          activeNotes: [firstNote]
       }
   }
   onPlayNoteInput = midiNumber => {
