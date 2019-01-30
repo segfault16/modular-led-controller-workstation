@@ -197,7 +197,7 @@ class NodePopup extends React.Component {
             </Grid>
             <Grid item xs={2}>
             <Typography>
-                {values[parameterName].toFixed(Math.abs(Math.log10(parameters[parameterName][3])))}
+                {values[parameterName] !== null ? values[parameterName].toFixed(Math.abs(Math.log10(parameters[parameterName][3]))) : null}
             </Typography>
             </Grid>
         </React.Fragment>
