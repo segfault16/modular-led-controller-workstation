@@ -16,9 +16,9 @@ import './NodePopup.css'
 
 const styles = theme => ({
     paper: {
-        position: 'absolute',
-        top: '350px',
-        left: '170px',
+        
+        position: 'absolute', left: '50%', top: '50%',
+        transform: 'translate(-50%, -50%)',
         width: theme.spacing.unit * 80,
         backgroundColor: theme.palette.background.paper,
         boxShadow: theme.shadows[5],
