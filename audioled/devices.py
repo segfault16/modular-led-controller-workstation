@@ -318,7 +318,7 @@ class DotStar(LEDController):
 class LEDOutput(Effect):
     overrideDevice = None
 
-    def __init__(self, controller):
+    def __init__(self, controller, brightness=1.0):
         self.controller = controller
         self.__initstate__()
 

@@ -1,0 +1,19 @@
+body {
+    #root{
+      background-color: #222;
+      color: lightgray;
+      display: flex;
+      min-height: 100vh;
+      flex-direction: column;
+      margin: 0;
+    }
+    div {
+      // border: 1px solid red;
+      // margin: 1px;
+      // box-sizing: border-box
+    }
+    margin: 0px
+  }
+  * {
+    box-sizing: border-box; 
+  }
