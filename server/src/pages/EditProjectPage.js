@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import Typography from '@material-ui/core/Typography';
 import VisGraph from '../components/VisGraph'
 import './EditProjectPage.css';
+import FilterGraphService from '../services/FilterGraphService';
 
 import { Piano, KeyboardShortcuts, MidiNumbers } from 'react-piano';
 import 'react-piano/dist/styles.css';
@@ -23,6 +24,10 @@ class EditProjectPage extends Component {
       }
   }
   onPlayNoteInput = midiNumber => {
+    
+    if(this.state.activeNote == midiNumber) {
+      return
+    }
     console.log("play")
     this.setState({
       activeNote: midiNumber,
@@ -31,8 +36,9 @@ class EditProjectPage extends Component {
   
   };
   onStopNoteInput = midiNumber => {
-    console.log("stop")
+    
     // do nothing
+    console.log("stop")
       this.setState(state => {
         return {
           activeNotes: [...state.activeNotes]
@@ -40,6 +46,17 @@ class EditProjectPage extends Component {
       })
     
   }
+
+  playNote = midiNumber => {
+    //console.log("playNote", midiNumber)
+    this.onPlayNoteInput(midiNumber)
+  }
+
+  stopNote = midiNumber => {
+    //console.log("stopNote", midiNumber)
+    this.onStopNoteInput(midiNumber)
+  }
+
   render() {
     console.log(this.state.activeNotes)
     return (
@@ -51,16 +68,12 @@ class EditProjectPage extends Component {
         <div style={{ "height": "150px", "maxWidth":"1000px" }}>
           <Piano
             noteRange={{ first: firstNote, last: lastNote }}
-            playNote={(midiNumber) => {
-              // Play a given note - see notes below
-            }}
-            stopNote={(midiNumber) => {
-              // Stop playing a given note - see notes below
-            }}
+            playNote={this.playNote}
+            stopNote={this.stopNote}
             activeNotes={this.state.activeNotes}
             keyboardShortcuts={keyboardShortcuts}
-            onPlayNoteInput={this.onPlayNoteInput}
-            onStopNoteInput={this.onStopNoteInput}
+            // onPlayNoteInput={this.onPlayNoteInput}
+            // onStopNoteInput={this.onStopNoteInput}
           />
         </div>
         <VisGraph slot={this.state.activeNote}/>
