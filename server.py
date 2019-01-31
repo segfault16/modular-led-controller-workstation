@@ -244,6 +244,17 @@ def create_app():
         fg = proj.activateSlot(value)
         return "OK"
 
+    @app.route('/project/configureSlot', methods=['POST'])
+    def project_configureSlot_post():
+        global proj
+        global fg
+        if not request.json:
+            abort(400)
+        value = request.json['slot']
+        # print("Activating slot {}".format(value))
+        fg = proj.getSlot(value)
+        return "OK"
+
     @app.route('/remote/brightness', methods=['POST'])
     def remote_brightness_post():
         global device

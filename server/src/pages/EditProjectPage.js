@@ -1,5 +1,8 @@
 import React, { Component } from 'react';
 import Typography from '@material-ui/core/Typography';
+import FormGroup from '@material-ui/core/FormGroup';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Switch from '@material-ui/core/Switch';
 import VisGraph from '../components/VisGraph'
 import './EditProjectPage.css';
 import FilterGraphService from '../services/FilterGraphService';
@@ -20,7 +23,8 @@ class EditProjectPage extends Component {
     super(props)
       this.state = {
           activeNote: firstNote,
-          activeNotes: [firstNote]
+          activeNotes: [firstNote],
+          switchLED: true
       }
   }
   onPlayNoteInput = midiNumber => {
@@ -28,7 +32,10 @@ class EditProjectPage extends Component {
     if(this.state.activeNote == midiNumber) {
       return
     }
-    console.log("play")
+    console.log("play note", midiNumber)
+    if(this.state.switchLED) {
+      FilterGraphService.activateSlot(midiNumber)
+    }
     this.setState({
       activeNote: midiNumber,
       activeNotes: [midiNumber],
@@ -57,12 +64,20 @@ class EditProjectPage extends Component {
     this.onStopNoteInput(midiNumber)
   }
 
+  handleSwitchLEDOutput = value => {
+    this.setState(state => {
+      return {
+        switchLED: value
+      }
+    })
+  }
+
   render() {
     console.log(this.state.activeNotes)
     return (
       <div id="content">
       <React.Fragment>
-      <Typography>
+        <Typography>
           Select note to configure:
         </Typography>
         <div style={{ "height": "150px", "maxWidth":"1000px" }}>
@@ -72,10 +87,21 @@ class EditProjectPage extends Component {
             stopNote={this.stopNote}
             activeNotes={this.state.activeNotes}
             keyboardShortcuts={keyboardShortcuts}
-            // onPlayNoteInput={this.onPlayNoteInput}
-            // onStopNoteInput={this.onStopNoteInput}
           />
         </div>
+        <FormGroup row>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={this.state.switchLED}
+              onChange={(e, val) => this.handleSwitchLEDOutput(val)}
+              value="checkedB"
+              color="primary"
+            />
+          }
+          label="Switch LED output"
+        />
+        </FormGroup>
         <VisGraph slot={this.state.activeNote}/>
         </React.Fragment>
       </div>

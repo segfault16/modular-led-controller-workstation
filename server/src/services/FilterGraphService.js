@@ -85,6 +85,16 @@ const FilterGraphService = {
                 'Content-Type': 'application/json'
             }
         })
+    },
+    configureSlot: function(slot) {
+        var postData = {slot: slot}
+        return fetch('./project/configureSlot', {
+            method: 'POST', // or 'PUT'
+            body: JSON.stringify(postData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
     }
 }
 

@@ -250,7 +250,7 @@ class VisGraph extends React.Component {
   async componentWillReceiveProps(nextProps) {
     if(nextProps.slot != this.state.slot) {
       console.log("new props", nextProps)
-      await FilterGraphService.activateSlot(nextProps.slot)
+      await FilterGraphService.configureSlot(nextProps.slot)
       this.setState(state => {
         return {
           slot: nextProps.slot
