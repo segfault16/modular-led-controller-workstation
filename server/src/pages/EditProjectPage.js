@@ -42,6 +42,19 @@ class EditProjectPage extends Component {
           switchLED: true
       }
   }
+
+  async componentDidMount() {
+    return FilterGraphService.getActiveSlot().then(res=>{
+      var slot = res.slot;
+      this.setState(state => {
+        return {
+          activeNote: slot,
+          activeNotes: [slot] 
+        }
+      })
+    })
+  }
+
   onPlayNoteInput = midiNumber => {
     
     if(this.state.activeNote == midiNumber) {

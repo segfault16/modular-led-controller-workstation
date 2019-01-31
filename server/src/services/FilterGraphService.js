@@ -86,6 +86,9 @@ const FilterGraphService = {
             }
         })
     },
+    getActiveSlot: function() {
+        return fetch('./project/activeSlot').then(res => res.json())
+    },
     configureSlot: function(slot) {
         var postData = {slot: slot}
         return fetch('./project/configureSlot', {

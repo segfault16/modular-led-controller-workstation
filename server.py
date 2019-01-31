@@ -243,6 +243,11 @@ def create_app():
         # print("Activating slot {}".format(value))
         fg = proj.activateSlot(value)
         return "OK"
+    
+    @app.route('/project/activeSlot', methods=['GET'])
+    def project_activeSlot_get():
+        global proj
+        return jsonify({'slot': proj.activeSlotId})
 
     @app.route('/project/configureSlot', methods=['POST'])
     def project_configureSlot_post():
