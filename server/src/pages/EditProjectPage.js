@@ -93,7 +93,8 @@ class EditProjectPage extends Component {
     return (
       <div id="content">
       <React.Fragment>
-      <ExpansionPanel>
+      <VisGraph slot={this.state.activeNote}/>
+      <ExpansionPanel defaultExpanded={true}>
         <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
           <Typography className={classes.heading}>Configurations</Typography>
         </ExpansionPanelSummary>
@@ -104,10 +105,7 @@ class EditProjectPage extends Component {
   justify="flex-start"
   alignItems="stretch"
 >
-        <Typography>
-          Select note to configure:
-        </Typography>
-        <div style={{ "height": "150px", "maxWidth":"1000px" }}>
+        <div style={{ "height": "100px", "maxWidth":"1000px" }}>
           <Piano
             noteRange={{ first: firstNote, last: lastNote }}
             playNote={this.playNote}
@@ -133,7 +131,7 @@ class EditProjectPage extends Component {
         </ExpansionPanelDetails>
       </ExpansionPanel>
         
-        <VisGraph slot={this.state.activeNote}/>
+      
         </React.Fragment>
       </div>
     );

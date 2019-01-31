@@ -26,6 +26,7 @@ import ConfigurationService from "../services/ConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
 import NodePopup from './NodePopup';
 import './VisGraph.css';
+import Measure from 'react-measure'
 
 var icons = {
   'audioled.audio.AudioInput': audioInputIcon,
@@ -60,8 +61,8 @@ class VisGraph extends React.Component {
         edges: []
       },
       style: {
-        flex: "1",
-        display: "block"
+        // flex: "1",
+        display: "absolute"
       },
       editNodePopup: {
         isShown: false,
@@ -505,8 +506,13 @@ class VisGraph extends React.Component {
   }
 
   updateDimensions = (event) => {
+    
     let content = document.getElementById('vis-content');
-    content.getElementsByTagName('div')[0].style.height = (content.clientHeight) + "px"
+    let visDiv = content.getElementsByTagName('div')[0]
+    visDiv.style.position = "absolute";
+    visDiv.style.height = (content.clientHeight) + "px";
+    visDiv.style.width = (content.clientWidth) + "px";
+
     if(this.state.network) {
       this.state.network.redraw();
     }
@@ -532,9 +538,13 @@ class VisGraph extends React.Component {
           </Button>
           </label>
         </div>
-        <div id="vis-content">
-          <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
-        </div>
+        <Measure onResize={() => this.updateDimensions()}>
+          {({ measureRef }) => (
+          <div id="vis-content" ref={measureRef}>
+            <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
+          </div>
+          )}
+        </Measure>
         <Modal open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp}>
           <NodePopup mode={this.state.editNodePopup.mode} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
         </Modal>
