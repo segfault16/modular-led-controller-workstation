@@ -1,5 +1,13 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
+import { withStyles } from '@material-ui/core/styles';
+import Grid from '@material-ui/core/Grid';
+import ExpansionPanel from '@material-ui/core/ExpansionPanel';
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
 import Typography from '@material-ui/core/Typography';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+
 import FormGroup from '@material-ui/core/FormGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
@@ -16,6 +24,13 @@ const keyboardShortcuts = KeyboardShortcuts.create({
   firstNote: firstNote,
   lastNote: lastNote,
   keyboardConfig: KeyboardShortcuts.HOME_ROW,
+});
+
+const styles = theme => ({
+  heading: {
+    fontSize: theme.typography.pxToRem(15),
+    fontWeight: theme.typography.fontWeightRegular,
+  },
 });
 
 class EditProjectPage extends Component {
@@ -73,10 +88,22 @@ class EditProjectPage extends Component {
   }
 
   render() {
+    const { classes } = this.props;
     console.log(this.state.activeNotes)
     return (
       <div id="content">
       <React.Fragment>
+      <ExpansionPanel>
+        <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography className={classes.heading}>Configurations</Typography>
+        </ExpansionPanelSummary>
+        <ExpansionPanelDetails>
+        <Grid
+  container
+  direction="column"
+  justify="flex-start"
+  alignItems="stretch"
+>
         <Typography>
           Select note to configure:
         </Typography>
@@ -102,6 +129,10 @@ class EditProjectPage extends Component {
           label="Switch LED output"
         />
         </FormGroup>
+        </Grid>
+        </ExpansionPanelDetails>
+      </ExpansionPanel>
+        
         <VisGraph slot={this.state.activeNote}/>
         </React.Fragment>
       </div>
@@ -109,4 +140,8 @@ class EditProjectPage extends Component {
   }
 }
 
-export default EditProjectPage;
+EditProjectPage.propTypes = {
+  classes: PropTypes.object.isRequired,
+};
+
+export default withStyles(styles)(EditProjectPage);
