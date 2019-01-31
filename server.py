@@ -230,15 +230,17 @@ def create_app():
         if not request.json:
             abort(400)
         fg = jsonpickle.decode(request.json)
+        proj.setFiltergraphForSlot(proj.activeSlotId, fg)
         return "OK"
     
     @app.route('/project/activeSlot', methods=['POST'])
     def project_activeSlot_post():
         global proj
         global fg
-        print(request.args)
-        value = int(request.args.get('value'))
-        print("Activating slot {}".format(value))
+        if not request.json:
+            abort(400)
+        value = request.json['slot']
+        # print("Activating slot {}".format(value))
         fg = proj.activateSlot(value)
         return "OK"
 
@@ -421,9 +423,9 @@ if __name__ == '__main__':
     second = configs.createDefenceGraph(num_pixels, device)
     # fg = configs.createKeyboardGraph(num_pixels, device)
 
-    proj.setFiltergraphForSlot(0, initial)
-    proj.setFiltergraphForSlot(1, second)
-    fg = proj.activateSlot(0)
+    proj.setFiltergraphForSlot(12, initial)
+    proj.setFiltergraphForSlot(13, second)
+    fg = proj.activateSlot(12)
 
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?

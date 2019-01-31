@@ -31,8 +31,10 @@ class Project(Updateable):
             self.slots[slotId] = filterGraph
     
     def activateSlot(self, slotId):
-        self.activateSlotId = slotId
+        self.activeSlotId = slotId
         print("Activate slot {} with {}".format(slotId, self.slots[slotId]))
+        if self.slots[slotId] is None:
+            self.slots[slotId] = FilterGraph()
         self._activeFiltergraph = self.slots[slotId]
         return self._activeFiltergraph
 

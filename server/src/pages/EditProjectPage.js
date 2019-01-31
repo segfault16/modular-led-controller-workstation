@@ -6,8 +6,8 @@ import './EditProjectPage.css';
 import { Piano, KeyboardShortcuts, MidiNumbers } from 'react-piano';
 import 'react-piano/dist/styles.css';
 
-const firstNote = MidiNumbers.fromNote('c3');
-const lastNote = MidiNumbers.fromNote('f5');
+const firstNote = MidiNumbers.fromNote('c0');
+const lastNote = MidiNumbers.fromNote('f2');
 const keyboardShortcuts = KeyboardShortcuts.create({
   firstNote: firstNote,
   lastNote: lastNote,
@@ -18,12 +18,14 @@ class EditProjectPage extends Component {
   constructor(props) {
     super(props)
       this.state = {
+          activeNote: firstNote,
           activeNotes: [firstNote]
       }
   }
   onPlayNoteInput = midiNumber => {
     console.log("play")
     this.setState({
+      activeNote: midiNumber,
       activeNotes: [midiNumber],
     });
   
@@ -56,12 +58,12 @@ class EditProjectPage extends Component {
               // Stop playing a given note - see notes below
             }}
             activeNotes={this.state.activeNotes}
-            // keyboardShortcuts={keyboardShortcuts}
+            keyboardShortcuts={keyboardShortcuts}
             onPlayNoteInput={this.onPlayNoteInput}
             onStopNoteInput={this.onStopNoteInput}
           />
         </div>
-        <VisGraph />
+        <VisGraph slot={this.state.activeNote}/>
         </React.Fragment>
       </div>
     );

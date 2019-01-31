@@ -1,8 +1,9 @@
+import React from "react";
+import PropTypes from 'prop-types';
 import "@babel/polyfill";
 import Button from '@material-ui/core/Button';
 import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import SaveIcon from '@material-ui/icons/Save';
-import React from "react";
 import Graph from "react-graph-vis";
 import 'vis/dist/vis-network.min.css';
 import Modal from '@material-ui/core/Modal';
@@ -47,11 +48,12 @@ var icons = {
 }
 
 class VisGraph extends React.Component {
-
+  
   constructor(props) {
     super(props);
+    //this.slot = props.slot
     this.state = {
-      counter: 0,
+      slot: props.slot,
       network: {},
       graph: {
         nodes: [],
@@ -245,6 +247,19 @@ class VisGraph extends React.Component {
     window.removeEventListener("resize", this.updateDimensions);
   }
 
+  async componentWillReceiveProps(nextProps) {
+    if(nextProps.slot != this.state.slot) {
+      console.log("new props", nextProps)
+      await FilterGraphService.activateSlot(nextProps.slot)
+      this.setState(state => {
+        return {
+          slot: nextProps.slot
+        }
+      })
+      this.createFromBackend()
+    }
+  }
+
 
   addStateNodesAndEdges(nodes, edges) {
     this.setState(state => {
@@ -269,6 +284,7 @@ class VisGraph extends React.Component {
   }
 
   async createFromBackend() {
+    
     await this.resetNetwork();
     const nodeCreate = await this.createNodesFromBackend();
     const edgeCreate = await this.createEdgesFromBackend();
@@ -526,5 +542,14 @@ class VisGraph extends React.Component {
     );
   }
 }
+
+VisGraph.propTypes = {
+  classes: PropTypes.object.isRequired,
+  slot: PropTypes.number.isRequired
+};
+
+VisGraph.defaultProps = {
+  slot: 0
+};
 
 export default VisGraph;
