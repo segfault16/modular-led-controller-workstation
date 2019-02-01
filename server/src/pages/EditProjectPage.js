@@ -18,13 +18,7 @@ import FilterGraphService from '../services/FilterGraphService';
 import { Piano, KeyboardShortcuts, MidiNumbers } from 'react-piano';
 import 'react-piano/dist/styles.css';
 
-const firstNote = MidiNumbers.fromNote('c0');
-const lastNote = MidiNumbers.fromNote('f2');
-const keyboardShortcuts = KeyboardShortcuts.create({
-  firstNote: firstNote,
-  lastNote: lastNote,
-  keyboardConfig: KeyboardShortcuts.HOME_ROW,
-});
+import {firstNote, lastNote, keyboardShortcuts} from '../config/PianoConfig'
 
 const styles = theme => ({
   heading: {
@@ -36,60 +30,48 @@ const styles = theme => ({
 class EditProjectPage extends Component {
   constructor(props) {
     super(props)
-      this.state = {
-          activeNote: firstNote,
-          activeNotes: [firstNote],
-          switchLED: true
-      }
+    this.state = {
+      activeNote: firstNote,
+      activeNotes: [firstNote],
+      switchLED: true
+    }
   }
 
   async componentDidMount() {
-    return FilterGraphService.getActiveSlot().then(res=>{
+    return FilterGraphService.getActiveSlot().then(res => {
       var slot = res.slot;
       this.setState(state => {
         return {
           activeNote: slot,
-          activeNotes: [slot] 
+          activeNotes: [slot]
         }
       })
     })
   }
 
-  onPlayNoteInput = midiNumber => {
-    
-    if(this.state.activeNote == midiNumber) {
+  playNote = midiNumber => {
+    if (this.state.activeNote == midiNumber) {
       return
     }
     console.log("play note", midiNumber)
-    if(this.state.switchLED) {
+    if (this.state.switchLED) {
       FilterGraphService.activateSlot(midiNumber)
     }
     this.setState({
       activeNote: midiNumber,
       activeNotes: [midiNumber],
     });
-  
-  };
-  onStopNoteInput = midiNumber => {
-    
-    // do nothing
-    console.log("stop")
-      this.setState(state => {
-        return {
-          activeNotes: [...state.activeNotes]
-        }
-      })
-    
-  }
-
-  playNote = midiNumber => {
-    //console.log("playNote", midiNumber)
-    this.onPlayNoteInput(midiNumber)
   }
 
   stopNote = midiNumber => {
-    //console.log("stopNote", midiNumber)
-    this.onStopNoteInput(midiNumber)
+
+    // do nothing
+    console.log("stop")
+    this.setState(state => {
+      return {
+        activeNotes: [...state.activeNotes]
+      }
+    })
   }
 
   handleSwitchLEDOutput = value => {
@@ -105,46 +87,46 @@ class EditProjectPage extends Component {
     console.log(this.state.activeNotes)
     return (
       <div id="content">
-      <React.Fragment>
-      <VisGraph slot={this.state.activeNote}/>
-      <ExpansionPanel defaultExpanded={true}>
-        <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography className={classes.heading}>Configurations</Typography>
-        </ExpansionPanelSummary>
-        <ExpansionPanelDetails>
-        <Grid
-  container
-  direction="column"
-  justify="flex-start"
-  alignItems="stretch"
->
-        <div style={{ "height": "100px", "maxWidth":"1000px" }}>
-          <Piano
-            noteRange={{ first: firstNote, last: lastNote }}
-            playNote={this.playNote}
-            stopNote={this.stopNote}
-            activeNotes={this.state.activeNotes}
-            keyboardShortcuts={keyboardShortcuts}
-          />
-        </div>
-        <FormGroup row>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={this.state.switchLED}
-              onChange={(e, val) => this.handleSwitchLEDOutput(val)}
-              value="checkedB"
-              color="primary"
-            />
-          }
-          label="Switch LED output"
-        />
-        </FormGroup>
-        </Grid>
-        </ExpansionPanelDetails>
-      </ExpansionPanel>
-        
-      
+        <React.Fragment>
+          <VisGraph slot={this.state.activeNote} />
+          <ExpansionPanel defaultExpanded={true}>
+            <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography className={classes.heading}>Configurations</Typography>
+            </ExpansionPanelSummary>
+            <ExpansionPanelDetails>
+              <Grid
+                container
+                direction="column"
+                justify="flex-start"
+                alignItems="stretch"
+              >
+                <div style={{ "height": "100px", "maxWidth": "1000px" }}>
+                  <Piano
+                    noteRange={{ first: firstNote, last: lastNote }}
+                    playNote={this.playNote}
+                    stopNote={this.stopNote}
+                    activeNotes={this.state.activeNotes}
+                    keyboardShortcuts={keyboardShortcuts}
+                  />
+                </div>
+                <FormGroup row>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={this.state.switchLED}
+                        onChange={(e, val) => this.handleSwitchLEDOutput(val)}
+                        value="checkedB"
+                        color="primary"
+                      />
+                    }
+                    label="Switch LED output"
+                  />
+                </FormGroup>
+              </Grid>
+            </ExpansionPanelDetails>
+          </ExpansionPanel>
+
+
         </React.Fragment>
       </div>
     );

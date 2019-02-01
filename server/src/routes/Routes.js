@@ -2,6 +2,7 @@ import React from "react";
 import { Redirect } from 'react-router';
 import { Home, ContentPaste, Notifications, AccountCircle } from '@material-ui/icons';
 import EditProjectPage from '../pages/EditProjectPage';
+import PerformPage from '../pages/PerformPage';
 
 
 const Routes = [
@@ -22,7 +23,7 @@ const Routes = [
     sidebarName: 'Perform',
     navbarName: 'Perform',
     icon: Home,
-    component: EditProjectPage
+    component: PerformPage
   }
 ];
 
