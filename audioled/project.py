@@ -10,6 +10,7 @@ class Project(Updateable):
         self.activeSlotId = 0
         self._activeFiltergraph = None
 
+
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         """Update active FilterGraph
         
