@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 import mido
 import numpy as np
+import scipy as sp
 from scipy import signal
 
 from audioled.effect import Effect
@@ -485,8 +486,9 @@ class Pendulum(Effect):
         return blobArray.clip(0.0, 255.0)
 
     def moveBlob(self, blobArray, displacement, swingspeed):
-        outputArray = np.roll(blobArray, int(displacement * math.sin(self._t * swingspeed)))
-        return outputArray.clip(0.0, 255.0)
+        outputArray = sp.ndimage.interpolation.shift(blobArray, displacement * math.sin(self._t * swingspeed),
+                                                               mode='wrap', prefilter=True)
+        return outputArray
 
     def controlBlobs(self):
         output = self.moveBlob(self.createBlob(self.spread, self.location), self.displacement, self.swingspeed)
@@ -568,7 +570,8 @@ class RandomPendulums(Effect):
         return blobArray.clip(0.0, 255.0)
 
     def moveBlob(self, blobArray, displacement, offset, swingspeed):
-        outputArray = np.roll(blobArray, int(displacement * math.sin((self._t * swingspeed) + offset)))
+        outputArray = sp.ndimage.interpolation.shift(blobArray, displacement * math.sin((self._t * swingspeed) + offset),
+                                                               mode='wrap', prefilter=True)
         return outputArray.clip(0.0, 255.0)
 
     def controlBlobs(self, spread, location, displacement, offset, swingspeed):
