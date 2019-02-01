@@ -251,13 +251,14 @@ class VisGraph extends React.Component {
   async componentWillReceiveProps(nextProps) {
     if(nextProps.slot != this.state.slot) {
       console.log("new props", nextProps)
-      await FilterGraphService.configureSlot(nextProps.slot)
+      await FilterGraphService.configureSlot(nextProps.slot).then(() => {
       this.setState(state => {
         return {
           slot: nextProps.slot
         }
       })
-      this.createFromBackend()
+      
+    }).then(this.createFromBackend())
     }
   }
 
@@ -286,10 +287,9 @@ class VisGraph extends React.Component {
 
   async createFromBackend() {
     
-    await this.resetNetwork();
     const nodeCreate = await this.createNodesFromBackend();
     const edgeCreate = await this.createEdgesFromBackend();
-    return Promise.all([nodeCreate, edgeCreate]).then(result => {
+    return this.resetNetwork().then(Promise.all([nodeCreate, edgeCreate]).then(result => {
       console.log(result)
       var nodes = [];
       var edges = [];
@@ -300,7 +300,7 @@ class VisGraph extends React.Component {
       edges = edges.concat(additionalEdges);
       this.addStateNodesAndEdges(nodes, edges);
       this.state.network.fit();
-    })
+    }))
   }
 
   async createNodesFromBackend() {
@@ -555,7 +555,7 @@ class VisGraph extends React.Component {
 
 VisGraph.propTypes = {
   classes: PropTypes.object.isRequired,
-  slot: PropTypes.number.isRequired
+  slot: PropTypes.number
 };
 
 VisGraph.defaultProps = {

@@ -1,6 +1,15 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
+import ExpansionPanel from '@material-ui/core/ExpansionPanel';
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
+import Typography from '@material-ui/core/Typography';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import FormGroup from '@material-ui/core/FormGroup';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Switch from '@material-ui/core/Switch';
+
 
 import { Piano } from 'react-piano';
 
@@ -11,17 +20,27 @@ const styles = theme => ({
 
 });
 
+const PERFORM_LATCH = "perform-latch";
+
 class PerformPage extends Component {
     constructor(props) {
         super(props)
         this.state = {
-            activeNote: firstNote,
-            activeNotes: [firstNote],
+            activeNote: null,
+            activeNotes: [],
             latch: false
         }
     }
 
     async componentDidMount() {
+        var latch = localStorage.getItem(PERFORM_LATCH);
+        if(latch !== null) {
+            this.setState(state => {
+                return {
+                    latch: JSON.parse(latch)
+                }
+            })
+        }
         return FilterGraphService.getActiveSlot().then(res => {
             var slot = res.slot;
             this.setState(state => {
@@ -67,8 +86,20 @@ class PerformPage extends Component {
         }
     }
 
+    handleLatch = (val) => {
+        localStorage.setItem(PERFORM_LATCH, val);
+        this.setState(state => {
+            return {
+                latch: val
+            }
+        })
+    }
+
     render() {
+        console.log(this.state)
+        const { classes } = this.props;
         return (
+            <React.Fragment>
             <div style={{ "height": "200px", "maxWidth": "1000px" }}>
                 <Piano
                     noteRange={{ first: firstNote, last: lastNote }}
@@ -78,6 +109,27 @@ class PerformPage extends Component {
                     keyboardShortcuts={keyboardShortcuts}
                 />
             </div>
+            <ExpansionPanel defaultExpanded={true}>
+            <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography className={classes.heading}>Configurations</Typography>
+            </ExpansionPanelSummary>
+            <ExpansionPanelDetails>
+            <FormGroup row>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={this.state.latch}
+                        onChange={(e, val) => this.handleLatch(val)}
+                        value="checkedB"
+                        color="primary"
+                      />
+                    }
+                    label="Latch"
+                  />
+                </FormGroup>
+            </ExpansionPanelDetails>
+            </ExpansionPanel>
+            </React.Fragment>
         )
     }
 }

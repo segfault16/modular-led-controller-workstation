@@ -27,23 +27,42 @@ const styles = theme => ({
   },
 });
 
+const EDIT_SWITCH_LED = "edit-switch-led";
+const EDIT_ACTIVE_NOTE = "edit-active-note";
+
 class EditProjectPage extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      activeNote: firstNote,
-      activeNotes: [firstNote],
+      activeNote: null,
+      activeNotes: [],
       switchLED: true
     }
   }
 
   async componentDidMount() {
+    var activeNote = localStorage.getItem(EDIT_ACTIVE_NOTE);
+    var switchLED = this.state.switchLED;
+    var persistentSwitchLED = localStorage.getItem(EDIT_SWITCH_LED);
+    if (persistentSwitchLED !== null) {
+      switchLED = JSON.parse(persistentSwitchLED);
+    }
+
     return FilterGraphService.getActiveSlot().then(res => {
       var slot = res.slot;
       this.setState(state => {
-        return {
-          activeNote: slot,
-          activeNotes: [slot]
+        if(switchLED) {
+          return {
+            switchLED: switchLED,
+            activeNote: slot,
+            activeNotes: [slot]
+          }
+        } else {
+          return {
+            switchLED: switchLED,
+            activeNote: activeNote !== null ? JSON.parse(activeNote) : slot,
+            activeNotes: activeNote !== null ? [JSON.parse(activeNote)] : [slot]
+          }
         }
       })
     })
@@ -54,6 +73,7 @@ class EditProjectPage extends Component {
       return
     }
     console.log("play note", midiNumber)
+    localStorage.setItem(EDIT_ACTIVE_NOTE, midiNumber);
     if (this.state.switchLED) {
       FilterGraphService.activateSlot(midiNumber)
     }
@@ -75,6 +95,7 @@ class EditProjectPage extends Component {
   }
 
   handleSwitchLEDOutput = value => {
+    localStorage.setItem(EDIT_SWITCH_LED, value);
     this.setState(state => {
       return {
         switchLED: value
@@ -84,7 +105,6 @@ class EditProjectPage extends Component {
 
   render() {
     const { classes } = this.props;
-    console.log(this.state.activeNotes)
     return (
       <div id="content">
         <React.Fragment>
