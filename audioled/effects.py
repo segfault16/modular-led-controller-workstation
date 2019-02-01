@@ -19,15 +19,14 @@ class Shift(Effect):
 
     def __initstate__(self):
         # state
+        super(Shift, self).__initstate__()
         try:
             self._shift_pixels
         except AttributeError:
             self._shift_pixels = 0
-        try:
-            self._last_t
-        except AttributeError:
-            self._last_t = 0.0
-        super(Shift, self).__initstate__()
+        
+        self._last_t = self._t
+        
 
     def numInputChannels(self):
         return 1
@@ -61,7 +60,7 @@ class Shift(Effect):
         dt_move = self._t - self._last_t
         if dt_move * self.speed > 1:
             self._shift_pixels = int(self._shift_pixels + dt_move * self.speed) % np.size(y, axis=1)
-        self._last_t = self._t
+            self._last_t = self._t
         self._outputBuffer[0] = np.roll(y, self._shift_pixels, axis=1)
 
 
