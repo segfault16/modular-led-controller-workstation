@@ -540,9 +540,14 @@ class Swing(Effect):
         return 1
 
     def process(self):
-        if self._outputBuffer is not None:
-            pixels = self._inputBuffer[0]
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = None
+            return
 
-            pixels = np.roll(pixels, int(self.displacement * math.sin(self._t * self.swingspeed)))
+        pixels = self._inputBuffer[0]
 
-            self._outputBuffer[0] = pixels.clip(0.0, 255.0)
+        self._outputBuffer[0] = sp.ndimage.interpolation.shift(pixels, [0, self.displacement * math.sin(self._t * self.swingspeed)],
+                                                               mode='wrap', prefilter=True)
+    
