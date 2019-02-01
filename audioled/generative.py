@@ -8,7 +8,7 @@ from collections import OrderedDict
 import mido
 import numpy as np
 import scipy as sp
-from scipy import signal
+from scipy import signal as signal
 
 from audioled.effect import Effect
 
@@ -724,17 +724,17 @@ class GenerateWaves(Effect):
         return outputarray
 
     def createSawtooth(self, period, scale):
-        outputarray = np.linspace(0, 300, 300)
+        outputarray = np.linspace(0, self.num_pixels, self.num_pixels)
         outputarray = 0.5 * scale - signal.sawtooth(outputarray * math.pi / self.period, width=1) * 0.5 * scale
         return outputarray
 
     def createSawtoothReversed(self, period, scale):
-        outputarray = np.linspace(0, 300, 300)
+        outputarray = np.linspace(0, self.num_pixels, self.num_pixels)
         outputarray = 0.5 * scale - signal.sawtooth(outputarray * math.pi / self.period, width=0) * 0.5 * scale
         return outputarray
 
     def createSquare(self, period, scale):
-        outputarray = np.linspace(0, 300, 300)
+        outputarray = np.linspace(0, self.num_pixels, self.num_pixels)
         outputarray = 0.5 * scale - signal.square(outputarray * math.pi / self.period) * 0.5 * scale
         return outputarray
 
