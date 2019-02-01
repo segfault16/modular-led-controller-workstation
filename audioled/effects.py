@@ -1,9 +1,9 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 from collections import OrderedDict
 
 import numpy as np
+import scipy as sp
 import math
 
 import audioled.colors as colors
@@ -24,9 +24,8 @@ class Shift(Effect):
             self._shift_pixels
         except AttributeError:
             self._shift_pixels = 0
-        
+
         self._last_t = self._t
-        
 
     def numInputChannels(self):
         return 1
@@ -59,10 +58,9 @@ class Shift(Effect):
         y = self._inputBuffer[0]
         dt_move = self._t - self._last_t
         shift = dt_move * self.speed * 0.1
-        if shift > 1:
-            self._shift_pixels = int(self._shift_pixels + shift) % np.size(y, axis=1)
-            self._last_t = self._t
-        self._outputBuffer[0] = np.roll(y, self._shift_pixels, axis=1)
+        self._shift_pixels = math.fmod((self._shift_pixels + shift), np.size(y, axis=1))
+        self._last_t = self._t
+        self._outputBuffer[0] = sp.ndimage.interpolation.shift(y, [0, self._shift_pixels], mode='wrap', prefilter=True)
 
 
 class Append(Effect):
@@ -504,10 +502,8 @@ class Swing(Effect):
     Inputs:
     - 0: Pixels
     """
-    def __init__(self,
-                 num_pixels,
-                 displacement=50,
-                 swingspeed=1):
+
+    def __init__(self, num_pixels, displacement=50, swingspeed=1):
         self.num_pixels = num_pixels
         self.displacement = displacement
         self.swingspeed = swingspeed
