@@ -547,7 +547,6 @@ class Swing(Effect):
             return
 
         pixels = self._inputBuffer[0]
+        config = self.displacement * math.sin(self._t * self.swingspeed)
 
-        self._outputBuffer[0] = sp.ndimage.interpolation.shift(pixels, [0, self.displacement * math.sin(self._t * self.swingspeed)],
-                                                               mode='wrap', prefilter=True)
-    
+        self._outputBuffer[0] = sp.ndimage.interpolation.shift(pixels, [0, config], mode='wrap', prefilter=True)

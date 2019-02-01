@@ -487,7 +487,7 @@ class Pendulum(Effect):
 
     def moveBlob(self, blobArray, displacement, swingspeed):
         outputArray = sp.ndimage.interpolation.shift(blobArray, displacement * math.sin(self._t * swingspeed),
-                                                               mode='wrap', prefilter=True)
+                                                     mode='wrap', prefilter=True)
         return outputArray
 
     def controlBlobs(self):
@@ -570,8 +570,8 @@ class RandomPendulums(Effect):
         return blobArray.clip(0.0, 255.0)
 
     def moveBlob(self, blobArray, displacement, offset, swingspeed):
-        outputArray = sp.ndimage.interpolation.shift(blobArray, displacement * math.sin((self._t * swingspeed) + offset),
-                                                               mode='wrap', prefilter=True)
+        config = displacement * math.sin((self._t * swingspeed) + offset)
+        outputArray = sp.ndimage.interpolation.shift(blobArray, config, mode='wrap', prefilter=True)
         return outputArray.clip(0.0, 255.0)
 
     def controlBlobs(self, spread, location, displacement, offset, swingspeed):

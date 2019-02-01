@@ -528,6 +528,8 @@ class Bonfire(Effect):
         y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audiobuffer), zi=self._filter_zi)
         peak = np.max(y) * 1.0
 
-        pixelbuffer[0] = sp.ndimage.interpolation.shift(pixelbuffer[0], -self.spread * peak, mode='wrap', prefilter=True)
-        pixelbuffer[2] = sp.ndimage.interpolation.shift(pixelbuffer[2], self.spread * peak, mode='wrap', prefilter=True)
+        pixelbuffer[0] = sp.ndimage.interpolation.shift(pixelbuffer[0],
+                                                        -self.spread * peak, mode='wrap', prefilter=True)
+        pixelbuffer[2] = sp.ndimage.interpolation.shift(pixelbuffer[2],
+                                                        self.spread * peak, mode='wrap', prefilter=True)
         self._outputBuffer[0] = pixelbuffer
