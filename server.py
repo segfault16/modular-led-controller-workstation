@@ -13,7 +13,7 @@ from timeit import default_timer as timer
 
 import jsonpickle
 import numpy as np
-from flask import Flask, abort, jsonify, request, send_from_directory
+from flask import Flask, abort, jsonify, request, send_from_directory, redirect, url_for
 from werkzeug.serving import is_running_from_reloader
 
 from audioled import audio, configs, devices, effects, filtergraph, project
@@ -59,6 +59,10 @@ def create_app():
     def add_header(response):
         response.cache_control.max_age = 0
         return response
+
+    @app.route('/')
+    def home():
+        return redirect("./index.html", code=302)
 
     @app.route('/<path:path>')
     def send_js(path):

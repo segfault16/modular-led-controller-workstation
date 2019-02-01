@@ -33,18 +33,19 @@ export class Sidebar extends Component {
   render() {
     const { classes, theme } = this.props;
     return (
-      
-        <Drawer
+
+      <Drawer
         className={classes.drawer}
         variant="permanent"
         classes={{
           paper: classes.drawerPaper,
         }}
         anchor="left"
-        >
+      >
         <div className={classes.toolbar} />
-          <MenuList>
-            {Routes.map((prop, key) => {
+        <MenuList>
+          {Routes.map((prop, key) => {
+            if (prop.sidebarName) {
               return (
                 <Link to={prop.path} style={{ textDecoration: 'none' }} key={key}>
                   <MenuItem selected={this.activeRoute(prop.path)}>
@@ -55,10 +56,14 @@ export class Sidebar extends Component {
                   </MenuItem>
                 </Link>
               );
-            })}
-          </MenuList>
-        </Drawer>
-      
+            } else {
+              return null
+            }
+          }
+          )}
+        </MenuList>
+      </Drawer>
+
     );
   }
 }

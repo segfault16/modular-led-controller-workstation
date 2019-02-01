@@ -1,8 +1,15 @@
+import React from "react";
+import { Redirect } from 'react-router';
 import { Home, ContentPaste, Notifications, AccountCircle } from '@material-ui/icons';
 import EditProjectPage from '../pages/EditProjectPage';
 
 
 const Routes = [
+  {
+    path: '/',
+    exact: true,
+    component: () => <Redirect to="/dashboard/configure"/>
+  },
   {
     path: '/dashboard/configure',
     sidebarName: 'Configure',
