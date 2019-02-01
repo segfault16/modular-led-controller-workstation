@@ -38,7 +38,7 @@ class Shift(Effect):
         definition = {
             "parameters": OrderedDict([
                 # default, min, max, stepsize
-                ("speed", [100.0, 0.0, 1000.0, 1.0]),
+                ("speed", [100.0, -1000.0, 1000.0, 1.0]),
             ])
         }
         return definition
