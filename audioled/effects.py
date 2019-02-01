@@ -58,8 +58,9 @@ class Shift(Effect):
 
         y = self._inputBuffer[0]
         dt_move = self._t - self._last_t
-        if dt_move * self.speed > 1:
-            self._shift_pixels = int(self._shift_pixels + dt_move * self.speed) % np.size(y, axis=1)
+        shift = dt_move * self.speed * 0.1
+        if shift > 1:
+            self._shift_pixels = int(self._shift_pixels + shift) % np.size(y, axis=1)
             self._last_t = self._t
         self._outputBuffer[0] = np.roll(y, self._shift_pixels, axis=1)
 
