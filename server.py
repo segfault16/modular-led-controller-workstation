@@ -13,14 +13,14 @@ from timeit import default_timer as timer
 
 import jsonpickle
 import numpy as np
-from flask import Flask, abort, jsonify, request, send_from_directory
+from flask import Flask, abort, jsonify, request, send_from_directory, redirect, url_for
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, configs, devices, effects, filtergraph
+from audioled import audio, configs, devices, effects, filtergraph, project
 
 num_pixels = 300
 device = None
-fg = None
+proj = None
 default_values = {}
 record_timings = False
 
@@ -59,28 +59,35 @@ def create_app():
         response.cache_control.max_age = 0
         return response
 
+    @app.route('/')
+    def home():
+        return redirect("./index.html", code=302)
+
     @app.route('/<path:path>')
     def send_js(path):
         return send_from_directory('resources', path)
 
-    @app.route('/nodes', methods=['GET'])
-    def nodes_get():
-        global fg
+    @app.route('/slot/<int:slotId>/nodes', methods=['GET'])
+    def nodes_get(slotId):
+        global proj
+        fg = proj.getSlot(slotId)
         nodes = [node for node in fg._filterNodes]
         return jsonpickle.encode(nodes)
 
-    @app.route('/node/<nodeUid>', methods=['GET'])
-    def node_uid_get(nodeUid):
-        global fg
+    @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['GET'])
+    def node_uid_get(slotId, nodeUid):
+        global proj
+        fg = proj.getSlot(slotId)
         try:
             node = next(node for node in fg._filterNodes if node.uid == nodeUid)
             return jsonpickle.encode(node)
         except StopIteration:
             abort(404, "Node not found")
 
-    @app.route('/node/<nodeUid>', methods=['DELETE'])
-    def node_uid_delete(nodeUid):
-        global fg
+    @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['DELETE'])
+    def node_uid_delete(slotId, nodeUid):
+        global proj
+        fg = proj.getSlot(slotId)
         try:
             node = next(node for node in fg._filterNodes if node.uid == nodeUid)
             fg.removeEffectNode(node.effect)
@@ -88,9 +95,10 @@ def create_app():
         except StopIteration:
             abort(404, "Node not found")
 
-    @app.route('/node/<nodeUid>', methods=['UPDATE'])
-    def node_uid_update(nodeUid):
-        global fg
+    @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['UPDATE'])
+    def node_uid_update(slotId, nodeUid):
+        global proj
+        fg = proj.getSlot(slotId)
         if not request.json:
             abort(400)
         try:
@@ -102,18 +110,20 @@ def create_app():
         except StopIteration:
             abort(404, "Node not found")
 
-    @app.route('/node/<nodeUid>/parameter', methods=['GET'])
-    def node_uid_parameter_get(nodeUid):
-        global fg
+    @app.route('/slot/<int:slotId>/node/<nodeUid>/parameter', methods=['GET'])
+    def node_uid_parameter_get(slotId, nodeUid):
+        global proj
+        fg = proj.getSlot(slotId)
         try:
             node = next(node for node in fg._filterNodes if node.uid == nodeUid)
             return json.dumps(node.effect.getParameter())
         except StopIteration:
             abort(404, "Node not found")
 
-    @app.route('/node', methods=['POST'])
-    def node_post():
-        global fg
+    @app.route('/slot/<int:slotId>/node', methods=['POST'])
+    def node_post(slotId):
+        global proj
+        fg = proj.getSlot(slotId)
         if not request.json:
             abort(400)
         full_class_name = request.json[0]
@@ -129,15 +139,17 @@ def create_app():
         node = fg.addEffectNode(instance)
         return jsonpickle.encode(node)
 
-    @app.route('/connections', methods=['GET'])
-    def connections_get():
-        global fg
+    @app.route('/slot/<int:slotId>/connections', methods=['GET'])
+    def connections_get(slotId):
+        global proj
+        fg = proj.getSlot(slotId)
         connections = [con for con in fg._filterConnections]
         return jsonpickle.encode(connections)
 
-    @app.route('/connection', methods=['POST'])
-    def connection_post():
-        global fg
+    @app.route('/slot/<int:slotId>/connection', methods=['POST'])
+    def connection_post(slotId):
+        global proj
+        fg = proj.getSlot(slotId)
         if not request.json:
             abort(400)
         json = request.json
@@ -146,9 +158,10 @@ def create_app():
 
         return jsonpickle.encode(connection)
 
-    @app.route('/connection/<connectionUid>', methods=['DELETE'])
-    def connection_uid_delete(connectionUid):
-        global fg
+    @app.route('/slot/<int:slotId>/connection/<connectionUid>', methods=['DELETE'])
+    def connection_uid_delete(slotId, connectionUid):
+        global proj
+        fg = proj.getSlot(slotId)
         try:
             connection = next(connection for connection in fg._filterConnections if connection.uid == connectionUid)
             fg.removeConnection(connection.fromNode.effect, connection.fromChannel, connection.toNode.effect,
@@ -156,6 +169,23 @@ def create_app():
             return "OK"
         except StopIteration:
             abort(404, "Node not found")
+
+    @app.route('/slot/<int:slotId>/configuration', methods=['GET'])
+    def configuration_get(slotId):
+        global proj
+        fg = proj.getSlot(slotId)
+        config = jsonpickle.encode(fg)
+        return config
+
+    @app.route('/slot/<int:slotId>/configuration', methods=['POST'])
+    def configuration_post(slotId):
+        global proj
+        if not request.json:
+            abort(400)
+        
+        newGraph = jsonpickle.decode(request.json)
+        proj.setFiltergraphForSlot(slotId, newGraph)
+        return "OK"
 
     @app.route('/effects', methods=['GET'])
     def effects_get():
@@ -218,18 +248,22 @@ def create_app():
             result[error.node.uid] = error.message
         return json.dumps(result)
 
-    @app.route('/configuration', methods=['GET'])
-    def configuration_get():
-        config = jsonpickle.encode(fg)
-        return config
 
-    @app.route('/configuration', methods=['POST'])
-    def configuration_post():
-        global fg
+    
+    @app.route('/project/activeSlot', methods=['POST'])
+    def project_activeSlot_post():
+        global proj
         if not request.json:
             abort(400)
-        fg = jsonpickle.decode(request.json)
+        value = request.json['slot']
+        # print("Activating slot {}".format(value))
+        proj.activateSlot(value)
         return "OK"
+    
+    @app.route('/project/activeSlot', methods=['GET'])
+    def project_activeSlot_get():
+        global proj
+        return jsonify({'slot': proj.activeSlotId})
 
     @app.route('/remote/brightness', methods=['POST'])
     def remote_brightness_post():
@@ -243,10 +277,11 @@ def create_app():
     @app.route('/remote/favorites/<id>', methods=['POST'])
     def remote_favorites_id_post(id):
         filename = "favorites/{}.json".format(id)
-        global fg
+        global proj
         if os.path.isfile(filename):
             with open(filename, "r") as f:
                 fg = jsonpickle.decode(f.read())
+                proj.setFiltergraphForSlot(proj.activeSlotId, fg)
                 return "OK"
         else:
             print("Favorite not found: {}".format(filename))
@@ -254,7 +289,7 @@ def create_app():
         abort(404)
 
     def processLED():
-        global fg
+        global proj
         global ledThread
         global event_loop
         global last_time
@@ -273,8 +308,8 @@ def create_app():
                     event_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(event_loop)
 
-                fg.update(dt, event_loop)
-                fg.process()
+                proj.update(dt, event_loop)
+                proj.process()
                 # clear errors (if any have occured in the current run, we wouldn't reach this)
                 errors.clear()
 
@@ -290,8 +325,8 @@ def create_app():
             timeToWait = max(POOL_TIME, 0.01 - real_process_time)
             if count == 100:
                 if record_timings:
-                    fg.printProcessTimings()
-                    fg.printUpdateTimings()
+                    proj.getSlot(proj.activeSlotId).printProcessTimings()
+                    proj.getSlot(proj.activeSlotId).printUpdateTimings()
                     print("Process time: {}".format(real_process_time))
                     print("Waiting {}".format(timeToWait))
                 count = 0
@@ -308,10 +343,6 @@ def create_app():
         ledThread = threading.Timer(POOL_TIME, processLED, ())
         print('starting LED thread')
         ledThread.start()
-
-    def loadConfig(json):
-        global fg
-        fg = jsonpickle.decode(json)
 
     # Initiate
 
@@ -398,13 +429,21 @@ if __name__ == '__main__':
     print("The following audio devices are available:")
     audio.print_audio_devices()
 
+    # Initialize project
+    proj = project.Project()
+
     # Initialize filtergraph
     # fg = configs.createSpectrumGraph(num_pixels, device)
     # fg = configs.createMovingLightGraph(num_pixels, device)
     # fg = configs.createMovingLightsGraph(num_pixels, device)
     # fg = configs.createVUPeakGraph(num_pixels, device)
-    fg = configs.createSwimmingPoolGraph(num_pixels, device)
+    initial = configs.createSwimmingPoolGraph(num_pixels, device)
+    second = configs.createDefenceGraph(num_pixels, device)
     # fg = configs.createKeyboardGraph(num_pixels, device)
+
+    proj.setFiltergraphForSlot(12, initial)
+    proj.setFiltergraphForSlot(13, second)
+    proj.activateSlot(12)
 
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
