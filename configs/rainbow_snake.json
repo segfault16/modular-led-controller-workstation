@@ -65,7 +65,7 @@
                         "py/state": {
                             "num_pixels": 300,
                             "fs": 48000,
-                            "spread": 11,
+                            "spread": 2,
                             "lowcut_hz": 50,
                             "highcut_hz": 200
                         },
