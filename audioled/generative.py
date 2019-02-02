@@ -438,7 +438,7 @@ class Pendulum(Effect):
                  location=150,
                  displacement=50,
                  heightactivator=True,
-                 lightflip=1,
+                 lightflip=True,
                  swingspeed=1):
         self.num_pixels = num_pixels
         self.spread = spread
@@ -464,7 +464,7 @@ class Pendulum(Effect):
                 ("displacement", [50, 1, 1000, 1]),
                 ("swingspeed", [1, 0, 5, 0.01]),
                 ("heightactivator", False),
-                ("lightflip", [1, -1, 1, 2]),
+                ("lightflip", False),
             ])
         }
         return definition
@@ -475,7 +475,7 @@ class Pendulum(Effect):
         definition['parameters']['location'][0] = self.location
         definition['parameters']['displacement'][0] = self.displacement
         definition['parameters']['heightactivator'] = self.heightactivator
-        definition['parameters']['lightflip'][0] = self.lightflip
+        definition['parameters']['lightflip'] = self.lightflip
         definition['parameters']['swingspeed'][0] = self.swingspeed
         return definition
 
@@ -509,8 +509,11 @@ class Pendulum(Effect):
             # default: all white
             color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self.heightactivator is True:
-            configArray = np.array([[self.lightflip * math.cos(2 * self._t)], [self.lightflip * math.cos(2 * self._t)],
-                                    [self.lightflip * math.cos(2 * self._t)]])
+            if self.lightflip is True:
+                lightconfig = -1.0
+            else: 
+                lightconfig = 1.0
+            configArray = lightconfig * math.cos(2 * self._t) * np.array([[1.0], [1.0], [1.0]])
         else:
             configArray = np.array([[1.0], [1.0], [1.0]])
         self._output = np.multiply(color, self.controlBlobs() * configArray)
