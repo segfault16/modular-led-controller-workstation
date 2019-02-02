@@ -1,14 +1,14 @@
 import { func } from "prop-types";
 
 const FilterGraphService = {
-    getAllConnections: function() {
-        return fetch('./connections').then(res => res.json())
+    getAllConnections: function(slotId) {
+        return fetch('./slot/' + slotId + '/connections').then(res => res.json())
     },
-    addConnection: function (from_node_uid, from_node_channel, to_node_uid, to_node_channel, data, callback) {
+    addConnection: function (slotId, from_node_uid, from_node_channel, to_node_uid, to_node_channel, data, callback) {
         var postData = { from_node_uid: from_node_uid, from_node_channel: from_node_channel, to_node_uid: to_node_uid, to_node_channel: to_node_channel };
 
         // Save node in backend
-        return fetch('./connection', {
+        return fetch('./slot/' + slotId + '/connection', {
             method: 'POST', // or 'PUT'
             body: JSON.stringify(postData), // data can be `string` or {object}!
             headers: {
@@ -22,8 +22,8 @@ const FilterGraphService = {
             console.error('Error on creating connection:', error);
         });
     },
-    deleteConnection: function (id) {
-        return fetch('./connection/' + id, {
+    deleteConnection: function (slotId, id) {
+        return fetch('./slot/' + slotId + '/connection/' + id, {
             method: 'DELETE'
         }).then(res => {
             console.debug('Delete connection successful:', id);
@@ -31,17 +31,17 @@ const FilterGraphService = {
             console.error('Error on deleting connection:', error)
         })
     },
-    getAllNodes: function() {
-        return fetch('./nodes').then(res => res.json());
+    getAllNodes: function(slotId) {
+        return fetch('./slot/' + slotId + '/nodes').then(res => res.json());
     },
-    getNode: function(id) {
-        return fetch('./node/' + id).then(res => res.json())
+    getNode: function(slotId, id) {
+        return fetch('./slot/' + slotId + '/node/' + id).then(res => res.json())
     },
-    getNodeParameter: function(id) {
-        return fetch('./node/' + id + '/parameter').then(res => res.json());
+    getNodeParameter: function(slotId, id) {
+        return fetch('./slot/' + slotId + '/node/' + id + '/parameter').then(res => res.json());
     },
-    addNode: function(selectedEffect, options) {
-        return fetch('./node', {
+    addNode: function(slotId, selectedEffect, options) {
+        return fetch('./slot/' + slotId + '/node', {
             method: 'POST', // or 'PUT'
             body: JSON.stringify([selectedEffect, options]), // data can be `string` or {object}!
             headers: {
@@ -49,8 +49,8 @@ const FilterGraphService = {
             }
           }).then(res => res.json())
     },
-    updateNode: function(data, options) {
-        return fetch('./node/' + data, {
+    updateNode: function(slotId, data, options) {
+        return fetch('./slot/' + slotId + '/node/' + data, {
             method: 'UPDATE', // or 'PUT'
             body: JSON.stringify(options), // data can be `string` or {object}!
             headers: {
@@ -58,8 +58,8 @@ const FilterGraphService = {
             }
           }).then(res => res.json())
     },
-    deleteNode: function (id) {
-        return fetch('./node/' + id, {
+    deleteNode: function (slotId, id) {
+        return fetch('./slot/' + slotId + '/node/' + id, {
             method: 'DELETE'
         }).then(res => {
             console.debug('Delete node successful:', id);
@@ -88,16 +88,6 @@ const FilterGraphService = {
     },
     getActiveSlot: function() {
         return fetch('./project/activeSlot').then(res => res.json())
-    },
-    configureSlot: function(slot) {
-        var postData = {slot: slot}
-        return fetch('./project/configureSlot', {
-            method: 'POST', // or 'PUT'
-            body: JSON.stringify(postData),
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
     }
 }
 

@@ -40,7 +40,8 @@ class NodePopup extends React.Component {
                 values: []
             },
             effects: [],
-            selectedEffect: null
+            selectedEffect: null,
+            slot: props.slot
         }
     }
 
@@ -58,8 +59,8 @@ class NodePopup extends React.Component {
 
     async showEdit() {
         const uid = this.state.nodeUid;
-        const stateJson = await FilterGraphService.getNode(uid);
-        const json = await FilterGraphService.getNodeParameter(uid);
+        const stateJson = await FilterGraphService.getNode(this.state.slot, uid);
+        const json = await FilterGraphService.getNodeParameter(this.state.slot, uid);
         await Promise.all([stateJson, json]).then(result => {
             var effect = result[0]["py/state"]["effect"]["py/state"];
             var values = result[1];
@@ -144,7 +145,7 @@ class NodePopup extends React.Component {
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.config.values[parameter] = value;
         if (this.state.mode === "edit") {
-            FilterGraphService.updateNode(this.state.nodeUid, { [parameter]: value })
+            FilterGraphService.updateNode(this.state.slot, this.state.nodeUid, { [parameter]: value })
         }
         this.setState(newState);
     };
@@ -313,6 +314,7 @@ class NodePopup extends React.Component {
 
 NodePopup.propTypes = {
     classes: PropTypes.object.isRequired,
+    slot: PropTypes.number.isRequired
 };
 
 export default withStyles(styles)(NodePopup);
