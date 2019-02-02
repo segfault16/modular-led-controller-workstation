@@ -542,7 +542,7 @@ class RandomPendulums(Effect):
             self._location.append(random.randint(0, self.num_pixels - self._spread[i] - 1))
             self._displacement.append(random.randint(5, 50))
             self._heightactivator.append(random.choice([True, False]))
-            self._lightflip.append(random.choice([-1, 1]))
+            self._lightflip.append(random.choice([True, False]))
             self._offset.append(random.uniform(0, 6.5))
             self._swingspeed.append(random.uniform(0, 1))
 
@@ -599,9 +599,11 @@ class RandomPendulums(Effect):
         self._output = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
         for i in range(self.num_pendulums):
             if self._heightactivator[i] is True:
-                configArray = np.array([[self._lightflip[i] * self.dim * math.cos(2 * self._t + self._offset[i])],
-                                        [self._lightflip[i] * self.dim * math.cos(2 * self._t + self._offset[i])],
-                                        [self._lightflip[i] * self.dim * math.cos(2 * self._t + self._offset[i])]])
+                if self._lightflip[i] is True:
+                    lightconfig = -1.0
+                else: 
+                    lightconfig = 1.0
+                configArray = lightconfig * self.dim * math.cos(2 * self._t + self._offset[i]) * np.array([[1.0], [1.0], [1.0]])
             else:
                 configArray = np.array([[1.0 * self.dim], [1.0 * self.dim], [1.0 * self.dim]])
             self._output += np.multiply(
