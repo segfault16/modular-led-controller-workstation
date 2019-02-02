@@ -103,7 +103,15 @@ class Timing(object):
         self._count = min(100, self._count)
 
 
-class FilterGraph(object):
+class Updateable(object):
+    def update(self, dt, event_loop):
+        raise NotImplementedError("Update not implemented")
+    
+    def process(self):
+        raise NotImplementedError("Process not implemented")
+
+
+class FilterGraph(Updateable):
     def __init__(self, recordTimings=False, asyncUpdate=True):
         self.recordTimings = recordTimings
         self.asyncUpdate = asyncUpdate

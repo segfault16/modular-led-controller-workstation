@@ -1,8 +1,9 @@
+import React from "react";
+import PropTypes from 'prop-types';
 import "@babel/polyfill";
 import Button from '@material-ui/core/Button';
 import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import SaveIcon from '@material-ui/icons/Save';
-import React from "react";
 import Graph from "react-graph-vis";
 import 'vis/dist/vis-network.min.css';
 import Modal from '@material-ui/core/Modal';
@@ -25,6 +26,7 @@ import ConfigurationService from "../services/ConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
 import NodePopup from './NodePopup';
 import './VisGraph.css';
+import Measure from 'react-measure'
 
 var icons = {
   'audioled.audio.AudioInput': audioInputIcon,
@@ -47,19 +49,20 @@ var icons = {
 }
 
 class VisGraph extends React.Component {
-
+  
   constructor(props) {
     super(props);
+    //this.slot = props.slot
     this.state = {
-      counter: 0,
+      slot: props.slot,
       network: {},
       graph: {
         nodes: [],
         edges: []
       },
       style: {
-        flex: "1",
-        display: "block"
+        // flex: "1",
+        display: "absolute"
       },
       editNodePopup: {
         isShown: false,
@@ -137,7 +140,7 @@ class VisGraph extends React.Component {
                 // update callback data to include all input and output nodes for this node
                 var inputOutputNodes = this.state.graph.nodes.filter(item => item.nodeType == 'channel' && item.nodeUid == id);
                 data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
-                FilterGraphService.deleteNode(id).finally(() => {
+                FilterGraphService.deleteNode(this.state.slot, id).finally(() => {
                   this.clearNodePopUp();
                 })
               } else {
@@ -161,7 +164,7 @@ class VisGraph extends React.Component {
             var toNode = this.state.graph.nodes.find(item => item.id === data.to);
             if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in') {
               console.log("could add edge")
-              FilterGraphService.addConnection(fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback).then(connection => {
+              FilterGraphService.addConnection(this.state.slot, fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback).then(connection => {
                 this.updateVisConnection(data, connection)
                 callback(data);
               });
@@ -178,7 +181,7 @@ class VisGraph extends React.Component {
               if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in') {
                 var edge = this.state.graph.edges.find(item => item.id === edgeUid);
                 var id = edge.id;
-                FilterGraphService.deleteConnection(id);
+                FilterGraphService.deleteConnection(this.state.slot, id);
 
                 console.debug("Deleted edge", edge);
               } else {
@@ -245,6 +248,19 @@ class VisGraph extends React.Component {
     window.removeEventListener("resize", this.updateDimensions);
   }
 
+  async componentWillReceiveProps(nextProps) {
+    if(nextProps.slot != this.state.slot) {
+      console.log("new props", nextProps)
+      this.state.slot = nextProps.slot
+      this.setState(state => {
+        return {
+          slot: nextProps.slot
+        }
+      })
+      this.createFromBackend()  
+    }
+  }
+
 
   addStateNodesAndEdges(nodes, edges) {
     this.setState(state => {
@@ -269,10 +285,10 @@ class VisGraph extends React.Component {
   }
 
   async createFromBackend() {
-    await this.resetNetwork();
+    
     const nodeCreate = await this.createNodesFromBackend();
     const edgeCreate = await this.createEdgesFromBackend();
-    return Promise.all([nodeCreate, edgeCreate]).then(result => {
+    return this.resetNetwork().then(Promise.all([nodeCreate, edgeCreate]).then(result => {
       console.log(result)
       var nodes = [];
       var edges = [];
@@ -283,11 +299,11 @@ class VisGraph extends React.Component {
       edges = edges.concat(additionalEdges);
       this.addStateNodesAndEdges(nodes, edges);
       this.state.network.fit();
-    })
+    }))
   }
 
   async createNodesFromBackend() {
-    return FilterGraphService.getAllNodes()
+    return FilterGraphService.getAllNodes(this.state.slot)
       .then(values => {
         // gather all nodes to add
         var allNodes = [];
@@ -303,7 +319,7 @@ class VisGraph extends React.Component {
   }
 
   async createEdgesFromBackend() {
-    return FilterGraphService.getAllConnections()
+    return FilterGraphService.getAllConnections(this.state.slot)
       .then(values => {
         var allEdges = [];
         values.forEach(element => {
@@ -438,7 +454,7 @@ class VisGraph extends React.Component {
   saveNodeCallback = async (selectedEffect, option) => {
     console.log(option);
     // Save node in backend
-    await FilterGraphService.addNode(selectedEffect, option)
+    await FilterGraphService.addNode(this.state.slot, selectedEffect, option)
       .then(node => {
         console.debug('Create node successful:', JSON.stringify(node));
         //updateVisNode(data, node);
@@ -477,11 +493,11 @@ class VisGraph extends React.Component {
   }
 
   handleSaveConfig = async (event) => {
-    await ConfigurationService.saveConfig();
+    await ConfigurationService.saveConfig(this.state.slot);
   }
 
   handleLoadConfig = async (event) => {
-    await ConfigurationService.loadConfig(event).finally(() => this.createFromBackend());
+    await ConfigurationService.loadConfig(this.state.slot, event).finally(() => this.createFromBackend());
   }
 
   handleNodeEditCancel = (event) => {
@@ -489,8 +505,13 @@ class VisGraph extends React.Component {
   }
 
   updateDimensions = (event) => {
+    
     let content = document.getElementById('vis-content');
-    content.getElementsByTagName('div')[0].style.height = (content.clientHeight) + "px"
+    let visDiv = content.getElementsByTagName('div')[0]
+    visDiv.style.position = "absolute";
+    visDiv.style.height = (content.clientHeight) + "px";
+    visDiv.style.width = (content.clientWidth) + "px";
+
     if(this.state.network) {
       this.state.network.redraw();
     }
@@ -516,15 +537,28 @@ class VisGraph extends React.Component {
           </Button>
           </label>
         </div>
-        <div id="vis-content">
-          <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
-        </div>
+        <Measure onResize={() => this.updateDimensions()}>
+          {({ measureRef }) => (
+          <div id="vis-content" ref={measureRef}>
+            <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
+          </div>
+          )}
+        </Measure>
         <Modal open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp}>
-          <NodePopup mode={this.state.editNodePopup.mode} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
+          <NodePopup mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
         </Modal>
       </div>
     );
   }
 }
+
+VisGraph.propTypes = {
+  classes: PropTypes.object.isRequired,
+  slot: PropTypes.number
+};
+
+VisGraph.defaultProps = {
+  slot: 0
+};
 
 export default VisGraph;

@@ -1,16 +1,16 @@
 import { saveAs } from 'file-saver';
 
 const ConfigurationService = {
-    loadConfig: async function (e) {
+    loadConfig: async function (slotId, e) {
         var file = e.target.files[0];
         if (!file) {
             return;
         }
-        await this._readUploadedFileAsText(file).then(contents => this._loadConfig(contents))
+        await this._readUploadedFileAsText(file).then(contents => this._loadConfig(slotId, contents))
     },
-    _loadConfig: async function (contents) {
+    _loadConfig: async function (slotId, contents) {
         console.log("Load config from service")
-        return fetch('./configuration', {
+        return fetch('./slot/'+slotId+'/configuration', {
             method: 'POST', // or 'PUT'
             body: JSON.stringify(contents), // data can be `string` or {object}!
             headers: {
@@ -26,13 +26,13 @@ const ConfigurationService = {
         })
 
     },
-    saveConfig: async function () {
+    saveConfig: async function (slotId) {
         try {
             var isFileSaverSupported = !!new Blob;
         } catch (e) {
             console.error("FileSaver not supported")
         }
-        await fetch('./configuration').then(response => response.json()).then(json => {
+        await fetch('./slot/'+slotId+'/configuration').then(response => response.json()).then(json => {
             var blob = new Blob([JSON.stringify(json, null, 4)], { type: "text/plain;charset=utf-8" });
             saveAs(blob, "configuration.json");
         })
