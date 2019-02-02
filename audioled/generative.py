@@ -7,7 +7,8 @@ from collections import OrderedDict
 
 import mido
 import numpy as np
-from scipy import signal
+import scipy as sp
+from scipy import signal as signal
 
 from audioled.effect import Effect
 
@@ -485,8 +486,9 @@ class Pendulum(Effect):
         return blobArray.clip(0.0, 255.0)
 
     def moveBlob(self, blobArray, displacement, swingspeed):
-        outputArray = np.roll(blobArray, int(displacement * math.sin(self._t * swingspeed)))
-        return outputArray.clip(0.0, 255.0)
+        outputArray = sp.ndimage.interpolation.shift(blobArray, displacement * math.sin(self._t * swingspeed),
+                                                     mode='wrap', prefilter=True)
+        return outputArray
 
     def controlBlobs(self):
         output = self.moveBlob(self.createBlob(self.spread, self.location), self.displacement, self.swingspeed)
@@ -568,7 +570,8 @@ class RandomPendulums(Effect):
         return blobArray.clip(0.0, 255.0)
 
     def moveBlob(self, blobArray, displacement, offset, swingspeed):
-        outputArray = np.roll(blobArray, int(displacement * math.sin((self._t * swingspeed) + offset)))
+        config = displacement * math.sin((self._t * swingspeed) + offset)
+        outputArray = sp.ndimage.interpolation.shift(blobArray, config, mode='wrap', prefilter=True)
         return outputArray.clip(0.0, 255.0)
 
     def controlBlobs(self, spread, location, displacement, offset, swingspeed):
@@ -721,17 +724,17 @@ class GenerateWaves(Effect):
         return outputarray
 
     def createSawtooth(self, period, scale):
-        outputarray = np.linspace(0, 300, 300)
+        outputarray = np.linspace(0, self.num_pixels, self.num_pixels)
         outputarray = 0.5 * scale - signal.sawtooth(outputarray * math.pi / self.period, width=1) * 0.5 * scale
         return outputarray
 
     def createSawtoothReversed(self, period, scale):
-        outputarray = np.linspace(0, 300, 300)
+        outputarray = np.linspace(0, self.num_pixels, self.num_pixels)
         outputarray = 0.5 * scale - signal.sawtooth(outputarray * math.pi / self.period, width=0) * 0.5 * scale
         return outputarray
 
     def createSquare(self, period, scale):
-        outputarray = np.linspace(0, 300, 300)
+        outputarray = np.linspace(0, self.num_pixels, self.num_pixels)
         outputarray = 0.5 * scale - signal.square(outputarray * math.pi / self.period) * 0.5 * scale
         return outputarray
 

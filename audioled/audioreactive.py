@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 import matplotlib as mpl
 import numpy as np
+import scipy as sp
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy.signal import lfilter
 
@@ -495,7 +496,7 @@ class Bonfire(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("num_pixels", [300, 1, 1000, 1]),
-                ("spread", [100.0, 0.0, 1000.0, 1.0]),
+                ("spread", [10, 0, 100, 1]),
                 ("lowcut_hz", [50.0, 0.0, 8000.0, 1.0]),
                 ("highcut_hz", [100.0, 0.0, 8000.0, 1.0]),
             ])
@@ -527,6 +528,8 @@ class Bonfire(Effect):
         y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audiobuffer), zi=self._filter_zi)
         peak = np.max(y) * 1.0
 
-        pixelbuffer[0] = np.roll(pixelbuffer[0], -int(self.spread * peak))
-        pixelbuffer[2] = np.roll(pixelbuffer[2], int(self.spread * peak))
+        pixelbuffer[0] = sp.ndimage.interpolation.shift(pixelbuffer[0],
+                                                        -self.spread * peak, mode='wrap', prefilter=True)
+        pixelbuffer[2] = sp.ndimage.interpolation.shift(pixelbuffer[2],
+                                                        self.spread * peak, mode='wrap', prefilter=True)
         self._outputBuffer[0] = pixelbuffer

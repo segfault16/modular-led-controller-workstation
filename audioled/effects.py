@@ -1,9 +1,9 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 from collections import OrderedDict
 
 import numpy as np
+import scipy as sp
 import math
 
 import audioled.colors as colors
@@ -19,15 +19,13 @@ class Shift(Effect):
 
     def __initstate__(self):
         # state
+        super(Shift, self).__initstate__()
         try:
             self._shift_pixels
         except AttributeError:
             self._shift_pixels = 0
-        try:
-            self._last_t
-        except AttributeError:
-            self._last_t = 0.0
-        super(Shift, self).__initstate__()
+
+        self._last_t = self._t
 
     def numInputChannels(self):
         return 1
@@ -40,7 +38,7 @@ class Shift(Effect):
         definition = {
             "parameters": OrderedDict([
                 # default, min, max, stepsize
-                ("speed", [100.0, 0.0, 1000.0, 1.0]),
+                ("speed", [100.0, -1000.0, 1000.0, 1.0]),
             ])
         }
         return definition
@@ -59,10 +57,10 @@ class Shift(Effect):
 
         y = self._inputBuffer[0]
         dt_move = self._t - self._last_t
-        if dt_move * self.speed > 1:
-            self._shift_pixels = int(self._shift_pixels + dt_move * self.speed) % np.size(y, axis=1)
+        shift = dt_move * self.speed * 0.1
+        self._shift_pixels = math.fmod((self._shift_pixels + shift), np.size(y, axis=1))
         self._last_t = self._t
-        self._outputBuffer[0] = np.roll(y, self._shift_pixels, axis=1)
+        self._outputBuffer[0] = sp.ndimage.interpolation.shift(y, [0, self._shift_pixels], mode='wrap', prefilter=True)
 
 
 class Append(Effect):
@@ -504,10 +502,8 @@ class Swing(Effect):
     Inputs:
     - 0: Pixels
     """
-    def __init__(self,
-                 num_pixels,
-                 displacement=50,
-                 swingspeed=1):
+
+    def __init__(self, num_pixels, displacement=50, swingspeed=1):
         self.num_pixels = num_pixels
         self.displacement = displacement
         self.swingspeed = swingspeed
@@ -544,9 +540,13 @@ class Swing(Effect):
         return 1
 
     def process(self):
-        if self._outputBuffer is not None:
-            pixels = self._inputBuffer[0]
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = None
+            return
 
-            pixels = np.roll(pixels, int(self.displacement * math.sin(self._t * self.swingspeed)))
+        pixels = self._inputBuffer[0]
+        config = self.displacement * math.sin(self._t * self.swingspeed)
 
-            self._outputBuffer[0] = pixels.clip(0.0, 255.0)
+        self._outputBuffer[0] = sp.ndimage.interpolation.shift(pixels, [0, config], mode='wrap', prefilter=True)
