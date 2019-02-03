@@ -22,6 +22,10 @@ import mirrorIcon from '../../img/audioled.effects.Mirror.png';
 import shiftIcon from '../../img/audioled.effects.Shift.png';
 import defenceIcon from '../../img/audioled.generative.DefenceMode.png';
 import swimmingPoolIcon from '../../img/audioled.generative.SwimmingPool.png';
+import springCombineIcon from '../../img/audioled.effects.SpringCombine.png';
+import fallingStarsIcon from '../../img/audioled.generative.FallingStars.png';
+import pendulumIcon from '../../img/audioled.generative.Pendulum.png'
+import bonfireIcon from '../../img/audioled.audioreactive.Bonfire.png'
 import ConfigurationService from "../services/ConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
 import NodePopup from './NodePopup';
@@ -44,7 +48,11 @@ var icons = {
   'audioled.generative.SwimmingPool': swimmingPoolIcon,
   'audioled.effects.Shift': shiftIcon,
   'audioled.generative.DefenceMode': defenceIcon,
-  'audioled.colors.InterpolateHSV': interpolateHSV
+  'audioled.colors.InterpolateHSV': interpolateHSV,
+  'audioled.effects.SpringCombine': springCombineIcon,
+  'audioled.generative.FallingStars': fallingStarsIcon,
+  'audioled.generative.Pendulum': pendulumIcon,
+  'audioled.audioreactive.Bonfire': bonfireIcon,
 
 }
 
