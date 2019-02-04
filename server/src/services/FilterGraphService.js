@@ -76,6 +76,9 @@ const FilterGraphService = {
     getEffectArguments: function(selectedEffect) {
         return fetch('./effect/' + selectedEffect + '/args').then(res => res.json());
     },
+    getEffectParameterHelp: function(selectedEffect) {
+        return fetch('./effect/' + selectedEffect + '/parameterHelp').then(res => res.json());
+    },
     activateSlot: function(slot) {
         var postData = {slot: slot}
         return fetch('./project/activeSlot', {

@@ -11,6 +11,7 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Divider from '@material-ui/core/Divider';
 import FilterGraphService from "../services/FilterGraphService";
 import Typography from '@material-ui/core/Typography';
+import Tooltip from '@material-ui/core/Tooltip'
 
 import './NodePopup.css'
 
@@ -37,7 +38,8 @@ class NodePopup extends React.Component {
             onCancel: props.onCancel,
             config: {
                 parameters: [],
-                values: []
+                values: [],
+                parameterHelp: []
             },
             effects: [],
             selectedEffect: null,
@@ -96,20 +98,22 @@ class NodePopup extends React.Component {
         }
         const json = await FilterGraphService.getEffectParameters(selectedEffect);
         const defaultJson = await FilterGraphService.getEffectArguments(selectedEffect);
-        Promise.all([json, defaultJson]).then(result => {
+        const helpJson = await FilterGraphService.getEffectParameterHelp(selectedEffect);
+        Promise.all([json, defaultJson, helpJson]).then(result => {
             var parameters = result[0];
             var defaults = result[1];
+            var helpText = result[2];
             return this.setState(state => {
                 return {
                     config: {
                         parameters: parameters.parameters,
-                        values: defaults
+                        values: defaults,
+                        parameterHelp: (helpText !== null && helpText.parameters !== null) ? helpText.parameters : {}
                     }
                 }
             })
         }).catch(err => {
-            showError("Error updating node configuration. See console for details.");
-            console.err("Error updating node configuration:", err);
+            console.error("Error updating node configuration:", err);
         });
     }
 
@@ -187,7 +191,7 @@ class NodePopup extends React.Component {
 
     domCreateParameterSlider = (parameters, values, parameterName) => {
         return <React.Fragment>
-            <Grid item xs={7}>
+            <Grid item xs={7}> 
                 <Slider 
                     id={parameterName} 
                     value={values[parameterName]} 
@@ -222,36 +226,41 @@ class NodePopup extends React.Component {
         </React.Fragment>
     }
 
-    domCreateConfigList = (parameters, values) => {
+    domCreateConfigList = (parameters, values, parameterHelp) => {
         if (parameters) {
-            return Object.keys(parameters).map((data, index) => {
+            return Object.keys(parameters).map((effectName, index) => {
                 let control;
-                if (parameters[data] instanceof Array) {
-                    if (parameters[data].some(isNaN)) {
+                if (parameters[effectName] instanceof Array) {
+                    if (parameters[effectName].some(isNaN)) {
                         // Array of non-numbers -> DropDown
-                        control = this.domCreateParameterDropdown(parameters, values, data);
+                        control = this.domCreateParameterDropdown(parameters, values, effectName);
 
-                    } else if (!parameters[data].some(isNaN)) {
+                    } else if (!parameters[effectName].some(isNaN)) {
                         // Array of numbers -> Slider
-                        control = this.domCreateParameterSlider(parameters, values, data);
+                        control = this.domCreateParameterSlider(parameters, values, effectName);
                     }
-                } else if (typeof (parameters[data]) === "boolean") {
+                } else if (typeof (parameters[effectName]) === "boolean") {
                     // Simple boolean -> Checkbox
-                    control = this.domCreateParameterCheckbox(parameters, values, data);
+                    control = this.domCreateParameterCheckbox(parameters, values, effectName);
                 }
                 if (control) {
+                    var helpText = (parameterHelp != null && effectName in parameterHelp) ? parameterHelp[effectName] : ""
                     return (
+                        <Tooltip title={helpText}>
+                        <div>
                         <Grid key={index} container spacing={24}   alignItems="center" justify="center">
                             <Grid item xs={3} >
                             <Typography>
-                                {data}:
+                                {effectName}:
                             </Typography>
                             </Grid>
                             {control}
                         </Grid>
+                        </div>
+                        </Tooltip>
                     )
                 } else {
-                    console.error("undefined control for data", parameters[data])
+                    console.error("undefined control for data", parameters[effectName])
                     return null
                 }
             });
@@ -287,7 +296,8 @@ class NodePopup extends React.Component {
         const { classes } = this.props;
         let parameters = this.state.config.parameters;
         let values = this.state.config.values;
-        let configList = this.domCreateConfigList(parameters, values);
+        let parameterHelp = this.state.config.parameterHelp;
+        let configList = this.domCreateConfigList(parameters, values, parameterHelp);
         let effectDropdown = this.domCreateEffectDropdown();
 
         return (

@@ -224,6 +224,16 @@ def create_app():
         class_ = getattr(importlib.import_module(module_name), class_name)
         return json.dumps(class_.getParameterDefinition())
 
+    @app.route('/effect/<full_class_name>/parameterHelp', methods=['GET'])
+    def effect_effectname_parameterhelp_get(full_class_name):
+        module_name, class_name = None, None
+        try:
+            module_name, class_name = getModuleAndClassName(full_class_name)
+        except RuntimeError:
+            abort(403)
+        class_ = getattr(importlib.import_module(module_name), class_name)
+        return json.dumps(class_.getParameterHelp())
+
     def getModuleAndClassName(full_class_name):
         module_name, class_name = full_class_name.rsplit(".", 1)
         if module_name != "audioled.audio" and module_name != "audioled.effects" and module_name != "audioled.devices" and module_name != "audioled.colors" and module_name != "audioled.audioreactive" and module_name != "audioled.generative" and module_name != "audioled.input":

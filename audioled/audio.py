@@ -177,6 +177,19 @@ class AudioInput(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters":
+            {
+                "num_channels": "Number of input channels of the audio device.",
+                "autogain": "Automatically adjust the gain of the input channels.\nThe input signal will be scaled up to 'autogain_max', gain will be reduced if the audio signal would clip.",
+                "autogain_max": "Maximum gain makeup.",
+                "autogain_time": "Control the lag of the gain adjustment. Higher values will result in slower gain makeup."
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         definition['parameters']['autogain_max'][0] = self.autogain_max
