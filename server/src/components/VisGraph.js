@@ -15,6 +15,7 @@ import Modal from '@material-ui/core/Modal';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import Paper from '@material-ui/core/Paper';
+import Tooltip from '@material-ui/core/Tooltip'
 
 import Graph from "react-graph-vis";
 import 'vis/dist/vis-network.min.css';
@@ -152,16 +153,16 @@ class VisGraph extends React.Component {
           this.addGraphNode();
         },
         hoverNode: ({node}) => {
-          this.updateHelpText(node, null);
+          this.updateHelpText(this.state.mode, node, null);
         },
         blurNode: ({node}) => {
-          this.updateHelpText(null, null);
+          this.updateHelpText(this.state.mode, null, null);
         },
         hoverEdge: ({edge}) => {
-          this.updateHelpText(null, edge);
+          this.updateHelpText(this.state.mode, null, edge);
         },
         blurEdge: ({edge}) => {
-          this.updateHelpText(null, null);
+          this.updateHelpText(this.state.mode, null, null);
         },
       },
       options: {
@@ -304,7 +305,7 @@ class VisGraph extends React.Component {
     this.ensureMode(this.state.mode)
   }
 
-  updateHelpText = (nodeUid, edgeUid) => {
+  updateHelpText = (mode, nodeUid, edgeUid) => {
     var hoverNode = false
     var hoverEdge = false
     var node = null 
@@ -317,7 +318,7 @@ class VisGraph extends React.Component {
       edge = this.state.graph.edges.find(item => item.id === edgeUid);
       hoverEdge = true
     }
-    if(this.state.mode == MODE_SELECT) {
+    if(mode == MODE_SELECT) {
       if(hoverNode) {
         if(node != null && node.nodeType == "node") {
           this.setState({helptext: "Click to edit node"})
@@ -329,7 +330,7 @@ class VisGraph extends React.Component {
       } else {
         this.setState({helptext: "Click and drag to pan"})
       }
-    } else if(this.state.mode == MODE_CREATE) {
+    } else if(mode == MODE_CREATE) {
       if(hoverNode) {
         if(node != null && node.group == "out") {
           this.setState({helptext: "Click and drag to input node to add connection"})
@@ -343,7 +344,7 @@ class VisGraph extends React.Component {
       } else {
         this.setState({helptext: "Click to add node"})
       }
-    } else if(this.state.mode == MODE_DELETE) {
+    } else if(mode == MODE_DELETE) {
       if(hoverNode) {
         if(node != null && node.nodeType == "node") {
           this.setState({helptext: "Click to delete node"})
@@ -679,13 +680,10 @@ class VisGraph extends React.Component {
   }
 
   handleModeChange = (event, mode) => {
-    if(mode == "save") {
-      this.handleSaveConfig();
-    } else if(mode == "load") {
-      this.handleLoadConfig(event);
-    } else {
-      this.setState({ mode })
-    }
+    console.log("mode change", mode)
+    this.setState({ mode });
+    this.updateHelpText(mode, null, null);
+    
   };
 
   render() {
@@ -702,23 +700,43 @@ class VisGraph extends React.Component {
               <Grid item xs={12} sm={12}>
                 <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange}>
                   <ToggleButton value={MODE_SELECT}>
+                    <Tooltip title="Select mode">
                     <InfoIcon />
+                    </Tooltip>
                   </ToggleButton>
+                  
+                  
                   <ToggleButton value={MODE_CREATE}>
+                  <Tooltip title="Create mode">
                     <CreateIcon />
+                    </Tooltip>
                   </ToggleButton>
+                  
+                  
                   <ToggleButton value={MODE_DELETE}>
+                  <Tooltip title="Delete mode">
                     <ClearIcon />
+                    </Tooltip>
                   </ToggleButton>
+                  
+                  
                   <Button onClick={this.handleSaveConfig} size="small">
+                  <Tooltip title="Download configuration">
                     <SaveIcon />
+                    </Tooltip>
                   </Button>
+                  
+                  
                   <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
                   <label htmlFor="file-input">
+                  
                   <Button component="span" size="small">
+                  <Tooltip title="Upload configuration">
                       <CloudUploadIcon />
-                    </Button>
+                      </Tooltip>
+                    </Button>                    
                   </label>
+                  
                 </ToggleButtonGroup>
               </Grid>
             </Grid>
