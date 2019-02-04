@@ -2,6 +2,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  background-color: #333333;
 }
 
 #vis-other {
@@ -15,7 +16,7 @@
 }
 
 .vis-network {
-  border: 0.5px solid lightgray;
+  /* border: 0.5px solid lightgray; */
   background-color: #333333;
 }
 

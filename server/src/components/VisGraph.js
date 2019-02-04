@@ -73,13 +73,18 @@ var icons = {
 
 const styles = theme => ({
   toggleContainer: {
-    // height: 56,
+    height: 56,
     padding: `${theme.spacing.unit}px ${theme.spacing.unit * 2}px`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
     // margin: `${theme.spacing.unit}px 0`,
-    background: theme.palette.background.default,
+    // background: theme.palette.background.default,
+  },
+  helptext: {
+    ...theme.mixins.gutters(),
+    paddingTop: theme.spacing.unit,
+    paddingBottom: theme.spacing.unit,
   },
 });
 
@@ -750,11 +755,15 @@ class VisGraph extends React.Component {
             </div>
           )}
         </Measure>
-        <div style={{"height": "20px", "background":"white"}}>
+        <div className={classes.toggleContainer}>
+            {this.state.helptext ? 
+          <Paper className={classes.helptext} >
               <Typography>
-                {this.state.helptext}
+                Usage: {this.state.helptext}
               </Typography>
-              </div>
+              </Paper>
+              : null}
+          </div>
         <Modal open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp}>
           <NodePopup mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
         </Modal>
