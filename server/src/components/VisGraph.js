@@ -1,12 +1,24 @@
 import React from "react";
 import PropTypes from 'prop-types';
+import { withStyles } from '@material-ui/core/styles';
 import "@babel/polyfill";
 import Button from '@material-ui/core/Button';
 import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import SaveIcon from '@material-ui/icons/Save';
+import CreateIcon from '@material-ui/icons/Create';
+import AddIcon from '@material-ui/icons/Add';
+import ClearIcon from '@material-ui/icons/Clear';
+import InfoIcon from '@material-ui/icons/Info';
+import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
+import ToggleButton from '@material-ui/lab/ToggleButton';
+import Modal from '@material-ui/core/Modal';
+import Grid from '@material-ui/core/Grid';
+import Typography from '@material-ui/core/Typography';
+import Paper from '@material-ui/core/Paper';
+
 import Graph from "react-graph-vis";
 import 'vis/dist/vis-network.min.css';
-import Modal from '@material-ui/core/Modal';
+
 import audioInputIcon from '../../img/audioled.audio.AudioInput.png';
 import movingIcon from '../../img/audioled.audioreactive.MovingLight.png';
 import spectrumIcon from '../../img/audioled.audioreactive.Spectrum.png';
@@ -26,8 +38,10 @@ import springCombineIcon from '../../img/audioled.effects.SpringCombine.png';
 import fallingStarsIcon from '../../img/audioled.generative.FallingStars.png';
 import pendulumIcon from '../../img/audioled.generative.Pendulum.png'
 import bonfireIcon from '../../img/audioled.audioreactive.Bonfire.png'
+
 import ConfigurationService from "../services/ConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
+
 import NodePopup from './NodePopup';
 import './VisGraph.css';
 import Measure from 'react-measure'
@@ -56,12 +70,30 @@ var icons = {
 
 }
 
+const styles = theme => ({
+  toggleContainer: {
+    // height: 56,
+    padding: `${theme.spacing.unit}px ${theme.spacing.unit * 2}px`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    // margin: `${theme.spacing.unit}px 0`,
+    background: theme.palette.background.default,
+  },
+});
+
+const MODE_SELECT = 'select';
+const MODE_CREATE = 'create';
+const MODE_DELETE = 'delete';
+
 class VisGraph extends React.Component {
-  
+
   constructor(props) {
     super(props);
     //this.slot = props.slot
     this.state = {
+      mode: MODE_SELECT,
+      helptext: "",
       slot: props.slot,
       network: {},
       graph: {
@@ -78,14 +110,59 @@ class VisGraph extends React.Component {
       },
       events: {
         select: ({ nodes, edges }) => {
-          this.clearNodePopUp()
-          if (nodes.length == 1) {
-            this.editNode(nodes[0])
+          if (this.state.mode === MODE_SELECT || this.state.mode === MODE_CREATE) {
+            this.clearNodePopUp()
+            if (nodes.length == 1) {
+              this.editNode(nodes[0])
+            }
+          } else if (this.state.mode === MODE_DELETE) {
+            if (nodes.length == 1) {
+              this.deleteNode({ nodes: nodes, edges: edges }, data => {
+                this.setState(oldState => {
+                  return {
+                    graph: {
+                      nodes: oldState.graph.nodes.filter((el) => !data.nodes.includes(el.id)),
+                      edges: oldState.graph.edges.filter((el) => !data.edges.includes(el.id))
+                    }
+                  }
+                })
+              })
+            } else if (edges.length > 0) {
+              this.deleteEdge({ nodes: nodes, edges: edges }, data => {
+                this.setState(oldState => {
+                  return {
+                    graph: {
+                      nodes: oldState.graph.nodes.filter((el) => !data.nodes.includes(el.id)),
+                      edges: oldState.graph.edges.filter((el) => !data.edges.includes(el.id))
+                    }
+                  }
+                })
+              })
+            }
+          }
+        },
+        click: ({ nodes, edges }) => {
+          if (this.state.mode === MODE_CREATE) {
+            if (nodes.length == 0) {
+              this.addGraphNode();
+            }
           }
         },
         doubleClick: ({ pointer: { canvas } }) => {
           this.addGraphNode();
-        }
+        },
+        hoverNode: ({node}) => {
+          this.updateHelpText(node, null);
+        },
+        blurNode: ({node}) => {
+          this.updateHelpText(null, null);
+        },
+        hoverEdge: ({edge}) => {
+          this.updateHelpText(null, edge);
+        },
+        blurEdge: ({edge}) => {
+          this.updateHelpText(null, null);
+        },
       },
       options: {
         layout: {
@@ -134,34 +211,9 @@ class VisGraph extends React.Component {
           hover: true
         },
         manipulation: {
-          enabled: true,
+          enabled: false,
           addNode: (data, callback) => {
             this.addGraphNode();
-          },
-          deleteNode: (data, callback) => {
-            data.nodes.forEach(id => {
-              var node = this.state.graph.nodes.find(node => node.id == id)
-              if (node == null) {
-                console.error("Cannot find node " + id)
-              }
-              if (node.nodeType == 'node') {
-                // update callback data to include all input and output nodes for this node
-                var inputOutputNodes = this.state.graph.nodes.filter(item => item.nodeType == 'channel' && item.nodeUid == id);
-                data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
-                FilterGraphService.deleteNode(this.state.slot, id).finally(() => {
-                  this.clearNodePopUp();
-                })
-              } else {
-                console.log("Cannot delete node " + id)
-                // Clear callback data
-                data.nodes = []
-                data.edges = []
-                return
-              }
-              console.debug("Deleted node", id);
-            });
-            callback(data);
-
           },
           addEdge: (data, callback) => {
             if (data.from == data.to) {
@@ -181,28 +233,7 @@ class VisGraph extends React.Component {
             }
             return;
           },
-          deleteEdge: (data, callback) => {
-            data.edges.forEach(edgeUid => {
-              var edge = this.state.graph.edges.find(item => item.id === edgeUid);
-              var fromNode = this.state.graph.nodes.find(item => item.id === edge.from);
-              var toNode = this.state.graph.nodes.find(item => item.id === edge.to);
-              if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in') {
-                var edge = this.state.graph.edges.find(item => item.id === edgeUid);
-                var id = edge.id;
-                FilterGraphService.deleteConnection(this.state.slot, id);
 
-                console.debug("Deleted edge", edge);
-              } else {
-                console.log("could not delete edge")
-                // Remove edge from callback data
-                var index = data.edges.indexOf(edgeUid);
-                if (index > -1) {
-                  data.edges.splice(index, 1);
-                }
-              }
-            });
-            callback(data);
-          },
           editEdge: false,
         },
         nodes: {
@@ -257,7 +288,7 @@ class VisGraph extends React.Component {
   }
 
   async componentWillReceiveProps(nextProps) {
-    if(nextProps.slot != this.state.slot) {
+    if (nextProps.slot != this.state.slot) {
       console.log("new props", nextProps)
       this.state.slot = nextProps.slot
       this.setState(state => {
@@ -265,10 +296,121 @@ class VisGraph extends React.Component {
           slot: nextProps.slot
         }
       })
-      this.createFromBackend()  
+      this.createFromBackend()
     }
   }
 
+  componentDidUpdate() {
+    this.ensureMode(this.state.mode)
+  }
+
+  updateHelpText = (nodeUid, edgeUid) => {
+    var hoverNode = false
+    var hoverEdge = false
+    var node = null 
+    var edge = null
+    if(nodeUid != null) {
+      node = this.state.graph.nodes.find(item => item.id === nodeUid);
+      hoverNode = true
+    }
+    if(edgeUid != null) {
+      edge = this.state.graph.edges.find(item => item.id === edgeUid);
+      hoverEdge = true
+    }
+    if(this.state.mode == MODE_SELECT) {
+      if(hoverNode) {
+        if(node != null && node.nodeType == "node") {
+          this.setState({helptext: "Click to edit node"})
+        } else {
+          this.setState({helptext: ""})
+        }
+      } else if(hoverEdge) {
+        this.setState({helptext: ""})
+      } else {
+        this.setState({helptext: "Click and drag to pan"})
+      }
+    } else if(this.state.mode == MODE_CREATE) {
+      if(hoverNode) {
+        if(node != null && node.group == "out") {
+          this.setState({helptext: "Click and drag to input node to add connection"})
+        } else if(node != null && node.nodeType == "node") {
+          this.setState({helptext: "Click to edit node"})
+        } else {
+          this.setState({helptext: ""})
+        }
+      } else if(hoverEdge) {
+        this.setState({helptext: ""})
+      } else {
+        this.setState({helptext: "Click to add node"})
+      }
+    } else if(this.state.mode == MODE_DELETE) {
+      if(hoverNode) {
+        if(node != null && node.nodeType == "node") {
+          this.setState({helptext: "Click to delete node"})
+        } else {
+          this.setState({helptext: ""})
+        }
+      } else if(hoverEdge) {
+        if(edge != null && edge.group === "connection")
+        this.setState({helptext: "Click to delete connection"})
+      } else {
+        this.setState({helptext: ""})
+      }
+    }
+    
+  }
+
+  deleteNode = (data, callback) => {
+    data.nodes.forEach(id => {
+      var node = this.state.graph.nodes.find(node => node.id == id)
+      if (node == null) {
+        console.error("Cannot find node " + id)
+      }
+      if (node.nodeType == 'node') {
+        // update callback data to include all input and output nodes for this node
+        var inputOutputNodes = this.state.graph.nodes.filter(item => item.nodeType == 'channel' && item.nodeUid == id);
+        data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
+        FilterGraphService.deleteNode(this.state.slot, id).finally(() => {
+          this.clearNodePopUp();
+        })
+      } else {
+        console.log("Cannot delete node " + id)
+        // Clear callback data
+        data.nodes = []
+        data.edges = []
+        return
+      }
+      console.debug("Deleted node", id);
+    });
+    if (callback != null) {
+      callback(data);
+    }
+  }
+
+  deleteEdge = (data, callback) => {
+    data.edges.forEach(edgeUid => {
+      var edge = this.state.graph.edges.find(item => item.id === edgeUid);
+      var fromNode = this.state.graph.nodes.find(item => item.id === edge.from);
+      var toNode = this.state.graph.nodes.find(item => item.id === edge.to);
+      if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in') {
+        var edge = this.state.graph.edges.find(item => item.id === edgeUid);
+        var id = edge.id;
+        FilterGraphService.deleteConnection(this.state.slot, id);
+
+        console.debug("Deleted edge", edge);
+      } else {
+        console.log("could not delete edge")
+        // Remove edge from callback data
+        var index = data.edges.indexOf(edgeUid);
+        if (index > -1) {
+          data.edges.splice(index, 1);
+        }
+      }
+    });
+    if (callback != null) {
+      callback(data);
+    }
+  }
 
   addStateNodesAndEdges(nodes, edges) {
     this.setState(state => {
@@ -293,14 +435,14 @@ class VisGraph extends React.Component {
   }
 
   async createFromBackend() {
-    
+
     const nodeCreate = await this.createNodesFromBackend();
     const edgeCreate = await this.createEdgesFromBackend();
     return this.resetNetwork().then(Promise.all([nodeCreate, edgeCreate]).then(result => {
       console.log(result)
       var nodes = [];
       var edges = [];
-      var {allNodes, allEdges} = result[0];
+      var { allNodes, allEdges } = result[0];
       var additionalEdges = result[1];
       nodes = nodes.concat(allNodes);
       edges = edges.concat(allEdges);
@@ -317,12 +459,12 @@ class VisGraph extends React.Component {
         var allNodes = [];
         var allEdges = [];
         values.forEach(element => {
-          var {nodes, edges} = this.createVisNodesAndEdges(element);
+          var { nodes, edges } = this.createVisNodesAndEdges(element);
           allNodes = allNodes.concat(nodes);
           allEdges = allEdges.concat(edges);
         })
-        
-        return {allNodes, allEdges};
+
+        return { allNodes, allEdges };
       })
   }
 
@@ -333,9 +475,9 @@ class VisGraph extends React.Component {
         values.forEach(element => {
           var edge = this.createVisConnection(element);
           allEdges.push(edge);
+        })
+        return allEdges;
       })
-      return allEdges;
-    })
   }
 
   conUid(inout, index, uid) {
@@ -353,10 +495,10 @@ class VisGraph extends React.Component {
     var allEdges = [];
     var visNode = this.createVisNode(json);
     allNodes.push(visNode);
-    var {nodes, edges} = this.createInputOutputNodesAndEdges(json, visNode);
+    var { nodes, edges } = this.createInputOutputNodesAndEdges(json, visNode);
     allNodes = allNodes.concat(nodes);
     allEdges = allEdges.concat(edges);
-    return {nodes: allNodes, edges: allEdges}
+    return { nodes: allNodes, edges: allEdges }
   }
 
   createInputOutputNodesAndEdges(json, visNode) {
@@ -367,31 +509,31 @@ class VisGraph extends React.Component {
     var edges = [];
     for (var i = 0; i < numOutputChannels; i++) {
       var uid = this.conUid('out', i, visNode.id);
-        var outNode = {};
-        outNode.group = 'out';
-        outNode.id = uid;
-        outNode.label = `${i}`;
-        outNode.shape = 'circle';
-        outNode.nodeType = 'channel';
-        outNode.nodeUid = visNode.id;
-        outNode.nodeChannel = i;
-        nodes.push(outNode);
-        edges.push({ id: outNode.id, from: visNode.id, to: outNode.id });
+      var outNode = {};
+      outNode.group = 'out';
+      outNode.id = uid;
+      outNode.label = `${i}`;
+      outNode.shape = 'circle';
+      outNode.nodeType = 'channel';
+      outNode.nodeUid = visNode.id;
+      outNode.nodeChannel = i;
+      nodes.push(outNode);
+      edges.push({ id: outNode.id, from: visNode.id, to: outNode.id });
     }
     for (var i = 0; i < numInputChannels; i++) {
       var uid = this.conUid('in', i, visNode.id);
-        var inNode = {};
-        inNode.group = 'in';
-        inNode.id = uid;
-        inNode.label = `${i}`;
-        inNode.shape = 'circle';
-        inNode.nodeType = 'channel';
-        inNode.nodeUid = visNode.id;
-        inNode.nodeChannel = i;
-        nodes.push(inNode);
-        edges.push({ id: inNode.id, from: inNode.id, to: visNode.id });
+      var inNode = {};
+      inNode.group = 'in';
+      inNode.id = uid;
+      inNode.label = `${i}`;
+      inNode.shape = 'circle';
+      inNode.nodeType = 'channel';
+      inNode.nodeUid = visNode.id;
+      inNode.nodeChannel = i;
+      nodes.push(inNode);
+      edges.push({ id: inNode.id, from: inNode.id, to: visNode.id });
     }
-    return {nodes, edges};
+    return { nodes, edges };
   }
 
   updateVisNode(visNode, json) {
@@ -405,7 +547,7 @@ class VisGraph extends React.Component {
     visNode.nodeType = 'node';
     var icon = icons[name];
     visNode.image = icon ? icon : '';
-    
+
   }
 
   createVisConnection(con) {
@@ -425,6 +567,7 @@ class VisGraph extends React.Component {
     edge.to = this.conUid('in', state['to_node_channel'], state['to_node_uid'])
     edge.to_channel = state["to_node_channel"];
     edge.arrows = 'to'
+    edge.group = "connection"
   }
 
 
@@ -466,7 +609,7 @@ class VisGraph extends React.Component {
       .then(node => {
         console.debug('Create node successful:', JSON.stringify(node));
         //updateVisNode(data, node);
-        var {nodes, edges} = this.createVisNodesAndEdges(node);
+        var { nodes, edges } = this.createVisNodesAndEdges(node);
         this.addStateNodesAndEdges(nodes, edges);
       })
       .catch(error => {
@@ -505,6 +648,7 @@ class VisGraph extends React.Component {
   }
 
   handleLoadConfig = async (event) => {
+    console.log("load", event)
     await ConfigurationService.loadConfig(this.state.slot, event).finally(() => this.createFromBackend());
   }
 
@@ -513,19 +657,39 @@ class VisGraph extends React.Component {
   }
 
   updateDimensions = (event) => {
-    
+
     let content = document.getElementById('vis-content');
     let visDiv = content.getElementsByTagName('div')[0]
     visDiv.style.position = "absolute";
     visDiv.style.height = (content.clientHeight) + "px";
     visDiv.style.width = (content.clientWidth) + "px";
 
-    if(this.state.network) {
+    if (this.state.network) {
       this.state.network.redraw();
     }
   }
 
+  ensureMode = (mode) => {
+    if (mode === MODE_SELECT) {
+      this.state.network.disableEditMode()
+    }
+    if (mode === MODE_CREATE) {
+      this.state.network.addEdgeMode()
+    }
+  }
+
+  handleModeChange = (event, mode) => {
+    if(mode == "save") {
+      this.handleSaveConfig();
+    } else if(mode == "load") {
+      this.handleLoadConfig(event);
+    } else {
+      this.setState({ mode })
+    }
+  };
+
   render() {
+    const { classes, theme } = this.props;
     const graph = this.state.graph;
     const options = this.state.options;
     const events = this.state.events;
@@ -533,25 +697,46 @@ class VisGraph extends React.Component {
     return (
       <div id="vis-container">
         <div id="vis-other">
-          <Button variant="contained" onClick={this.handleSaveConfig}>
-            <SaveIcon />
-            Download Config
-          </Button>
-          <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
-          <label htmlFor="file-input">
-            <Button variant="contained" component="span">
-              <CloudUploadIcon />
-              Upload Config
-          </Button>
-          </label>
+          <div className={classes.toggleContainer}>
+            <Grid container spacing={16} justify="flex-end" direction="row">
+              <Grid item xs={12} sm={12}>
+                <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange}>
+                  <ToggleButton value={MODE_SELECT}>
+                    <InfoIcon />
+                  </ToggleButton>
+                  <ToggleButton value={MODE_CREATE}>
+                    <CreateIcon />
+                  </ToggleButton>
+                  <ToggleButton value={MODE_DELETE}>
+                    <ClearIcon />
+                  </ToggleButton>
+                  <Button onClick={this.handleSaveConfig} size="small">
+                    <SaveIcon />
+                  </Button>
+                  <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
+                  <label htmlFor="file-input">
+                  <Button component="span" size="small">
+                      <CloudUploadIcon />
+                    </Button>
+                  </label>
+                </ToggleButtonGroup>
+              </Grid>
+            </Grid>
+          </div>
+
         </div>
         <Measure onResize={() => this.updateDimensions()}>
           {({ measureRef }) => (
-          <div id="vis-content" ref={measureRef}>
-            <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
-          </div>
+            <div id="vis-content" ref={measureRef}>
+              <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
+            </div>
           )}
         </Measure>
+        <div style={{"height": "20px", "background":"white"}}>
+              <Typography>
+                {this.state.helptext}
+              </Typography>
+              </div>
         <Modal open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp}>
           <NodePopup mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
         </Modal>
@@ -569,4 +754,4 @@ VisGraph.defaultProps = {
   slot: 0
 };
 
-export default VisGraph;
+export default withStyles(styles)(VisGraph);
