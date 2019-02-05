@@ -1,10 +1,14 @@
-from audioled import project, configs
+from audioled import project, configs, devices
 import uuid
+import jsonpickle
+import os.path
+import hashlib
 
 CONFIG_NUM_PIXELS = 'num_pixels'
 CONFIG_DEVICE = 'device'
 CONFIG_DEVICE_CANDY_SERVER = 'device.candy.server'
 CONFIG_AUDIO_DEVICE_INDEX = 'audio.device_index'
+CONFIG_ACTIVE_PROJECT = 'active_project'
 
 
 class ServerConfiguration:
@@ -16,7 +20,6 @@ class ServerConfiguration:
         self._config[CONFIG_DEVICE] = 'FadeCandy'
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
         self._projects = {}
-        self._activeProjectUid = None
         proj = project.Project()
         # Initialize filtergraph
         # fg = configs.createSpectrumGraph(num_pixels, device)
@@ -32,7 +35,7 @@ class ServerConfiguration:
         # proj.activateSlot(12)
         projectUid = uuid.uuid4().hex
         self._projects[projectUid] = proj
-        self._activeProjectUid = projectUid
+        self._config[CONFIG_ACTIVE_PROJECT] = projectUid
 
     def setConfiguration(self, key, value):
         self._config[key] = value
@@ -43,7 +46,14 @@ class ServerConfiguration:
         return None
 
     def getProject(self):
-        return self._projects[self._activeProjectUid]
+        activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)
+        return self._projects[activeProjectUid]
+    
+    def _store(self):
+        pass
+
+    def _load(self):
+        pass
         
 
 class PersistentConfiguration(ServerConfiguration):
@@ -51,15 +61,99 @@ class PersistentConfiguration(ServerConfiguration):
         super().__init__()
         self.storageLocation = storageLocation
         self.no_store = no_store
+        self.need_write = False
+        self._lastHash = None
+        self._lastProjectHashs = {}
+        self._load()
     
     def setConfiguration(self, key, value):
-        super().setConfiguration(value)
-        self._store()
+        super().setConfiguration(key, value)
     
     def getConfiguration(self, key):
         return super().getConfiguration(key)
     
     def _store(self):
-        if not self.no_store:
-            # ToDo: Store
-            pass
+        self.need_write = True
+
+    def store(self):
+ 
+        # Check and write configuration
+        value = self._getStoreConfig()
+        m = hashlib.md5()
+        m.update(value.encode('utf-8'))
+        curHash = m.hexdigest()    
+        if self._lastHash is None or curHash != self._lastHash:
+            self.need_write = True
+
+        if not self.no_store and self.need_write:          
+            if not os.path.exists(self.storageLocation):
+                os.makedirs(self.storageLocation)
+            print("Writing configuration to {}".format(os.path.join(self.storageLocation, "configuration.json")))
+            with open(os.path.join(self.storageLocation,'configuration.json'), "w") as f:
+                f.write(value)
+            self.need_write = False
+            self._lastHash = curHash
+
+        # Check and write projects
+        for key, project in self._projects.items():
+            lastProjHash = None
+            if key in self._lastProjectHashs:
+                lastProjHash = self._lastProjectHashs[key]
+            projJson = jsonpickle.encode(project)
+            mp = hashlib.md5()
+            mp.update(projJson.encode('utf-8'))
+            projHash = mp.hexdigest()
+            needProjWrite = lastProjHash is None or lastProjHash != projHash
+            if not self.no_store and needProjWrite:
+                path = os.path.join(self.storageLocation, "projects")
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                projFile = os.path.join(path, "{}.json".format(key))
+                print("Writing project to {}".format(projFile))
+                with open(projFile, "w") as f:
+                    f.write(projJson)
+                self._lastProjectHashs[key] = projHash
+                
+
+    def _getStoreConfig(self):
+        return jsonpickle.encode(self._config)
+
+    def _load(self):
+        # Read configuration file
+        configFile = os.path.join(self.storageLocation, "configuration.json")
+        if os.path.exists(configFile):
+            with open(os.path.join(self.storageLocation, "configuration.json"), "r", encoding='utf-8') as f:
+                print("Reading configuration from {}".format(configFile))
+                content = f.read()
+                self._config = jsonpickle.decode(content)
+                m = hashlib.md5()
+                m.update(content.encode('utf-8'))
+                self._lastHash = m.hexdigest() 
+        else:
+            print("Configuration not found. Skipping read.")
+        
+        # Init overrideDevice
+        device = None
+        if self.getConfiguration(CONFIG_DEVICE) == 'RaspberryPi':
+            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS))
+        elif self.getConfiguration(CONFIG_DEVICE) == 'FadeCandy':
+            device = devices.FadeCandy(self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
+        else:
+            print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
+        exit
+        devices.LEDOutput.overrideDevice = device
+
+        # Read projects
+        projPath = os.path.join(self.storageLocation, "projects")
+        onlyfiles = [f for f in os.listdir(projPath) if os.path.isfile(os.path.join(projPath, f))]
+        for f in onlyfiles:
+            print("Reading project {}".format(f))
+            with open(os.path.join(projPath, f), "r", encoding='utf-8') as fc:
+                content = fc.read()
+                projUid = os.path.splitext(os.path.basename(f))[0]
+                self._projects[projUid] = jsonpickle.decode(content)
+                m = hashlib.md5()
+                m.update(content.encode('utf-8'))
+                self._lastProjectHashs[projUid] = m.hexdigest()
+
+

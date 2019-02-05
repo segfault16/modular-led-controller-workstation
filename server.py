@@ -11,10 +11,12 @@ from os.path import expanduser
 import threading
 import time
 from timeit import default_timer as timer
+import atexit
 
 import jsonpickle
 import numpy as np
 from flask import Flask, abort, jsonify, request, send_from_directory, redirect
+from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
 from audioled import audio, configs, devices, effects, filtergraph, project, serverconfiguration
@@ -46,6 +48,14 @@ count = 0
 
 def create_app():
     app = Flask(__name__, static_url_path='/')
+
+    def store_configuration():
+        global serverconfig
+        serverconfig.store()
+
+    sched = BackgroundScheduler(daemon=True)
+    sched.add_job(store_configuration,'interval',seconds=5)
+    sched.start()
 
     def interrupt():
         print('cancelling LED thread')
