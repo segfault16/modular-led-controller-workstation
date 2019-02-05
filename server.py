@@ -120,6 +120,16 @@ def create_app():
         except StopIteration:
             abort(404, "Node not found")
 
+    @app.route('/slot/<int:slotId>/node/<nodeUid>/effect', methods=['GET'])
+    def node_uid_effectname_get(slotId, nodeUid):
+        global proj
+        fg = proj.getSlot(slotId)
+        try:
+            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            return json.dumps(getFullClassName(node.effect))
+        except StopIteration:
+            abort(404, "Node not found")
+
     @app.route('/slot/<int:slotId>/node', methods=['POST'])
     def node_post(slotId):
         global proj
@@ -192,6 +202,16 @@ def create_app():
         childclasses = inheritors(effects.Effect)
         return jsonpickle.encode([child for child in childclasses])
 
+    @app.route('/effect/<full_class_name>/description', methods=['GET'])
+    def effect_effectname_description_get(full_class_name):
+        module_name, class_name = None, None
+        try:
+            module_name, class_name = getModuleAndClassName(full_class_name)
+        except RuntimeError:
+            abort(403)
+        class_ = getattr(importlib.import_module(module_name), class_name)
+        return class_.getEffectDescription()
+
     @app.route('/effect/<full_class_name>/args', methods=['GET'])
     def effect_effectname_args_get(full_class_name):
         module_name, class_name = None, None
@@ -239,6 +259,13 @@ def create_app():
         if module_name != "audioled.audio" and module_name != "audioled.effects" and module_name != "audioled.devices" and module_name != "audioled.colors" and module_name != "audioled.audioreactive" and module_name != "audioled.generative" and module_name != "audioled.input":
             raise RuntimeError("Not allowed")
         return module_name, class_name
+    
+    def getFullClassName(o):
+        module = o.__class__.__module__
+        if module is None or module == str.__class__.__module__:
+            return o.__class__.__name__  
+        else:
+            return module + '.' + o.__class__.__name__
 
     def inheritors(klass):
         subclasses = set()

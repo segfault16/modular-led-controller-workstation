@@ -39,7 +39,8 @@ class NodePopup extends React.Component {
             config: {
                 parameters: [],
                 values: [],
-                parameterHelp: []
+                parameterHelp: [],
+                description: ""
             },
             effects: [],
             selectedEffect: null,
@@ -61,20 +62,28 @@ class NodePopup extends React.Component {
 
     async showEdit() {
         const uid = this.state.nodeUid;
-        const stateJson = await FilterGraphService.getNode(this.state.slot, uid);
-        const json = await FilterGraphService.getNodeParameter(this.state.slot, uid);
-        await Promise.all([stateJson, json]).then(result => {
-            var effect = result[0]["py/state"]["effect"]["py/state"];
-            var values = result[1];
+        await FilterGraphService.getNodeEffect(this.state.slot, uid).then(effectName => {
+            const nodeJson = FilterGraphService.getNode(this.state.slot, uid);
+            const parameterDefinitionJson = FilterGraphService.getNodeParameter(this.state.slot, uid);
+            const helpJson = FilterGraphService.getEffectParameterHelp(effectName);
+            const description = FilterGraphService.getEffectDescription(effectName);
+            return Promise.all([nodeJson, parameterDefinitionJson, helpJson, description])
+        }).then(result => {
+            var currentParameterValues = result[0]["py/state"]["effect"]["py/state"];
+            var parameterDefinition = result[1];
+            var helpText = result[2];
+            var desc = result[3];
             this.setState(state => {
                 return {
                     config: {
-                        parameters: values.parameters,
-                        values: effect
+                        parameters: parameterDefinition.parameters,
+                        values: currentParameterValues,
+                        parameterHelp: (helpText !== null && helpText.parameters !== null) ? helpText.parameters : {},
+                        description: desc
                     }
                 }
             })
-        });
+        })
     }
 
     async showAdd() {
@@ -99,16 +108,19 @@ class NodePopup extends React.Component {
         const json = await FilterGraphService.getEffectParameters(selectedEffect);
         const defaultJson = await FilterGraphService.getEffectArguments(selectedEffect);
         const helpJson = await FilterGraphService.getEffectParameterHelp(selectedEffect);
-        Promise.all([json, defaultJson, helpJson]).then(result => {
+        const description = await FilterGraphService.getEffectDescription(selectedEffect);
+        Promise.all([json, defaultJson, helpJson, description]).then(result => {
             var parameters = result[0];
             var defaults = result[1];
             var helpText = result[2];
+            var desc = result[3];
             return this.setState(state => {
                 return {
                     config: {
                         parameters: parameters.parameters,
                         values: defaults,
-                        parameterHelp: (helpText !== null && helpText.parameters !== null) ? helpText.parameters : {}
+                        parameterHelp: (helpText !== null && helpText.parameters !== null) ? helpText.parameters : {},
+                        description: desc
                     }
                 }
             })
@@ -297,6 +309,7 @@ class NodePopup extends React.Component {
         let parameters = this.state.config.parameters;
         let values = this.state.config.values;
         let parameterHelp = this.state.config.parameterHelp;
+        let effectDescription = this.state.config.description;
         let configList = this.domCreateConfigList(parameters, values, parameterHelp);
         let effectDropdown = this.domCreateEffectDropdown();
 
@@ -305,6 +318,11 @@ class NodePopup extends React.Component {
                 <h2 id="node-operation">{this.state.mode === "edit" ? "Edit Node" : "Add Node"}</h2>
                 <div id="effects">
                     {effectDropdown}
+                </div>
+                <div><br/>
+                    <Typography>
+                        {effectDescription}
+                    </Typography>
                 </div>
                 <div id="node-grid">
                     <h3>Parameters:</h3>

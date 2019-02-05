@@ -107,6 +107,10 @@ class Effect(object):
     @staticmethod
     def getParameterHelp():
         return {}
+    
+    @staticmethod
+    def getEffectDescription():
+        return ""
 
     def _inputBufferValid(self, index):
         if self._inputBuffer is None:

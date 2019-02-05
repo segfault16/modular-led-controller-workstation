@@ -40,6 +40,9 @@ const FilterGraphService = {
     getNodeParameter: function(slotId, id) {
         return fetch('./slot/' + slotId + '/node/' + id + '/parameter').then(res => res.json());
     },
+    getNodeEffect: function(slotId, id) {
+        return fetch('./slot/' + slotId + '/node/' + id + '/effect').then(res => res.json());
+    },
     addNode: function(slotId, selectedEffect, options) {
         return fetch('./slot/' + slotId + '/node', {
             method: 'POST', // or 'PUT'
@@ -69,6 +72,9 @@ const FilterGraphService = {
     },
     getAllEffects: function() {
         return fetch('./effects').then(res => res.json());
+    },
+    getEffectDescription: function(selectedEffect) {
+        return fetch('./effect/' + selectedEffect + '/description').then(res => res.text());
     },
     getEffectParameters: function(selectedEffect) {
         return fetch('./effect/' + selectedEffect + '/parameter').then(res => res.json());
