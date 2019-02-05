@@ -686,9 +686,13 @@ class VisGraph extends React.Component {
 
   handleModeChange = (event, mode) => {
     console.log("mode change", mode)
-    this.setState({ mode });
-    this.updateHelpText(mode, null, null);
-    
+    if(mode != null) {
+      this.setState({ mode });
+      this.updateHelpText(mode, null, null);
+    } else {
+      // No new mode given, event is onChange of fileInput
+      this.handleLoadConfig(event)
+    }
   };
 
   render() {
