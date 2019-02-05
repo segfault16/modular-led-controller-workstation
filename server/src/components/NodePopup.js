@@ -319,10 +319,15 @@ class NodePopup extends React.Component {
                 <div id="effects">
                     {effectDropdown}
                 </div>
-                <div><br/>
+                <div>
+                    {effectDescription.length > 0 ? 
+                    <React.Fragment>
+                    <br/>
                     <Typography>
                         {effectDescription}
                     </Typography>
+                    </React.Fragment>
+                    : null}
                 </div>
                 <div id="node-grid">
                     <h3>Parameters:</h3>
