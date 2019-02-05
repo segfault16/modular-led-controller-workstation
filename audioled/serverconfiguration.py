@@ -20,22 +20,6 @@ class ServerConfiguration:
         self._config[CONFIG_DEVICE] = 'FadeCandy'
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
         self._projects = {}
-        proj = project.Project()
-        # Initialize filtergraph
-        # fg = configs.createSpectrumGraph(num_pixels, device)
-        # fg = configs.createMovingLightGraph(num_pixels, device)
-        # fg = configs.createMovingLightsGraph(num_pixels, device)
-        # fg = configs.createVUPeakGraph(num_pixels, device)
-        # initial = configs.createSwimmingPoolGraph(num_pixels, device)
-        # second = configs.createDefenceGraph(num_pixels, device)
-        # fg = configs.createKeyboardGraph(num_pixels, device)
-
-        # proj.setFiltergraphForSlot(12, initial)
-        # proj.setFiltergraphForSlot(13, second)
-        # proj.activateSlot(12)
-        projectUid = uuid.uuid4().hex
-        self._projects[projectUid] = proj
-        self._config[CONFIG_ACTIVE_PROJECT] = projectUid
 
     def setConfiguration(self, key, value):
         self._config[key] = value
@@ -47,6 +31,25 @@ class ServerConfiguration:
 
     def getProject(self):
         activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)
+        if activeProjectUid is None:
+            # Initialize default project
+            proj = project.Project()
+            # Initialize filtergraph
+            # fg = configs.createSpectrumGraph(num_pixels, device)
+            # fg = configs.createMovingLightGraph(num_pixels, device)
+            # fg = configs.createMovingLightsGraph(num_pixels, device)
+            # fg = configs.createVUPeakGraph(num_pixels, device)
+            initial = configs.createSwimmingPoolGraph(self.getConfiguration(CONFIG_NUM_PIXELS), devices.LEDOutput.overrideDevice)
+            second = configs.createDefenceGraph(self.getConfiguration(CONFIG_NUM_PIXELS), devices.LEDOutput.overrideDevice)
+            # fg = configs.createKeyboardGraph(num_pixels, device)
+
+            proj.setFiltergraphForSlot(12, initial)
+            proj.setFiltergraphForSlot(13, second)
+            proj.activateSlot(12)
+            projectUid = uuid.uuid4().hex
+            self._projects[projectUid] = proj
+            self._config[CONFIG_ACTIVE_PROJECT] = projectUid
+            activeProjectUid = projectUid
         return self._projects[activeProjectUid]
     
     def _store(self):
@@ -89,17 +92,17 @@ class PersistentConfiguration(ServerConfiguration):
             if not os.path.exists(self.storageLocation):
                 os.makedirs(self.storageLocation)
             print("Writing configuration to {}".format(os.path.join(self.storageLocation, "configuration.json")))
-            with open(os.path.join(self.storageLocation,'configuration.json'), "w") as f:
+            with open(os.path.join(self.storageLocation, 'configuration.json'), "w") as f:
                 f.write(value)
             self.need_write = False
             self._lastHash = curHash
 
         # Check and write projects
-        for key, project in self._projects.items():
+        for key, proj in self._projects.items():
             lastProjHash = None
             if key in self._lastProjectHashs:
                 lastProjHash = self._lastProjectHashs[key]
-            projJson = jsonpickle.encode(project)
+            projJson = jsonpickle.encode(proj)
             mp = hashlib.md5()
             mp.update(projJson.encode('utf-8'))
             projHash = mp.hexdigest()
@@ -114,7 +117,6 @@ class PersistentConfiguration(ServerConfiguration):
                     f.write(projJson)
                 self._lastProjectHashs[key] = projHash
                 
-
     def _getStoreConfig(self):
         return jsonpickle.encode(self._config)
 
@@ -145,6 +147,8 @@ class PersistentConfiguration(ServerConfiguration):
 
         # Read projects
         projPath = os.path.join(self.storageLocation, "projects")
+        if not os.path.exists(projPath):
+            os.makedirs(projPath)
         onlyfiles = [f for f in os.listdir(projPath) if os.path.isfile(os.path.join(projPath, f))]
         for f in onlyfiles:
             print("Reading project {}".format(f))
