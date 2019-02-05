@@ -7,22 +7,22 @@ import importlib
 import inspect
 import json
 import os.path
+from os.path import expanduser
 import threading
 import time
 from timeit import default_timer as timer
 
 import jsonpickle
 import numpy as np
-from flask import Flask, abort, jsonify, request, send_from_directory, redirect, url_for
+from flask import Flask, abort, jsonify, request, send_from_directory, redirect
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, configs, devices, effects, filtergraph, project
+from audioled import audio, configs, devices, effects, filtergraph, project, serverconfiguration
 
-num_pixels = 300
-device = None
 proj = None
 default_values = {}
 record_timings = False
+serverconfig = None
 
 POOL_TIME = 0.0  # Seconds
 
@@ -377,18 +377,27 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Audio Reactive LED Strip Server')
     parser.add_argument(
-        '-N', '--num_pixels', dest='num_pixels', type=int, default=300, help='number of pixels (default: 300)')
+        '-C', '--config_location', dest='config_location', default=None, help='Location of the server configuration to store. Defaults to $HOME/.ledserver.'
+    )
+    parser.add_argument(
+        '--no_conf', dest='no_conf', action='store_true', default=False, help="Don't load config from file"
+    )
+    parser.add_argument(
+        '--no_store', dest='no_store', action='store_true', default=False, help="Don't save anything to disk"
+    )
+    parser.add_argument(
+        '-N', '--num_pixels', dest='num_pixels', type=int, default=None, help='number of pixels (default: 300)')
     parser.add_argument(
         '-D',
         '--device',
         dest='device',
-        default=deviceCandy,
+        default=None,
         choices=[deviceRasp, deviceCandy],
-        help='device to send RGB to')
+        help='device to send RGB to (default: FadeCandy)')
     parser.add_argument(
         '--device_candy_server',
         dest='device_candy_server',
-        default='127.0.0.1:7890',
+        default=None,
         help='Server for device FadeCandy')
     parser.add_argument(
         '-A',
@@ -406,48 +415,68 @@ if __name__ == '__main__':
         help='Print process timing')
 
     args = parser.parse_args()
-    num_pixels = args.num_pixels
-    # Initialize LED device
-    if args.device == deviceRasp:
-        device = devices.RaspberryPi(num_pixels)
-    elif args.device == deviceCandy:
-        device = devices.FadeCandy(args.device_candy_server)
+    config_location = None
+    if args.config_location is None:
+        config_location = os.path.join(os.path.expanduser("~"), '.ledserver')
+    else:
+        config_location = os.path.join(args.config_location, '.ledserver')
 
-    devices.LEDOutput.overrideDevice = device
+    if args.no_conf:
+        print("Using in-memory configuration")
+        serverconfig = serverconfiguration.ServerConfiguration()
+    else:
+        print("Using configuration from {}".format(config_location))
+        serverconfig = serverconfiguration.PersistentConfiguration(config_location, args.no_store)
 
-    # Initialize Audio device
+    # Update num pixels
+    if args.num_pixels is not None:
+        num_pixels = args.num_pixels
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_NUM_PIXELS, num_pixels)
+
+    # Update LED device
+    if args.device is not None:
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE, args.device)
+    
+    if args.device_candy_server is not None:
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER, args.device_candy_server)
+    
+    # Update Audio device
     if args.audio_device_index is not None:
-        audio.AudioInput.overrideDeviceIndex = args.audio_device_index
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX, args.audio_device_index)
 
     if args.process_timing:
         record_timings = True
 
+    # Adjust from configuration
+
+    # LED Device
+    device = None
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
+        device = devices.RaspberryPi(serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
+    elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
+        device = devices.FadeCandy(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
+    else:
+        print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
+        exit
+    devices.LEDOutput.overrideDevice = device
+
+    # Audio
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
+        audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
+        
     # strand test
-    strandTest(device, num_pixels)
+    strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # print audio information
     print("The following audio devices are available:")
     audio.print_audio_devices()
 
     # Initialize project
-    proj = project.Project()
-
-    # Initialize filtergraph
-    # fg = configs.createSpectrumGraph(num_pixels, device)
-    # fg = configs.createMovingLightGraph(num_pixels, device)
-    # fg = configs.createMovingLightsGraph(num_pixels, device)
-    # fg = configs.createVUPeakGraph(num_pixels, device)
-    initial = configs.createSwimmingPoolGraph(num_pixels, device)
-    second = configs.createDefenceGraph(num_pixels, device)
-    # fg = configs.createKeyboardGraph(num_pixels, device)
-
-    proj.setFiltergraphForSlot(12, initial)
-    proj.setFiltergraphForSlot(13, second)
-    proj.activateSlot(12)
+    proj = serverconfig.getProject()
 
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
-    default_values['num_pixels'] = num_pixels
+    default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
 
     app = create_app()
     app.run(debug=False, host="0.0.0.0")
