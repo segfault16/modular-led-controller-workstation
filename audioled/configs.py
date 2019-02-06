@@ -380,3 +380,16 @@ def createGenerateWavesGraph(N_pixels, device):
 
     fg.addConnection(GenerateWaves, 0, led_out, 0)
     return fg
+
+
+def createSortingGraph(N_pixels, device):
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput(device)
+    fg.addEffectNode(led_out)
+
+    Sorting = generative.Sorting(N_pixels, sort_by='red')
+    fg.addEffectNode(Sorting)
+
+    fg.addConnection(Sorting, 0, led_out, 0)
+    return fg

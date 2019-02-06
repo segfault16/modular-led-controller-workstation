@@ -14,6 +14,8 @@ from audioled.effect import Effect
 
 wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
 wave_mode_default = 'sin'
+sort_by = ['red', 'green', 'blue']
+sort_by_default = 'red'
 
 
 class SwimmingPool(Effect):
@@ -758,3 +760,106 @@ class GenerateWaves(Effect):
             self._output = np.multiply(color, self._wavearray * np.array([[1.0], [1.0], [1.0]]))
 
             self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+
+
+class Sorting(Effect):
+    """Effect for sorting an input by color."""
+
+    def __init__(
+            self,
+            num_pixels,
+            sort_by='red',
+    ):
+        self.num_pixels = num_pixels
+        self._sorting_done = True
+        self.sort_by = sort_by
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        self._pixel_state = None
+        super(Sorting, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("sort_by", sort_by),
+            ])
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['sort_by'] = [self.sort_by] + [x for x in self.sort_by if x != self.sort_by]
+        return definition
+    
+    def disorder(self):
+        self._output = np.ones(self.num_pixels) * np.array([[1.0],[1.0],[1.0]])
+        for i in range(self.num_pixels):
+            self._output[0][i] = random.randint(0.0, 255.0)
+            self._output[1][i] = random.randint(0.0, 255.0)
+            self._output[2][i] = random.randint(0.0, 255.0)
+        return self._output
+    
+    def selection_sort(self, inputArray):
+        for i in range(len(inputArray[0])):
+            swap = i + np.argmin(inputArray[0][i:])
+            (inputArray[0][i], inputArray[0][swap]) = (inputArray[0][swap], inputArray[0][i])
+            (inputArray[1][i], inputArray[1][swap]) = (inputArray[1][swap], inputArray[1][i])
+            (inputArray[2][i], inputArray[2][swap]) = (inputArray[2][swap], inputArray[2][i])
+        return inputArray
+    
+    def bubble(self, inputArray, sort_by):
+        if sort_by == 'red':
+            sortindex = 0
+        elif sort_by == 'green':
+            sortindex = 1
+        elif sort_by == 'blue':
+            sortindex = 2
+        else:
+            raise NotImplementedError("Sorting not implemented.")
+
+        for passnum in range(len(inputArray[0])-1,0,-1):
+            check = 0
+            for i in range(passnum):
+                if inputArray[sortindex][i]>inputArray[sortindex][i+1]:
+                    temp0 = inputArray[0][i]
+                    temp1 = inputArray[1][i]
+                    temp2 = inputArray[2][i]
+                    inputArray[0][i] = inputArray[0][i+1]
+                    inputArray[1][i] = inputArray[1][i+1]
+                    inputArray[2][i] = inputArray[2][i+1]
+                    inputArray[0][i+1] = temp0
+                    inputArray[1][i+1] = temp1
+                    inputArray[2][i+1] = temp2
+                else:
+                    check += 1
+                    if check == passnum:
+                        self._sorting_done = True
+            return inputArray
+
+    def numInputChannels(self):
+        return 0
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        self._output = self._pixel_state
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+
+        if self._sorting_done is True:
+            self._output = self.disorder()
+            self._sorting_done = False
+
+        sorting = self.bubble(self._output, self.sort_by)
+        self._output = sorting
+        self._pixel_state = sorting
+
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
