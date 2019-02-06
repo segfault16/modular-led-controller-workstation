@@ -92,6 +92,8 @@ const MODE_SELECT = 'select';
 const MODE_CREATE = 'create';
 const MODE_DELETE = 'delete';
 
+var is_dragging = false;
+
 class VisGraph extends React.Component {
 
   constructor(props) {
@@ -154,6 +156,8 @@ class VisGraph extends React.Component {
             }
           }
         },
+        release: () => {
+        },
         doubleClick: ({ pointer: { canvas } }) => {
           this.addGraphNode();
         },
@@ -169,6 +173,18 @@ class VisGraph extends React.Component {
         blurEdge: ({edge}) => {
           this.updateHelpText(this.state.mode, null, null);
         },
+        dragStart: () => {
+          is_dragging = true
+        },
+        dragEnd: () => {
+          is_dragging = false
+        },
+        afterDrawing: () => {
+          if(this.state.network.manipulation.temporaryIds.nodes.length == 0) {
+            // Hack for no DragEnd event fired when adding edges
+            is_dragging = false
+          }
+        }
       },
       options: {
         layout: {
@@ -214,7 +230,9 @@ class VisGraph extends React.Component {
         },
         interaction: {
           navigationButtons: false,
-          hover: true
+          hover: true,
+          hoverConnectedEdges: false,
+          selectedConnectedEdges: false
         },
         manipulation: {
           enabled: false,
@@ -222,6 +240,7 @@ class VisGraph extends React.Component {
             this.addGraphNode();
           },
           addEdge: (data, callback) => {
+            console.log("add edge")
             if (data.from == data.to) {
               callback(null);
               return;
@@ -233,6 +252,9 @@ class VisGraph extends React.Component {
               FilterGraphService.addConnection(this.state.slot, fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback).then(connection => {
                 this.updateVisConnection(data, connection)
                 this.addStateNodesAndEdges([],[data])
+                // manual drag end
+                is_dragging = false
+                this.updateHelpText(null, null)
               });
             } else {
               console.log("could not add edge")
@@ -311,6 +333,10 @@ class VisGraph extends React.Component {
   }
 
   updateHelpText = (mode, nodeUid, edgeUid) => {
+    if(is_dragging || this.state.network.manipulation.temporaryIds.nodes.length > 0) {
+      // Fix for add connection issue in Safari -> don't update state while dragging
+      return
+    }
     var hoverNode = false
     var hoverEdge = false
     var node = null 
