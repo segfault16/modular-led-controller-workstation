@@ -7,7 +7,7 @@ from timeit import default_timer as timer
 
 import jsonpickle
 
-from audioled import configs, devices, filtergraph
+from audioled import configs, devices, filtergraph, audio
 
 num_pixels = 300
 device = None
@@ -61,6 +61,13 @@ parser.add_argument(
     choices=configChoices,
     help='config to use, default is rolling through all configs')
 parser.add_argument('-s', '--save_config', dest='save_config', type=bool, default=False, help='Save config to config/')
+parser.add_argument(
+    '-A',
+    '--audio_device_index',
+    dest='audio_device_index',
+    type=int,
+    default=None,
+    help='Audio device index to use')
 args = parser.parse_args()
 
 num_pixels = args.num_pixels
@@ -71,9 +78,15 @@ if args.device == deviceRasp:
 elif args.device == deviceCandy:
     device = devices.FadeCandy(args.device_candy_server)
 
+# Initialize Audio device
+if args.audio_device_index is not None:
+    audio.AudioInput.overrideDeviceIndex = args.audio_device_index
+
 # select config to show
 config = args.config
 
+print("The following audio devices are available:")
+audio.print_audio_devices()
 
 def createFilterGraph(config, num_pixels, device):
     if config == movingLightConf:
