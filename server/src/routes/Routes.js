@@ -1,9 +1,10 @@
 import React from "react";
 import { Redirect } from 'react-router';
-import { Home, PlayArrow, Settings } from '@material-ui/icons';
+import { Home, PlayArrow, Settings, Bookmarks } from '@material-ui/icons';
 import EditProjectPage from '../pages/EditProjectPage';
 import PerformPage from '../pages/PerformPage';
 import ConfigurationPage from '../pages/ConfigurationPage';
+import ProjectsPage from '../pages/ProjectsPage';
 
 const Routes = [
   {
@@ -24,6 +25,13 @@ const Routes = [
     navbarName: 'Perform',
     icon: PlayArrow,
     component: PerformPage
+  },
+  {
+    path: '/dashboard/projects',
+    sidebarName: 'Projects',
+    navbarName: 'Projects',
+    icon: Bookmarks,
+    component: ProjectsPage
   },
   {
     path: '/dashboard/configuration',
