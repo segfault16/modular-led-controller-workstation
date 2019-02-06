@@ -232,7 +232,7 @@ class VisGraph extends React.Component {
               console.log("could add edge")
               FilterGraphService.addConnection(this.state.slot, fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback).then(connection => {
                 this.updateVisConnection(data, connection)
-                callback(data);
+                this.addStateNodesAndEdges([],[data])
               });
             } else {
               console.log("could not add edge")
