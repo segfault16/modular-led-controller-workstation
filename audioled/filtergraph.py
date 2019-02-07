@@ -2,6 +2,8 @@ import asyncio
 import uuid
 from timeit import default_timer as timer
 
+from audioled import devices
+
 
 class NodeException(Exception):
     def __init__(self, message, node, error):
@@ -120,6 +122,7 @@ class FilterGraph(Updateable):
         self._processOrder = []
         self._updateTimings = {}
         self._processTimings = {}
+        self._outputNode = None
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         if self.asyncUpdate:
@@ -199,8 +202,15 @@ class FilterGraph(Updateable):
         filterNode: node to add
         """
         print("add node {}".format(effect))
+        
         node = Node(effect)
         node.uid = uuid.uuid4().hex
+        if isinstance(effect, devices.LEDOutput):
+            if self._outputNode is None:
+                self._outputNode = node
+            else:
+                raise RuntimeError("Filtergraph can only have one LED Output")
+
         self._filterNodes.append(node)
         self._updateProcessOrder()
         return node
@@ -264,6 +274,9 @@ class FilterGraph(Updateable):
             self._filterConnections.remove(con)
             con.toNode._incomingConnections.remove(con)
         None
+
+    def getLEDOutput(self):
+        return self._outputNode
 
     def _updateProcessOrder(self):
         # reset

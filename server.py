@@ -258,8 +258,6 @@ def create_app():
             result[error.node.uid] = error.message
         return json.dumps(result)
 
-
-    
     @app.route('/project/activeSlot', methods=['POST'])
     def project_activeSlot_post():
         global proj
