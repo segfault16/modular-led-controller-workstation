@@ -316,26 +316,13 @@ class DotStar(LEDController):
 
 
 class LEDOutput(Effect):
-    overrideDevice = None
 
-    def __init__(self, controller, brightness=1.0):
-        self.controller = controller
+    def __init__(self, brightness=1.0):
+        self.brightness = brightness
         self.__initstate__()
 
     def __initstate__(self):
         super().__initstate__()
-        self._num_pixels = None
-
-    def __setstate__(self, state):
-        # override __setstate__ from Effect:
-        # We want to be able to inject another device with class variable
-        if self.overrideDevice is not None and 'controller' in state:
-            del state['controller']
-            self.controller = self.overrideDevice
-        if 'brightness' in state:
-            floatVal = float(state['brightness'])
-            self.controller.setBrightness(floatVal)
-        super().__setstate__(state)
 
     @staticmethod
     def getParameterDefinition():
@@ -349,24 +336,26 @@ class LEDOutput(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        definition['parameters']['brightness'][0] = self.controller.getBrightness()
+        definition['parameters']['brightness'][0] = self.brightness
         return definition
 
     def numInputChannels(self):
         return 1
 
     def numOutputChannels(self):
+        # Don't want anything to show in the UI
         return 0
 
     def process(self):
-        if self._inputBuffer is not None:
+        if self._inputBuffer is not None and self._outputBuffer is not None:
+            # Make output buffer same size as input buffer
+            if len(self._outputBuffer) <= self.numInputChannels():
+                for i in range(self.numInputChannels() - len(self._outputBuffer)):
+                    self._outputBuffer.append(None)
             if self._inputBuffer[0] is not None:
-                self._num_pixels = np.size(self._inputBuffer[0], axis=1)
-                self.controller.show(self._inputBuffer[0])
+                self._outputBuffer[0] = self.brightness * self._inputBuffer[0]
             else:
-                # show black
-                if self._num_pixels is not None:
-                    self.controller.show(np.zeros(self._num_pixels) * np.array([[0], [0], [0]]))
+                self._outputBuffer[0] = None
 
 
 # # Execute this file to run a LED strand test
