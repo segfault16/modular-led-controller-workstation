@@ -143,17 +143,6 @@ class PersistentConfiguration(ServerConfiguration):
                 self._lastHash = m.hexdigest() 
         else:
             print("Configuration not found. Skipping read.")
-        
-        # Init overrideDevice
-        device = None
-        if self.getConfiguration(CONFIG_DEVICE) == 'RaspberryPi':
-            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS))
-        elif self.getConfiguration(CONFIG_DEVICE) == 'FadeCandy':
-            device = devices.FadeCandy(self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
-        else:
-            print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
-        exit
-        devices.LEDOutput.overrideDevice = device
 
         # Read projects
         projPath = os.path.join(self.storageLocation, "projects")
@@ -165,7 +154,9 @@ class PersistentConfiguration(ServerConfiguration):
             with open(os.path.join(projPath, f), "r", encoding='utf-8') as fc:
                 content = fc.read()
                 projUid = os.path.splitext(os.path.basename(f))[0]
-                self._projects[projUid] = jsonpickle.decode(content)
+                proj = jsonpickle.decode(content)
+                proj.setDevice(self._createOutputDevice())
+                self._projects[projUid] = proj
                 m = hashlib.md5()
                 m.update(content.encode('utf-8'))
                 self._lastProjectHashs[projUid] = m.hexdigest()
