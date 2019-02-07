@@ -6,12 +6,16 @@ import CardActions from '@material-ui/core/CardActions';
 import CardContent from '@material-ui/core/CardContent';
 import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
+import GridList from '@material-ui/core/GridList';
+import GridListTile from '@material-ui/core/GridListTile';
 
 import ProjectService from '../services/ProjectService'
 
 const styles = {
-    card: {
+    tile: {
         minWidth: 275,
+        maxWidth: 300,
+        
     },
     title: {
         fontSize: 14,
@@ -68,43 +72,48 @@ class ProjectsPage extends Component {
         }))
     }
 
-    handleProjectCreate = () => {
+    handleProjectCreate = async () => {
         console.log("create project")
-        ProjectService.createProject('TODO', 'TODO').then(ProjectService.getProjects().then(res => {
+        await ProjectService.createProject('TODO', 'TODO')
+        await ProjectService.getProjects().then(res => {
             this.setState({
                 projects: res
             })
-        }))
+        })
     }
 
     render() {
         const { classes } = this.props;
         const projects = this.state.projects;
         return (
-            <React.Fragment>
-                <Button onClick={() => this.handleProjectCreate()}>New Project</Button>
-                <Button onClick={() => this.handleProjectImport()}>Import Project</Button>
+            <div>
+                <Button variant="contained" onClick={() => this.handleProjectCreate()}>New Project</Button>
+                <Button variant="contained" onClick={() => this.handleProjectImport()}>Import Project</Button>
+                <GridList cellHeight={160} className={classes.gridList} cols={3} >
                 {Object.keys(projects).map((proj, key) => {
                     return (
-                <Card key={key} className={classes.card}>
-                    <CardContent>
-                        <Typography variant="h5" component="h2">
-                            {projects[proj].active ? "Active: " : null}
-                            {projects[proj].title}
-                        </Typography>
-                        <Typography>
-                            {projects[proj].description}
-                        </Typography>
-                    </CardContent>
-                    <CardActions>
-                        <Button size="small" onClick={() => this.handleProjectLoad(proj)}>Load</Button>
-                        <Button size="small" onClick={() => this.handleProjectExport(proj)}>Export</Button>
-                        <Button size="small" onClick={() => this.handleProjectDelete(proj)} disabled={projects[proj].active}>Delete</Button>
-                    </CardActions>
-                </Card>         
+                        <GridListTile className={classes.tile} key={key}>
+                            <Card className={classes.card}  >
+                                <CardContent>
+                                    <Typography variant="h5" component="h2">
+                                         {projects[proj].active ? "Active: " : null}
+                                         {projects[proj].title}
+                                    </Typography>
+                                    <Typography>
+                                         {projects[proj].description}
+                                    </Typography>
+                                </CardContent>
+                                <CardActions>
+                                     <Button size="small" onClick={() => this.handleProjectLoad(proj)}>Load</Button>
+                                     <Button size="small" onClick={() => this.handleProjectExport(proj)}>Export</Button>
+                                       <Button size="small" onClick={() => this.handleProjectDelete(proj)} disabled={projects[proj].active}>Delete</Button>
+                                </CardActions>
+                            </Card>         
+                          </GridListTile>
                     )
                 })}
-            </React.Fragment>
+                </GridList>
+            </div>
         )
     }
 }
