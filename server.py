@@ -281,20 +281,28 @@ def create_app():
     @app.route('/projects/<uid>/export', methods=['GET'])
     def projects_project_export(uid):
         global serverconfig
-        print("TODO: Implement project export")
-        return 
+        proj = serverconfig.getProject(uid)
+        if proj is not None:
+            print("Exporting project {}".format(uid))
+            return jsonpickle.encode(proj)
+        abort(404)
 
     @app.route('/projects/<uid>', methods=['DELETE'])
     def projects_project_delete(uid):
         global serverconfig
-        print("TODO: Implement project delete")
-        return
+        serverconfig.deleteProject(uid)
+        return "OK"
     
     @app.route('/projects/activeProject', methods=['POST'])
     def projects_activeProject_post():
         global serverconfig
-        print("TODO: Implement project activate")
-        return
+        global proj
+        if not request.json:
+            abort(400)
+        uid = request.json['project']
+        print("Activating project {}".format(uid))
+        proj = serverconfig.activateProject(uid)
+        return "OK"
 
     @app.route('/remote/brightness', methods=['POST'])
     def remote_brightness_post():
@@ -502,7 +510,7 @@ if __name__ == '__main__':
     audio.print_audio_devices()
 
     # Initialize project
-    proj = serverconfig.getProject()
+    proj = serverconfig.getActiveProjectOrDefault()
 
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?

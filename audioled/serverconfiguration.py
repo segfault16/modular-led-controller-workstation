@@ -29,7 +29,7 @@ class ServerConfiguration:
             return self._config[key]
         return None
 
-    def getProject(self):
+    def getActiveProjectOrDefault(self):
         activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)
         if activeProjectUid is None:
             # Initialize default project
@@ -51,6 +51,19 @@ class ServerConfiguration:
             self._config[CONFIG_ACTIVE_PROJECT] = projectUid
             activeProjectUid = projectUid
         return self._projects[activeProjectUid]
+
+    def getProject(self, uid):
+        if uid in self._projects:
+            return self._projects[uid]
+        return None
+
+    def deleteProject(self, uid):
+        if uid in self._projects:
+            self._projects.pop(uid)
+
+    def activateProject(self, uid):
+        self._config[CONFIG_ACTIVE_PROJECT] = uid
+        return self.getActiveProjectOrDefault()
 
     def getProjectsMetadata(self):
         data = {}
@@ -97,6 +110,13 @@ class PersistentConfiguration(ServerConfiguration):
     
     def _store(self):
         self.need_write = True
+
+    def deleteProject(self, uid):
+        print("Deleting project {} from disk".format(uid))
+        path = os.path.join(self.storageLocation, "projects", "{}.json".format(uid))
+        if os.path.isfile(path):
+            os.remove(path)
+        super().deleteProject(uid)
 
     def store(self):
  

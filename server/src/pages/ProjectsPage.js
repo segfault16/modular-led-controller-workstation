@@ -45,22 +45,26 @@ class ProjectsPage extends Component {
 
     handleProjectLoad = (proj) => {
         console.log("load", proj)
-        ProjectService.activateProject(proj).then(ProjectService.getProjects()).then(res => this.setState({
-            projects: res
+        ProjectService.activateProject(proj).then(ProjectService.getProjects().then(res => {
+            console.log(res)
+            this.setState({
+                projects: res
+            })
         }))
     }
 
-    handleProjectExport = (proj) => {
+    handleProjectExport = async (proj) => {
         console.log("export", proj)
-        ProjectService.exportProject(proj).then(res => {
-            console.log("todo: download json")
-        })
+        return ProjectService.exportProject(proj)
     }
 
     handleProjectDelete = (proj) => {
         console.log("delete", proj)
-        ProjectService.deleteProject(proj).then(ProjectService.getProjects()).then(res => this.setState({
-            projects: res
+        ProjectService.deleteProject(proj).then(ProjectService.getProjects().then(res => {
+            console.log(res)
+            this.setState({
+                projects: res
+            })
         }))
     }
 
@@ -84,7 +88,7 @@ class ProjectsPage extends Component {
                     <CardActions>
                         <Button size="small" onClick={() => this.handleProjectLoad(proj)}>Load</Button>
                         <Button size="small" onClick={() => this.handleProjectExport(proj)}>Export</Button>
-                        <Button size="small" onClick={() => this.handleProjectDelete(proj)}>Delete</Button>
+                        <Button size="small" onClick={() => this.handleProjectDelete(proj)} disabled={projects[proj].active}>Delete</Button>
                     </CardActions>
                 </Card>         
                     )
