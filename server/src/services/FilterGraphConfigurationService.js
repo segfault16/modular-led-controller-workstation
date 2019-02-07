@@ -1,6 +1,6 @@
 import { saveAs } from 'file-saver';
 
-const ConfigurationService = {
+const FilterGraphConfigurationService = {
     loadConfig: async function (slotId, e) {
         var file = e.target.files[0];
         if (!file) {
@@ -54,4 +54,4 @@ const ConfigurationService = {
     }
 }
 
-export default ConfigurationService;
+export default FilterGraphConfigurationService;

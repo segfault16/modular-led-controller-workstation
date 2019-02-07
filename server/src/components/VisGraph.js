@@ -40,7 +40,7 @@ import fallingStarsIcon from '../../img/audioled.generative.FallingStars.png';
 import pendulumIcon from '../../img/audioled.generative.Pendulum.png'
 import bonfireIcon from '../../img/audioled.audioreactive.Bonfire.png'
 
-import ConfigurationService from "../services/ConfigurationService";
+import FilterGraphConfigurationService from "../services/FilterGraphConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
 
 import NodePopup from './NodePopup';
@@ -676,12 +676,12 @@ class VisGraph extends React.Component {
   }
 
   handleSaveConfig = async (event) => {
-    await ConfigurationService.saveConfig(this.state.slot);
+    await FilterGraphConfigurationService.saveConfig(this.state.slot);
   }
 
   handleLoadConfig = async (event) => {
     console.log("load", event)
-    await ConfigurationService.loadConfig(this.state.slot, event).finally(() => this.createFromBackend());
+    await FilterGraphConfigurationService.loadConfig(this.state.slot, event).finally(() => this.createFromBackend());
   }
 
   handleNodeEditCancel = (event) => {
