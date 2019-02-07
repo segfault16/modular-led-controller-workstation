@@ -13,7 +13,7 @@ from timeit import default_timer as timer
 
 import jsonpickle
 import numpy as np
-from flask import Flask, abort, jsonify, request, send_from_directory, redirect, url_for
+from flask import Flask, abort, jsonify, request, send_from_directory, redirect
 from werkzeug.serving import is_running_from_reloader
 
 from audioled import audio, configs, devices, effects, filtergraph, project
@@ -248,8 +248,6 @@ def create_app():
             result[error.node.uid] = error.message
         return json.dumps(result)
 
-
-    
     @app.route('/project/activeSlot', methods=['POST'])
     def project_activeSlot_post():
         global proj
@@ -413,8 +411,6 @@ if __name__ == '__main__':
     elif args.device == deviceCandy:
         device = devices.FadeCandy(args.device_candy_server)
 
-    devices.LEDOutput.overrideDevice = device
-
     # Initialize Audio device
     if args.audio_device_index is not None:
         audio.AudioInput.overrideDeviceIndex = args.audio_device_index
@@ -430,15 +426,15 @@ if __name__ == '__main__':
     audio.print_audio_devices()
 
     # Initialize project
-    proj = project.Project()
+    proj = project.Project(device)
 
     # Initialize filtergraph
     # fg = configs.createSpectrumGraph(num_pixels, device)
     # fg = configs.createMovingLightGraph(num_pixels, device)
     # fg = configs.createMovingLightsGraph(num_pixels, device)
     # fg = configs.createVUPeakGraph(num_pixels, device)
-    initial = configs.createSwimmingPoolGraph(num_pixels, device)
-    second = configs.createDefenceGraph(num_pixels, device)
+    initial = configs.createSwimmingPoolGraph(num_pixels)
+    second = configs.createDefenceGraph(num_pixels)
     # fg = configs.createKeyboardGraph(num_pixels, device)
 
     proj.setFiltergraphForSlot(12, initial)
