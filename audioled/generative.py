@@ -770,11 +770,13 @@ class Sorting(Effect):
             num_pixels,
             sortby=sortbydefault,
             reversed=False,
+            looping=True,
     ):
         self.num_pixels = num_pixels
         self._sorting_done = True
         self.sortby = sortby
         self.reversed = reversed
+        self.looping = looping
         self.__initstate__()
 
     def __initstate__(self):
@@ -791,6 +793,7 @@ class Sorting(Effect):
                 ("num_pixels", [300, 1, 1000, 1]),
                 ("sortby", sortby),
                 ("reversed", False),
+                ("looping", True)
             ])
         }
         return definition
@@ -800,6 +803,7 @@ class Sorting(Effect):
         del definition['parameters']['num_pixels']
         definition['parameters']['sortby'] = [self.sortby] + [x for x in sortby if x != self.sortby]
         definition['parameters']['reversed'] = self.reversed
+        definition['parameters']['looping'] = self.looping 
         return definition
     
     def disorder(self):
@@ -809,15 +813,7 @@ class Sorting(Effect):
                 self._output[j][i] = random.randint(0.0, 255.0)
         return self._output
     
-    def selection_sort(self, inputArray):
-        for i in range(len(inputArray[0])):
-            swap = i + np.argmin(inputArray[0][i:])
-            (inputArray[0][i], inputArray[0][swap]) = (inputArray[0][swap], inputArray[0][i])
-            (inputArray[1][i], inputArray[1][swap]) = (inputArray[1][swap], inputArray[1][i])
-            (inputArray[2][i], inputArray[2][swap]) = (inputArray[2][swap], inputArray[2][i])
-        return inputArray
-    
-    def bubble(self, inputArray, sortby, reversed):
+    def bubble(self, inputArray, sortby, reversed, looping):
         if sortby == 'red':
             sortindex = 0
         elif sortby == 'green':
@@ -847,7 +843,11 @@ class Sorting(Effect):
                     else:
                         check += 1
                         if check == passnum:
-                            self._sorting_done = True
+                            if looping is True:
+                                self.sortby = random.choice(['red', 'green', 'blue', 'brightness'])
+                                self.reversed = random.choice([True, False])
+                            else:
+                                self._sorting_done = True
 
                 elif sortindex == 3:    #sorting by brightness
                     tempArray = np.sum(inputArray, axis=0)
@@ -860,8 +860,11 @@ class Sorting(Effect):
                     else:
                         check += 1
                         if check == passnum:
-                            self._sorting_done = True
-
+                            if looping is True:
+                                self.sortby = random.choice(['red', 'green', 'blue', 'brightness'])
+                                self.reversed = random.choice([True, False])
+                            else:
+                                self._sorting_done = True
             return inputArray
 
     def numInputChannels(self):
@@ -878,5 +881,5 @@ class Sorting(Effect):
             self._output = self.disorder()
             self._sorting_done = False
 
-        self._output = self.bubble(self._output, self.sortby, self.reversed)
+        self._output = self.bubble(self._output, self.sortby, self.reversed, self.looping)
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
