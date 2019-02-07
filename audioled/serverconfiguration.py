@@ -51,6 +51,16 @@ class ServerConfiguration:
             self._config[CONFIG_ACTIVE_PROJECT] = projectUid
             activeProjectUid = projectUid
         return self._projects[activeProjectUid]
+
+    def getProjectsMetadata(self):
+        data = {}
+        for key, proj in self._projects.items():
+            data[key] = {
+                "title": key,
+                "description": key,
+                "active": key == self.getConfiguration(CONFIG_ACTIVE_PROJECT)
+            }
+        return data
     
     def _store(self):
         pass

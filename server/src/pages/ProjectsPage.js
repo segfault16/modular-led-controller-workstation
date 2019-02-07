@@ -25,25 +25,43 @@ class ProjectsPage extends Component {
     constructor(props) {
         super(props)
         this.state = {
-            projects: [{
-                active: true,
-                title: "Project",
-                description: "Description",
-                id: "ajsfkajsfklasjkf"
-            }]
+            projects: {
+                "asjdkfjaskldf": {
+                    active: true,
+                    title: "Project",
+                    description: "Description"
+                }
+            }
         }
+    }
+
+    componentDidMount() {
+        ProjectService.getProjects().then(res => {
+            this.setState({
+                projects: res
+            })
+        })
     }
 
     handleProjectLoad = (proj) => {
         console.log("load", proj)
+        ProjectService.activateProject(proj).then(ProjectService.getProjects()).then(res => this.setState({
+            projects: res
+        }))
     }
 
     handleProjectExport = (proj) => {
         console.log("export", proj)
+        ProjectService.exportProject(proj).then(res => {
+            console.log("todo: download json")
+        })
     }
 
     handleProjectDelete = (proj) => {
         console.log("delete", proj)
+        ProjectService.deleteProject(proj).then(ProjectService.getProjects()).then(res => this.setState({
+            projects: res
+        }))
     }
 
     render() {
@@ -51,15 +69,16 @@ class ProjectsPage extends Component {
         const projects = this.state.projects;
         return (
             <React.Fragment>
-                {projects.map((proj, key) => {
+                {Object.keys(projects).map((proj, key) => {
                     return (
                 <Card key={key} className={classes.card}>
                     <CardContent>
                         <Typography variant="h5" component="h2">
-                            {proj.title}
+                            {projects[proj].active ? "Active: " : null}
+                            {projects[proj].title}
                         </Typography>
                         <Typography>
-                            {proj.description}
+                            {projects[proj].description}
                         </Typography>
                     </CardContent>
                     <CardActions>

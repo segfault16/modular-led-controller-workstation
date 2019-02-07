@@ -273,6 +273,29 @@ def create_app():
         global proj
         return jsonify({'slot': proj.activeSlotId})
 
+    @app.route('/projects', methods=['GET'])
+    def projects_get():
+        global serverconfig
+        return jsonify(serverconfig.getProjectsMetadata())
+    
+    @app.route('/projects/<uid>/export', methods=['GET'])
+    def projects_project_export(uid):
+        global serverconfig
+        print("TODO: Implement project export")
+        return 
+
+    @app.route('/projects/<uid>', methods=['DELETE'])
+    def projects_project_delete(uid):
+        global serverconfig
+        print("TODO: Implement project delete")
+        return
+    
+    @app.route('/projects/activeProject', methods=['POST'])
+    def projects_activeProject_post():
+        global serverconfig
+        print("TODO: Implement project activate")
+        return
+
     @app.route('/remote/brightness', methods=['POST'])
     def remote_brightness_post():
         global device
