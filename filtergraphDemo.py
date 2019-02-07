@@ -35,7 +35,7 @@ sortingConf = 'sorting'
 configChoices = [
     movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf,
     breathingConf, heartbeatConf, pendulumConf, rpendulumConf, keyboardConf, keyboardSpringConf, testblobConf,
-    bonfireConf, generatewavesConf
+    bonfireConf, generatewavesConf, sortingConf
 ]
 
 deviceRasp = 'RaspberryPi'
@@ -120,6 +120,8 @@ def createFilterGraph(config, num_pixels):
         return configs.createBonfireGraph(num_pixels)
     elif config == generatewavesConf:
         return configs.createGenerateWavesGraph(num_pixels)
+    elif config == sortingConf:
+        return configs.createSortingGraph(num_pixels)    
     else:
         raise NotImplementedError("Config not implemented")
 
