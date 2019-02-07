@@ -33,7 +33,7 @@ class ServerConfiguration:
         activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)
         if activeProjectUid is None:
             # Initialize default project
-            proj = project.Project(self._createOutputDevice())
+            proj = project.Project("Default project", "This is the default project.", self._createOutputDevice())
             # Initialize filtergraph
             # fg = configs.createSpectrumGraph(num_pixels, device)
             # fg = configs.createMovingLightGraph(num_pixels, device)
@@ -68,12 +68,25 @@ class ServerConfiguration:
     def getProjectsMetadata(self):
         data = {}
         for key, proj in self._projects.items():
-            data[key] = {
-                "title": key,
-                "description": key,
-                "active": key == self.getConfiguration(CONFIG_ACTIVE_PROJECT)
-            }
+            data[key] = self.getProjectMetadata(key)[key]
         return data
+    
+    def getProjectMetadata(self, key):
+        data = {}
+        proj = self._projects[key]
+        data[key] = {
+            "title": proj.name,
+            "description": proj.description,
+            "active": key == self.getConfiguration(CONFIG_ACTIVE_PROJECT)
+        }
+        
+        return data
+
+    def createEmptyProject(self, title, description):
+        proj = project.Project("Empty Project", "", self._createOutputDevice())
+        projectUid = uuid.uuid4().hex
+        self._projects[projectUid] = proj
+        return self.getProjectMetadata(projectUid)
     
     def _store(self):
         pass

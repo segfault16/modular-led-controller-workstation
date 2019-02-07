@@ -277,6 +277,16 @@ def create_app():
     def projects_get():
         global serverconfig
         return jsonify(serverconfig.getProjectsMetadata())
+
+    @app.route('/projects', methods=['POST'])
+    def projects_post():
+        global serverconfig
+        if not request.json:
+            abort(400)
+        title = request.json['title']
+        description = request.json['description']
+        metadata = serverconfig.createEmptyProject(title, description)
+        return jsonify(metadata)
     
     @app.route('/projects/<uid>/export', methods=['GET'])
     def projects_project_export(uid):

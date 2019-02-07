@@ -33,6 +33,19 @@ const ProjectService = {
                 'Content-Type': 'application/json'
             }
         })
+    },
+    createProject: function(title, description) {
+        var postData = {
+            title: title,
+            description: description
+        }
+        return fetch('./projects', {
+            method: 'POST',
+            body: JSON.stringify(postData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(res => res.json())
     }
 }
 

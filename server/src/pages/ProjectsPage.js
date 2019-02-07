@@ -68,11 +68,22 @@ class ProjectsPage extends Component {
         }))
     }
 
+    handleProjectCreate = () => {
+        console.log("create project")
+        ProjectService.createProject('TODO', 'TODO').then(ProjectService.getProjects().then(res => {
+            this.setState({
+                projects: res
+            })
+        }))
+    }
+
     render() {
         const { classes } = this.props;
         const projects = this.state.projects;
         return (
             <React.Fragment>
+                <Button onClick={() => this.handleProjectCreate()}>New Project</Button>
+                <Button onClick={() => this.handleProjectImport()}>Import Project</Button>
                 {Object.keys(projects).map((proj, key) => {
                     return (
                 <Card key={key} className={classes.card}>
