@@ -466,7 +466,6 @@ if __name__ == '__main__':
     else:
         print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
         exit
-    devices.LEDOutput.overrideDevice = device
 
     # Audio
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:

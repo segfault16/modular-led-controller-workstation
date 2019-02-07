@@ -33,14 +33,14 @@ class ServerConfiguration:
         activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)
         if activeProjectUid is None:
             # Initialize default project
-            proj = project.Project()
+            proj = project.Project(self._createOutputDevice())
             # Initialize filtergraph
             # fg = configs.createSpectrumGraph(num_pixels, device)
             # fg = configs.createMovingLightGraph(num_pixels, device)
             # fg = configs.createMovingLightsGraph(num_pixels, device)
             # fg = configs.createVUPeakGraph(num_pixels, device)
-            initial = configs.createSwimmingPoolGraph(self.getConfiguration(CONFIG_NUM_PIXELS), devices.LEDOutput.overrideDevice)
-            second = configs.createDefenceGraph(self.getConfiguration(CONFIG_NUM_PIXELS), devices.LEDOutput.overrideDevice)
+            initial = configs.createSwimmingPoolGraph(self.getConfiguration(CONFIG_NUM_PIXELS))
+            second = configs.createDefenceGraph(self.getConfiguration(CONFIG_NUM_PIXELS))
             # fg = configs.createKeyboardGraph(num_pixels, device)
 
             proj.setFiltergraphForSlot(12, initial)
@@ -57,6 +57,16 @@ class ServerConfiguration:
 
     def _load(self):
         pass
+
+    def _createOutputDevice(self):
+        device = None
+        if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
+            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS))
+        elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
+            device = devices.FadeCandy(self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
+        else:
+            print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
+        return device
         
 
 class PersistentConfiguration(ServerConfiguration):
