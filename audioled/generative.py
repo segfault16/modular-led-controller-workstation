@@ -488,8 +488,8 @@ class Pendulum(Effect):
         return blobArray.clip(0.0, 255.0)
 
     def moveBlob(self, blobArray, displacement, swingspeed):
-        outputArray = sp.ndimage.interpolation.shift(blobArray, displacement * math.sin(self._t * swingspeed),
-                                                     mode='wrap', prefilter=True)
+        outputArray = sp.ndimage.interpolation.shift(
+            blobArray, displacement * math.sin(self._t * swingspeed), mode='wrap', prefilter=True)
         return outputArray
 
     def controlBlobs(self):
@@ -513,7 +513,7 @@ class Pendulum(Effect):
         if self.heightactivator is True:
             if self.lightflip is True:
                 lightconfig = -1.0
-            else: 
+            else:
                 lightconfig = 1.0
             configArray = lightconfig * math.cos(2 * self._t) * np.array([[1.0], [1.0], [1.0]])
         else:
@@ -603,9 +603,10 @@ class RandomPendulums(Effect):
             if self._heightactivator[i] is True:
                 if self._lightflip[i] is True:
                     lightconfig = -1.0
-                else: 
+                else:
                     lightconfig = 1.0
-                configArray = lightconfig * self.dim * math.cos(2 * self._t + self._offset[i]) * np.array([[1.0], [1.0], [1.0]])
+                configArray = lightconfig * self.dim * math.cos(2 * self._t + self._offset[i]) * np.array([[1.0], [1.0],
+                                                                                                           [1.0]])
             else:
                 configArray = np.array([[1.0 * self.dim], [1.0 * self.dim], [1.0 * self.dim]])
             self._output += np.multiply(
@@ -773,7 +774,6 @@ class Sorting(Effect):
             looping=True,
     ):
         self.num_pixels = num_pixels
-        self._sorting_done = True
         self.sortby = sortby
         self.reversed = reversed
         self.looping = looping
@@ -782,6 +782,7 @@ class Sorting(Effect):
     def __initstate__(self):
         # state
         self._pixel_state = None
+        self._sorting_done = True
         super(Sorting, self).__initstate__()
 
     @staticmethod
@@ -803,16 +804,16 @@ class Sorting(Effect):
         del definition['parameters']['num_pixels']
         definition['parameters']['sortby'] = [self.sortby] + [x for x in sortby if x != self.sortby]
         definition['parameters']['reversed'] = self.reversed
-        definition['parameters']['looping'] = self.looping 
+        definition['parameters']['looping'] = self.looping
         return definition
-    
+
     def disorder(self):
-        self._output = np.ones(self.num_pixels) * np.array([[1.0],[1.0],[1.0]])
+        self._output = np.ones(self.num_pixels) * np.array([[1.0], [1.0], [1.0]])
         for i in range(self.num_pixels):
             for j in range(len(self._output)):
                 self._output[j][i] = random.randint(0.0, 255.0)
         return self._output
-    
+
     def bubble(self, inputArray, sortby, reversed, looping):
         if sortby == 'red':
             sortindex = 0
@@ -824,22 +825,22 @@ class Sorting(Effect):
             sortindex = 3
         else:
             raise NotImplementedError("Sorting not implemented.")
-        
-        if reversed == False:
-            flip_index = 1
-        elif reversed == True:
-            flip_index = -1
 
-        for passnum in range(len(inputArray[0])-1,0,-1):
+        if reversed:
+            flip_index = -1
+        else:
+            flip_index = 1
+
+        for passnum in range(len(inputArray[0]) - 1, 0, -1):
             check = 0
             for i in range(passnum):
-                if sortindex == 0 or sortindex == 1 or sortindex == 2:     #sorting by color 
-                    if inputArray[sortindex][i]>inputArray[sortindex][i+1*flip_index]:
+                if sortindex == 0 or sortindex == 1 or sortindex == 2:  # sorting by color
+                    if inputArray[sortindex][i] > inputArray[sortindex][i + 1 * flip_index]:
                         temp = np.array([[1.0], [1.0], [1.0]])
                         for j in range(len(inputArray)):
                             temp[j] = inputArray[j][i]
-                            inputArray[j][i] = inputArray[j][i+1*flip_index]
-                            inputArray[j][i+1*flip_index] = temp[j]
+                            inputArray[j][i] = inputArray[j][i + 1 * flip_index]
+                            inputArray[j][i + 1 * flip_index] = temp[j]
                     else:
                         check += 1
                         if check == passnum:
@@ -849,14 +850,14 @@ class Sorting(Effect):
                             else:
                                 self._sorting_done = True
 
-                elif sortindex == 3:    #sorting by brightness
+                elif sortindex == 3:  # sorting by brightness
                     tempArray = np.sum(inputArray, axis=0)
-                    if tempArray[i]>tempArray[i+1*flip_index]:
+                    if tempArray[i] > tempArray[i + 1 * flip_index]:
                         temp = np.array([[1.0], [1.0], [1.0]])
                         for j in range(len(inputArray)):
                             temp[j] = inputArray[j][i]
-                            inputArray[j][i] = inputArray[j][i+1*flip_index]
-                            inputArray[j][i+1*flip_index] = temp[j]
+                            inputArray[j][i] = inputArray[j][i + 1 * flip_index]
+                            inputArray[j][i + 1 * flip_index] = temp[j]
                     else:
                         check += 1
                         if check == passnum:
