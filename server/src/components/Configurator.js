@@ -11,7 +11,6 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Typography from '@material-ui/core/Typography';
 
 const styles = theme => ({
-
 });
 
 class Configurator extends Component {
@@ -137,10 +136,11 @@ class Configurator extends Component {
     }
 
     render() {
+        const { classes } = this.props;
         return (
-            <React.Fragment>
+            <div>
                 {this.domCreateConfigList(this.state.parameters, this.state.values)}
-            </React.Fragment>
+            </div>
         )
     }
 }

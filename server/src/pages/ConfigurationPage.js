@@ -13,7 +13,9 @@ const styles = theme => ({
     },
     pageContent: {
         margin: theme.spacing.unit,
-        background: theme.palette.background.default
+        background: theme.palette.background.default,
+        width: '100%',
+        maxWidth: '100%'
     }
 });
 
@@ -42,15 +44,18 @@ class ConfigurationPage extends Component {
     render() {
         const { classes } = this.props;
         return (
-            <div className={classes.page}>
+            // <div className={classes.page}>
                 <div className={classes.pageContent}>
+                <h2>
+                    Server Configuration
+                </h2>
                     <Configurator
                         parameters={this.state.parameters}
                         values={this.state.values}
                         onChange={(parameter, value) => this.handleParameterChange(parameter, value)}
                     />
                 </div>
-            </div>
+            // </div>
         )
     }
 }

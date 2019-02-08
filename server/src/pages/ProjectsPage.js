@@ -12,6 +12,9 @@ import GridListTile from '@material-ui/core/GridListTile';
 import ProjectService from '../services/ProjectService'
 
 const styles = {
+    gridList: {
+        width: '100%'
+    },
     tile: {
         minWidth: 275,
         maxWidth: 300,
@@ -89,6 +92,7 @@ class ProjectsPage extends Component {
             <div>
                 <Button variant="contained" onClick={() => this.handleProjectCreate()}>New Project</Button>
                 <Button variant="contained" onClick={() => this.handleProjectImport()}>Import Project</Button>
+                
                 <GridList cellHeight={160} className={classes.gridList} cols={3} >
                 {projects.map((proj, key) => {
                     console.log(proj)
