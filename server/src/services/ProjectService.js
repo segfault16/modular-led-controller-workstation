@@ -2,7 +2,7 @@ import { saveAs } from 'file-saver';
 
 const ProjectService = {
     getProjects: function() {
-        return fetch('./projects').then(res => res.json())
+        return fetch('./projects').then(res => res.json()).then(dict => this._toArrayData(dict))
     },
     deleteProject: function(uid) {
         return fetch('./projects/'+uid, {
@@ -45,7 +45,14 @@ const ProjectService = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then(res => res.json())
+        }).then(res => res.json()).then(dict => this._toArrayData(dict)[0])
+    },
+    _toArrayData: function(projDict) {
+        return Object.keys(projDict).map((proj, key) => {
+            var entry = projDict[proj]
+            entry['id'] = proj
+            return entry
+        })
     }
 }
 

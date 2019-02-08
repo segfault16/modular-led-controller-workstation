@@ -29,55 +29,54 @@ class ProjectsPage extends Component {
     constructor(props) {
         super(props)
         this.state = {
-            projects: {
-                "asjdkfjaskldf": {
-                    active: true,
-                    title: "Project",
-                    description: "Description"
-                }
-            }
+            projects: [
+            ],
+            activeProject: null
         }
     }
 
     componentDidMount() {
         ProjectService.getProjects().then(res => {
+            var activeProj = res.find(p => p.active)
             this.setState({
-                projects: res
+                projects: res,
+                activeProject: activeProj ? activeProj.id : null
             })
         })
     }
 
     handleProjectLoad = (proj) => {
         console.log("load", proj)
-        ProjectService.activateProject(proj).then(ProjectService.getProjects().then(res => {
-            console.log(res)
+        ProjectService.activateProject(proj.id).then(
             this.setState({
-                projects: res
+                activeProject: proj.id
             })
-        }))
+        )
     }
 
     handleProjectExport = async (proj) => {
         console.log("export", proj)
-        return ProjectService.exportProject(proj)
+        return ProjectService.exportProject(proj.id)
     }
 
     handleProjectDelete = (proj) => {
         console.log("delete", proj)
-        ProjectService.deleteProject(proj).then(ProjectService.getProjects().then(res => {
-            console.log(res)
-            this.setState({
-                projects: res
+        ProjectService.deleteProject(proj.id).then(() => {
+            this.setState(oldState => {
+                return {
+                    projects: oldState.projects.filter(p => p.id != proj.id)
+                }
             })
-        }))
+        })
     }
 
     handleProjectCreate = async () => {
         console.log("create project")
-        await ProjectService.createProject('TODO', 'TODO')
-        await ProjectService.getProjects().then(res => {
-            this.setState({
-                projects: res
+        await ProjectService.createProject('TODO', 'TODO').then(res => {
+            this.setState(oldState => {
+                return {
+                    projects: [...oldState.projects, res]
+                }
             })
         })
     }
@@ -85,28 +84,31 @@ class ProjectsPage extends Component {
     render() {
         const { classes } = this.props;
         const projects = this.state.projects;
+        console.log(projects)
         return (
             <div>
                 <Button variant="contained" onClick={() => this.handleProjectCreate()}>New Project</Button>
                 <Button variant="contained" onClick={() => this.handleProjectImport()}>Import Project</Button>
                 <GridList cellHeight={160} className={classes.gridList} cols={3} >
-                {Object.keys(projects).map((proj, key) => {
+                {projects.map((proj, key) => {
+                    console.log(proj)
+                    console.log(key)
                     return (
                         <GridListTile className={classes.tile} key={key}>
                             <Card className={classes.card}  >
                                 <CardContent>
                                     <Typography variant="h5" component="h2">
-                                         {projects[proj].active ? "Active: " : null}
-                                         {projects[proj].title}
+                                         {proj.id == this.state.activeProject ? "Active: " : null}
+                                         {proj.title}
                                     </Typography>
                                     <Typography>
-                                         {projects[proj].description}
+                                         {proj.description}
                                     </Typography>
                                 </CardContent>
                                 <CardActions>
                                      <Button size="small" onClick={() => this.handleProjectLoad(proj)}>Load</Button>
                                      <Button size="small" onClick={() => this.handleProjectExport(proj)}>Export</Button>
-                                       <Button size="small" onClick={() => this.handleProjectDelete(proj)} disabled={projects[proj].active}>Delete</Button>
+                                       <Button size="small" onClick={() => this.handleProjectDelete(proj)} disabled={proj.active}>Delete</Button>
                                 </CardActions>
                             </Card>         
                           </GridListTile>
