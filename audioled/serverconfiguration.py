@@ -21,13 +21,27 @@ class ServerConfiguration:
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
         self._projects = {}
 
+    @staticmethod
+    def getConfigurationParameters():
+        return {
+            CONFIG_NUM_PIXELS: [300, 1, 2000, 1],
+            CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi']
+        }
+
     def setConfiguration(self, key, value):
+        print("Updating {} to {}".format(key, value))
         self._config[key] = value
+        if key in [CONFIG_NUM_PIXELS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER]:
+            print("Renewing device")
+            self.getActiveProjectOrDefault().setDevice(self._createOutputDevice())
         
     def getConfiguration(self, key):
         if key in self._config:
             return self._config[key]
         return None
+
+    def getFullConfiguration(self):
+        return self._config
 
     def getActiveProjectOrDefault(self):
         activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)

@@ -78,14 +78,14 @@ def create_app():
         return send_from_directory('resources', path)
 
     @app.route('/slot/<int:slotId>/nodes', methods=['GET'])
-    def nodes_get(slotId):
+    def slot_slotId_nodes_get(slotId):
         global proj
         fg = proj.getSlot(slotId)
         nodes = [node for node in fg._filterNodes]
         return jsonpickle.encode(nodes)
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['GET'])
-    def node_uid_get(slotId, nodeUid):
+    def slot_slotId_node_uid_get(slotId, nodeUid):
         global proj
         fg = proj.getSlot(slotId)
         try:
@@ -95,7 +95,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['DELETE'])
-    def node_uid_delete(slotId, nodeUid):
+    def slot_slotId_node_uid_delete(slotId, nodeUid):
         global proj
         fg = proj.getSlot(slotId)
         try:
@@ -106,7 +106,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['UPDATE'])
-    def node_uid_update(slotId, nodeUid):
+    def slot_slotId_node_uid_update(slotId, nodeUid):
         global proj
         fg = proj.getSlot(slotId)
         if not request.json:
@@ -121,7 +121,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>/parameter', methods=['GET'])
-    def node_uid_parameter_get(slotId, nodeUid):
+    def slot_slotId_node_uid_parameter_get(slotId, nodeUid):
         global proj
         fg = proj.getSlot(slotId)
         try:
@@ -131,7 +131,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node', methods=['POST'])
-    def node_post(slotId):
+    def slot_slotId_node_post(slotId):
         global proj
         fg = proj.getSlot(slotId)
         if not request.json:
@@ -150,14 +150,14 @@ def create_app():
         return jsonpickle.encode(node)
 
     @app.route('/slot/<int:slotId>/connections', methods=['GET'])
-    def connections_get(slotId):
+    def slot_slotId_connections_get(slotId):
         global proj
         fg = proj.getSlot(slotId)
         connections = [con for con in fg._filterConnections]
         return jsonpickle.encode(connections)
 
     @app.route('/slot/<int:slotId>/connection', methods=['POST'])
-    def connection_post(slotId):
+    def slot_slotId_connection_post(slotId):
         global proj
         fg = proj.getSlot(slotId)
         if not request.json:
@@ -169,7 +169,7 @@ def create_app():
         return jsonpickle.encode(connection)
 
     @app.route('/slot/<int:slotId>/connection/<connectionUid>', methods=['DELETE'])
-    def connection_uid_delete(slotId, connectionUid):
+    def slot_slotId_connection_uid_delete(slotId, connectionUid):
         global proj
         fg = proj.getSlot(slotId)
         try:
@@ -181,14 +181,14 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/configuration', methods=['GET'])
-    def configuration_get(slotId):
+    def slot_slotId_configuration_get(slotId):
         global proj
         fg = proj.getSlot(slotId)
         config = jsonpickle.encode(fg)
         return config
 
     @app.route('/slot/<int:slotId>/configuration', methods=['POST'])
-    def configuration_post(slotId):
+    def slot_slotId_configuration_post(slotId):
         global proj
         if not request.json:
             abort(400)
@@ -313,6 +313,23 @@ def create_app():
         print("Activating project {}".format(uid))
         proj = serverconfig.activateProject(uid)
         return "OK"
+
+    @app.route('/configuration', methods=['GET'])
+    def configuration_get():
+        global serverconfig
+        return jsonify({
+            'parameters': serverconfig.getConfigurationParameters(),
+            'values': serverconfig.getFullConfiguration()
+        })
+    
+    @app.route('/configuration', methods=['UPDATE'])
+    def configuration_put():
+        global serverconfig
+        if not request.json:
+            abort(400)
+        for key, value in request.json.items():
+            serverconfig.setConfiguration(key, value)
+        return jsonify(serverconfig.getFullConfiguration())
 
     @app.route('/remote/brightness', methods=['POST'])
     def remote_brightness_post():
