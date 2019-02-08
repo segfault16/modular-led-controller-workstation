@@ -8,13 +8,28 @@ import Button from '@material-ui/core/Button';
 import Typography from '@material-ui/core/Typography';
 import GridList from '@material-ui/core/GridList';
 import GridListTile from '@material-ui/core/GridListTile';
+import CloudUploadIcon from '@material-ui/icons/CloudUpload';
+import SaveIcon from '@material-ui/icons/Save';
+import CreateIcon from '@material-ui/icons/Create';
+import AddIcon from '@material-ui/icons/Add';
 
 import ProjectService from '../services/ProjectService'
 
-const styles = {
+const styles = theme => ({
+    toggleContainer: {
+        height: 32,
+        padding: `${theme.spacing.unit}px ${theme.spacing.unit * 2}px`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+         margin: `${theme.spacing.unit}px`,
+         background: theme.palette.background.default,
+      },
     gridList: {
-        width: '100%'
+        width: '100%',
+        padding: theme.spacing.unit
     },
+    
     tile: {
         minWidth: 275,
         maxWidth: 300,
@@ -26,7 +41,7 @@ const styles = {
     pos: {
         marginBottom: 12,
     },
-};
+});
 
 class ProjectsPage extends Component {
     constructor(props) {
@@ -101,19 +116,25 @@ class ProjectsPage extends Component {
         const projects = this.state.projects;
         console.log(projects)
         return (
-            <div>
-                <Button variant="contained" onClick={() => this.handleProjectCreate()}>New Project</Button>
+            <div id="content-dark">
+            <div className={classes.toggleContainer}>
+                
+                <Button size="small" onClick={() => this.handleProjectCreate()}>
+                <AddIcon/>
+                </Button>
                 <input type="file" id="file-input" onChange={this.handleProjectImport} style={{ display: 'none' }} />
                 <label htmlFor="file-input">
-                    <Button variant="contained" component="span">Import Project</Button>                    
+                    <Button size="small" component="span">
+                    <CloudUploadIcon/>
+                    </Button>                    
                 </label>
-                
-                <GridList cellHeight={160} className={classes.gridList} cols={3} >
+                </div>
+                <GridList cellHeight={160} className={classes.gridList} cols={3} spacing={8} >
                 {projects.map((proj, key) => {
                     console.log(proj)
                     console.log(key)
                     return (
-                        <GridListTile className={classes.tile} key={key}>
+                        <GridListTile className={classes.tile} key={key} >
                             <Card className={classes.card}  >
                                 <CardContent>
                                     <Typography variant="h5" component="h2">
