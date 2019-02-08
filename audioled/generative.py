@@ -14,6 +14,8 @@ from audioled.effect import Effect
 
 wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
 wave_mode_default = 'sin'
+sortby = ['red', 'green', 'blue', 'brightness']
+sortbydefault = 'red'
 
 
 class SwimmingPool(Effect):
@@ -438,7 +440,7 @@ class Pendulum(Effect):
                  location=150,
                  displacement=50,
                  heightactivator=True,
-                 lightflip=1,
+                 lightflip=True,
                  swingspeed=1):
         self.num_pixels = num_pixels
         self.spread = spread
@@ -464,7 +466,7 @@ class Pendulum(Effect):
                 ("displacement", [50, 1, 1000, 1]),
                 ("swingspeed", [1, 0, 5, 0.01]),
                 ("heightactivator", False),
-                ("lightflip", [1, -1, 1, 2]),
+                ("lightflip", False),
             ])
         }
         return definition
@@ -475,7 +477,7 @@ class Pendulum(Effect):
         definition['parameters']['location'][0] = self.location
         definition['parameters']['displacement'][0] = self.displacement
         definition['parameters']['heightactivator'] = self.heightactivator
-        definition['parameters']['lightflip'][0] = self.lightflip
+        definition['parameters']['lightflip'] = self.lightflip
         definition['parameters']['swingspeed'][0] = self.swingspeed
         return definition
 
@@ -486,8 +488,8 @@ class Pendulum(Effect):
         return blobArray.clip(0.0, 255.0)
 
     def moveBlob(self, blobArray, displacement, swingspeed):
-        outputArray = sp.ndimage.interpolation.shift(blobArray, displacement * math.sin(self._t * swingspeed),
-                                                     mode='wrap', prefilter=True)
+        outputArray = sp.ndimage.interpolation.shift(
+            blobArray, displacement * math.sin(self._t * swingspeed), mode='wrap', prefilter=True)
         return outputArray
 
     def controlBlobs(self):
@@ -509,8 +511,11 @@ class Pendulum(Effect):
             # default: all white
             color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self.heightactivator is True:
-            configArray = np.array([[self.lightflip * math.cos(2 * self._t)], [self.lightflip * math.cos(2 * self._t)],
-                                    [self.lightflip * math.cos(2 * self._t)]])
+            if self.lightflip is True:
+                lightconfig = -1.0
+            else:
+                lightconfig = 1.0
+            configArray = lightconfig * math.cos(2 * self._t) * np.array([[1.0], [1.0], [1.0]])
         else:
             configArray = np.array([[1.0], [1.0], [1.0]])
         self._output = np.multiply(color, self.controlBlobs() * configArray)
@@ -539,7 +544,7 @@ class RandomPendulums(Effect):
             self._location.append(random.randint(0, self.num_pixels - self._spread[i] - 1))
             self._displacement.append(random.randint(5, 50))
             self._heightactivator.append(random.choice([True, False]))
-            self._lightflip.append(random.choice([-1, 1]))
+            self._lightflip.append(random.choice([True, False]))
             self._offset.append(random.uniform(0, 6.5))
             self._swingspeed.append(random.uniform(0, 1))
 
@@ -596,9 +601,12 @@ class RandomPendulums(Effect):
         self._output = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
         for i in range(self.num_pendulums):
             if self._heightactivator[i] is True:
-                configArray = np.array([[self._lightflip[i] * self.dim * math.cos(2 * self._t + self._offset[i])],
-                                        [self._lightflip[i] * self.dim * math.cos(2 * self._t + self._offset[i])],
-                                        [self._lightflip[i] * self.dim * math.cos(2 * self._t + self._offset[i])]])
+                if self._lightflip[i] is True:
+                    lightconfig = -1.0
+                else:
+                    lightconfig = 1.0
+                configArray = lightconfig * self.dim * math.cos(2 * self._t + self._offset[i]) * np.array([[1.0], [1.0],
+                                                                                                           [1.0]])
             else:
                 configArray = np.array([[1.0 * self.dim], [1.0 * self.dim], [1.0 * self.dim]])
             self._output += np.multiply(
@@ -753,3 +761,126 @@ class GenerateWaves(Effect):
             self._output = np.multiply(color, self._wavearray * np.array([[1.0], [1.0], [1.0]]))
 
             self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+
+
+class Sorting(Effect):
+    """Effect for sorting an input by color or brightness"""
+
+    def __init__(
+            self,
+            num_pixels,
+            sortby=sortbydefault,
+            reversed=False,
+            looping=True,
+    ):
+        self.num_pixels = num_pixels
+        self.sortby = sortby
+        self.reversed = reversed
+        self.looping = looping
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        self._pixel_state = None
+        self._sorting_done = True
+        super(Sorting, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("num_pixels", [300, 1, 1000, 1]),
+                ("sortby", sortby),
+                ("reversed", False),
+                ("looping", True)
+            ])
+        }
+        return definition
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
+        definition['parameters']['sortby'] = [self.sortby] + [x for x in sortby if x != self.sortby]
+        definition['parameters']['reversed'] = self.reversed
+        definition['parameters']['looping'] = self.looping
+        return definition
+
+    def disorder(self):
+        self._output = np.ones(self.num_pixels) * np.array([[1.0], [1.0], [1.0]])
+        for i in range(self.num_pixels):
+            for j in range(len(self._output)):
+                self._output[j][i] = random.randint(0.0, 255.0)
+        return self._output
+
+    def bubble(self, inputArray, sortby, reversed, looping):
+        if sortby == 'red':
+            sortindex = 0
+        elif sortby == 'green':
+            sortindex = 1
+        elif sortby == 'blue':
+            sortindex = 2
+        elif sortby == 'brightness':
+            sortindex = 3
+        else:
+            raise NotImplementedError("Sorting not implemented.")
+
+        if reversed:
+            flip_index = -1
+        else:
+            flip_index = 1
+
+        for passnum in range(len(inputArray[0]) - 1, 0, -1):
+            check = 0
+            for i in range(passnum):
+                if sortindex == 0 or sortindex == 1 or sortindex == 2:  # sorting by color
+                    if inputArray[sortindex][i] > inputArray[sortindex][i + 1 * flip_index]:
+                        temp = np.array([[1.0], [1.0], [1.0]])
+                        for j in range(len(inputArray)):
+                            temp[j] = inputArray[j][i]
+                            inputArray[j][i] = inputArray[j][i + 1 * flip_index]
+                            inputArray[j][i + 1 * flip_index] = temp[j]
+                    else:
+                        check += 1
+                        if check == passnum:
+                            if looping is True:
+                                self.sortby = random.choice(['red', 'green', 'blue', 'brightness'])
+                                self.reversed = random.choice([True, False])
+                            else:
+                                self._sorting_done = True
+
+                elif sortindex == 3:  # sorting by brightness
+                    tempArray = np.sum(inputArray, axis=0)
+                    if tempArray[i] > tempArray[i + 1 * flip_index]:
+                        temp = np.array([[1.0], [1.0], [1.0]])
+                        for j in range(len(inputArray)):
+                            temp[j] = inputArray[j][i]
+                            inputArray[j][i] = inputArray[j][i + 1 * flip_index]
+                            inputArray[j][i + 1 * flip_index] = temp[j]
+                    else:
+                        check += 1
+                        if check == passnum:
+                            if looping is True:
+                                self.sortby = random.choice(['red', 'green', 'blue', 'brightness'])
+                                self.reversed = random.choice([True, False])
+                            else:
+                                self._sorting_done = True
+            return inputArray
+
+    def numInputChannels(self):
+        return 0
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+
+        if self._sorting_done is True:
+            self._output = self.disorder()
+            self._sorting_done = False
+
+        self._output = self.bubble(self._output, self.sortby, self.reversed, self.looping)
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
