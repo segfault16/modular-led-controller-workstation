@@ -84,6 +84,18 @@ class ProjectsPage extends Component {
         })
     }
 
+    handleProjectImport = async (event) => {
+        console.log("import")
+        return ProjectService.importProject(event).then(res => {
+            console.log("metadata", res)
+            this.setState(oldState => {
+                return {
+                    projects: [...oldState.projects, res]
+                }
+            })
+        })
+    }
+
     render() {
         const { classes } = this.props;
         const projects = this.state.projects;
@@ -91,7 +103,10 @@ class ProjectsPage extends Component {
         return (
             <div>
                 <Button variant="contained" onClick={() => this.handleProjectCreate()}>New Project</Button>
-                <Button variant="contained" onClick={() => this.handleProjectImport()}>Import Project</Button>
+                <input type="file" id="file-input" onChange={this.handleProjectImport} style={{ display: 'none' }} />
+                <label htmlFor="file-input">
+                    <Button variant="contained" component="span">Import Project</Button>                    
+                </label>
                 
                 <GridList cellHeight={160} className={classes.gridList} cols={3} >
                 {projects.map((proj, key) => {
@@ -112,7 +127,7 @@ class ProjectsPage extends Component {
                                 <CardActions>
                                      <Button size="small" onClick={() => this.handleProjectLoad(proj)}>Load</Button>
                                      <Button size="small" onClick={() => this.handleProjectExport(proj)}>Export</Button>
-                                       <Button size="small" onClick={() => this.handleProjectDelete(proj)} disabled={proj.active}>Delete</Button>
+                                     <Button size="small" onClick={() => this.handleProjectDelete(proj)} disabled={proj.active}>Delete</Button>
                                 </CardActions>
                             </Card>         
                           </GridListTile>

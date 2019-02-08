@@ -93,15 +93,23 @@ class ServerConfiguration:
             "description": proj.description,
             "active": key == self.getConfiguration(CONFIG_ACTIVE_PROJECT)
         }
-        
         return data
 
     def createEmptyProject(self, title, description):
-        proj = project.Project("Empty Project", "", self._createOutputDevice())
+        proj = project.Project(title, description, self._createOutputDevice())
         projectUid = uuid.uuid4().hex
         self._projects[projectUid] = proj
         return self.getProjectMetadata(projectUid)
     
+    def importProject(self, json):
+        # Generate new uid
+        proj = jsonpickle.decode(json)
+        if not isinstance(proj, project.Project):
+            raise RuntimeError("Imported object is not a project")
+        projectUid = uuid.uuid4().hex
+        self._projects[projectUid] = proj
+        return self.getProjectMetadata(projectUid)
+
     def _store(self):
         pass
 

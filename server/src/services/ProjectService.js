@@ -47,6 +47,48 @@ const ProjectService = {
             }
         }).then(res => res.json()).then(dict => this._toArrayData(dict)[0])
     },
+    importProject: async function (e) {
+        var file = e.target.files[0];
+        if (!file) {
+            return;
+        }
+        return this._readUploadedFileAsText(file).then(contents => this._importProject(contents)).then(res => res.json()).then(dict => this._toArrayData(dict)[0])
+
+    },
+    _importProject: async function (contents) {
+        console.log("Load config from service")
+        return fetch('./projects/import', {
+            method: 'POST', // or 'PUT'
+            body: JSON.stringify(contents), // data can be `string` or {object}!
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(
+            (res) => {
+                console.log("Successfully loaded");
+                return res
+            })
+        .catch(error => {
+            console.error('Error on loading configuration:', error);
+        })
+
+    },
+    _readUploadedFileAsText: function (inputFile) {
+        const temporaryFileReader = new FileReader();
+
+        return new Promise((resolve, reject) => {
+            temporaryFileReader.onerror = () => {
+                temporaryFileReader.abort();
+                reject(new DOMException("Problem parsing input file."));
+            };
+
+            temporaryFileReader.onload = () => {
+                resolve(temporaryFileReader.result);
+            };
+            temporaryFileReader.readAsText(inputFile);
+        });
+    },
     _toArrayData: function(projDict) {
         return Object.keys(projDict).map((proj, key) => {
             var entry = projDict[proj]

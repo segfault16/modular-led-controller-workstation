@@ -194,6 +194,8 @@ def create_app():
             abort(400)
         
         newGraph = jsonpickle.decode(request.json)
+        if not isinstance(newGraph, filtergraph.FilterGraph):
+            raise RuntimeError("Not a FilterGraph")
         proj.setFiltergraphForSlot(slotId, newGraph)
         return "OK"
 
@@ -286,6 +288,14 @@ def create_app():
         title = request.json['title']
         description = request.json['description']
         metadata = serverconfig.createEmptyProject(title, description)
+        return jsonify(metadata)
+
+    @app.route('/projects/import', methods=['POST'])
+    def projects_import_post():
+        global serverconfig
+        if not request.json:
+            abort(400)
+        metadata = serverconfig.importProject(request.json)
         return jsonify(metadata)
     
     @app.route('/projects/<uid>/export', methods=['GET'])
