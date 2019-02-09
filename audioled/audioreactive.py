@@ -88,6 +88,19 @@ class Spectrum(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "fs": "Sample Frequency of the audio input.",
+                "n_overlaps": "Number of overlapping samples in time. This smoothes the FFT.",
+                "fft_bins": "Number of bins of the FFT. Increase for a more detailed FFT.",
+                "col_blend": "Color blend mode for combining bass and melody FFT."
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_pixels']  # disable edit
@@ -216,6 +229,17 @@ class VUMeterRMS(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "db_range": "Range of the VU Meter in decibels.",
+                "n_overlaps": "Number of overlapping samples in time. This smoothes the VU Meter."
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_pixels']  # disable edit
@@ -315,6 +339,17 @@ class VUMeterPeak(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "db_range": "Range of the VU Meter in decibels.",
+                "n_overlaps": "Number of overlapping samples in time. This smoothes the VU Meter."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -427,6 +462,22 @@ class MovingLight(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "speed": "Speed of the moving peak.",
+                "dim_time": "Amount of time for the afterglow of the moving peak.",
+                "lowcut_hz": "Lowcut frequency of the audio input.",
+                "highcut_hz": "Highcut frequency of the audio input.",
+                "peak_filter": "Filters the audio peaks. Increase this value to transform only high audio peaks into visual peaks.",
+                "peak_scale": "Scales the visual peak after the filter.",
+                "highlight": "Amount of white light added to the audio peak.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_pixels']  # disable edit
@@ -529,6 +580,18 @@ class Bonfire(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "spread": "Amount of pixels the splitted colors are moved.",
+                "lowcut_hz": "Lowcut frequency of the audio input.",
+                "highcut_hz": "Highcut frequency of the audio input.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
