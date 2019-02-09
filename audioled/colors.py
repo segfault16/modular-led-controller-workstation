@@ -99,7 +99,7 @@ class StaticRGBColor(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['num_pixels']
+        del definition['parameters']['num_pixels']
         definition['parameters']['r'][0] = self.r
         definition['parameters']['g'][0] = self.g
         definition['parameters']['b'][0] = self.b
@@ -123,6 +123,11 @@ class StaticRGBColor(Effect):
 class ColorWheel(Effect):
     """ Generates colors
     """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "The ColorWheel moves through the HSV color space and outputs the color."
 
     def __init__(self,
                  num_pixels=1,
