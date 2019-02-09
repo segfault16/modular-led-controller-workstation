@@ -54,7 +54,7 @@ def create_app():
         serverconfig.store()
 
     sched = BackgroundScheduler(daemon=True)
-    sched.add_job(store_configuration,'interval',seconds=5)
+    sched.add_job(store_configuration, 'interval', seconds=5)
     sched.start()
 
     def interrupt():
@@ -192,7 +192,7 @@ def create_app():
         global proj
         if not request.json:
             abort(400)
-        
+
         newGraph = jsonpickle.decode(request.json)
         if not isinstance(newGraph, filtergraph.FilterGraph):
             raise RuntimeError("Not a FilterGraph")
@@ -269,7 +269,7 @@ def create_app():
         # print("Activating slot {}".format(value))
         proj.activateSlot(value)
         return "OK"
-    
+
     @app.route('/project/activeSlot', methods=['GET'])
     def project_activeSlot_get():
         global proj
@@ -285,8 +285,8 @@ def create_app():
         global serverconfig
         if not request.json:
             abort(400)
-        title = request.json['title']
-        description = request.json['description']
+        title = request.json.get('title', '')
+        description = request.json.get('description', '')
         metadata = serverconfig.createEmptyProject(title, description)
         return jsonify(metadata)
 
@@ -297,7 +297,7 @@ def create_app():
             abort(400)
         metadata = serverconfig.importProject(request.json)
         return jsonify(metadata)
-    
+
     @app.route('/projects/<uid>/export', methods=['GET'])
     def projects_project_export(uid):
         global serverconfig
@@ -312,7 +312,7 @@ def create_app():
         global serverconfig
         serverconfig.deleteProject(uid)
         return "OK"
-    
+
     @app.route('/projects/activeProject', methods=['POST'])
     def projects_activeProject_post():
         global serverconfig
@@ -331,7 +331,7 @@ def create_app():
             'parameters': serverconfig.getConfigurationParameters(),
             'values': serverconfig.getFullConfiguration()
         })
-    
+
     @app.route('/configuration', methods=['UPDATE'])
     def configuration_put():
         global serverconfig
@@ -453,14 +453,15 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Audio Reactive LED Strip Server')
     parser.add_argument(
-        '-C', '--config_location', dest='config_location', default=None, help='Location of the server configuration to store. Defaults to $HOME/.ledserver.'
-    )
+        '-C',
+        '--config_location',
+        dest='config_location',
+        default=None,
+        help='Location of the server configuration to store. Defaults to $HOME/.ledserver.')
     parser.add_argument(
-        '--no_conf', dest='no_conf', action='store_true', default=False, help="Don't load config from file"
-    )
+        '--no_conf', dest='no_conf', action='store_true', default=False, help="Don't load config from file")
     parser.add_argument(
-        '--no_store', dest='no_store', action='store_true', default=False, help="Don't save anything to disk"
-    )
+        '--no_store', dest='no_store', action='store_true', default=False, help="Don't save anything to disk")
     parser.add_argument(
         '-N', '--num_pixels', dest='num_pixels', type=int, default=None, help='number of pixels (default: 300)')
     parser.add_argument(
@@ -471,10 +472,7 @@ if __name__ == '__main__':
         choices=[deviceRasp, deviceCandy],
         help='device to send RGB to (default: FadeCandy)')
     parser.add_argument(
-        '--device_candy_server',
-        dest='device_candy_server',
-        default=None,
-        help='Server for device FadeCandy')
+        '--device_candy_server', dest='device_candy_server', default=None, help='Server for device FadeCandy')
     parser.add_argument(
         '-A',
         '--audio_device_index',
@@ -512,10 +510,10 @@ if __name__ == '__main__':
     # Update LED device
     if args.device is not None:
         serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE, args.device)
-    
+
     if args.device_candy_server is not None:
         serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER, args.device_candy_server)
-    
+
     # Update Audio device
     if args.audio_device_index is not None:
         serverconfig.setConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX, args.audio_device_index)
@@ -537,8 +535,9 @@ if __name__ == '__main__':
 
     # Audio
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
-        audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
-        
+        audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(
+            serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
+
     # strand test
     strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
