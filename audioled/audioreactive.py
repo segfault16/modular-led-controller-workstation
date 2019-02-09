@@ -17,7 +17,7 @@ from audioled.effects import Effect
 
 class Spectrum(Effect):
     """
-    SpectrumEffect performs a FFT and visualizes bass and melody frequencies with different colors.
+    Spectrum performs a FFT and visualizes bass and melody frequencies with different colors.
 
     Inputs:
     - 0: Audio
@@ -32,7 +32,8 @@ class Spectrum(Effect):
     @staticmethod
     def getEffectDescription():
         return \
-            "SpectrumEffect performs a FFT and visualizes bass and melody frequencies with different colors."
+            "Spectrum performs a FFT on the audio input (channel 0) and visualizes bass and melody frequencies "\
+            "with different colors (channel 1 for bass, channel 2 for melody)."
 
     def __init__(self,
                  num_pixels,
@@ -161,6 +162,11 @@ class VUMeterRMS(Effect):
     - 1: Color
     """
 
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "VUMeterRMS visualizes the RMS value of the audio input (channel 0) with the color (channel 1)."
+
     def __init__(self, num_pixels, db_range=60.0, n_overlaps=1):
         self.num_pixels = num_pixels
         self.db_range = db_range
@@ -250,6 +256,11 @@ class VUMeterPeak(Effect):
     - 0: Audio
     - 1: Color
     """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "VUMeterPeak visualizes the Peak value of the audio input (channel 0) with the color (channel 1)."
 
     def __init__(self, num_pixels, db_range=60.0, n_overlaps=1):
         self.num_pixels = num_pixels
@@ -356,6 +367,12 @@ class MovingLight(Effect):
     - 0: Audio
     - 1: Color
     """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "MovingLight generates a visual peak based on the audio input (channel 0) with the given color (channel 1) "\
+            "at the beginning of the strip. This peak moves down the strip until it dissipates."
 
     def __init__(self,
                  num_pixels,
@@ -473,6 +490,12 @@ class Bonfire(Effect):
     - 0: Audio
     - 1: Pixels
     """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Bonfire performs an audio-reactive color splitting of input channel 1 based on "\
+            "the audio input (channel 0)."
 
     def __init__(self, num_pixels, fs, spread=100, lowcut_hz=50.0, highcut_hz=200.0):
         self.num_pixels = num_pixels
