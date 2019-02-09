@@ -59,6 +59,12 @@ def blend(pixel_a, pixel_b, blend_mode):
 
 
 class StaticRGBColor(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "StaticRGBColor outputs a static color."
+
     def __init__(self, num_pixels, r=255.0, g=255.0, b=255.0):
         self.num_pixels = num_pixels
         self.r = r
@@ -83,6 +89,7 @@ class StaticRGBColor(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
+                ("num_pixels", [300, 1, 1000, 1]),
                 ("r", [255.0, 0.0, 255.0, 1.0]),
                 ("g", [255.0, 0.0, 255.0, 1.0]),
                 ("b", [255.0, 0.0, 255.0, 1.0]),
@@ -92,6 +99,7 @@ class StaticRGBColor(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
+        del definition['num_pixels']
         definition['parameters']['r'][0] = self.r
         definition['parameters']['g'][0] = self.g
         definition['parameters']['b'][0] = self.b
