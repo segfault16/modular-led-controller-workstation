@@ -45,14 +45,14 @@ const ProjectService = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then(res => res.json()).then(dict => this._toArrayData(dict)[0])
+        }).then(res => res.json())
     },
     importProject: async function (e) {
         var file = e.target.files[0];
         if (!file) {
             return;
         }
-        return this._readUploadedFileAsText(file).then(contents => this._importProject(contents)).then(res => res.json()).then(dict => this._toArrayData(dict)[0])
+        return this._readUploadedFileAsText(file).then(contents => this._importProject(contents)).then(res => res.json())
 
     },
     _importProject: async function (contents) {

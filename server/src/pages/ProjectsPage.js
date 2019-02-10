@@ -19,7 +19,8 @@ import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogTitle from '@material-ui/core/DialogTitle';
 
-import ProjectService from '../services/ProjectService'
+import ProjectService from '../services/ProjectService';
+import ConfigurationService from '../services/ConfigurationService';
 
 const styles = theme => ({
     toggleContainer: {
@@ -178,7 +179,7 @@ class ProjectsPage extends Component {
                     </Dialog>
 
 
-                    <input type="file" id="file-input" onChange={this.handleProjectImport} style={{ display: 'none' }} />
+                    <input type="file" id="file-input" onChange={this.handleProjectImport} style={{ display: 'none' }} onClick={(event) => { event.target.value = null }} />
                     <label htmlFor="file-input">
                         <Button size="small" component="span">
                             <CloudUploadIcon />
@@ -193,7 +194,7 @@ class ProjectsPage extends Component {
                                     <CardContent>
                                         <Typography variant="h5" component="h2">
                                             {proj.id == this.state.activeProject ? "Active: " : null}
-                                            {proj.title}
+                                            {proj.name}
                                         </Typography>
                                         <Typography>
                                             {proj.description}
