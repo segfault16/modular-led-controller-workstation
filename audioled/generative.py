@@ -63,6 +63,7 @@ class SwimmingPool(Effect):
 
     def _SinArray(self, _spread, _scale, _wavehight):
         _CArray = []
+        _spread = min(int(self._num_pixels / 2) - 1, _spread)
         for i in range(-_spread, _spread + 1):
             _CArray.append(math.sin((math.pi / _spread) * i) * _scale * _wavehight)
             _output = np.copy(self._pixel_state)
