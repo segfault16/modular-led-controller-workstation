@@ -19,8 +19,8 @@ sortbydefault = 'red'
 
 
 class SwimmingPool(Effect):
-    def __init__(self, num_pixels, num_waves=30, scale=0.2, wavespread_low=30, wavespread_high=70, max_speed=30):
-        self.num_pixels = num_pixels
+    def __init__(self, num_waves=30, scale=0.2, wavespread_low=30, wavespread_high=70, max_speed=30):
+        
         self.num_waves = num_waves
         self.scale = scale
         self.wavespread_low = wavespread_low
@@ -30,11 +30,11 @@ class SwimmingPool(Effect):
 
     def __initstate__(self):
         # state
-        self._pixel_state = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
+        self._pixel_state = None
         self._last_t = 0.0
-        self._output = np.copy(self._pixel_state)
-        self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.scale, self.wavespread_low,
-                                                            self.wavespread_high, self.max_speed)
+        self._output = None
+        self._Wave = None
+        self._WaveSpecSpeed = None
         super(SwimmingPool, self).__initstate__()
 
     @staticmethod
@@ -43,7 +43,6 @@ class SwimmingPool(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("num_waves", [30, 1, 100, 1]),
                 ("scale", [0.2, 0.01, 1.0, 0.01]),
                 ("wavespread_low", [30, 1, 100, 1]),
@@ -55,7 +54,6 @@ class SwimmingPool(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['num_waves'][0] = self.num_waves
         definition['parameters']['scale'][0] = self.scale
         definition['parameters']['wavespread_low'][0] = self.wavespread_low
@@ -88,10 +86,19 @@ class SwimmingPool(Effect):
     def numOutputChannels(self):
         return 1
 
+    async def update(self, dt):
+        await super().update(dt)
+        if self._pixel_state is None or np.size(self._pixel_state, 1) != self._num_pixels:
+            self._pixel_state = np.zeros(self._num_pixels) * np.array([[0.0], [0.0], [0.0]])
+            self._output = np.copy(self._pixel_state)
+        if self._Wave is None or self._WaveSpecSpeed is None:
+            self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.scale, self.wavespread_low,
+                                                            self.wavespread_high, self.max_speed)
+
     def process(self):
         if self._outputBuffer is not None:
             color = self._inputBuffer[0]
-            self._output = np.multiply(color, 0.5 * np.zeros(self.num_pixels))
+            self._output = np.multiply(color, 0.5 * np.zeros(self._num_pixels))
 
             for i in range(0, self.num_waves):
                 step = np.multiply(color, np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1))
@@ -101,14 +108,13 @@ class SwimmingPool(Effect):
 
 
 class DefenceMode(Effect):
-    def __init__(self, num_pixels, scale=0.2):
-        self.num_pixels = num_pixels
+    def __init__(self, scale=0.2):
+        
         self.scale = scale
         self.__initstate__()
 
     def __initstate__(self):
         # state
-        self._pixel_state = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
         self._last_t = 0.0
         super(DefenceMode, self).__initstate__()
 
@@ -123,10 +129,10 @@ class DefenceMode(Effect):
             # color = self._inputBuffer[0]
             A = random.choice([True, False, False])
             if A is True:
-                self._output = np.ones(self.num_pixels) * np.array([[random.randint(
+                self._output = np.ones(self._num_pixels) * np.array([[random.randint(
                     0.0, 255.0)], [random.randint(0.0, 255.0)], [random.randint(0.0, 255.0)]])
             else:
-                self._output = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
+                self._output = np.zeros(self._num_pixels) * np.array([[0.0], [0.0], [0.0]])
 
             self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
@@ -141,8 +147,8 @@ class MidiKeyboard(Effect):
             self.value = 0.0
             self.release_time = 0.0
 
-    def __init__(self, num_pixels, midiPort='', attack=0.0, decay=0.0, sustain=1.0, release=0.0):
-        self.num_pixels = num_pixels
+    def __init__(self, midiPort='', attack=0.0, decay=0.0, sustain=1.0, release=0.0):
+        
         self.midiPort = midiPort
         self.attack = attack
         self.decay = decay
@@ -176,7 +182,6 @@ class MidiKeyboard(Effect):
         definition = {
             "parameters": {
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
                 "midiPort": mido.get_input_names(),
                 "attack": [0.0, 0.0, 5.0, 0.01],
                 "decay": [0.0, 0.0, 5.0, 0.01],
@@ -188,7 +193,6 @@ class MidiKeyboard(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['midiPort'] = [self.midiPort
                                                 ] + [x for x in mido.get_input_names() if x != self.midiPort]
         definition['parameters']['attack'][0] = self.attack
@@ -238,21 +242,21 @@ class MidiKeyboard(Effect):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
         if not self._inputBufferValid(0):
-            col = np.ones(self.num_pixels) * np.array([[255], [255], [255]])
+            col = np.ones(self._num_pixels) * np.array([[255], [255], [255]])
         else:
             col = self._inputBuffer[0]
 
         # Draw
-        pos = np.zeros(self.num_pixels)
+        pos = np.zeros(self._num_pixels)
         for note in self._on_notes:
-            index = int(max(0, min(self.num_pixels - 1, float(note.note) / 127.0 * self.num_pixels)))
+            index = int(max(0, min(self._num_pixels - 1, float(note.note) / 127.0 * self._num_pixels)))
             pos[index] = 1 * note.value / 127.0
         self._outputBuffer[0] = np.multiply(pos, col)
 
 
 class Breathing(Effect):
-    def __init__(self, num_pixels, cycle=5):
-        self.num_pixels = num_pixels
+    def __init__(self, cycle=5):
+        
         self.cycle = cycle
         self.__initstate__()
 
@@ -276,7 +280,6 @@ class Breathing(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("cycle", [5, 0.1, 10, 0.1]),
             ])
         }
@@ -284,24 +287,23 @@ class Breathing(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['cycle'][0] = self.cycle
         return definition
 
     def process(self):
         color = self._inputBuffer[0]
         if color is None:
-            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self._outputBuffer is not None:
             brightness = self.oneStar(self._t, self.cycle)
             self._output = np.multiply(color,
-                                       np.ones(self.num_pixels) * np.array([[brightness], [brightness], [brightness]]))
+                                       np.ones(self._num_pixels) * np.array([[brightness], [brightness], [brightness]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class Heartbeat(Effect):
-    def __init__(self, num_pixels, speed=1):
-        self.num_pixels = num_pixels
+    def __init__(self, speed=1):
+        
         self.speed = speed
         self.__initstate__()
 
@@ -325,7 +327,6 @@ class Heartbeat(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("speed", [1, 0.1, 100, 0.1]),
             ])
         }
@@ -333,24 +334,23 @@ class Heartbeat(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['speed'][0] = self.speed
         return definition
 
     def process(self):
         color = self._inputBuffer[0]
         if color is None:
-            color = np.ones(self.num_pixels) * np.array([[255.0], [0.0], [0.0]])
+            color = np.ones(self._num_pixels) * np.array([[255.0], [0.0], [0.0]])
         if self._outputBuffer is not None:
             brightness = self.oneStar(self._t, self.speed)
             self._output = np.multiply(color,
-                                       np.ones(self.num_pixels) * np.array([[brightness], [brightness], [brightness]]))
+                                       np.ones(self._num_pixels) * np.array([[brightness], [brightness], [brightness]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class FallingStars(Effect):
-    def __init__(self, num_pixels, dim_speed=100, thickness=1, spawntime=0.1, max_brightness=1):
-        self.num_pixels = num_pixels
+    def __init__(self, dim_speed=100, thickness=1, spawntime=0.1, max_brightness=1):
+        
         self.dim_speed = dim_speed
         self.thickness = thickness  # getting down with it
         self.spawntime = spawntime
@@ -371,7 +371,6 @@ class FallingStars(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("dim_speed", [100, 1, 1000, 1]),
                 ("thickness", [1, 1, 300, 1]),
                 ("spawntime", [1, 0.01, 10, 0.01]),
@@ -382,7 +381,6 @@ class FallingStars(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['dim_speed'][0] = self.dim_speed
         definition['parameters']['thickness'][0] = self.thickness
         definition['parameters']['spawntime'][0] = self.spawntime
@@ -398,7 +396,7 @@ class FallingStars(Effect):
     def spawnStar(self):
         self._starCounter += 1
         self._t0Array.append(self._t)
-        self._spawnArray.append(random.randint(0, self.num_pixels - self.thickness))
+        self._spawnArray.append(random.randint(0, self._num_pixels - self.thickness))
         if self._starCounter > 100:
             self._starCounter -= 1
             self._t0Array.pop(0)
@@ -408,7 +406,7 @@ class FallingStars(Effect):
     def allStars(self, t, dim_speed, thickness, t0, spawnSpot):
         controlArray = []
         for i in range(0, self._starCounter):
-            oneStarArray = np.zeros(self.num_pixels)
+            oneStarArray = np.zeros(self._num_pixels)
             for j in range(0, thickness):
                 oneStarArray[spawnSpot[i] + j] = math.exp(-(100 / dim_speed) * (self._t - t0[i]))
             controlArray.append(oneStarArray)
@@ -424,7 +422,7 @@ class FallingStars(Effect):
     def process(self):
         color = self._inputBuffer[0]
         if color is None:
-            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self._outputBuffer is not None:
             self._output = np.multiply(
                 color,
@@ -435,14 +433,13 @@ class FallingStars(Effect):
 
 class Pendulum(Effect):
     def __init__(self,
-                 num_pixels,
                  spread=10,
                  location=150,
                  displacement=50,
                  heightactivator=True,
                  lightflip=True,
                  swingspeed=1):
-        self.num_pixels = num_pixels
+        
         self.spread = spread
         self.location = location
         self.displacement = displacement
@@ -461,7 +458,6 @@ class Pendulum(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("location", [150, 0, 300, 1]),
                 ("displacement", [50, 1, 1000, 1]),
                 ("swingspeed", [1, 0, 5, 0.01]),
@@ -473,7 +469,6 @@ class Pendulum(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['location'][0] = self.location
         definition['parameters']['displacement'][0] = self.displacement
         definition['parameters']['heightactivator'] = self.heightactivator
@@ -482,7 +477,7 @@ class Pendulum(Effect):
         return definition
 
     def createBlob(self, spread, location):
-        blobArray = np.zeros(self.num_pixels)
+        blobArray = np.zeros(self._num_pixels)
         for i in range(-spread, spread + 1):
             blobArray[location + i] = math.sin((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
@@ -509,7 +504,7 @@ class Pendulum(Effect):
             color = self._inputBuffer[0]
         else:
             # default: all white
-            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self.heightactivator is True:
             if self.lightflip is True:
                 lightconfig = -1.0
@@ -523,8 +518,8 @@ class Pendulum(Effect):
 
 
 class RandomPendulums(Effect):
-    def __init__(self, num_pixels, num_pendulums=100, dim=0.1):
-        self.num_pixels = num_pixels
+    def __init__(self, num_pendulums=100, dim=0.1):
+        
         self.num_pendulums = num_pendulums
         self.dim = dim
         self.__initstate__()
@@ -539,14 +534,7 @@ class RandomPendulums(Effect):
         self._lightflip = []
         self._offset = []
         self._swingspeed = []
-        for i in range(self.num_pendulums):
-            self._spread.append(random.randint(2, 10))
-            self._location.append(random.randint(0, self.num_pixels - self._spread[i] - 1))
-            self._displacement.append(random.randint(5, 50))
-            self._heightactivator.append(random.choice([True, False]))
-            self._lightflip.append(random.choice([True, False]))
-            self._offset.append(random.uniform(0, 6.5))
-            self._swingspeed.append(random.uniform(0, 1))
+
 
     @staticmethod
     def getParameterDefinition():
@@ -554,7 +542,6 @@ class RandomPendulums(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("num_pendulums", [20, 1, 300, 1]),
                 ("dim", [1, 0, 1, 0.01]),
             ])
@@ -563,13 +550,12 @@ class RandomPendulums(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['num_pendulums'][0] = self.num_pendulums
         definition['parameters']['dim'][0] = self.dim
         return definition
 
     def createBlob(self, spread, location):
-        blobArray = np.zeros(self.num_pixels)
+        blobArray = np.zeros(self._num_pixels)
         for i in range(-spread, spread + 1):
             blobArray[location + i] = math.sin((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
@@ -589,6 +575,18 @@ class RandomPendulums(Effect):
     def numOutputChannels(self):
         return 1
 
+    async def update(self, dt):
+        await super().update(dt)
+        if len(self._spread) == 0:
+            for i in range(self.num_pendulums):
+                self._spread.append(random.randint(2, 10))
+                self._location.append(random.randint(0, self._num_pixels - self._spread[i] - 1))
+                self._displacement.append(random.randint(5, 50))
+                self._heightactivator.append(random.choice([True, False]))
+                self._lightflip.append(random.choice([True, False]))
+                self._offset.append(random.uniform(0, 6.5))
+                self._swingspeed.append(random.uniform(0, 1))
+
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
@@ -596,9 +594,9 @@ class RandomPendulums(Effect):
             color = self._inputBuffer[0]
         else:
             # default: all white
-            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
 
-        self._output = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
+        self._output = np.zeros(self._num_pixels) * np.array([[0.0], [0.0], [0.0]])
         for i in range(self.num_pendulums):
             if self._heightactivator[i] is True:
                 if self._lightflip[i] is True:
@@ -617,8 +615,8 @@ class RandomPendulums(Effect):
 
 
 class StaticBlob(Effect):
-    def __init__(self, num_pixels, spread=50, location=150):
-        self.num_pixels = num_pixels
+    def __init__(self, spread=50, location=150):
+        
         self.spread = spread
         self.location = location
         self.__initstate__()
@@ -633,7 +631,6 @@ class StaticBlob(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("location", [150, 0, 300, 1]),
                 ("spread", [50, 1, 300, 1]),
             ])
@@ -642,13 +639,12 @@ class StaticBlob(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['location'][0] = self.location
         definition['parameters']['spread'][0] = self.spread
         return definition
 
     def createBlob(self, spread, location):
-        blobArray = np.zeros(self.num_pixels)
+        blobArray = np.zeros(self._num_pixels)
         for i in range(-spread, spread + 1):
             blobArray[location + i] = math.sin((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
@@ -666,7 +662,7 @@ class StaticBlob(Effect):
             color = self._inputBuffer[0]
         else:
             # default: all white
-            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
 
         self._output = np.multiply(color, self.createBlob(self.spread, self.location) * np.array([[1.0], [1.0], [1.0]]))
 
@@ -678,29 +674,21 @@ class GenerateWaves(Effect):
 
     def __init__(
             self,
-            num_pixels,
             wavemode=wave_mode_default,
             period=20,
             scale=1,
     ):
-        self.num_pixels = num_pixels
+        
         self.period = period
         self.scale = scale
-        self.wavemode = wavemode
-        self._wavearray = np.zeros(self.num_pixels)
-        self._outputarray = []
+        self.wavemode = wavemode 
         self.__initstate__()
 
     def __initstate__(self):
         # state
-        if self.wavemode == 'sin':
-            self._wavearray = self.createSin(self.period, self.scale)
-        elif self.wavemode == 'sawtooth':
-            self._wavearray = self.createSawtooth(self.period, self.scale)
-        elif self.wavemode == 'sawtooth_reversed':
-            self._wavearray = self.createSawtoothReversed(self.period, self.scale)
-        elif self.wavemode == 'square':
-            self._wavearray = self.createSquare(self.period, self.scale)
+        self._wavearray = None
+        self._outputarray = []
+
         super(GenerateWaves, self).__initstate__()
 
     @staticmethod
@@ -709,7 +697,6 @@ class GenerateWaves(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("period", [20, 1, 300, 1]),
                 ("scale", [1, 0.01, 1, 0.01]),
                 ("wavemode", wave_modes),
@@ -719,30 +706,29 @@ class GenerateWaves(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['period'][0] = self.period
         definition['parameters']['scale'][0] = self.scale
         definition['parameters']['wavemode'] = [self.wavemode] + [x for x in wave_modes if x != self.wavemode]
         return definition
 
     def createSin(self, period, scale):
-        outputarray = np.zeros(self.num_pixels)
-        for i in range(0, self.num_pixels):
+        outputarray = np.zeros(self._num_pixels)
+        for i in range(0, self._num_pixels):
             outputarray[i] = 0.5 * scale - math.sin(math.pi / self.period * i) * 0.5 * scale
         return outputarray
 
     def createSawtooth(self, period, scale):
-        outputarray = np.linspace(0, self.num_pixels, self.num_pixels)
+        outputarray = np.linspace(0, self._num_pixels, self._num_pixels)
         outputarray = 0.5 * scale - signal.sawtooth(outputarray * math.pi / self.period, width=1) * 0.5 * scale
         return outputarray
 
     def createSawtoothReversed(self, period, scale):
-        outputarray = np.linspace(0, self.num_pixels, self.num_pixels)
+        outputarray = np.linspace(0, self._num_pixels, self._num_pixels)
         outputarray = 0.5 * scale - signal.sawtooth(outputarray * math.pi / self.period, width=0) * 0.5 * scale
         return outputarray
 
     def createSquare(self, period, scale):
-        outputarray = np.linspace(0, self.num_pixels, self.num_pixels)
+        outputarray = np.linspace(0, self._num_pixels, self._num_pixels)
         outputarray = 0.5 * scale - signal.square(outputarray * math.pi / self.period) * 0.5 * scale
         return outputarray
 
@@ -752,11 +738,23 @@ class GenerateWaves(Effect):
     def numOutputChannels(self):
         return 1
 
+    async def update(self, dt):
+        await super().update(dt)
+        if self._wavearray is None or len(self._wavearray) != self._num_pixels:
+            if self.wavemode == 'sin':
+                self._wavearray = self.createSin(self.period, self.scale)
+            elif self.wavemode == 'sawtooth':
+                self._wavearray = self.createSawtooth(self.period, self.scale)
+            elif self.wavemode == 'sawtooth_reversed':
+                self._wavearray = self.createSawtoothReversed(self.period, self.scale)
+            elif self.wavemode == 'square':
+                self._wavearray = self.createSquare(self.period, self.scale)
+
     def process(self):
         if self._outputBuffer is not None:
             color = self._inputBuffer[0]
             if color is None:
-                color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+                color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
 
             self._output = np.multiply(color, self._wavearray * np.array([[1.0], [1.0], [1.0]]))
 
@@ -768,12 +766,11 @@ class Sorting(Effect):
 
     def __init__(
             self,
-            num_pixels,
             sortby=sortbydefault,
             reversed=False,
             looping=True,
     ):
-        self.num_pixels = num_pixels
+        
         self.sortby = sortby
         self.reversed = reversed
         self.looping = looping
@@ -791,7 +788,6 @@ class Sorting(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("sortby", sortby),
                 ("reversed", False),
                 ("looping", True)
@@ -801,15 +797,14 @@ class Sorting(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['sortby'] = [self.sortby] + [x for x in sortby if x != self.sortby]
         definition['parameters']['reversed'] = self.reversed
         definition['parameters']['looping'] = self.looping
         return definition
 
     def disorder(self):
-        self._output = np.ones(self.num_pixels) * np.array([[1.0], [1.0], [1.0]])
-        for i in range(self.num_pixels):
+        self._output = np.ones(self._num_pixels) * np.array([[1.0], [1.0], [1.0]])
+        for i in range(self._num_pixels):
             for j in range(len(self._output)):
                 self._output[j][i] = random.randint(0.0, 255.0)
         return self._output

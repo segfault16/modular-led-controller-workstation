@@ -36,7 +36,8 @@ class LEDController:
         device.show(pixels)
     """
 
-    def __init__(self, brightness=1.0):
+    def __init__(self, num_pixels, brightness=1.0):
+        self.num_pixels = num_pixels
         self.brightness = brightness
 
     def setBrightness(self, value):
@@ -94,7 +95,8 @@ class LEDController:
 
 
 class ESP8266(LEDController):
-    def __init__(self, ip='192.168.0.150', port=7777):
+    def __init__(self, num_pixels, ip='192.168.0.150', port=7777):
+        super().__init__(num_pixels)
         """Initialize object for communicating with as ESP8266
 
         Parameters
@@ -131,7 +133,8 @@ class ESP8266(LEDController):
 
 
 class FadeCandy(LEDController):
-    def __init__(self, server='localhost:7890'):
+    def __init__(self, num_pixels, server='localhost:7890'):
+        super().__init__(num_pixels)
         """Initializes object for communicating with a FadeCandy device
 
         Parameters

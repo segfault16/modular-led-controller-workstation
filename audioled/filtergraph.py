@@ -125,6 +125,9 @@ class FilterGraph(Updateable):
         self._outputNode = None
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
+        if self._outputNode is None:
+            # Pass the update, since no num_pixels can be provided to the effects
+            return
         if self.asyncUpdate:
             time = timer()
             # gather all async updates
@@ -154,6 +157,10 @@ class FilterGraph(Updateable):
 
     def process(self):
         time = None
+
+        if self._outputNode is None:
+            # Pass the process, since no num_pixels can be provided to the effects
+            return
 
         for node in self._processOrder:
             try:
@@ -281,50 +288,58 @@ class FilterGraph(Updateable):
     def _updateProcessOrder(self):
         # reset
         self._processOrder = []
-        # find nodes without inputs
-        allNodes = self._filterNodes.copy()
-        for con in self._filterConnections:
-            if allNodes.count(con.toNode) > 0:
-                allNodes.remove(con.toNode)
 
-        # Add those nodes first
-        for node in allNodes:
-            self._processOrder.append(node)
+        if self._outputNode is None:
+            print("No output node")
+            return
 
-        # print("{} of {} nodes without inputs processed".format(len(self._processOrder), len(self._filterNodes)))
+        print("Updating process order")
+        
+        unprocessedNodes = self._filterNodes.copy()
+        self._processOrder.append(self._outputNode)
+        unprocessedNodes.remove(self._outputNode)
 
-        # Process others
-        connectionsToProcess = self._filterConnections.copy()
-        while len(connectionsToProcess) > 0:
-            nodesBefore = len(self._processOrder)
-            # find nodes with connections only relying on nodes already in chain
-            candidates = self._filterNodes.copy()
-            for node in self._processOrder:
-                candidates.remove(node)
+        fatalError = False
+        while not fatalError and len(unprocessedNodes) > 0:
+            sizeBefore = len(unprocessedNodes)
+            for node in unprocessedNodes.copy():
+                # find connections
+                cons = [con for con in self._filterConnections if con.fromNode == node]
+                # check all nodes after this node have been processed
+                satisfied = True
+                for con in cons:
+                    if con.toNode not in self._processOrder:
+                        satisfied = False
+                        continue
+                
+                if len(cons) > 0 and satisfied:
+                    print("Appending {}".format(node.effect))
+                    self._processOrder.append(node)
+                    unprocessedNodes.remove(node)
+            sizeAfter = len(unprocessedNodes)
+            fatalError = sizeAfter == sizeBefore
+        
+        print("{} nodes total, {} nodes have not been processed".format(len(self._processOrder), len(unprocessedNodes)))
 
-            # if we find a connection with anything other than input nodes already processed, those are not candidates
-
-            for con in connectionsToProcess:
-                if self._processOrder.count(con.fromNode) <= 0 and candidates.count(con.toNode) > 0:
-                    candidates.remove(con.toNode)
-
-            # append all candidates
-            for node in candidates:
-                self._processOrder.append(node)
-
-            # update connections to process
-            for con in connectionsToProcess.copy():
-                if self._processOrder.count(con.fromNode) > 0 and self._processOrder.count(con.toNode) > 0:
-                    connectionsToProcess.remove(con)
-
-            # print("{} of {} nodes processed".format(len(self._processOrder), len(self._filterNodes)))
-
-            if len(self._processOrder) == nodesBefore:
-                print("circular graph detected")
-                raise RuntimeError("circular graph detected")
-
-        if len(self._processOrder) != len(self._filterNodes):
-            raise RuntimeError("not all nodes processed")
+        self._processOrder.reverse()
+        
+        # Propagate num pixels
+        for node in reversed(self._processOrder):
+            # find connections to the current node
+            inputConnections = [con for con in self._filterConnections if con.toNode == node]
+            print("{} input connections found for node {}".format(len(inputConnections), node.effect))
+            for con in inputConnections:
+                num_pixels = node.effect.getNumInputPixels(con.toChannel)
+                # find node
+                iNode = con.fromNode
+                # propagate pixels
+                if iNode is not None:
+                    print("setting {} pixels for {}".format(num_pixels, iNode.effect))
+                    iNode.effect.setNumOutputPixels(num_pixels)
+        
+        # Debug output
+        for node in self._processOrder:
+            print("{} with {} pixels".format(node.effect, node.effect._num_pixels))
 
     def __getstate__(self):
         state = {}
@@ -349,3 +364,8 @@ class FilterGraph(Updateable):
             fromChannel = con['from_node_channel']
             toChannel = con['to_node_channel']
             self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
+
+    def propagateNumPixels(self, num_pixels):
+        if self.getLEDOutput() is not None:
+            self.getLEDOutput().effect.setNumOutputPixels(num_pixels)
+            self._updateProcessOrder()

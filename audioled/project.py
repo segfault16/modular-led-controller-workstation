@@ -38,17 +38,24 @@ class Project(Updateable):
         Arguments:
             dt {[float]} -- Time since last update
         """
-        if self.getSlot(self.activeSlotId) is not None:
-            self.getSlot(self.activeSlotId).update(dt, event_loop)
-
+        activeFilterGraph = self.getSlot(self.activeSlotId)
+        if activeFilterGraph is not None:
+            # Propagate num pixels from server configuration
+            if self._device is not None and activeFilterGraph.getLEDOutput() is not None:
+                if self._device.num_pixels != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels():
+                    print("propagating pixels")
+                    activeFilterGraph.propagateNumPixels(self._device.num_pixels)
+                activeFilterGraph.update(dt, event_loop)
+    
     def process(self):
         """Process active FilterGraph
         """
         activeFilterGraph = self.getSlot(self.activeSlotId)
         if activeFilterGraph is not None:
-            activeFilterGraph.process()
             if self._device is not None and activeFilterGraph.getLEDOutput() is not None:
-                self._device.show(activeFilterGraph.getLEDOutput()._outputBuffer[0])
+                activeFilterGraph.process()
+                if activeFilterGraph.getLEDOutput()._outputBuffer[0] is not None:
+                    self._device.show(activeFilterGraph.getLEDOutput()._outputBuffer[0])
 
     def setFiltergraphForSlot(self, slotId, filterGraph):
         print("Set {} for slot {}".format(filterGraph, slotId))

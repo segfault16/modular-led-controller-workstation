@@ -8,7 +8,7 @@ from audioled import effects
 from audioled import input
 
 
-def createMovingLightGraph(N_pixels):
+def createMovingLightGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     audio_in = audio.AudioInput(num_channels=2)
@@ -17,11 +17,10 @@ def createMovingLightGraph(N_pixels):
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    N_pixels = int(N_pixels / 2)
-    color_wheel = colors.ColorWheel(N_pixels)
+    color_wheel = colors.ColorWheel()
     fg.addEffectNode(color_wheel)
 
-    movingLight = audioreactive.MovingLight(num_pixels=N_pixels, fs=audio_in.getSampleRate())
+    movingLight = audioreactive.MovingLight(fs=audio_in.getSampleRate())
     fg.addEffectNode(movingLight)
 
     mirrorLower = effects.Mirror(mirror_lower=True, recursion=0)
@@ -43,7 +42,7 @@ def createMovingLightGraph(N_pixels):
     return fg
 
 
-def createMovingLightsGraph(N_pixels):
+def createMovingLightsGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     audio_in = audio.AudioInput(num_channels=2)
@@ -52,13 +51,12 @@ def createMovingLightsGraph(N_pixels):
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    N_pixels = int(N_pixels / 2)
     # Layer 1
-    color_wheel1 = colors.ColorWheel(N_pixels)
+    color_wheel1 = colors.ColorWheel()
     fg.addEffectNode(color_wheel1)
 
     movingLight1 = audioreactive.MovingLight(
-        N_pixels, audio_in.getSampleRate(), speed=150.0, dim_time=.5, highcut_hz=200)
+        fs=audio_in.getSampleRate(), speed=150.0, dim_time=.5, highcut_hz=200)
     fg.addEffectNode(movingLight1)
 
     afterglow1 = effects.AfterGlow()
@@ -74,11 +72,10 @@ def createMovingLightsGraph(N_pixels):
     fg.addConnection(afterglow1, 0, append1, 1)
 
     # Layer 2
-    color_wheel2 = colors.ColorWheel(N_pixels)
+    color_wheel2 = colors.ColorWheel()
     fg.addEffectNode(color_wheel2)
 
-    movingLight2 = audioreactive.MovingLight(
-        N_pixels, audio_in.getSampleRate(), speed=150.0, dim_time=1.0, highcut_hz=500)
+    movingLight2 = audioreactive.MovingLight(audio_in.getSampleRate(), speed=150.0, dim_time=1.0, highcut_hz=500)
     fg.addEffectNode(movingLight2)
 
     afterglow2 = effects.AfterGlow()
@@ -105,7 +102,7 @@ def createMovingLightsGraph(N_pixels):
     return fg
 
 
-def createSpectrumGraph(N_pixels):
+def createSpectrumGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     audio_in = audio.AudioInput(num_channels=2)
@@ -114,14 +111,13 @@ def createSpectrumGraph(N_pixels):
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    N_pixels = int(N_pixels / 2)
-    color_wheel = colors.ColorWheel(N_pixels)
+    color_wheel = colors.ColorWheel()
     fg.addEffectNode(color_wheel)
 
-    color_wheel2 = colors.ColorWheel(N_pixels, cycle_time=15.0)
+    color_wheel2 = colors.ColorWheel(cycle_time=15.0)
     fg.addEffectNode(color_wheel2)
 
-    spectrum = audioreactive.Spectrum(num_pixels=N_pixels, fs=audio_in.getSampleRate(), chunk_rate=60)
+    spectrum = audioreactive.Spectrum(fs=audio_in.getSampleRate(), chunk_rate=60)
     fg.addEffectNode(spectrum)
 
     append = effects.Append(2, flip0=True)
@@ -141,7 +137,7 @@ def createSpectrumGraph(N_pixels):
     return fg
 
 
-def createVUPeakGraph(N_pixels):
+def createVUPeakGraph():
 
     fg = filtergraph.FilterGraph(recordTimings=True)
 
@@ -151,20 +147,19 @@ def createVUPeakGraph(N_pixels):
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    N_pixels = int(N_pixels / 2)
-    color_wheel = colors.ColorWheel(N_pixels)
+    color_wheel = colors.ColorWheel()
     fg.addEffectNode(color_wheel)
 
-    color_wheel2 = colors.ColorWheel(N_pixels, cycle_time=5.0)
+    color_wheel2 = colors.ColorWheel(cycle_time=5.0)
     fg.addEffectNode(color_wheel2)
 
-    interpCol = colors.InterpolateHSV(N_pixels)
+    interpCol = colors.InterpolateHSV()
     fg.addEffectNode(interpCol)
 
-    vu_peak = audioreactive.VUMeterPeak(N_pixels)
+    vu_peak = audioreactive.VUMeterPeak()
     fg.addEffectNode(vu_peak)
 
-    vu_peak_R = audioreactive.VUMeterPeak(N_pixels)
+    vu_peak_R = audioreactive.VUMeterPeak()
     fg.addEffectNode(vu_peak_R)
 
     append = effects.Append(2, flip1=True)
@@ -188,17 +183,17 @@ def createVUPeakGraph(N_pixels):
     return fg
 
 
-def createSwimmingPoolGraph(N_pixels):
+def createSwimmingPoolGraph():
 
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    color = colors.StaticRGBColor(N_pixels, 55.0, 150.0, 236.0)
+    color = colors.StaticRGBColor(55.0, 150.0, 236.0)
     fg.addEffectNode(color)
 
-    SwimmingPool = generative.SwimmingPool(N_pixels)
+    SwimmingPool = generative.SwimmingPool()
     fg.addEffectNode(SwimmingPool)
 
     fg.addConnection(color, 0, SwimmingPool, 0)
@@ -206,45 +201,45 @@ def createSwimmingPoolGraph(N_pixels):
     return fg
 
 
-def createDefenceGraph(N_pixels):
+def createDefenceGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    Defence = generative.DefenceMode(N_pixels)
+    Defence = generative.DefenceMode()
     fg.addEffectNode(Defence)
 
     fg.addConnection(Defence, 0, led_out, 0)
     return fg
 
 
-def createKeyboardGraph(N_pixels):
+def createKeyboardGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    PKeyboard = generative.MidiKeyboard(N_pixels)
+    PKeyboard = generative.MidiKeyboard()
     fg.addEffectNode(PKeyboard)
 
     fg.addConnection(PKeyboard, 0, led_out, 0)
     return fg
 
 
-def createKeyboardSpringGraph(N_pixels):
+def createKeyboardSpringGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    PKeyboard = generative.MidiKeyboard(N_pixels)
+    PKeyboard = generative.MidiKeyboard()
     fg.addEffectNode(PKeyboard)
 
-    color_wheel = colors.ColorWheel(N_pixels)
+    color_wheel = colors.ColorWheel()
     fg.addEffectNode(color_wheel)
 
-    springs = effects.SpringCombine(N_pixels)
+    springs = effects.SpringCombine()
     fg.addEffectNode(springs)
 
     fg.addConnection(PKeyboard, 0, springs, 0)
@@ -255,98 +250,98 @@ def createKeyboardSpringGraph(N_pixels):
     return fg
 
 
-def createProxyServerGraph(N_pixels):
+def createProxyServerGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    candyIn = input.CandyServer(N_pixels)
+    candyIn = input.CandyServer()
     fg.addEffectNode(candyIn)
 
     fg.addConnection(candyIn, 0, led_out, 0)
     return fg
 
 
-def createBreathingGraph(N_pixels):
+def createBreathingGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    Breathing = generative.Breathing(N_pixels)
+    Breathing = generative.Breathing()
     fg.addEffectNode(Breathing)
 
     fg.addConnection(Breathing, 0, led_out, 0)
     return fg
 
 
-def createHeartbeatGraph(N_pixels):
+def createHeartbeatGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    Heartbeat = generative.Heartbeat(N_pixels)
+    Heartbeat = generative.Heartbeat()
     fg.addEffectNode(Heartbeat)
 
     fg.addConnection(Heartbeat, 0, led_out, 0)
     return fg
 
 
-def createFallingStarsGraph(N_pixels):
+def createFallingStarsGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    FallingStars = generative.FallingStars(N_pixels)
+    FallingStars = generative.FallingStars()
     fg.addEffectNode(FallingStars)
 
     fg.addConnection(FallingStars, 0, led_out, 0)
     return fg
 
 
-def createPendulumGraph(N_pixels):
+def createPendulumGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    Pendulum = generative.Pendulum(N_pixels)
+    Pendulum = generative.Pendulum()
     fg.addEffectNode(Pendulum)
 
     fg.addConnection(Pendulum, 0, led_out, 0)
     return fg
 
 
-def createRPendulumGraph(N_pixels):
+def createRPendulumGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    RPendulum = generative.RandomPendulums(N_pixels)
+    RPendulum = generative.RandomPendulums()
     fg.addEffectNode(RPendulum)
 
     fg.addConnection(RPendulum, 0, led_out, 0)
     return fg
 
 
-def createTestBlobGraph(N_pixels):
+def createTestBlobGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    TestBlob = generative.StaticBlob(N_pixels)
+    TestBlob = generative.StaticBlob()
     fg.addEffectNode(TestBlob)
 
     fg.addConnection(TestBlob, 0, led_out, 0)
     return fg
 
 
-def createBonfireGraph(N_pixels):
+def createBonfireGraph():
 
     fg = filtergraph.FilterGraph(recordTimings=True)
 
@@ -356,10 +351,10 @@ def createBonfireGraph(N_pixels):
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    bonfire = audioreactive.Bonfire(N_pixels, fs=audio_in.getSampleRate())
+    bonfire = audioreactive.Bonfire(fs=audio_in.getSampleRate())
     fg.addEffectNode(bonfire)
 
-    testblob = generative.StaticBlob(N_pixels)
+    testblob = generative.StaticBlob()
     fg.addEffectNode(testblob)
 
     fg.addConnection(testblob, 0, bonfire, 1)
@@ -369,26 +364,26 @@ def createBonfireGraph(N_pixels):
     return fg
 
 
-def createGenerateWavesGraph(N_pixels):
+def createGenerateWavesGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    GenerateWaves = generative.GenerateWaves(N_pixels, wavemode='square')
+    GenerateWaves = generative.GenerateWaves(wavemode='square')
     fg.addEffectNode(GenerateWaves)
 
     fg.addConnection(GenerateWaves, 0, led_out, 0)
     return fg
 
 
-def createSortingGraph(N_pixels):
+def createSortingGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    Sorting = generative.Sorting(N_pixels)
+    Sorting = generative.Sorting()
     fg.addEffectNode(Sorting)
 
     fg.addConnection(Sorting, 0, led_out, 0)

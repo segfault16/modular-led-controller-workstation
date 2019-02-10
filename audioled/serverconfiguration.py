@@ -51,8 +51,8 @@ class ServerConfiguration:
             # fg = configs.createMovingLightGraph(num_pixels, device)
             # fg = configs.createMovingLightsGraph(num_pixels, device)
             # fg = configs.createVUPeakGraph(num_pixels, device)
-            initial = configs.createSwimmingPoolGraph(self.getConfiguration(CONFIG_NUM_PIXELS))
-            second = configs.createDefenceGraph(self.getConfiguration(CONFIG_NUM_PIXELS))
+            initial = configs.createSwimmingPoolGraph()
+            second = configs.createDefenceGraph()
             # fg = configs.createKeyboardGraph(num_pixels, device)
 
             proj.setFiltergraphForSlot(12, initial)
@@ -121,7 +121,7 @@ class ServerConfiguration:
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
             device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS))
         elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
-            device = devices.FadeCandy(self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
+            device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         return device
