@@ -91,6 +91,9 @@ class SwimmingPool(Effect):
         if self._pixel_state is None or np.size(self._pixel_state, 1) != self._num_pixels:
             self._pixel_state = np.zeros(self._num_pixels) * np.array([[0.0], [0.0], [0.0]])
             self._output = np.copy(self._pixel_state)
+            self._Wave = None
+            self._WaveSpecSpeed = None
+            
         if self._Wave is None or self._WaveSpecSpeed is None:
             self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.scale, self.wavespread_low,
                                                             self.wavespread_high, self.max_speed)
@@ -410,7 +413,7 @@ class FallingStars(Effect):
             for j in range(0, thickness):
                 index = spawnSpot[i] + j
                 if index < self._num_pixels:
-                    oneStarArray[spawnSpot[i] + j] = math.exp(-(100 / dim_speed) * (self._t - t0[i]))
+                    oneStarArray[index] = math.exp(-(100 / dim_speed) * (self._t - t0[i]))
             controlArray.append(oneStarArray)
         return controlArray
 
