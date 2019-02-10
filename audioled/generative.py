@@ -761,9 +761,9 @@ class GenerateWaves(Effect):
             if color is None:
                 color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
 
-            self._output = np.multiply(color, self._wavearray * np.array([[1.0], [1.0], [1.0]]))
+            output = np.multiply(color, self._wavearray * np.array([[1.0], [1.0], [1.0]]))
 
-            self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+            self._outputBuffer[0] = output.clip(0.0, 255.0)
 
 
 class Sorting(Effect):
