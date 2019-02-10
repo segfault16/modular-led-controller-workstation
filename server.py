@@ -390,7 +390,7 @@ def create_app():
                 errors.clear()
 
         except filtergraph.NodeException as ne:
-            print("NodeError: {}".format(ne))
+            print("NodeError in {}: {}".format(ne.node.effect, ne))
             errors.clear()
             errors.append(ne)
         except Exception as e:
