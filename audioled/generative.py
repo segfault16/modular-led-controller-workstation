@@ -778,7 +778,7 @@ class Sorting(Effect):
 
     def __initstate__(self):
         # state
-        self._pixel_state = None
+        self._output = None
         self._sorting_done = True
         super(Sorting, self).__initstate__()
 
@@ -868,6 +868,11 @@ class Sorting(Effect):
 
     def numOutputChannels(self):
         return 1
+
+    async def update(self, dt):
+        if self._output is None or np.size(self._output, 1) != self._num_pixels:
+            self._output = self.disorder()
+            self._sorting_done = False
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
