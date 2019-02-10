@@ -32,7 +32,7 @@ Install dependencies using pip and the conda package manager
 ```
 conda install numpy scipy
 
-pip install pyaudio matplotlib jsonpickle flask mido python-rtmidi
+pip install pyaudio matplotlib jsonpickle flask mido python-rtmidi apscheduler
 ```
 
 ## Visualization Server
@@ -76,7 +76,7 @@ sudo apt-get remove python2.7
 sudo apt-get autoremove
 sudo apt-get update
 sudo apt-get install python3-numpy python3-scipy python3-pyaudio python3-matplotlib python3-jsonpickle libasound-dev libjack-dev
-sudo pip3 install mido python-rtmidi
+sudo pip3 install mido python-rtmidi apscheduler
 ```
 
 ## Install rpi_ws281x

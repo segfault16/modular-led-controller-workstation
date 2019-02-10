@@ -99,7 +99,7 @@ class PerformPage extends Component {
         console.log(this.state)
         const { classes } = this.props;
         return (
-            <React.Fragment>
+            <div id="content-dark">
             <div style={{ "height": "200px", "maxWidth": "1000px" }}>
                 <Piano
                     noteRange={{ first: firstNote, last: lastNote }}
@@ -129,7 +129,7 @@ class PerformPage extends Component {
                 </FormGroup>
             </ExpansionPanelDetails>
             </ExpansionPanel>
-            </React.Fragment>
+            </div>
         )
     }
 }
