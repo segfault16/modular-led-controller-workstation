@@ -3,15 +3,16 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
 import unittest
-import numpy as np
 from audioled import effects
+
 
 class Test_Effects(unittest.TestCase):
     def test_effectDoesntProcessNullBuffers(self):
         effect = effects.Mirror()
         effect.process()
         self.assertIsNone(effect._inputBuffer)
-    # Disabled because implementation has changed and test is out of scope for now 
+
+    # Disabled because implementation has changed and test is out of scope for now
     #
     # def test_mirrorEffect(self):
     #     n=3
@@ -29,7 +30,7 @@ class Test_Effects(unittest.TestCase):
     #     mapped = rgb[mapMask[:,:,0], mapMask[:,:,1]]
     #     print(mapped)
     #     np.testing.assert_array_equal(mapped, rgb)
-        
+
     #     mirror = effects.Mirror(mirror_lower = True, recursion = 0)
     #     mirror._inputBuffer = []
     #     mirror._outputBuffer = []
@@ -39,13 +40,9 @@ class Test_Effects(unittest.TestCase):
     #     mirror.process()
     #     print(mirror._mirrorLower)
     #     np.testing.assert_array_equal(mirror._mirrorLower[0,:,1],np.array([0,1,1,0]))
-        
+
     #     mirror = effects.Mirror(mirror_lower = True,recursion = 1)
     #     np.testing.assert_array_equal(mirror._mirrorLower[0,:,1],np.array([0,1,1,0,0,1,1,0]))
 
-
-
     #     mirror = effects.Mirror(mirror_lower = True,recursion = 2)
     #     np.testing.assert_array_equal(mirror._mirrorLower[0,:,1],np.array([0,1,1,0,0,1,1,0,3, 2, 2, 3, 3, 2, 2, 3]))
-
-

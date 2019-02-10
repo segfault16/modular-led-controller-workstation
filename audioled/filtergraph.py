@@ -239,7 +239,9 @@ class FilterGraph(Updateable):
         node = next(node for node in self._filterNodes if node.effect == effect)
         if node is not None:
             self._filterNodes.remove(node)
-            self._processOrder.remove(node)
+            if node in self._processOrder:
+                self._processOrder.remove(node)
+                self._updateProcessOrder()
 
     def addConnection(self, fromEffect, fromEffectChannel, toEffect, toEffectChannel):
         """Adds a connection between two filters
@@ -320,6 +322,13 @@ class FilterGraph(Updateable):
             fatalError = sizeAfter == sizeBefore
         
         print("{} nodes total, {} nodes have not been processed".format(len(self._processOrder), len(unprocessedNodes)))
+
+        # Check remaining unprocessed nodes for circular connections
+        for node in unprocessedNodes:
+            cons = [con for con in self._filterConnections if con.fromNode == node]
+            for con in cons:
+                if con.toNode in self._processOrder:
+                    raise RuntimeError("Circular connection detected")
 
         self._processOrder.reverse()
         
