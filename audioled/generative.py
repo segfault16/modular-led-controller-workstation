@@ -408,7 +408,9 @@ class FallingStars(Effect):
         for i in range(0, self._starCounter):
             oneStarArray = np.zeros(self._num_pixels)
             for j in range(0, thickness):
-                oneStarArray[spawnSpot[i] + j] = math.exp(-(100 / dim_speed) * (self._t - t0[i]))
+                index = spawnSpot[i] + j
+                if index < self._num_pixels:
+                    oneStarArray[spawnSpot[i] + j] = math.exp(-(100 / dim_speed) * (self._t - t0[i]))
             controlArray.append(oneStarArray)
         return controlArray
 
@@ -418,6 +420,9 @@ class FallingStars(Effect):
             self._spawnflag = False
         outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray)
         return np.sum(outputArray, axis=0)
+
+    async def update(self, dt):
+        await super().update(dt)
 
     def process(self):
         color = self._inputBuffer[0]
@@ -870,6 +875,7 @@ class Sorting(Effect):
         return 1
 
     async def update(self, dt):
+        await super().update(dt)
         if self._output is None or np.size(self._output, 1) != self._num_pixels:
             self._output = self.disorder()
             self._sorting_done = False
