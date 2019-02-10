@@ -49,6 +49,15 @@ class Shift(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "speed": "Speed of the shifting effect.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         definition['parameters']['speed'][0] = self.speed
@@ -128,6 +137,23 @@ class Append(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_channels": "Number of input channels of the effect.",
+                "flip0": "Change pixel direction of input channel 0.",
+                "flip1": "Change pixel direction of input channel 1.",
+                "flip2": "Change pixel direction of input channel 2.",
+                "flip3": "Change pixel direction of input channel 3.",
+                "flip4": "Change pixel direction of input channel 4.",
+                "flip5": "Change pixel direction of input channel 5.",
+                "flip6": "Change pixel direction of input channel 6.",
+                "flip7": "Change pixel direction of input channel 7.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_channels']  # not editable at runtime
@@ -179,6 +205,15 @@ class Combine(Effect):
     def getParameterDefinition():
         definition = {"parameters": OrderedDict([("mode", colors.blend_modes)])}
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "mode": "Color blend mode for combining input channel 0 and input channel 1.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -236,6 +271,15 @@ class AfterGlow(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "glow_time": "Amount of time for the pixels to glow.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -306,10 +350,21 @@ class Mirror(Effect):
             OrderedDict([
                 ("mirror_lower", True),
                 # default, min, max, stepsize
-                ("recursion", [1, 0, 8, 1]),
+                ("recursion", [0, 0, 8, 1]),
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "mirror_lower": "Switch between mirroring the lower or the upper part of input channel 0.",
+                "recursion": "Recursion depth of the mirroring effect. If recursion is set to 1, "\
+                    "the lower and upper half of the strip are mirrored again at their centers."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -467,6 +522,22 @@ class SpringCombine(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "dampening": "Dampening factory of the springs.",
+                "tension": "Tension of the springs.",
+                "spread": "Interaction between neighboring springs.",
+                "scale_low": "Scaling factor for input channel 1.",
+                "scale_mid": "Scaling factor for input channel 2.",
+                "scale_high": "Scaling factor for input channel 3.",
+                "speed": "Controls the speed of the spring simulation.",
+                "trigger_threshold": "Above this threshold springs are actuated based on brightness of input channel 0."
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_pixels']
@@ -565,6 +636,17 @@ class Swing(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "displacement": "Defines maximum amount of pixels that the input is shifted.",
+                "swingspeed": "Speed of the swing."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
