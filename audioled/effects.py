@@ -13,6 +13,12 @@ SHORT_NORMALIZE = 1.0 / 32768.0
 
 
 class Shift(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Shift effect for shifting pixels through the strip."
+
     def __init__(self, speed=100.0):
         self.speed = speed
         self.__initstate__()
@@ -64,6 +70,12 @@ class Shift(Effect):
 
 
 class Append(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Append combines multiple channels into one output."
+
     def __init__(self,
                  num_channels=2,
                  flip0=False,
@@ -147,6 +159,12 @@ class Append(Effect):
 
 
 class Combine(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for blending two channels into one using several color blend modes."
+
     def __init__(self, mode=colors.blend_mode_default):
         self.mode = mode
         self.__initstate__()
@@ -187,9 +205,11 @@ class Combine(Effect):
 
 
 class AfterGlow(Effect):
-    """
-    Effect that
-    """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Afterglow makes pixels hold their value and fade out smoothly."
 
     def __init__(self, glow_time=1.0):
         self.glow_time = glow_time
@@ -256,6 +276,12 @@ class AfterGlow(Effect):
 
 
 class Mirror(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Mirrors the upper or lower half of the input channel."
+
     def __init__(self, mirror_lower=True, recursion=0):
         self.mirror_lower = mirror_lower
         self.recursion = recursion
@@ -382,6 +408,15 @@ class SpringCombine(Effect):
 
     """
 
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Spring simulation effect that interpolates between three inputs based on displacement of the springs. \n"\
+            "The trigger input (channel 0) actuates on the springs (if value exceeds trigger_threshold). \n"\
+            "Depending on the displacement of each spring, the output value is a linear interpolation between:\n"\
+            "- channel 1 and channel 2 if displacement < 0\n"\
+            "- channel 2 and channel 3 if displacement > 0"
+
     def __init__(self,
                  num_pixels,
                  dampening=0.99,
@@ -502,6 +537,11 @@ class Swing(Effect):
     Inputs:
     - 0: Pixels
     """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Makes the pixels shift in both directions like a pendulum."
 
     def __init__(self, num_pixels, displacement=50, swingspeed=1):
         self.num_pixels = num_pixels

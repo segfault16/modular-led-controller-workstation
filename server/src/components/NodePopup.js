@@ -323,9 +323,11 @@ class NodePopup extends React.Component {
                     {effectDescription.length > 0 ? 
                     <React.Fragment>
                     <br/>
-                    <Typography>
-                        {effectDescription}
-                    </Typography>
+                    {effectDescription.split("\n").map(line => {
+                        return <Typography>
+                            {line}
+                        </Typography>
+                    })}
                     </React.Fragment>
                     : null}
                 </div>
