@@ -39,6 +39,7 @@ class Test_FilterGraph(unittest.TestCase):
         ef2 = MockEffect()
         ef3 = MockEffect()
         led = devices.LEDOutput()
+        led.setNumOutputPixels(100)
 
         n1 = fg.addEffectNode(ef1)
 
@@ -50,7 +51,7 @@ class Test_FilterGraph(unittest.TestCase):
         fg.addConnection(ef1, 0, ef2, 0)
         fg.addConnection(ef2, 0, ef3, 0)
         fg.addConnection(ef3, 0, led, 0)
-
+        print(fg._processOrder)
         self.assertTrue(fg._processOrder.index(n1) < fg._processOrder.index(n2))
         self.assertTrue(fg._processOrder.index(n1) < fg._processOrder.index(n3))
         self.assertTrue(fg._processOrder.index(n2) < fg._processOrder.index(n3))
@@ -85,6 +86,7 @@ class Test_FilterGraph(unittest.TestCase):
         fg = filtergraph.FilterGraph()
         ef1 = MockEffect()
         led = devices.LEDOutput()
+        led.setNumOutputPixels(100)
         fg.addEffectNode(ef1)
         fg.addEffectNode(led)
         fg.addConnection(ef1, 0, led, 0)
@@ -96,6 +98,7 @@ class Test_FilterGraph(unittest.TestCase):
         fg = filtergraph.FilterGraph()
         ef1 = MockEffect()
         led = devices.LEDOutput()
+        led.setNumOutputPixels(100)
         n1 = fg.addEffectNode(ef1)
         fg.addEffectNode(led)
         fg.addConnection(ef1, 0, led, 0)
@@ -114,6 +117,7 @@ class Test_FilterGraph(unittest.TestCase):
         ef1 = MockEffect('test')
         ef2 = MockEffect()
         led = devices.LEDOutput()
+        led.setNumOutputPixels(100)
 
         n1 = fg.addEffectNode(ef1)
         n2 = fg.addEffectNode(ef2)

@@ -261,6 +261,9 @@ class VisGraph extends React.Component {
                 // manual drag end
                 is_dragging = false
                 this.updateHelpText(null, null)
+              }).catch(err => {
+                console.error(err)
+                this.props.enqueueSnackbar("Error creating connection", { variant: 'error' })
               });
             } else {
               console.log("could not add edge")
@@ -734,11 +737,13 @@ class VisGraph extends React.Component {
 
   fetchErrors = async() => fetch('./errors').then(response => response.json()).then(json => {
     // Reset error on nodes
+    var changed = false;
     var nodes = [];
     this.state.graph.nodes.map( node => {
       var newNode = Object.assign({}, node);
       if(newNode.group == 'error') {
         newNode.group = 'ok';
+        changed = true;
       }
       nodes.push(newNode);
     })
@@ -748,11 +753,12 @@ class VisGraph extends React.Component {
         var node = nodes.find(node => node.id === key);
         if (node != null) {
           node.group = 'error';
+          changed = true
         }
         this.props.enqueueSnackbar(json[key], { variant: 'error' })
       }
     }
-    this.state.network.redraw()
+    if(changed) {  
     this.setState(oldState => {
       return {
         graph: {
@@ -761,6 +767,7 @@ class VisGraph extends React.Component {
         },
       }
     })
+  }
     
   }); 
 
