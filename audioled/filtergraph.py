@@ -1,5 +1,8 @@
 import asyncio
 import uuid
+import sys
+import os
+import traceback
 from timeit import default_timer as timer
 
 from audioled import devices
@@ -40,10 +43,18 @@ class Node(object):
         for con in self._incomingConnections:
             self._inputBuffer[con.toChannel] = con.fromNode._outputBuffer[con.fromChannel]
         # process
-        self.effect.process()
+        try:
+            self.effect.process()
+        except Exception as e:
+            traceback.print_exc()
+            raise NodeException("{}".format(e), self, e)
 
     async def update(self, dt):
-        await self.effect.update(dt)
+        try:
+            await self.effect.update(dt)
+        except Exception as e:
+            traceback.print_exc()
+            raise NodeException("{}".format(e), self, e)
 
     def __cleanState__(self, stateDict):
         """
@@ -134,10 +145,8 @@ class FilterGraph(Updateable):
             asyncio.set_event_loop(event_loop)
 
             async def handle_async_exception(node, func, param):
-                try:
-                    await func(param)
-                except Exception as e:
-                    raise NodeException("{}".format(e), node, e)
+                await func(param)
+                
 
             all_tasks = asyncio.gather(
                 *[asyncio.ensure_future(handle_async_exception(node, node.update, dt)) for node in self._processOrder])
@@ -146,14 +155,14 @@ class FilterGraph(Updateable):
             self.updateUpdateTiming("all_async", timer() - time)
         else:
             for node in self._processOrder:
-                try:
-                    if self.recordTimings:
-                        time = timer()
-                    event_loop.run_until_complete(node.update(dt))
-                    if self.recordTimings:
-                        self.updateUpdateTiming(str(node.effect), timer() - time)
-                except Exception as e:
-                    raise NodeException("{}".format(e), node, e)
+                
+                if self.recordTimings:
+                    time = timer()
+                event_loop.run_until_complete(node.update(dt))
+                if self.recordTimings:
+                    self.updateUpdateTiming(str(node.effect), timer() - time)
+                
+                
 
     def process(self):
         time = None
@@ -163,14 +172,13 @@ class FilterGraph(Updateable):
             return
 
         for node in self._processOrder:
-            try:
-                if self.recordTimings:
-                    time = timer()
-                node.process()
-                if self.recordTimings:
-                    self.updateProcessTiming(node, timer() - time)
-            except Exception as e:
-                raise NodeException("{}".format(e), node, e)
+            
+            if self.recordTimings:
+                time = timer()
+            node.process()
+            if self.recordTimings:
+                self.updateProcessTiming(node, timer() - time)
+            
 
     def updateProcessTiming(self, node, timing):
         if node not in self._processTimings:
