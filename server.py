@@ -7,22 +7,24 @@ import importlib
 import inspect
 import json
 import os.path
+from os.path import expanduser
 import threading
 import time
 from timeit import default_timer as timer
+import atexit
 
 import jsonpickle
 import numpy as np
 from flask import Flask, abort, jsonify, request, send_from_directory, redirect
+from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, configs, devices, effects, filtergraph, project
+from audioled import audio, configs, devices, effects, filtergraph, project, serverconfiguration
 
-num_pixels = 300
-device = None
 proj = None
 default_values = {}
 record_timings = False
+serverconfig = None
 
 POOL_TIME = 0.0  # Seconds
 
@@ -47,6 +49,14 @@ count = 0
 def create_app():
     app = Flask(__name__, static_url_path='/')
 
+    def store_configuration():
+        global serverconfig
+        serverconfig.store()
+
+    sched = BackgroundScheduler(daemon=True)
+    sched.add_job(store_configuration, 'interval', seconds=5)
+    sched.start()
+
     def interrupt():
         print('cancelling LED thread')
         global ledThread
@@ -68,14 +78,14 @@ def create_app():
         return send_from_directory('resources', path)
 
     @app.route('/slot/<int:slotId>/nodes', methods=['GET'])
-    def nodes_get(slotId):
+    def slot_slotId_nodes_get(slotId):
         global proj
         fg = proj.getSlot(slotId)
         nodes = [node for node in fg._filterNodes]
         return jsonpickle.encode(nodes)
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['GET'])
-    def node_uid_get(slotId, nodeUid):
+    def slot_slotId_node_uid_get(slotId, nodeUid):
         global proj
         fg = proj.getSlot(slotId)
         try:
@@ -85,7 +95,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['DELETE'])
-    def node_uid_delete(slotId, nodeUid):
+    def slot_slotId_node_uid_delete(slotId, nodeUid):
         global proj
         fg = proj.getSlot(slotId)
         try:
@@ -96,7 +106,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['UPDATE'])
-    def node_uid_update(slotId, nodeUid):
+    def slot_slotId_node_uid_update(slotId, nodeUid):
         global proj
         fg = proj.getSlot(slotId)
         if not request.json:
@@ -111,7 +121,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>/parameter', methods=['GET'])
-    def node_uid_parameter_get(slotId, nodeUid):
+    def slot_slotId_node_uid_parameter_get(slotId, nodeUid):
         global proj
         fg = proj.getSlot(slotId)
         try:
@@ -131,7 +141,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node', methods=['POST'])
-    def node_post(slotId):
+    def slot_slotId_node_post(slotId):
         global proj
         fg = proj.getSlot(slotId)
         if not request.json:
@@ -150,14 +160,14 @@ def create_app():
         return jsonpickle.encode(node)
 
     @app.route('/slot/<int:slotId>/connections', methods=['GET'])
-    def connections_get(slotId):
+    def slot_slotId_connections_get(slotId):
         global proj
         fg = proj.getSlot(slotId)
         connections = [con for con in fg._filterConnections]
         return jsonpickle.encode(connections)
 
     @app.route('/slot/<int:slotId>/connection', methods=['POST'])
-    def connection_post(slotId):
+    def slot_slotId_connection_post(slotId):
         global proj
         fg = proj.getSlot(slotId)
         if not request.json:
@@ -169,7 +179,7 @@ def create_app():
         return jsonpickle.encode(connection)
 
     @app.route('/slot/<int:slotId>/connection/<connectionUid>', methods=['DELETE'])
-    def connection_uid_delete(slotId, connectionUid):
+    def slot_slotId_connection_uid_delete(slotId, connectionUid):
         global proj
         fg = proj.getSlot(slotId)
         try:
@@ -181,19 +191,21 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/configuration', methods=['GET'])
-    def configuration_get(slotId):
+    def slot_slotId_configuration_get(slotId):
         global proj
         fg = proj.getSlot(slotId)
         config = jsonpickle.encode(fg)
         return config
 
     @app.route('/slot/<int:slotId>/configuration', methods=['POST'])
-    def configuration_post(slotId):
+    def slot_slotId_configuration_post(slotId):
         global proj
         if not request.json:
             abort(400)
-        
+
         newGraph = jsonpickle.decode(request.json)
+        if not isinstance(newGraph, filtergraph.FilterGraph):
+            raise RuntimeError("Not a FilterGraph")
         proj.setFiltergraphForSlot(slotId, newGraph)
         return "OK"
 
@@ -294,11 +306,77 @@ def create_app():
         # print("Activating slot {}".format(value))
         proj.activateSlot(value)
         return "OK"
-    
+
     @app.route('/project/activeSlot', methods=['GET'])
     def project_activeSlot_get():
         global proj
         return jsonify({'slot': proj.activeSlotId})
+
+    @app.route('/projects', methods=['GET'])
+    def projects_get():
+        global serverconfig
+        return jsonify(serverconfig.getProjectsMetadata())
+
+    @app.route('/projects', methods=['POST'])
+    def projects_post():
+        global serverconfig
+        if not request.json:
+            abort(400)
+        title = request.json.get('title', '')
+        description = request.json.get('description', '')
+        metadata = serverconfig.createEmptyProject(title, description)
+        return jsonify(metadata)
+
+    @app.route('/projects/import', methods=['POST'])
+    def projects_import_post():
+        global serverconfig
+        if not request.json:
+            abort(400)
+        metadata = serverconfig.importProject(request.json)
+        return jsonify(metadata)
+
+    @app.route('/projects/<uid>/export', methods=['GET'])
+    def projects_project_export(uid):
+        global serverconfig
+        proj = serverconfig.getProject(uid)
+        if proj is not None:
+            print("Exporting project {}".format(uid))
+            return jsonpickle.encode(proj)
+        abort(404)
+
+    @app.route('/projects/<uid>', methods=['DELETE'])
+    def projects_project_delete(uid):
+        global serverconfig
+        serverconfig.deleteProject(uid)
+        return "OK"
+
+    @app.route('/projects/activeProject', methods=['POST'])
+    def projects_activeProject_post():
+        global serverconfig
+        global proj
+        if not request.json:
+            abort(400)
+        uid = request.json['project']
+        print("Activating project {}".format(uid))
+        proj = serverconfig.activateProject(uid)
+        return "OK"
+
+    @app.route('/configuration', methods=['GET'])
+    def configuration_get():
+        global serverconfig
+        return jsonify({
+            'parameters': serverconfig.getConfigurationParameters(),
+            'values': serverconfig.getFullConfiguration()
+        })
+
+    @app.route('/configuration', methods=['UPDATE'])
+    def configuration_put():
+        global serverconfig
+        if not request.json:
+            abort(400)
+        for key, value in request.json.items():
+            serverconfig.setConfiguration(key, value)
+        return jsonify(serverconfig.getFullConfiguration())
 
     @app.route('/remote/brightness', methods=['POST'])
     def remote_brightness_post():
@@ -412,19 +490,26 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Audio Reactive LED Strip Server')
     parser.add_argument(
-        '-N', '--num_pixels', dest='num_pixels', type=int, default=300, help='number of pixels (default: 300)')
+        '-C',
+        '--config_location',
+        dest='config_location',
+        default=None,
+        help='Location of the server configuration to store. Defaults to $HOME/.ledserver.')
+    parser.add_argument(
+        '--no_conf', dest='no_conf', action='store_true', default=False, help="Don't load config from file")
+    parser.add_argument(
+        '--no_store', dest='no_store', action='store_true', default=False, help="Don't save anything to disk")
+    parser.add_argument(
+        '-N', '--num_pixels', dest='num_pixels', type=int, default=None, help='number of pixels (default: 300)')
     parser.add_argument(
         '-D',
         '--device',
         dest='device',
-        default=deviceCandy,
+        default=None,
         choices=[deviceRasp, deviceCandy],
-        help='device to send RGB to')
+        help='device to send RGB to (default: FadeCandy)')
     parser.add_argument(
-        '--device_candy_server',
-        dest='device_candy_server',
-        default='127.0.0.1:7890',
-        help='Server for device FadeCandy')
+        '--device_candy_server', dest='device_candy_server', default=None, help='Server for device FadeCandy')
     parser.add_argument(
         '-A',
         '--audio_device_index',
@@ -441,46 +526,68 @@ if __name__ == '__main__':
         help='Print process timing')
 
     args = parser.parse_args()
-    num_pixels = args.num_pixels
-    # Initialize LED device
-    if args.device == deviceRasp:
-        device = devices.RaspberryPi(num_pixels)
-    elif args.device == deviceCandy:
-        device = devices.FadeCandy(args.device_candy_server)
+    config_location = None
+    if args.config_location is None:
+        config_location = os.path.join(os.path.expanduser("~"), '.ledserver')
+    else:
+        config_location = os.path.join(args.config_location, '.ledserver')
 
-    # Initialize Audio device
+    if args.no_conf:
+        print("Using in-memory configuration")
+        serverconfig = serverconfiguration.ServerConfiguration()
+    else:
+        print("Using configuration from {}".format(config_location))
+        serverconfig = serverconfiguration.PersistentConfiguration(config_location, args.no_store)
+
+    # Update num pixels
+    if args.num_pixels is not None:
+        num_pixels = args.num_pixels
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_NUM_PIXELS, num_pixels)
+
+    # Update LED device
+    if args.device is not None:
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE, args.device)
+
+    if args.device_candy_server is not None:
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER, args.device_candy_server)
+
+    # Update Audio device
     if args.audio_device_index is not None:
-        audio.AudioInput.overrideDeviceIndex = args.audio_device_index
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX, args.audio_device_index)
 
     if args.process_timing:
         record_timings = True
 
+    # Adjust from configuration
+
+    # LED Device
+    device = None
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
+        device = devices.RaspberryPi(serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
+    elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
+        device = devices.FadeCandy(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
+    else:
+        print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
+        exit
+
+    # Audio
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
+        audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(
+            serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
+
     # strand test
-    strandTest(device, num_pixels)
+    strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # print audio information
     print("The following audio devices are available:")
     audio.print_audio_devices()
 
     # Initialize project
-    proj = project.Project(device)
-
-    # Initialize filtergraph
-    # fg = configs.createSpectrumGraph(num_pixels, device)
-    # fg = configs.createMovingLightGraph(num_pixels, device)
-    # fg = configs.createMovingLightsGraph(num_pixels, device)
-    # fg = configs.createVUPeakGraph(num_pixels, device)
-    initial = configs.createSwimmingPoolGraph(num_pixels)
-    second = configs.createDefenceGraph(num_pixels)
-    # fg = configs.createKeyboardGraph(num_pixels, device)
-
-    proj.setFiltergraphForSlot(12, initial)
-    proj.setFiltergraphForSlot(13, second)
-    proj.activateSlot(12)
+    proj = serverconfig.getActiveProjectOrDefault()
 
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
-    default_values['num_pixels'] = num_pixels
+    default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
 
     app = create_app()
     app.run(debug=False, host="0.0.0.0")

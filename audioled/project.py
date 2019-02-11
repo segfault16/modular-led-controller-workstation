@@ -5,9 +5,11 @@ from audioled.filtergraph import (FilterGraph, Updateable)
 
 class Project(Updateable):
 
-    def __init__(self, device=None):
+    def __init__(self, name='Empty project', description='', device=None):
         self.slots = [None for i in range(127)]
         self.activeSlotId = 0
+        self.name = name
+        self.description = description
         self._device = device
 
     def __cleanState__(self, stateDict):
@@ -38,7 +40,7 @@ class Project(Updateable):
         """
         if self.getSlot(self.activeSlotId) is not None:
             self.getSlot(self.activeSlotId).update(dt, event_loop)
-    
+
     def process(self):
         """Process active FilterGraph
         """
@@ -52,7 +54,7 @@ class Project(Updateable):
         print("Set {} for slot {}".format(filterGraph, slotId))
         if isinstance(filterGraph, FilterGraph):
             self.slots[slotId] = filterGraph
-    
+
     def activateSlot(self, slotId):
         self.activeSlotId = slotId
         print("Activate slot {} with {}".format(slotId, self.slots[slotId]))

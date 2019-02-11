@@ -11,9 +11,10 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Divider from '@material-ui/core/Divider';
 import FilterGraphService from "../services/FilterGraphService";
 import Typography from '@material-ui/core/Typography';
-import Tooltip from '@material-ui/core/Tooltip'
 
 import './NodePopup.css'
+
+import Configurator from './Configurator';
 
 const styles = theme => ({
     paper: {
@@ -175,110 +176,6 @@ class NodePopup extends React.Component {
         this.updateNodeArgs(effect);
     }
 
-    domCreateParameterDropdown = (parameters, values, parameterName) => {
-        let items = parameters[parameterName].map((option, idx) => {
-            return (
-                <MenuItem key={idx} value={option}>{option}</MenuItem>
-            )
-        })
-        return <React.Fragment>
-
-            <Grid item xs={7} >
-                <InputLabel htmlFor={parameterName} />
-                <Select
-                    value={values[parameterName]}
-                    fullWidth={true}
-                    onChange={(e, val) => this.handleParameterChange(val.props.value, parameterName)}
-                    inputProps={{
-                        name: parameterName,
-                        id: parameterName,
-                    }}>
-                    {items}
-                </Select>
-            </Grid>
-            <Grid item xs={2}>
-            </Grid>
-        </React.Fragment>
-    }
-
-    domCreateParameterSlider = (parameters, values, parameterName) => {
-        return <React.Fragment>
-            <Grid item xs={7}> 
-                <Slider 
-                    id={parameterName} 
-                    value={values[parameterName]} 
-                    min={parameters[parameterName][1]} 
-                    max={parameters[parameterName][2]} 
-                    step={parameters[parameterName][3]} 
-                    onChange={(e, val) => this.handleParameterChange(val, parameterName)} />
-            </Grid>
-            <Grid item xs={2}>
-            <Typography>
-                {values[parameterName] !== null ? values[parameterName].toFixed(Math.abs(Math.log10(parameters[parameterName][3]))) : null}
-            </Typography>
-            </Grid>
-        </React.Fragment>
-    }
-
-    domCreateParameterCheckbox = (parameters, values, parameterName) => {
-        return <React.Fragment>
-            <Grid container xs={7} justify="flex-end">
-                <Checkbox
-                    checked={values[parameterName]}
-                    onChange={(e, val) => this.handleParameterChange(val, parameterName)}
-                    value={parameterName}
-                    color="primary"
-                />
-            </Grid>
-            <Grid item xs={2}>
-            <Typography>
-                {values[parameterName]}
-            </Typography>
-            </Grid>
-        </React.Fragment>
-    }
-
-    domCreateConfigList = (parameters, values, parameterHelp) => {
-        if (parameters) {
-            return Object.keys(parameters).map((effectName, index) => {
-                let control;
-                if (parameters[effectName] instanceof Array) {
-                    if (parameters[effectName].some(isNaN)) {
-                        // Array of non-numbers -> DropDown
-                        control = this.domCreateParameterDropdown(parameters, values, effectName);
-
-                    } else if (!parameters[effectName].some(isNaN)) {
-                        // Array of numbers -> Slider
-                        control = this.domCreateParameterSlider(parameters, values, effectName);
-                    }
-                } else if (typeof (parameters[effectName]) === "boolean") {
-                    // Simple boolean -> Checkbox
-                    control = this.domCreateParameterCheckbox(parameters, values, effectName);
-                }
-                if (control) {
-                    var helpText = (parameterHelp != null && effectName in parameterHelp) ? parameterHelp[effectName] : ""
-                    return (
-                        <Tooltip title={helpText}>
-                        <div>
-                        <Grid key={index} container spacing={24}   alignItems="center" justify="center">
-                            <Grid item xs={3} >
-                            <Typography>
-                                {effectName}:
-                            </Typography>
-                            </Grid>
-                            {control}
-                        </Grid>
-                        </div>
-                        </Tooltip>
-                    )
-                } else {
-                    console.error("undefined control for data", parameters[effectName])
-                    return null
-                }
-            });
-        }
-    }
-
     domCreateEffectDropdown = () => {
         if (this.state.mode === 'add' && this.state.effects.length > 0) {
             let items = this.state.effects.map((effect, id) => {
@@ -310,9 +207,7 @@ class NodePopup extends React.Component {
         let values = this.state.config.values;
         let parameterHelp = this.state.config.parameterHelp;
         let effectDescription = this.state.config.description;
-        let configList = this.domCreateConfigList(parameters, values, parameterHelp);
         let effectDropdown = this.domCreateEffectDropdown();
-
         return (
             <div className={classes.paper}>
                 <h2 id="node-operation">{this.state.mode === "edit" ? "Edit Node" : "Add Node"}</h2>
@@ -333,7 +228,11 @@ class NodePopup extends React.Component {
                 </div>
                 <div id="node-grid">
                     <h3>Parameters:</h3>
-                    {configList}
+                    <Configurator 
+                        onChange={(parameter, value) => this.handleParameterChange(value, parameter)}
+                        parameters={parameters}
+                        values={values}
+                        parameterHelp={parameterHelp}/>
                 </div>
                 <h3></h3>
                 <Divider className={classes.divider} />
