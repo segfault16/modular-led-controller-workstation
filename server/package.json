@@ -38,6 +38,7 @@
     "@material-ui/lab": "^3.0.0-alpha.29",
     "@types/file-saver": "^2.0.0",
     "file-saver": "^2.0.0",
+    "notistack": "^0.4.2",
     "npm": "^6.7.0",
     "react": "^16.7.0",
     "react-dom": "^16.7.0",
