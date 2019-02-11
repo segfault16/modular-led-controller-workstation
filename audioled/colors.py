@@ -185,6 +185,21 @@ class ColorWheel(Effect):
         definition['parameters']['wiggle_amplitude'][0] = self.wiggle_amplitude
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "cycle_time": "Amount of time the Color Wheel needs to cycle through the hue values of the color space.",
+                "offset": "Offset of the Color Wheel.",
+                "luminocity": "Luminocity of the color space.",
+                "saturation": "Color saturation.",
+                "wiggle_time": "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. This parameter controls the frequency of the wiggle.",
+                "wiggle_amplitude": "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. This parameter controls the amplitude of the wiggle.",
+            }
+        }
+        return help
+
     async def update(self, dt):
         await super(ColorWheel, self).update(dt)
         self._color = self.get_color_array(self._t, self.num_pixels)
@@ -290,6 +305,12 @@ class ColorDimEffect(Effect):
 
 
 class InterpolateRGB(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "RGB interpolation between two color inputs."
+
     def __init__(self, num_pixels):
         self.num_pixels = num_pixels
         self.__initstate__()
@@ -314,6 +335,12 @@ class InterpolateRGB(Effect):
 
 
 class InterpolateHSV(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "HSV interpolation between two color inputs."
+
     def __init__(self, num_pixels):
         self.num_pixels = num_pixels
         self.__initstate__()
