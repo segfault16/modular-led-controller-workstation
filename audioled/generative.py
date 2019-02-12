@@ -500,7 +500,7 @@ class Pendulum(Effect):
         location = int(location_rel * self._num_pixels)
         for i in range(-spread, spread + 1):
             if (location + i) >= 0 and (location + i) < self._num_pixels:
-                blobArray[location + i] = math.sin((math.pi / spread) * i)
+                blobArray[location + i] = math.cos((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
 
     def moveBlob(self, blobArray, displacement_rel, swingspeed):
