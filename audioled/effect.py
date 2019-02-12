@@ -16,8 +16,14 @@ class Effect(object):
         self.__initstate__()
 
     def __initstate__(self):
-        self._t = 0.0
-        self._num_pixels = None
+        try:
+            self._t
+        except AttributeError:
+            self._t = 0
+        try:
+            self._num_pixels
+        except AttributeError:
+            self._num_pixels = None
         try:
             self._inputBuffer
         except AttributeError:
