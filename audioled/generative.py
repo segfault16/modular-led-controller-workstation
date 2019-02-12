@@ -496,7 +496,7 @@ class Pendulum(Effect):
 
     def createBlob(self, spread_rel, location_rel):
         blobArray = np.zeros(self._num_pixels)
-        spread = int(spread_rel * self._num_pixels)
+        spread = max(int(spread_rel * self._num_pixels), 1)
         location = int(location_rel * self._num_pixels)
         for i in range(-spread, spread + 1):
             if (location + i) >= 0 and (location + i) < self._num_pixels:
@@ -576,19 +576,22 @@ class RandomPendulums(Effect):
         definition['parameters']['dim'][0] = self.dim
         return definition
 
-    def createBlob(self, spread, location):
+    def createBlob(self, spread_rel, location_rel):
         blobArray = np.zeros(self._num_pixels)
+        spread = max(int(spread_rel * self._num_pixels), 1)
+        location = int(location_rel * self._num_pixels)
         for i in range(-spread, spread + 1):
-            blobArray[location + i] = math.sin((math.pi / spread) * i)
+            if (location + i) >= 0 and (location + i) < self._num_pixels:
+                blobArray[location + i] = math.cos((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
 
-    def moveBlob(self, blobArray, displacement, offset, swingspeed):
-        config = displacement * math.sin((self._t * swingspeed) + offset)
+    def moveBlob(self, blobArray, displacement_rel, offset_rel, swingspeed):
+        config = displacement_rel * self._num_pixels * math.sin((self._t * swingspeed) + offset_rel * self._num_pixels)
         outputArray = sp.ndimage.interpolation.shift(blobArray, config, mode='wrap', prefilter=True)
         return outputArray.clip(0.0, 255.0)
 
-    def controlBlobs(self, spread, location, displacement, offset, swingspeed):
-        output = self.moveBlob(self.createBlob(spread, location), displacement, offset, swingspeed)
+    def controlBlobs(self, spread_rel, location_rel, displacement_rel, offset_rel, swingspeed):
+        output = self.moveBlob(self.createBlob(spread_rel, location_rel), displacement_rel, offset_rel, swingspeed)
         return output
 
     def numInputChannels(self):
@@ -599,14 +602,22 @@ class RandomPendulums(Effect):
 
     async def update(self, dt):
         await super().update(dt)
-        if len(self._spread) == 0:
+        if len(self._spread) == 0 or len(self._spread) != self.num_pendulums:
+            self._spread = []
+            self._location = []
+            self._displacement = []
+            self._heightactivator = []
+            self._lightflip = []
+            self._offset = []
+            self._swingspeed = []
             for i in range(self.num_pendulums):
-                self._spread.append(random.randint(2, 10))
-                self._location.append(random.randint(0, self._num_pixels - self._spread[i] - 1))
-                self._displacement.append(random.randint(5, 50))
+                rSpread = int(random.randint(2, 10) / 300 * self._num_pixels)
+                self._spread.append(rSpread / 300)
+                self._location.append(random.randint(0, self._num_pixels - rSpread - 1) / 300)
+                self._displacement.append(random.randint(5, 50) / 300)
                 self._heightactivator.append(random.choice([True, False]))
                 self._lightflip.append(random.choice([True, False]))
-                self._offset.append(random.uniform(0, 6.5))
+                self._offset.append(random.uniform(0, 6.5) / 300)
                 self._swingspeed.append(random.uniform(0, 1))
 
     def process(self):
@@ -677,7 +688,7 @@ class StaticBlob(Effect):
         blobArray = np.zeros(self._num_pixels)
         
         # convert relative to absolute values
-        spread = int(spread_rel * self._num_pixels)
+        spread = max(int(spread_rel * self._num_pixels), 1)
         location = int(location_rel * self._num_pixels)
         for i in range(-spread, spread + 1):
             # make sure we are in bounds of array
