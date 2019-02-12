@@ -442,9 +442,9 @@ class FallingStars(Effect):
 
 class Pendulum(Effect):
     def __init__(self,
-                 spread=10,
-                 location=150,
-                 displacement=50,
+                 spread=0.03,
+                 location=0.5,
+                 displacement=0.15,
                  heightactivator=True,
                  lightflip=True,
                  swingspeed=1):
@@ -460,6 +460,15 @@ class Pendulum(Effect):
     def __initstate__(self):
         # state
         super(Pendulum, self).__initstate__()
+    
+    def __setstate__(self, state):
+        if 'spread' in state and state['spread'] > 1:
+            state['spread'] = state['spread'] / 300
+        if 'location' in state and state['location'] > 1:
+            state['location'] = state['location'] / 300
+        if 'displacement' in state and state['displacement'] > 3:
+            state['displacement'] = state['displacement'] / 300
+        return super().__setstate__(state)
 
     @staticmethod
     def getParameterDefinition():
@@ -467,8 +476,8 @@ class Pendulum(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("location", [150, 0, 300, 1]),
-                ("displacement", [50, 1, 1000, 1]),
+                ("location", [0, 0, 1, 0.01]),
+                ("displacement", [0.15, 0, 3, 0.01]),
                 ("swingspeed", [1, 0, 5, 0.01]),
                 ("heightactivator", False),
                 ("lightflip", False),
@@ -485,13 +494,17 @@ class Pendulum(Effect):
         definition['parameters']['swingspeed'][0] = self.swingspeed
         return definition
 
-    def createBlob(self, spread, location):
+    def createBlob(self, spread_rel, location_rel):
         blobArray = np.zeros(self._num_pixels)
+        spread = int(spread_rel * self._num_pixels)
+        location = int(location_rel * self._num_pixels)
         for i in range(-spread, spread + 1):
-            blobArray[location + i] = math.sin((math.pi / spread) * i)
+            if (location + i) >= 0 and (location + i) < self._num_pixels:
+                blobArray[location + i] = math.sin((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
 
-    def moveBlob(self, blobArray, displacement, swingspeed):
+    def moveBlob(self, blobArray, displacement_rel, swingspeed):
+        displacement = displacement_rel * self._num_pixels
         outputArray = sp.ndimage.interpolation.shift(
             blobArray, displacement * math.sin(self._t * swingspeed), mode='wrap', prefilter=True)
         return outputArray
