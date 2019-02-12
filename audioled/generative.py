@@ -19,6 +19,13 @@ sortbydefault = 'red'
 
 
 class SwimmingPool(Effect):
+    """Generates a wave effect to look like the reflection on the bottom of a swimming pool."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Generates a wave effect to look like the reflection on the bottom of a swimming pool."
+
     def __init__(self, num_pixels, num_waves=30, scale=0.2, wavespread_low=30, wavespread_high=70, max_speed=30):
         self.num_pixels = num_pixels
         self.num_waves = num_waves
@@ -52,6 +59,20 @@ class SwimmingPool(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "num_waves": "Number of generated overlaying waves.",
+                "scale": "Scales the brightness of the waves.",
+                "wavespread_low": "Minimal spread of the randomly generated waves.",
+                "wavespread_high": "Maximum spread of the randomly generated waves.", 
+                "max_speed": "Maximum movement speed of the waves."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -101,6 +122,15 @@ class SwimmingPool(Effect):
 
 
 class DefenceMode(Effect):
+    """Generates a colorchanging strobe light effect.
+    The mode to defend against all kinds of attackers.
+    """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Generates a color-changing strobe light effect."
+
     def __init__(self, num_pixels, scale=0.2):
         self.num_pixels = num_pixels
         self.scale = scale
@@ -132,6 +162,13 @@ class DefenceMode(Effect):
 
 
 class MidiKeyboard(Effect):
+    """Effect for handling midi inputs."""
+
+   @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for handling midi inputs."
+
     class Note(object):
         def __init__(self, note, velocity, spawn_time):
             self.note = note
@@ -251,6 +288,12 @@ class MidiKeyboard(Effect):
 
 
 class Breathing(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for handling midi inputs."
+
     def __init__(self, num_pixels, cycle=5):
         self.num_pixels = num_pixels
         self.cycle = cycle

@@ -466,8 +466,8 @@ class SpringCombine(Effect):
     @staticmethod
     def getEffectDescription():
         return \
-            "Spring simulation effect that interpolates between three inputs based on displacement of the springs. \n"\
-            "The trigger input (channel 0) actuates on the springs (if value exceeds trigger_threshold). \n"\
+            "Spring simulation effect that interpolates between three inputs based on displacement of the springs. "\
+            "The trigger input (channel 0) actuates on the springs (if value exceeds trigger_threshold). "\
             "Depending on the displacement of each spring, the output value is a linear interpolation between:\n"\
             "- channel 1 and channel 2 if displacement < 0\n"\
             "- channel 2 and channel 3 if displacement > 0"
