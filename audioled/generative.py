@@ -669,7 +669,7 @@ class StaticBlob(Effect):
         for i in range(-spread, spread + 1):
             # make sure we are in bounds of array
             if (location + i) >= 0 and (location + i) < self._num_pixels:
-                blobArray[location + i] = math.sin((math.pi / spread) * i)
+                blobArray[location + i] = math.cos((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
 
     def numInputChannels(self):
