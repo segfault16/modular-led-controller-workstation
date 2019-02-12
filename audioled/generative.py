@@ -624,7 +624,7 @@ class RandomPendulums(Effect):
 
 
 class StaticBlob(Effect):
-    def __init__(self, spread=50, location=150):
+    def __init__(self, spread=0.3, location=0.5):
         
         self.spread = spread
         self.location = location
@@ -633,6 +633,14 @@ class StaticBlob(Effect):
     def __initstate__(self):
         # state
         super(StaticBlob, self).__initstate__()
+    
+    def __setstate__(self, state):
+        # Backwards compatibility from absolute -> relative sizes
+        if 'spread' in state and state['spread'] > 1:
+            state['spread'] = state['spread'] / 300 / 2
+        if 'location' in state and state['location'] > 1:
+            state['location'] = state['location'] / 300
+        return super().__setstate__(state)
 
     @staticmethod
     def getParameterDefinition():
@@ -640,8 +648,8 @@ class StaticBlob(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("location", [150, 0, 300, 1]),
-                ("spread", [50, 1, 300, 1]),
+                ("location", [0.5, 0, 1, 0.01]),
+                ("spread", [0.3, 0, 1, 0.01]),
             ])
         }
         return definition
@@ -652,10 +660,16 @@ class StaticBlob(Effect):
         definition['parameters']['spread'][0] = self.spread
         return definition
 
-    def createBlob(self, spread, location):
+    def createBlob(self, spread_rel, location_rel):
         blobArray = np.zeros(self._num_pixels)
+        
+        # convert relative to absolute values
+        spread = int(spread_rel * self._num_pixels)
+        location = int(location_rel * self._num_pixels)
         for i in range(-spread, spread + 1):
-            blobArray[location + i] = math.sin((math.pi / spread) * i)
+            # make sure we are in bounds of array
+            if (location + i) >= 0 and (location + i) < self._num_pixels:
+                blobArray[location + i] = math.sin((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
 
     def numInputChannels(self):
@@ -672,7 +686,6 @@ class StaticBlob(Effect):
         else:
             # default: all white
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
-
         self._output = np.multiply(color, self.createBlob(self.spread, self.location) * np.array([[1.0], [1.0], [1.0]]))
 
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
