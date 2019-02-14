@@ -4,6 +4,22 @@ import numpy as np
 
 
 class MakeSquare(Effect):
+    """MakeSquare takes a 1d pixel array and fills the panel by the following pattern:
+
+    1 2 3 4 5 6 7 8
+    ->
+    1 1 1 1 1 1 1 1
+    1 2 2 2 2 2 2 1
+
+    1 2 2 3 3 2 2 1
+    1 2 3 4 4 3 2 1
+    1 2 3 4 4 3 2 1
+    1 2 2 3 3 2 2 1
+
+    1 2 2 2 2 2 2 1
+    1 1 1 1 1 1 1 1
+    """
+
     def __init__(self):
         super().__init__()
         self.__initstate__()
@@ -54,16 +70,39 @@ class MakeSquare(Effect):
         if not self._inputBufferValid(0):
             self._outputBuffer[0] = None
             return
-        buffer = self._inputBuffer[0]
+        # [1]             [1 2 3]
+        # [1] * [1 2 3] = [1 2 3]
+        # [1]             [1 2 3]
+        print(self._inputBuffer[0])
+        buffer = np.tile(self._inputBuffer[0],np.size(self._inputBuffer[0], axis=1))
+        # print("buffer:")
+        # print(buffer)
+        # print("mask:")
+        # print(self._mapMask)
         self._outputBuffer[0] = buffer[self._mapMask[:, :, 0], self._mapMask[:, :, 1]]
 
     def _genMapMask(self, num_pixels, num_cols):
-        num_cols = 2
         num_rows = int(num_pixels / num_cols)
-        mapMask = np.array([[[0, i] for i, j in np.ndindex(num_rows, num_cols)], 
-            [[1, i] for i, j in np.ndindex(num_rows, num_cols)], 
-            [[2, i] for i, j in np.ndindex(num_rows, num_cols)]],
+        print("Generating map mask for {}x{} pixels".format(num_rows,num_cols))
+        mapMask = np.array([
+            [[0, self._indexFor(i, j, num_rows, num_cols)] for i, j in np.ndindex(num_rows, num_cols)], 
+            [[1, self._indexFor(i, j, num_rows, num_cols)] for i, j in np.ndindex(num_rows, num_cols)], 
+            [[2, self._indexFor(i, j, num_rows, num_cols)] for i, j in np.ndindex(num_rows, num_cols)]],
             dtype=np.int64)
         print(np.shape(mapMask))
         print(np.shape(mapMask))
         return mapMask
+    
+    def _indexFor(self, row, col, num_rows, num_cols):
+        adjusted_row = row
+        adjusted_col = col
+        if row >= num_rows / 2:
+            adjusted_row = num_rows - 1 - row
+        if col >= num_cols / 2:
+            adjusted_col = num_cols - 1 - col
+        
+        #index = min(adjusted_row,adjusted_col)
+        row_offset = int(abs(num_rows/2 - adjusted_row - 1))
+        index = max(0, adjusted_col-row_offset)
+        print("index for {}, {}: {}".format(row, col, index))
+        return index
