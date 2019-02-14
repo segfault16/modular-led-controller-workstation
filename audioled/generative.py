@@ -412,9 +412,10 @@ class FallingStars(Effect):
         for i in range(0, self._starCounter):
             oneStarArray = np.zeros(self._num_pixels)
             for j in range(0, thickness):
-                index = spawnSpot[i] + j
-                if index < self._num_pixels:
-                    oneStarArray[index] = math.exp(-(100 / dim_speed) * (self._t - t0[i]))
+                if i < len(spawnSpot):
+                    index = spawnSpot[i] + j
+                    if index < self._num_pixels:
+                        oneStarArray[index] = math.exp(-(100 / dim_speed) * (self._t - t0[i]))
             controlArray.append(oneStarArray)
         return controlArray
 
