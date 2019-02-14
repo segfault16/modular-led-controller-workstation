@@ -25,9 +25,9 @@ class Effect(object):
         except AttributeError:
             self._num_pixels = None
         try:
-            self._num_cols
+            self._num_rows
         except AttributeError:
-            self._num_cols = 1
+            self._num_rows = 1
         try:
             self._inputBuffer
         except AttributeError:
@@ -136,14 +136,14 @@ class Effect(object):
         # Default: Same pixels as output
         return self._num_pixels
 
-    def setNumOutputCols(self, num_cols):
-        self._num_cols = num_cols
-        if num_cols is not None:
-            self._num_cols = int(num_cols)
+    def setNumOutputRows(self, num_rows):
+        self._num_rows = num_rows
+        if num_rows is not None:
+            self._num_rows = int(num_rows)
     
-    def getNumOutputCols(self):
-        return self._num_cols
+    def getNumOutputRows(self):
+        return self._num_rows
 
-    def getNumInputCols(self, channel):
+    def getNumInputRows(self, channel):
         # Default: Same number of columns as output
-        return self._num_cols
+        return self._num_rows

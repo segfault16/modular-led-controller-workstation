@@ -36,9 +36,9 @@ class LEDController:
         device.show(pixels)
     """
 
-    def __init__(self, num_pixels, num_cols=1, brightness=1.0):
+    def __init__(self, num_pixels, num_rows=1, brightness=1.0):
         self.num_pixels = num_pixels
-        self.num_cols = 1
+        self.num_rows = num_rows
         self.brightness = brightness
 
     def setBrightness(self, value):
@@ -96,8 +96,8 @@ class LEDController:
 
 
 class ESP8266(LEDController):
-    def __init__(self, num_pixels, num_cols=1, ip='192.168.0.150', port=7777):
-        super().__init__(num_pixels, num_cols)
+    def __init__(self, num_pixels, num_rows=1, ip='192.168.0.150', port=7777):
+        super().__init__(num_pixels, num_rows)
         """Initialize object for communicating with as ESP8266
 
         Parameters
@@ -134,8 +134,8 @@ class ESP8266(LEDController):
 
 
 class FadeCandy(LEDController):
-    def __init__(self, num_pixels, num_cols=1, server='localhost:7890'):
-        super().__init__(num_pixels, num_cols)
+    def __init__(self, num_pixels, num_rows=1, server='localhost:7890'):
+        super().__init__(num_pixels, num_rows)
         """Initializes object for communicating with a FadeCandy device
 
         Parameters
@@ -156,8 +156,8 @@ class FadeCandy(LEDController):
 
 
 class BlinkStick(LEDController):
-    def __init__(self, num_pixels, num_cols=1):
-        super().__init__(num_pixels, num_cols)
+    def __init__(self, num_pixels, num_rows=1):
+        super().__init__(num_pixels, num_rows)
         """Initializes a BlinkStick controller"""
         try:
             from blinkstick import blinkstick
@@ -194,8 +194,8 @@ class BlinkStick(LEDController):
 
 
 class RaspberryPi(LEDController):
-    def __init__(self, num_pixels, num_cols=1, pin=18, invert_logic=False, freq=800000, dma=5):
-        super().__init__(num_pixels, num_cols)
+    def __init__(self, num_pixels, num_rows=1, pin=18, invert_logic=False, freq=800000, dma=5):
+        super().__init__(num_pixels, num_rows)
         """Creates a Raspberry Pi output device
 
         Parameters
@@ -290,8 +290,8 @@ class RaspberryPi(LEDController):
 
 
 class DotStar(LEDController):
-    def __init__(self, num_pixels, num_cols=1, brightness=31):
-        super().__init__(num_pixels, num_cols)
+    def __init__(self, num_pixels, num_rows=1, brightness=31):
+        super().__init__(num_pixels, num_rows)
         """Creates an APA102-based output device
 
         Parameters

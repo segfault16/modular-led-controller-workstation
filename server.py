@@ -468,6 +468,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '-N', '--num_pixels', dest='num_pixels', type=int, default=None, help='number of pixels (default: 300)')
     parser.add_argument(
+        '-R', '--num_rows', dest='num_rows', type=int, default=None, help='number of rows (default: 1)')
+    parser.add_argument(
         '-D',
         '--device',
         dest='device',
@@ -510,6 +512,11 @@ if __name__ == '__main__':
         num_pixels = args.num_pixels
         serverconfig.setConfiguration(serverconfiguration.CONFIG_NUM_PIXELS, num_pixels)
 
+    # Update num rows
+    if args.num_rows is not None:
+        num_rows = args.num_rows
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_NUM_ROWS, num_rows)
+
     # Update LED device
     if args.device is not None:
         serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE, args.device)
@@ -531,12 +538,12 @@ if __name__ == '__main__':
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
         device = devices.RaspberryPi(
             serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
-            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_COLS),
+            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
         )
     elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
         device = devices.FadeCandy(
             serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
-            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_COLS),
+            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
             serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
     else:
         print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
@@ -548,7 +555,7 @@ if __name__ == '__main__':
             serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
 
     # strand test
-    strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
+    #strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # print audio information
     print("The following audio devices are available:")

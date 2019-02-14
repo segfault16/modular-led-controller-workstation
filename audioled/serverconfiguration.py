@@ -6,7 +6,7 @@ import os.path
 import hashlib
 
 CONFIG_NUM_PIXELS = 'num_pixels'
-CONFIG_NUM_COLS = 'num_cols'
+CONFIG_NUM_ROWS = 'num_rows'
 CONFIG_DEVICE = 'device'
 CONFIG_DEVICE_CANDY_SERVER = 'device.candy.server'
 CONFIG_AUDIO_DEVICE_INDEX = 'audio.device_index'
@@ -18,7 +18,7 @@ class ServerConfiguration:
         self._config = {}
         # Init default values
         self._config[CONFIG_NUM_PIXELS] = 300
-        self._config[CONFIG_NUM_COLS] = 1
+        self._config[CONFIG_NUM_ROWS] = 1
         self._config[CONFIG_DEVICE] = 'FadeCandy'
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
         self._projects = {}
@@ -26,12 +26,16 @@ class ServerConfiguration:
 
     @staticmethod
     def getConfigurationParameters():
-        return {CONFIG_NUM_PIXELS: [300, 1, 2000, 1], CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi']}
+        return {
+            CONFIG_NUM_PIXELS: [300, 1, 2000, 1], 
+            CONFIG_NUM_ROWS: [1, 1, 100, 1],
+            CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
+        }
 
     def setConfiguration(self, key, value):
         print("Updating {} to {}".format(key, value))
         self._config[key] = value
-        if key in [CONFIG_NUM_PIXELS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER]:
+        if key in [CONFIG_NUM_PIXELS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_NUM_ROWS]:
             print("Renewing device")
             self.getActiveProjectOrDefault().setDevice(self._createOutputDevice())
 
@@ -121,9 +125,9 @@ class ServerConfiguration:
     def _createOutputDevice(self):
         device = None
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
-            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_COLS))
+            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS))
         elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
-            device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_COLS), self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
+            device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS), self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         return device
