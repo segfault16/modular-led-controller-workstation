@@ -347,19 +347,22 @@ class FilterGraph(Updateable):
         for node in self._filterNodes:
             if node is not self.getLEDOutput():
                 node.effect.setNumOutputPixels(None)
-        # Propagate num pixels
+        # Propagate num pixels and num cols
         for node in reversed(processOrder):
             # find connections to the current node
             inputConnections = [con for con in self._filterConnections if con.toNode == node]
             # print("{} input connections found for node {}".format(len(inputConnections), node.effect))
             for con in inputConnections:
                 num_pixels = node.effect.getNumInputPixels(con.toChannel)
+                num_cols = node.effect.getNumInputCols(con.toChannel)
                 # find node
                 iNode = con.fromNode
                 # propagate pixels
                 if iNode is not None:
-                    print("setting {} pixels for {}".format(num_pixels, iNode.effect))
+                    print("setting {} pixels with {} cols for {}".format(num_pixels, num_cols, iNode.effect))
+                    iNode.effect.setNumOutputCols(num_cols)
                     iNode.effect.setNumOutputPixels(num_pixels)
+                    
         
         # Debug output
         for node in processOrder.copy():
@@ -393,9 +396,10 @@ class FilterGraph(Updateable):
             toChannel = con['to_node_channel']
             self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
 
-    def propagateNumPixels(self, num_pixels):
+    def propagateNumPixels(self, num_pixels, num_cols=1):
         if self.getLEDOutput() is not None:
             self.getLEDOutput().effect.setNumOutputPixels(num_pixels)
+            self.getLEDOutput().effect.setNumOutputCols(num_cols)
             self._updateProcessOrder()
 
     def _connectionWillMakeGraphCyclic(self, connection):

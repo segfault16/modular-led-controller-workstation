@@ -70,9 +70,9 @@ num_pixels = args.num_pixels
 
 # Initialize device
 if args.device == deviceRasp:
-    device = devices.RaspberryPi(num_pixels)
+    device = devices.RaspberryPi(num_pixels, 1)
 elif args.device == deviceCandy:
-    device = devices.FadeCandy(num_pixels, args.device_candy_server)
+    device = devices.FadeCandy(num_pixels, 1, server=args.device_candy_server)
 
 # Initialize Audio device
 if args.audio_device_index is not None:

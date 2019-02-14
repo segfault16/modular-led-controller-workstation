@@ -19,7 +19,7 @@ from flask import Flask, abort, jsonify, request, send_from_directory, redirect
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, configs, devices, effects, filtergraph, project, serverconfiguration
+from audioled import audio, configs, devices, effects, panelize, filtergraph, project, serverconfiguration
 
 proj = None
 default_values = {}
@@ -238,7 +238,10 @@ def create_app():
 
     def getModuleAndClassName(full_class_name):
         module_name, class_name = full_class_name.rsplit(".", 1)
-        if module_name != "audioled.audio" and module_name != "audioled.effects" and module_name != "audioled.devices" and module_name != "audioled.colors" and module_name != "audioled.audioreactive" and module_name != "audioled.generative" and module_name != "audioled.input":
+        if (module_name != "audioled.audio" and module_name != "audioled.effects" and module_name != "audioled.devices"
+                and module_name != "audioled.colors" and module_name != "audioled.audioreactive"
+                and module_name != "audioled.generative" and module_name != "audioled.input"
+                and module_name != "audioled.panelize"):
             raise RuntimeError("Not allowed")
         return module_name, class_name
 
@@ -526,9 +529,14 @@ if __name__ == '__main__':
     # LED Device
     device = None
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
-        device = devices.RaspberryPi(serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
+        device = devices.RaspberryPi(
+            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
+            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_COLS),
+        )
     elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
-        device = devices.FadeCandy(serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS), 
+        device = devices.FadeCandy(
+            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
+            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_COLS),
             serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
     else:
         print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))

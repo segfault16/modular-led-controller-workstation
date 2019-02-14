@@ -36,8 +36,9 @@ class LEDController:
         device.show(pixels)
     """
 
-    def __init__(self, num_pixels, brightness=1.0):
+    def __init__(self, num_pixels, num_cols=1, brightness=1.0):
         self.num_pixels = num_pixels
+        self.num_cols = 1
         self.brightness = brightness
 
     def setBrightness(self, value):
@@ -95,8 +96,8 @@ class LEDController:
 
 
 class ESP8266(LEDController):
-    def __init__(self, num_pixels, ip='192.168.0.150', port=7777):
-        super().__init__(num_pixels)
+    def __init__(self, num_pixels, num_cols=1, ip='192.168.0.150', port=7777):
+        super().__init__(num_pixels, num_cols)
         """Initialize object for communicating with as ESP8266
 
         Parameters
@@ -133,8 +134,8 @@ class ESP8266(LEDController):
 
 
 class FadeCandy(LEDController):
-    def __init__(self, num_pixels, server='localhost:7890'):
-        super().__init__(num_pixels)
+    def __init__(self, num_pixels, num_cols=1, server='localhost:7890'):
+        super().__init__(num_pixels, num_cols)
         """Initializes object for communicating with a FadeCandy device
 
         Parameters
@@ -155,7 +156,8 @@ class FadeCandy(LEDController):
 
 
 class BlinkStick(LEDController):
-    def __init__(self):
+    def __init__(self, num_pixels, num_cols=1):
+        super().__init__(num_pixels, num_cols)
         """Initializes a BlinkStick controller"""
         try:
             from blinkstick import blinkstick
@@ -192,7 +194,8 @@ class BlinkStick(LEDController):
 
 
 class RaspberryPi(LEDController):
-    def __init__(self, pixels, pin=18, invert_logic=False, freq=800000, dma=5):
+    def __init__(self, num_pixels, num_cols=1, pin=18, invert_logic=False, freq=800000, dma=5):
+        super().__init__(num_pixels, num_cols)
         """Creates a Raspberry Pi output device
 
         Parameters
@@ -213,7 +216,6 @@ class RaspberryPi(LEDController):
             If you aren't sure, try 5.
         """
         print('construct')
-        self.num_pixels = pixels
         self.pin = pin
         self.freq_hz = freq
         self.dma = dma
@@ -288,7 +290,8 @@ class RaspberryPi(LEDController):
 
 
 class DotStar(LEDController):
-    def __init__(self, pixels, brightness=31):
+    def __init__(self, num_pixels, num_cols=1, brightness=31):
+        super().__init__(num_pixels, num_cols)
         """Creates an APA102-based output device
 
         Parameters
@@ -305,12 +308,12 @@ class DotStar(LEDController):
             print('Could not import the apa102 library')
             print('For installation instructions, see {}'.format(url))
             raise e
-        self._strip = apa102.APA102(numLEDs=pixels, globalBrightness=brightness)  # Initialize the strip
+        self._strip = apa102.APA102(numLEDs=num_pixels, globalBrightness=brightness)  # Initialize the strip
         led_data = np.array(self._strip.leds, dtype=np.uint8)
         # memoryview preserving the first 8 bits of LED frames (w/ global brightness)
         self._strip.leds = led_data.data
         # 2D view of led_data
-        self.led_data = led_data.reshape((pixels, 4))  # or (-1, 4)
+        self.led_data = led_data.reshape((num_pixels, 4))  # or (-1, 4)
 
     def show(self, pixels):
         bgr = [2, 1, 0]

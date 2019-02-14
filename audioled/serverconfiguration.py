@@ -6,6 +6,7 @@ import os.path
 import hashlib
 
 CONFIG_NUM_PIXELS = 'num_pixels'
+CONFIG_NUM_COLS = 'num_cols'
 CONFIG_DEVICE = 'device'
 CONFIG_DEVICE_CANDY_SERVER = 'device.candy.server'
 CONFIG_AUDIO_DEVICE_INDEX = 'audio.device_index'
@@ -17,6 +18,7 @@ class ServerConfiguration:
         self._config = {}
         # Init default values
         self._config[CONFIG_NUM_PIXELS] = 300
+        self._config[CONFIG_NUM_COLS] = 1
         self._config[CONFIG_DEVICE] = 'FadeCandy'
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
         self._projects = {}
@@ -119,9 +121,9 @@ class ServerConfiguration:
     def _createOutputDevice(self):
         device = None
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
-            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS))
+            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_COLS))
         elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
-            device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
+            device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_COLS), self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         return device
