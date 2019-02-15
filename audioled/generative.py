@@ -164,7 +164,7 @@ class DefenceMode(Effect):
 class MidiKeyboard(Effect):
     """Effect for handling midi inputs."""
 
-   @staticmethod
+    @staticmethod
     def getEffectDescription():
         return \
             "Effect for handling midi inputs."
@@ -288,11 +288,12 @@ class MidiKeyboard(Effect):
 
 
 class Breathing(Effect):
+    """Effect for simulating breathing behavior over brightness."""
 
     @staticmethod
     def getEffectDescription():
         return \
-            "Effect for handling midi inputs."
+            "Effect for simulating breathing behavior over brightness."
 
     def __init__(self, num_pixels, cycle=5):
         self.num_pixels = num_pixels
@@ -325,6 +326,16 @@ class Breathing(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "cycle": "Seconds to repeat a full cycle.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_pixels']
@@ -343,6 +354,13 @@ class Breathing(Effect):
 
 
 class Heartbeat(Effect):
+    """Effect for simulating a beating heart over brightness."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for simulating a beating heart over brightness."
+
     def __init__(self, num_pixels, speed=1):
         self.num_pixels = num_pixels
         self.speed = speed
@@ -373,6 +391,16 @@ class Heartbeat(Effect):
             ])
         }
         return definition
+    
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "speed": "Speed of the heartbeat.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -392,6 +420,13 @@ class Heartbeat(Effect):
 
 
 class FallingStars(Effect):
+    """Effect for creating random stars that fade over time."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for creating random stars that fade over time."
+
     def __init__(self, num_pixels, dim_speed=100, thickness=1, spawntime=0.1, max_brightness=1):
         self.num_pixels = num_pixels
         self.dim_speed = dim_speed
@@ -422,6 +457,19 @@ class FallingStars(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "dim_speed": "Time to fade out one star.",
+                "thickness": "Thickness of one star in pixels.",
+                "spawntime": "Time till a new star is spawned.",
+                "max_brightness": "Maximum brightness of a star when it is spawned."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -477,6 +525,13 @@ class FallingStars(Effect):
 
 
 class Pendulum(Effect):
+    """Generates a blob of light to swing back and forth."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Generates a blob of light to swing back and forth."
+
     def __init__(self,
                  num_pixels,
                  spread=10,
@@ -513,6 +568,20 @@ class Pendulum(Effect):
             ])
         }
         return definition
+    
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "location": "Starting location and center to swing around.",
+                "displacement": "Displacement of the pendulum to each side.",
+                "swingspeed": "Speed of the pendulum.",
+                "heightactivator": "Changes brightness of the pendulum depending on its location.", 
+                "lightflip": "Reverses the setting of heightactivator."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -566,6 +635,13 @@ class Pendulum(Effect):
 
 
 class RandomPendulums(Effect):
+    """Randomly generates a number of pendulums."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Randomly generates a number of pendulums."
+
     def __init__(self, num_pixels, num_pendulums=100, dim=0.1):
         self.num_pixels = num_pixels
         self.num_pendulums = num_pendulums
@@ -603,6 +679,17 @@ class RandomPendulums(Effect):
             ])
         }
         return definition
+    
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "num_pendulums": "Number of random pendulums.",
+                "dim": "Overall brightness of the pendulums.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -660,6 +747,13 @@ class RandomPendulums(Effect):
 
 
 class StaticBlob(Effect):
+    """Generates a blob of light. Mostly for testing purposes."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Generates a blob of light. Mostly for testing purposes."
+
     def __init__(self, num_pixels, spread=50, location=150):
         self.num_pixels = num_pixels
         self.spread = spread
@@ -682,6 +776,17 @@ class StaticBlob(Effect):
             ])
         }
         return definition
+    
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "location": "Location where the blob is created.",
+                "spread": "Spreading of the blob."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -718,6 +823,11 @@ class StaticBlob(Effect):
 
 class GenerateWaves(Effect):
     """Effect for displaying different wave forms."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for displaying different wave forms."
 
     def __init__(
             self,
@@ -759,6 +869,18 @@ class GenerateWaves(Effect):
             ])
         }
         return definition
+    
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "period": "Spread of one wave.",
+                "scale": "Overall brightness of the effect.",
+                "wavemode": "Selection of different wave forms."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -807,7 +929,12 @@ class GenerateWaves(Effect):
 
 
 class Sorting(Effect):
-    """Effect for sorting an input by color or brightness"""
+    """Effect for sorting an input by color or brightness."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for sorting an input by color or brightness."
 
     def __init__(
             self,
@@ -841,6 +968,19 @@ class Sorting(Effect):
             ])
         }
         return definition
+    
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "sortby": "Parameter which the effect sorts by.",
+                "reversed": "Flips the parameter which is sorted by.",
+                "looping": "If activated, the effect randomly picks another parameter to sort by. " \
+                           "If deactivated, the effects spawns a new pattern after sorting."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
