@@ -34,9 +34,9 @@ class Test_Panelize(unittest.TestCase):
         effect = panelize.MakeSquare()
         effect.setNumOutputPixels(num_pixels)
         effect.setNumOutputRows(num_rows)
-        self.assertEqual(effect.getNumInputPixels(0), num_cols)
-        input = np.array([[i + 1, 2 * i + 1, 3 * i + 1] for i in range(0, num_cols)]).T
-        for i in range(0, num_cols):
+        self.assertEqual(effect.getNumInputPixels(0), 2 * num_cols)
+        input = np.array([[i + 1, 2 * i + 1, 3 * i + 1] for i in range(0, 2 * num_cols)]).T
+        for i in range(0, 2 * num_cols):
             self.assertEqual(i + 1, input[0, i])
         effect._inputBuffer = [input]
         effect._outputBuffer = [None]
@@ -54,16 +54,18 @@ class Test_Panelize(unittest.TestCase):
                 print(index)
                 self.assertEqual(input[0, index], output[0, j + i * num_cols])
 
-    def _indexFor(self, row, col, num_rows, num_cols):
+    def _indexFor(self, row, col, num_rows, num_cols, input_displacement=0.5):
         adjusted_row = row
         adjusted_col = col
+        dp = int(input_displacement * num_cols)
+        # Mirror row at the center
         if row >= num_rows / 2:
             adjusted_row = num_rows - 1 - row
+        # Mirror col at the center
         if col >= num_cols / 2:
             adjusted_col = num_cols - 1 - col
 
-        #index = min(adjusted_row,adjusted_col)
-        row_offset = int(abs(num_rows / 2 - adjusted_row - 1))
-        index = max(0, adjusted_col - row_offset)
-        print("index for {}, {}: {}".format(row, col, index))
+        row_offset = int(abs(num_rows / 2 - adjusted_row + 1))
+        col_offset = int(abs(num_cols / 2 - adjusted_col + 1))
+        index = min(max(0, int(max(num_rows, num_cols) / 2) - max(row_offset, col_offset) + dp), num_cols - 1)
         return index

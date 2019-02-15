@@ -156,6 +156,12 @@ class MockEffect(object):
     def getNumInputPixels(self, channel):
         return self._num_pixels
 
+    def getNumInputRows(self, channel):
+        return 1
+
+    def setNumOutputRows(self, rows):
+        pass
+
     def process(self):
         self._outputBuffer[0] = 0
         self._outputBuffer[1] = 1
