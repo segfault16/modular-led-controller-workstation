@@ -68,7 +68,7 @@ class SwimmingPool(Effect):
                 "num_waves": "Number of generated overlaying waves.",
                 "scale": "Scales the brightness of the waves.",
                 "wavespread_low": "Minimal spread of the randomly generated waves.",
-                "wavespread_high": "Maximum spread of the randomly generated waves.", 
+                "wavespread_high": "Maximum spread of the randomly generated waves.",
                 "max_speed": "Maximum movement speed of the waves."
             }
         }
@@ -391,7 +391,7 @@ class Heartbeat(Effect):
             ])
         }
         return definition
-    
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -568,7 +568,7 @@ class Pendulum(Effect):
             ])
         }
         return definition
-    
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -577,7 +577,7 @@ class Pendulum(Effect):
                 "location": "Starting location and center to swing around.",
                 "displacement": "Displacement of the pendulum to each side.",
                 "swingspeed": "Speed of the pendulum.",
-                "heightactivator": "Changes brightness of the pendulum depending on its location.", 
+                "heightactivator": "Changes brightness of the pendulum depending on its location.",
                 "lightflip": "Reverses the setting of heightactivator."
             }
         }
@@ -679,7 +679,7 @@ class RandomPendulums(Effect):
             ])
         }
         return definition
-    
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -776,7 +776,7 @@ class StaticBlob(Effect):
             ])
         }
         return definition
-    
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -869,7 +869,7 @@ class GenerateWaves(Effect):
             ])
         }
         return definition
-    
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -968,7 +968,7 @@ class Sorting(Effect):
             ])
         }
         return definition
-    
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -976,7 +976,7 @@ class Sorting(Effect):
                 "num_pixels": "Number of pixels.",
                 "sortby": "Parameter which the effect sorts by.",
                 "reversed": "Flips the parameter which is sorted by.",
-                "looping": "If activated, the effect randomly picks another parameter to sort by. " \
+                "looping": "If activated, the effect randomly picks another parameter to sort by. "
                            "If deactivated, the effects spawns a new pattern after sorting."
             }
         }
