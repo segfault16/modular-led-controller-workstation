@@ -40,14 +40,12 @@ class Spectrum(Effect):
                  fs,
                  fmax=6000,
                  n_overlaps=4,
-                 chunk_rate=60,
                  fft_bins=64,
                  col_blend=colors.blend_mode_default):
         self.num_pixels = num_pixels
         self.fs = fs
         self.fmax = fmax
         self.n_overlaps = n_overlaps
-        self.chunk_rate = chunk_rate
         self.fft_bins = fft_bins
         self.col_blend = col_blend
         self.__initstate__()
@@ -81,7 +79,6 @@ class Spectrum(Effect):
                 ("num_pixels", [300, 1, 1000, 1]),
                 ("fs", [48000, 44100, 96000, 100]),
                 ("n_overlaps", [4, 0, 20, 1]),
-                ("chunk_rate", [60, 30, 100, 1]),
                 ("fft_bins", [64, 32, 128, 1]),
                 ("col_blend", colors.blend_modes)
             ])
@@ -106,15 +103,12 @@ class Spectrum(Effect):
         del definition['parameters']['num_pixels']  # disable edit
         del definition['parameters']['fs']  # disable edit
         definition['parameters']['n_overlaps'][0] = self.n_overlaps
-        definition['parameters']['chunk_rate'][0] = self.chunk_rate
-        definition['parameters']['fft_bins'][0] = self.chunk_rate
+        definition['parameters']['fft_bins'][0] = self.fft_bins
         definition['parameters']['col_blend'] = [self.col_blend
                                                  ] + [x for x in colors.blend_modes if x != self.col_blend]
         return definition
 
     def _audio_gen(self, audio_gen):
-        self._bass_rms = np.zeros(self.chunk_rate * 6)
-        self._melody_rms = np.zeros(self.chunk_rate * 6)
         audio, self._fs_ds = dsp.preprocess(audio_gen, self.fs, self.fmax, self.n_overlaps)
         return audio
 
@@ -144,13 +138,13 @@ class Spectrum(Effect):
                 y = next(self._gen)
                 bass = dsp.warped_psd(y, self.fft_bins, self._fs_ds, [32.7, 261.0], 'bark')
                 melody = dsp.warped_psd(y, self.fft_bins, self._fs_ds, [261.0, self.fmax], 'bark')
-                bass = self.process_line(bass, self._bass_rms)
-                melody = self.process_line(melody, self._melody_rms)
+                bass = self.process_line(bass)
+                melody = self.process_line(melody)
                 pixels = colors.blend(1. / 255.0 * np.multiply(col_bass, bass),
                                       1. / 255. * np.multiply(col_melody, melody), self.col_blend)
                 self._outputBuffer[0] = pixels.clip(0, 255).astype(int)
 
-    def process_line(self, fft, fft_rms):
+    def process_line(self, fft):
 
         # fft = np.convolve(fft, self._max_filter, 'same')
 
