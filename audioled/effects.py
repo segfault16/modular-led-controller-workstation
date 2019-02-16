@@ -526,6 +526,7 @@ class SpringCombine(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
+                "num_pixels": "Number of pixels.",
                 "dampening": "Dampening factory of the springs.",
                 "tension": "Tension of the springs.",
                 "spread": "Interaction between neighboring springs.",
