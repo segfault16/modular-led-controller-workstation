@@ -5,7 +5,6 @@ import random
 import threading
 from collections import OrderedDict
 
-import mido
 import numpy as np
 import scipy as sp
 from scipy import signal as signal
@@ -189,7 +188,12 @@ class MidiKeyboard(Effect):
 
     def __initstate__(self):
         super(MidiKeyboard, self).__initstate__()
-        print(mido.get_input_names())
+        try:
+            import mido
+        except ImportError as e:
+            print('Unable to import the mido library')
+            print('You can install this library with `pip install mido`')
+            raise e
         try:
             self._midi.close()
         except Exception:
@@ -209,12 +213,26 @@ class MidiKeyboard(Effect):
         return 1
 
     @staticmethod
+    def getMidiPorts():
+        try: 
+            return mido.get_input_names()
+        except Exception:
+            try:
+                import mido
+                return mido.get_input_names()
+            except ImportError as e:
+                print('Unable to import the mido library')
+                print('You can install this library with `pip install mido`')
+                return []
+        return []
+
+    @staticmethod
     def getParameterDefinition():
         definition = {
             "parameters": {
                 # default, min, max, stepsize
                 "num_pixels": [300, 1, 1000, 1],
-                "midiPort": mido.get_input_names(),
+                "midiPort": MidiKeyboard.getMidiPorts(),
                 "attack": [0.0, 0.0, 5.0, 0.01],
                 "decay": [0.0, 0.0, 5.0, 0.01],
                 "sustain": [1.0, 0.0, 1.0, 0.01],
@@ -241,7 +259,7 @@ class MidiKeyboard(Effect):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_pixels']
         definition['parameters']['midiPort'] = [self.midiPort
-                                                ] + [x for x in mido.get_input_names() if x != self.midiPort]
+                                                ] + [x for x in MidiKeyboard.getMidiPorts() if x != self.midiPort]
         definition['parameters']['attack'][0] = self.attack
         definition['parameters']['decay'][0] = self.decay
         definition['parameters']['sustain'][0] = self.sustain
