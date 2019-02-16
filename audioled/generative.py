@@ -216,7 +216,7 @@ class MidiKeyboard(Effect):
     def getMidiPorts():
         try: 
             return mido.get_input_names()
-        except Exception:
+        except:
             try:
                 import mido
                 return mido.get_input_names()
