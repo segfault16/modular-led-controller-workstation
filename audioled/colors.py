@@ -97,6 +97,18 @@ class StaticRGBColor(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "r": "Amount of red.",
+                "g": "Amount of green.",
+                "b": "Amount of blue.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_pixels']
