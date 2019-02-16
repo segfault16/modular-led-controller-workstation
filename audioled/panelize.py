@@ -43,7 +43,8 @@ class MakeSquare(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": OrderedDict([
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
                 ("displacement", [0.0, 0.0, 1.0, .001]),
                 ("input_displacement", [0.5, 0.0, 1.0, .001]),
@@ -60,7 +61,8 @@ class MakeSquare(Effect):
     async def update(self, dt):
         await super().update(dt)
         if self._mapMask is None or np.size(self._mapMask, 1) != self._num_pixels:
-            self._mapMask = self._genMapMask(self._num_pixels, self._num_rows, self.displacement, self.input_displacement)
+            self._mapMask = self._genMapMask(self._num_pixels, self._num_rows, self.displacement,
+                                             self.input_displacement)
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -75,11 +77,13 @@ class MakeSquare(Effect):
         num_cols = int(num_pixels / num_rows)
         print("Generating map mask for {}x{} pixels".format(num_rows, num_cols))
         dp = int(displacement * num_cols)
-        mapMask = np.array(
-            [[[0, self._indexFor(i, j + dp, num_rows, num_cols, input_displacement)] for i, j in np.ndindex(num_rows, num_cols)],
-             [[1, self._indexFor(i, j + dp, num_rows, num_cols, input_displacement)] for i, j in np.ndindex(num_rows, num_cols)],
-             [[2, self._indexFor(i, j + dp, num_rows, num_cols, input_displacement)] for i, j in np.ndindex(num_rows, num_cols)]],
-            dtype=np.int64)
+        mapMask = np.array([[[0, self._indexFor(i, j + dp, num_rows, num_cols, input_displacement)]
+                             for i, j in np.ndindex(num_rows, num_cols)],
+                            [[1, self._indexFor(i, j + dp, num_rows, num_cols, input_displacement)]
+                             for i, j in np.ndindex(num_rows, num_cols)],
+                            [[2, self._indexFor(i, j + dp, num_rows, num_cols, input_displacement)]
+                             for i, j in np.ndindex(num_rows, num_cols)]],
+                           dtype=np.int64)
         return mapMask
 
     def _indexFor(self, row, col, num_rows, num_cols, input_displacement=0.5):
@@ -92,7 +96,7 @@ class MakeSquare(Effect):
         # Mirror col at the center
         if col >= num_cols / 2:
             adjusted_col = num_cols - 1 - col
-        
+
         row_offset = int(abs(num_rows / 2 - adjusted_row + 1))
         col_offset = int(abs(num_cols / 2 - adjusted_col + 1))
         index = min(max(0, int(max(num_rows, num_cols) / 2) - max(row_offset, col_offset) + dp), num_cols - 1)
@@ -110,7 +114,7 @@ class MakeBatman(MakeSquare):
         # Mirror col at the center
         if col >= num_cols / 2:
             adjusted_col = num_cols - 1 - col
-        
+
         row_offset = int(abs(num_rows / 2 - adjusted_row - 1))
         col_offset = int(abs(num_cols / 2 - adjusted_col - 1))
         offset = min(row_offset, col_offset)
@@ -119,7 +123,6 @@ class MakeBatman(MakeSquare):
 
 
 class MakeRuby(MakeSquare):
-
     def _indexFor(self, row, col, num_rows, num_cols, input_displacement=0.5):
         adjusted_row = row
         adjusted_col = col
@@ -130,7 +133,7 @@ class MakeRuby(MakeSquare):
         # Mirror col at the center
         if col >= num_cols / 2:
             adjusted_col = num_cols - 1 - col
-        
+
         row_offset = int(abs(num_rows / 2 - adjusted_row - 1))
         col_offset = int(abs(num_cols / 2 - adjusted_col - 1))
         offset = max(row_offset, col_offset)
@@ -163,8 +166,166 @@ class MakeDiamond(MakeSquare):
         # Mirror col at the center
         if col >= num_cols / 2:
             adjusted_col = num_cols - 1 - col
-        
+
         # Apply row offset, so that index is decreased for each row more away from the center
         row_offset = int(abs(num_rows / 2 - adjusted_row - 1))
         index = min(max(0, adjusted_col - row_offset + dp), num_cols - 1)
         return index
+
+
+def toIdx(row, col, num_cols):
+    return col + row * num_cols
+
+
+def move(row, col, direction):
+    if direction == 'l':
+        return (row, col - 1)
+    elif direction == 'r':
+        return (row, col + 1)
+    elif direction == 'u':
+        return (row - 1, col)
+    else:
+        return (row + 1, col)
+
+
+def next_dir_possible(cur_dir, cur_row, cur_col, visited, pref_dir, allowed_row_range):
+    for i in range(0, len(pref_dir)):
+        rows = np.size(visited, axis=0)
+        cols = np.size(visited, axis=1)
+        r, c = move(cur_row, cur_col, pref_dir[i])
+        # check out of bounds
+        if r < 0 or c < 0 or r >= rows or c >= cols:
+            continue
+
+        # check visited
+        if visited[r, c]:
+            continue
+        # check in allowed row range
+        if r < allowed_row_range[0] or r > allowed_row_range[1]:
+            continue
+        # found new direction
+        print("next dir: {}, preference {}".format(pref_dir[i], i))
+        return pref_dir[i]
+    raise RuntimeError("Cannot determine new direction!")
+
+
+def next_dir(cur_dir, cur_row, cur_col, visited, pref_dir, allowed_row_range):
+    # if cur_dir == pref_dir[2]:
+    #     # not the main direction, make others more appealing
+    #     return next_dir_possible(cur_dir, cur_row, cur_col, visited, [pref_dir[0], pref_dir[1], pref_dir[3], pref_dir[2]], allowed_row_range)
+    # elif cur_dir == pref_dir[1]:
+    #     # not the main direction, make others more appealing
+    #     return next_dir_possible(cur_dir, cur_row, cur_col, visited, [pref_dir[0], pref_dir[2], pref_dir[3], pref_dir[1]], allowed_row_range)
+    # else:
+    #     # immedate change of direction
+    return next_dir_possible(cur_dir, cur_row, cur_col, visited, pref_dir, allowed_row_range)
+
+
+class MakeLabyrinth(Effect):
+    def __init__(self):
+        super().__init__()
+        self.__initstate__()
+
+    def __initstate__(self):
+        super().__initstate__()
+        self._mapMask = None
+
+    def numOutputChannels(self):
+        return 1
+
+    def numInputChannels(self):
+        return 1
+
+    async def update(self, dt):
+        await super().update(dt)
+        if self._mapMask is None or np.size(self._mapMask, 1) != self._num_pixels:
+            self._mapMask = self._genMapMask(self._num_pixels, self._num_rows)
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = None
+            return
+        buffer = self._inputBuffer[0]
+        self._outputBuffer[0] = buffer[self._mapMask[:, :, 0], self._mapMask[:, :, 1]]
+
+    def _genMapMask(self, num_pixels, num_rows):
+
+        num_cols = int(num_pixels / num_rows)
+        mapMask = np.zeros((3, num_pixels, 2))
+        visited = np.zeros((num_rows, num_cols), dtype=np.int64)  # array holding information if pixel was visited
+        cur_idx_u = int(num_pixels / 2)  # current index counter upper half
+        cur_idx_l = int(num_pixels / 2)  # current index counter lower half
+        cur_row_u = int(num_rows / 2) - 1
+        cur_col_u = int(num_cols / 2)
+        cur_row_l = int(num_rows / 2)
+        cur_col_l = int(num_cols / 2) - 1
+        # visit first pixels
+        for i in range(0, 1):
+            mapMask[0, toIdx(cur_row_u, cur_col_u, num_cols), :] = [0, cur_idx_u]
+            mapMask[1, toIdx(cur_row_u, cur_col_u, num_cols), :] = [1, cur_idx_u]
+            mapMask[2, toIdx(cur_row_u, cur_col_u, num_cols), :] = [2, cur_idx_u]
+            visited[cur_row_u, cur_col_u] = 1
+            cur_idx_u -= 1
+            cur_col_u -= 1
+        for i in range(0, 1):
+            mapMask[0, toIdx(cur_row_l, cur_col_l, num_cols), :] = [0, cur_idx_l]
+            mapMask[1, toIdx(cur_row_l, cur_col_l, num_cols), :] = [1, cur_idx_l]
+            mapMask[2, toIdx(cur_row_l, cur_col_l, num_cols), :] = [2, cur_idx_l]
+            visited[cur_row_l, cur_col_l] = 1
+            cur_idx_l += 1
+            cur_col_l += 1
+        dir_u = 'u'
+        dir_l = 'd'
+        last_hor_u = 'l'
+        last_hor_l = 'r'
+        allowed_range_u = [0, int(num_rows / 2) - 1]
+        allowed_range_l = [int(num_rows / 2), num_rows - 1]
+        for p in range(0, int(num_pixels / 2) - 2):
+            # adjust indices
+            cur_idx_u = int(cur_idx_u - 1)
+            cur_idx_l = int(cur_idx_l + 1)
+            # move
+            cur_row_u, cur_col_u = move(cur_row_u, cur_col_u, dir_u)
+            cur_row_l, cur_col_l = move(cur_row_l, cur_col_l, dir_l)
+            # set new value
+            mapMask[0, toIdx(cur_row_u, cur_col_u, num_cols), :] = [0, cur_idx_u]
+            mapMask[1, toIdx(cur_row_u, cur_col_u, num_cols), :] = [1, cur_idx_u]
+            mapMask[2, toIdx(cur_row_u, cur_col_u, num_cols), :] = [2, cur_idx_u]
+            visited[cur_row_u, cur_col_u] = 1
+            mapMask[0, toIdx(cur_row_l, cur_col_l, num_cols), :] = [0, cur_idx_l]
+            mapMask[1, toIdx(cur_row_l, cur_col_l, num_cols), :] = [1, cur_idx_l]
+            mapMask[2, toIdx(cur_row_l, cur_col_l, num_cols), :] = [2, cur_idx_l]
+            visited[cur_row_l, cur_col_l] = 1
+            # determine new direction upper
+            try:
+                cur_dir = dir_u
+                if last_hor_u == 'l':
+                    dir_u = next_dir(dir_u, cur_row_u, cur_col_u, visited, ['d', 'r', 'u', 'l'], allowed_range_u)
+                elif last_hor_u == 'r':
+                    dir_u = next_dir(dir_u, cur_row_u, cur_col_u, visited, ['d', 'l', 'u', 'r'], allowed_range_u)
+                else:
+                    dir_u = next_dir(dir_u, cur_row_u, cur_col_u, visited, ['d', 'r', 'l', 'u'], allowed_range_u)
+                if dir_u == 'd' and (cur_dir == 'l' or cur_dir == 'r'):
+                    last_hor_u = cur_dir
+            except RuntimeError:
+                # reset allowed range
+                allowed_range_u = [0, num_rows]
+
+            # determine new direction lower
+            try:
+                cur_dir = dir_l
+                if last_hor_l == 'l':
+                    dir_l = next_dir(dir_l, cur_row_l, cur_col_l, visited, ['u', 'r', 'd', 'l'], allowed_range_l)
+                elif last_hor_l == 'r':
+                    dir_l = next_dir(dir_l, cur_row_l, cur_col_l, visited, ['u', 'l', 'd', 'r'], allowed_range_l)
+                else:
+                    dir_l = next_dir(dir_l, cur_row_l, cur_col_l, visited, ['u', 'l', 'r', 'd'], allowed_range_l)
+                if dir_l == 'u' and (cur_dir == 'l' or cur_dir == 'r'):
+                    last_hor_l = cur_dir
+            except RuntimeError:
+                # reset allowed range
+                allowed_range_l = [0, num_rows]
+
+        return mapMask.astype(np.int64)
