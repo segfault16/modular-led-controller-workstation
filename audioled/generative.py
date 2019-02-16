@@ -221,6 +221,9 @@ class MidiKeyboard(Effect):
             print('Unable to import the mido library')
             print('You can install this library with `pip install mido`')
             return []
+        except Exception:
+            print("Error while getting midi inputs")
+            return []
 
 
     @staticmethod
