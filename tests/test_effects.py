@@ -21,15 +21,16 @@ class Test_Effects(unittest.TestCase):
         childclasses = inheritors(effects.Effect)
         effectsWithMissingParameterDescription = []
         for _class in childclasses:
-            try:
+            if 'parameters' in _class.getParameterDefinition():
                 parameters = _class.getParameterDefinition()['parameters']
-                parameterDescription = _class.getParameterHelp()['parameters']
-                for key, value in parameters.items():
-                    if parameterDescription.get(key) is None:
-                        effectsWithMissingParameterDescription.append("{} has no help for parameter {}".format(
-                            _class, key))
-            except Exception:
-                effectsWithMissingParameterDescription.append("{} has no parameter help at all".format(_class))
+                try:
+                    parameterDescription = _class.getParameterHelp()['parameters']
+                    for key, value in parameters.items():
+                        if parameterDescription.get(key) is None:
+                            effectsWithMissingParameterDescription.append("{} has no help for parameter {}".format(
+                                _class, key))
+                except Exception:
+                    effectsWithMissingParameterDescription.append("{} has no parameter help at all".format(_class))
 
         self.assertEqual([], effectsWithMissingParameterDescription)
 
