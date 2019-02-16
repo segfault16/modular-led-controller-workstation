@@ -86,7 +86,6 @@ class Spectrum(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "fs": "Sample Frequency of the audio input.",
                 "n_overlaps": "Number of overlapping samples in time. This smoothes the FFT.",
                 "fft_bins": "Number of bins of the FFT. Increase for a more detailed FFT.",
@@ -225,7 +224,6 @@ class VUMeterRMS(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "db_range": "Range of the VU Meter in decibels.",
                 "n_overlaps": "Number of overlapping samples in time. This smoothes the VU Meter."
             }
@@ -314,7 +312,6 @@ class VUMeterPeak(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "db_range": "Range of the VU Meter in decibels.",
                 "n_overlaps": "Number of overlapping samples in time. This smoothes the VU Meter."
             }
@@ -454,7 +451,6 @@ class MovingLight(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "speed": "Speed of the moving peak.",
                 "dim_time": "Amount of time for the afterglow of the moving peak.",
                 "lowcut_hz": "Lowcut frequency of the audio input.",
@@ -575,7 +571,6 @@ class Bonfire(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "spread": "Amount of pixels the splitted colors are moved.",
                 "lowcut_hz": "Lowcut frequency of the audio input.",
                 "highcut_hz": "Highcut frequency of the audio input.",

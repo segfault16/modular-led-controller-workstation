@@ -530,7 +530,6 @@ class SpringCombine(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "dampening": "Dampening factory of the springs.",
                 "tension": "Tension of the springs.",
                 "spread": "Interaction between neighboring springs.",
@@ -647,7 +646,6 @@ class Swing(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "displacement": "Defines maximum amount of pixels that the input is shifted.",
                 "swingspeed": "Speed of the swing."
             }

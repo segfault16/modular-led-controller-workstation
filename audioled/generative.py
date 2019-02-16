@@ -61,7 +61,6 @@ class SwimmingPool(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "num_waves": "Number of generated overlaying waves.",
                 "scale": "Scales the brightness of the waves.",
                 "wavespread_low": "Minimal spread of the randomly generated waves.",
@@ -365,7 +364,6 @@ class Breathing(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "cycle": "Seconds to repeat a full cycle.",
             }
         }
@@ -428,7 +426,6 @@ class Heartbeat(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "speed": "Speed of the heartbeat.",
             }
         }
@@ -491,7 +488,6 @@ class FallingStars(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "dim_speed": "Time to fade out one star.",
                 "thickness": "Thickness of one star in pixels.",
                 "spawntime": "Time until a new star is spawned.",
@@ -613,7 +609,6 @@ class Pendulum(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "location": "Starting location and center to swing around.",
                 "displacement": "Displacement of the pendulum to either side.",
                 "swingspeed": "Speed of the pendulum.",
@@ -718,7 +713,6 @@ class RandomPendulums(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "num_pendulums": "Number of random pendulums.",
                 "dim": "Overall brightness of the pendulums.",
             }
@@ -843,7 +837,6 @@ class StaticBlob(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "location": "Location where the blob is created.",
                 "spread": "Spreading of the blob."
             }
@@ -931,7 +924,6 @@ class GenerateWaves(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "period": "Spread of one wave.",
                 "scale": "Overall brightness of the effect.",
                 "wavemode": "Selection of different wave forms."
@@ -1039,7 +1031,6 @@ class Sorting(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "sortby": "Parameter which the effect sorts by.",
                 "reversed": "Flips the parameter which is sorted by.",
                 "looping": "If activated, the effect randomly picks another parameter to sort by. "

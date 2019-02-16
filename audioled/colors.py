@@ -88,7 +88,6 @@ class StaticRGBColor(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("r", [255.0, 0.0, 255.0, 1.0]),
                 ("g", [255.0, 0.0, 255.0, 1.0]),
                 ("b", [255.0, 0.0, 255.0, 1.0]),
@@ -100,7 +99,6 @@ class StaticRGBColor(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "r": "Amount of red.",
                 "g": "Amount of green.",
                 "b": "Amount of blue.",
@@ -196,7 +194,6 @@ class ColorWheel(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "cycle_time": "Amount of time the Color Wheel needs to cycle through the hue values of the color space.",
                 "offset": "Offset of the Color Wheel.",
                 "luminocity": "Luminocity of the color space.",
