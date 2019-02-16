@@ -469,12 +469,12 @@ def create_app():
 def strandTest(device, num_pixels):
     pixels = np.zeros(int(num_pixels / 2)) * np.array([[255.0], [255.0], [255.0]])
     t = 0.0
-    dt = 0.001
+    dt = 1.0 / num_pixels
     for i in range(0, int(num_pixels * 1.2)):
         h = t / dt / num_pixels
         r, g, b, = 0, 0, 0
         if i < num_pixels / 2:
-            r, g, b = colorsys.hls_to_rgb(h, 0.5, 1.0)
+            r, g, b = colorsys.hsv_to_rgb(h, 0.5, 1.0)
         pixels = np.roll(pixels, -1, axis=1)
         pixels[0][0] = r * 255.0
         pixels[1][0] = g * 255.0
@@ -565,7 +565,8 @@ if __name__ == '__main__':
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
         device = devices.RaspberryPi(serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
     elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
-        device = devices.FadeCandy(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
+        device = devices.FadeCandy(serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS), 
+            serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
     else:
         print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
         exit

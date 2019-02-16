@@ -104,10 +104,11 @@ class Timing(object):
         self._count = 0
 
     def update(self, timing):
-        if self._count == 0:
+        if self._count % 100 == 0:
             self._max = timing
             self._min = timing
             self._avg = timing
+            self._count = 0
         else:
             self._max = max(self._max, timing)
             self._min = min(self._min, timing)

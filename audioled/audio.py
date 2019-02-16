@@ -142,8 +142,9 @@ class AudioInput(Effect):
                 try:
                     if AudioInput.global_stream is None:
                         AudioInput.global_stream, fs = self._open_input_stream(device_index, channels=channels)
-
-                    chunk = AudioInput.global_stream.read(chunk_length)
+                    # Reading audio by default with exception_on_overflow=False
+                    # Exceptions on overflow result in hickups. Enable only for debugging.
+                    chunk = AudioInput.global_stream.read(chunk_length, exception_on_overflow=False)
                 except IOError as e:
                     if e.errno == pyaudio.paInputOverflowed:
                         print('Audio buffer full')
