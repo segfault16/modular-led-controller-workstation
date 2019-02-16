@@ -130,6 +130,16 @@ def create_app():
         except StopIteration:
             abort(404, "Node not found")
 
+    @app.route('/slot/<int:slotId>/node/<nodeUid>/effect', methods=['GET'])
+    def node_uid_effectname_get(slotId, nodeUid):
+        global proj
+        fg = proj.getSlot(slotId)
+        try:
+            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            return json.dumps(getFullClassName(node.effect))
+        except StopIteration:
+            abort(404, "Node not found")
+
     @app.route('/slot/<int:slotId>/node', methods=['POST'])
     def slot_slotId_node_post(slotId):
         global proj
@@ -204,6 +214,16 @@ def create_app():
         childclasses = inheritors(effects.Effect)
         return jsonpickle.encode([child for child in childclasses])
 
+    @app.route('/effect/<full_class_name>/description', methods=['GET'])
+    def effect_effectname_description_get(full_class_name):
+        module_name, class_name = None, None
+        try:
+            module_name, class_name = getModuleAndClassName(full_class_name)
+        except RuntimeError:
+            abort(403)
+        class_ = getattr(importlib.import_module(module_name), class_name)
+        return class_.getEffectDescription()
+
     @app.route('/effect/<full_class_name>/args', methods=['GET'])
     def effect_effectname_args_get(full_class_name):
         module_name, class_name = None, None
@@ -236,6 +256,16 @@ def create_app():
         class_ = getattr(importlib.import_module(module_name), class_name)
         return json.dumps(class_.getParameterDefinition())
 
+    @app.route('/effect/<full_class_name>/parameterHelp', methods=['GET'])
+    def effect_effectname_parameterhelp_get(full_class_name):
+        module_name, class_name = None, None
+        try:
+            module_name, class_name = getModuleAndClassName(full_class_name)
+        except RuntimeError:
+            abort(403)
+        class_ = getattr(importlib.import_module(module_name), class_name)
+        return json.dumps(class_.getParameterHelp())
+
     def getModuleAndClassName(full_class_name):
         module_name, class_name = full_class_name.rsplit(".", 1)
         if (module_name != "audioled.audio" and module_name != "audioled.effects" and module_name != "audioled.devices"
@@ -244,6 +274,13 @@ def create_app():
                 and module_name != "audioled.panelize"):
             raise RuntimeError("Not allowed")
         return module_name, class_name
+    
+    def getFullClassName(o):
+        module = o.__class__.__module__
+        if module is None or module == str.__class__.__module__:
+            return o.__class__.__name__  
+        else:
+            return module + '.' + o.__class__.__name__
 
     def inheritors(klass):
         subclasses = set()

@@ -323,6 +323,11 @@ class DotStar(LEDController):
 
 class LEDOutput(Effect):
 
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Sends pixel information to a LED Output Device.."
+
     def __init__(self, brightness=1.0):
         self.brightness = brightness
         self.__initstate__()
@@ -339,6 +344,15 @@ class LEDOutput(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "brightness": "Adjust brightness of all pixels."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()

@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import colorsys
 import math
@@ -18,7 +17,7 @@ from audioled.effects import Effect
 
 class Spectrum(Effect):
     """
-    SpectrumEffect performs a FFT and visualizes bass and melody frequencies with different colors.
+    Spectrum performs a FFT and visualizes bass and melody frequencies with different colors.
 
     Inputs:
     - 0: Audio
@@ -30,17 +29,21 @@ class Spectrum(Effect):
 
     """
 
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Spectrum performs a FFT on the audio input (channel 0) and visualizes bass and melody frequencies "\
+            "with different colors (channel 1 for bass, channel 2 for melody)."
+
     def __init__(self,
                  fs,
                  fmax=6000,
                  n_overlaps=4,
-                 chunk_rate=60,
                  fft_bins=64,
                  col_blend=colors.blend_mode_default):
         self.fs = fs
         self.fmax = fmax
         self.n_overlaps = n_overlaps
-        self.chunk_rate = chunk_rate
         self.fft_bins = fft_bins
         self.col_blend = col_blend
         self.__initstate__()
@@ -73,26 +76,34 @@ class Spectrum(Effect):
                 # default, min, max, stepsize
                 ("fs", [48000, 44100, 96000, 100]),
                 ("n_overlaps", [4, 0, 20, 1]),
-                ("chunk_rate", [60, 30, 100, 1]),
                 ("fft_bins", [64, 32, 128, 1]),
                 ("col_blend", colors.blend_modes)
             ])
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "fs": "Sample Frequency of the audio input.",
+                "n_overlaps": "Number of overlapping samples in time. This smoothes the FFT.",
+                "fft_bins": "Number of bins of the FFT. Increase for a more detailed FFT.",
+                "col_blend": "Color blend mode for combining bass and melody FFT."
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['fs']  # disable edit
         definition['parameters']['n_overlaps'][0] = self.n_overlaps
-        definition['parameters']['chunk_rate'][0] = self.chunk_rate
-        definition['parameters']['fft_bins'][0] = self.chunk_rate
+        definition['parameters']['fft_bins'][0] = self.fft_bins
         definition['parameters']['col_blend'] = [self.col_blend
                                                  ] + [x for x in colors.blend_modes if x != self.col_blend]
         return definition
 
     def _audio_gen(self, audio_gen):
-        self._bass_rms = np.zeros(self.chunk_rate * 6)
-        self._melody_rms = np.zeros(self.chunk_rate * 6)
         audio, self._fs_ds = dsp.preprocess(audio_gen, self.fs, self.fmax, self.n_overlaps)
         return audio
 
@@ -126,13 +137,13 @@ class Spectrum(Effect):
                 y = next(self._gen)
                 bass = dsp.warped_psd(y, self.fft_bins, self._fs_ds, [32.7, 261.0], 'bark')
                 melody = dsp.warped_psd(y, self.fft_bins, self._fs_ds, [261.0, self.fmax], 'bark')
-                bass = self.process_line(bass, self._bass_rms)
-                melody = self.process_line(melody, self._melody_rms)
+                bass = self.process_line(bass)
+                melody = self.process_line(melody)
                 pixels = colors.blend(1. / 255.0 * np.multiply(col_bass, bass),
                                       1. / 255. * np.multiply(col_melody, melody), self.col_blend)
                 self._outputBuffer[0] = pixels.clip(0, 255).astype(int)
 
-    def process_line(self, fft, fft_rms):
+    def process_line(self, fft):
 
         # fft = np.convolve(fft, self._max_filter, 'same')
 
@@ -156,6 +167,11 @@ class VUMeterRMS(Effect):
     - 0: Audio
     - 1: Color
     """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "VUMeterRMS visualizes the RMS value of the audio input (channel 0) with the color (channel 1)."
 
     def __init__(self, db_range=60.0, n_overlaps=1):
         self.db_range = db_range
@@ -204,6 +220,16 @@ class VUMeterRMS(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "db_range": "Range of the VU Meter in decibels.",
+                "n_overlaps": "Number of overlapping samples in time. This smoothes the VU Meter."
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         definition['parameters']['db_range'][0] = self.db_range
@@ -244,6 +270,11 @@ class VUMeterPeak(Effect):
     - 1: Color
     """
 
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "VUMeterPeak visualizes the Peak value of the audio input (channel 0) with the color (channel 1)."
+
     def __init__(self, db_range=60.0, n_overlaps=1):
         self.db_range = db_range
         self.n_overlaps = n_overlaps
@@ -276,6 +307,16 @@ class VUMeterPeak(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "db_range": "Range of the VU Meter in decibels.",
+                "n_overlaps": "Number of overlapping samples in time. This smoothes the VU Meter."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -350,6 +391,12 @@ class MovingLight(Effect):
     - 1: Color
     """
 
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "MovingLight generates a visual peak based on the audio input (channel 0) with the given color (channel 1) "\
+            "at the beginning of the strip. This peak moves down the strip until it dissipates."
+
     def __init__(self,
                  fs,
                  speed=100.0,
@@ -399,6 +446,21 @@ class MovingLight(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "speed": "Speed of the moving peak.",
+                "dim_time": "Amount of time for the afterglow of the moving peak.",
+                "lowcut_hz": "Lowcut frequency of the audio input.",
+                "highcut_hz": "Highcut frequency of the audio input.",
+                "peak_filter": "Filters the audio peaks. Increase this value to transform only high audio peaks into visual peaks.",
+                "peak_scale": "Scales the visual peak after the filter.",
+                "highlight": "Amount of white light added to the audio peak.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -468,6 +530,12 @@ class Bonfire(Effect):
     - 1: Pixels
     """
 
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Bonfire performs an audio-reactive color splitting of input channel 1 based on "\
+            "the audio input (channel 0)."
+
     def __init__(self, fs, spread=100, lowcut_hz=50.0, highcut_hz=200.0):
         self.spread = spread
         self.lowcut_hz = lowcut_hz
@@ -499,6 +567,17 @@ class Bonfire(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "spread": "Amount of pixels the splitted colors are moved.",
+                "lowcut_hz": "Lowcut frequency of the audio input.",
+                "highcut_hz": "Highcut frequency of the audio input.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         definition['parameters']['spread'][0] = self.spread
@@ -523,8 +602,7 @@ class Bonfire(Effect):
         y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audiobuffer), zi=self._filter_zi)
         peak = np.max(y) * 1.0
 
-        pixelbuffer[0] = sp.ndimage.interpolation.shift(pixelbuffer[0],
-                                                        -self.spread * peak, mode='wrap', prefilter=True)
-        pixelbuffer[2] = sp.ndimage.interpolation.shift(pixelbuffer[2],
-                                                        self.spread * peak, mode='wrap', prefilter=True)
+        pixelbuffer[0] = sp.ndimage.interpolation.shift(
+            pixelbuffer[0], -self.spread * peak, mode='wrap', prefilter=True)
+        pixelbuffer[2] = sp.ndimage.interpolation.shift(pixelbuffer[2], self.spread * peak, mode='wrap', prefilter=True)
         self._outputBuffer[0] = pixelbuffer
