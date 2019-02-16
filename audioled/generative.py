@@ -214,17 +214,14 @@ class MidiKeyboard(Effect):
 
     @staticmethod
     def getMidiPorts():
-        try: 
+        try:
+            import mido
             return mido.get_input_names()
-        except:
-            try:
-                import mido
-                return mido.get_input_names()
-            except ImportError as e:
-                print('Unable to import the mido library')
-                print('You can install this library with `pip install mido`')
-                return []
-        return []
+        except ImportError as e:
+            print('Unable to import the mido library')
+            print('You can install this library with `pip install mido`')
+            return []
+
 
     @staticmethod
     def getParameterDefinition():
