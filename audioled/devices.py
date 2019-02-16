@@ -343,7 +343,7 @@ class LEDOutput(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "brightnes": "Adjust brightness of all pixels."
+                "brightness": "Adjust brightness of all pixels."
             }
         }
         return help
