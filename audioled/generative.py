@@ -479,8 +479,8 @@ class FallingStars(Effect):
                 "num_pixels": "Number of pixels.",
                 "dim_speed": "Time to fade out one star.",
                 "thickness": "Thickness of one star in pixels.",
-                "spawntime": "Time till a new star is spawned.",
-                "max_brightness": "Maximum brightness of a star when it is spawned."
+                "spawntime": "Time until a new star is spawned.",
+                "max_brightness": "Maximum brightness of the stars."
             }
         }
         return help
@@ -589,7 +589,7 @@ class Pendulum(Effect):
             "parameters": {
                 "num_pixels": "Number of pixels.",
                 "location": "Starting location and center to swing around.",
-                "displacement": "Displacement of the pendulum to each side.",
+                "displacement": "Displacement of the pendulum to either side.",
                 "swingspeed": "Speed of the pendulum.",
                 "heightactivator": "Changes brightness of the pendulum depending on its location.",
                 "lightflip": "Reverses the setting of heightactivator."
