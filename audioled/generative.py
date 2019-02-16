@@ -223,6 +223,20 @@ class MidiKeyboard(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "midiPort": "Midi Port to use.",
+                "attack": "Controls attack in pixel envelope.",
+                "decay": "Controls decay in pixel envelope.",
+                "sustain": "Controls sustain in pixel envelope.",
+                "release": "Controls release in pixel envelope.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_pixels']
