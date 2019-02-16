@@ -38,8 +38,10 @@ class NodePopup extends React.Component {
             onSave: props.onSave,
             onCancel: props.onCancel,
             config: {
-                parameters: {},
-                values: {}
+                parameters: [],
+                values: [],
+                parameterHelp: [],
+                description: ""
             },
             effects: [],
             selectedEffect: null,
@@ -61,20 +63,28 @@ class NodePopup extends React.Component {
 
     async showEdit() {
         const uid = this.state.nodeUid;
-        const stateJson = await FilterGraphService.getNode(this.state.slot, uid);
-        const json = await FilterGraphService.getNodeParameter(this.state.slot, uid);
-        await Promise.all([stateJson, json]).then(result => {
-            var effect = result[0]["py/state"]["effect"]["py/state"];
-            var values = result[1];
+        await FilterGraphService.getNodeEffect(this.state.slot, uid).then(effectName => {
+            const nodeJson = FilterGraphService.getNode(this.state.slot, uid);
+            const parameterDefinitionJson = FilterGraphService.getNodeParameter(this.state.slot, uid);
+            const helpJson = FilterGraphService.getEffectParameterHelp(effectName);
+            const description = FilterGraphService.getEffectDescription(effectName);
+            return Promise.all([nodeJson, parameterDefinitionJson, helpJson, description])
+        }).then(result => {
+            var currentParameterValues = result[0]["py/state"]["effect"]["py/state"];
+            var parameterDefinition = result[1];
+            var helpText = result[2];
+            var desc = result[3];
             this.setState(state => {
                 return {
                     config: {
-                        parameters: values.parameters,
-                        values: effect
+                        parameters: parameterDefinition.parameters,
+                        values: currentParameterValues,
+                        parameterHelp: (helpText !== null && helpText.parameters !== null) ? helpText.parameters : {},
+                        description: desc
                     }
                 }
             })
-        });
+        })
     }
 
     async showAdd() {
@@ -98,20 +108,25 @@ class NodePopup extends React.Component {
         }
         const json = await FilterGraphService.getEffectParameters(selectedEffect);
         const defaultJson = await FilterGraphService.getEffectArguments(selectedEffect);
-        Promise.all([json, defaultJson]).then(result => {
+        const helpJson = await FilterGraphService.getEffectParameterHelp(selectedEffect);
+        const description = await FilterGraphService.getEffectDescription(selectedEffect);
+        Promise.all([json, defaultJson, helpJson, description]).then(result => {
             var parameters = result[0];
             var defaults = result[1];
+            var helpText = result[2];
+            var desc = result[3];
             return this.setState(state => {
                 return {
                     config: {
                         parameters: parameters.parameters,
-                        values: defaults
+                        values: defaults,
+                        parameterHelp: (helpText !== null && helpText.parameters !== null) ? helpText.parameters : {},
+                        description: desc
                     }
                 }
             })
         }).catch(err => {
-            showError("Error updating node configuration. See console for details.");
-            console.err("Error updating node configuration:", err);
+            console.error("Error updating node configuration:", err);
         });
     }
 
@@ -190,6 +205,8 @@ class NodePopup extends React.Component {
         const { classes } = this.props;
         let parameters = this.state.config.parameters;
         let values = this.state.config.values;
+        let parameterHelp = this.state.config.parameterHelp;
+        let effectDescription = this.state.config.description;
         let effectDropdown = this.domCreateEffectDropdown();
         return (
             <div className={classes.paper}>
@@ -197,12 +214,25 @@ class NodePopup extends React.Component {
                 <div id="effects">
                     {effectDropdown}
                 </div>
+                <div>
+                    {effectDescription.length > 0 ? 
+                    <React.Fragment>
+                    <br/>
+                    {effectDescription.split("\n").map(line => {
+                        return <Typography>
+                            {line}
+                        </Typography>
+                    })}
+                    </React.Fragment>
+                    : null}
+                </div>
                 <div id="node-grid">
                     <h3>Parameters:</h3>
                     <Configurator 
                         onChange={(parameter, value) => this.handleParameterChange(value, parameter)}
                         parameters={parameters}
-                        values={values}/>
+                        values={values}
+                        parameterHelp={parameterHelp}/>
                 </div>
                 <h3></h3>
                 <Divider className={classes.divider} />

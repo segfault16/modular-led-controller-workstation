@@ -59,6 +59,12 @@ def blend(pixel_a, pixel_b, blend_mode):
 
 
 class StaticRGBColor(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "StaticRGBColor outputs a static color."
+
     def __init__(self, num_pixels, r=255.0, g=255.0, b=255.0):
         self.num_pixels = num_pixels
         self.r = r
@@ -83,6 +89,7 @@ class StaticRGBColor(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
+                ("num_pixels", [300, 1, 1000, 1]),
                 ("r", [255.0, 0.0, 255.0, 1.0]),
                 ("g", [255.0, 0.0, 255.0, 1.0]),
                 ("b", [255.0, 0.0, 255.0, 1.0]),
@@ -90,8 +97,21 @@ class StaticRGBColor(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "r": "Amount of red.",
+                "g": "Amount of green.",
+                "b": "Amount of blue.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
+        del definition['parameters']['num_pixels']
         definition['parameters']['r'][0] = self.r
         definition['parameters']['g'][0] = self.g
         definition['parameters']['b'][0] = self.b
@@ -115,6 +135,11 @@ class StaticRGBColor(Effect):
 class ColorWheel(Effect):
     """ Generates colors
     """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "The ColorWheel moves through the HSV color space and outputs the color."
 
     def __init__(self,
                  num_pixels=1,
@@ -172,6 +197,21 @@ class ColorWheel(Effect):
         definition['parameters']['wiggle_amplitude'][0] = self.wiggle_amplitude
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "cycle_time": "Amount of time the Color Wheel needs to cycle through the hue values of the color space.",
+                "offset": "Offset of the Color Wheel.",
+                "luminocity": "Luminocity of the color space.",
+                "saturation": "Color saturation.",
+                "wiggle_time": "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. This parameter controls the frequency of the wiggle.",
+                "wiggle_amplitude": "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. This parameter controls the amplitude of the wiggle.",
+            }
+        }
+        return help
+
     async def update(self, dt):
         await super(ColorWheel, self).update(dt)
         self._color = self.get_color_array(self._t, self.num_pixels)
@@ -199,84 +239,13 @@ class ColorWheel(Effect):
         return np.ones(num_pixels) * self.get_color(t, -1)
 
 
-class ColorWheel2_gen(Effect):
-    def __init__(self, num_pixels, cycle_time=30.0, offset=0.0, cycle_time_dim=10.0):
-        self.num_pixels = num_pixels
-        self.cycle_time = cycle_time
-        self.offset = offset
-        self.cycle_time_dim = cycle_time_dim
-        self._color = None
-        self.__initstate__()
-
-    def numInputChannels(self):
-        return 0
-
-    def numOutputChannels(self):
-        return 1
-
-    def get_color(self, t, pixel):
-        L = 0.5
-        S = 1.0
-        dim = math.sin(2 * math.pi / self.cycle_time_dim * t)
-        h = (t + self.offset % self.cycle_time) / self.cycle_time
-        r, g, b = colorsys.hls_to_rgb(h, L, S)
-        CArray = np.array([[dim * r * 255.0], [dim * g * 255.0], [dim * b * 255.0]])
-
-        return CArray
-
-    async def update(self, dt):
-        await super(ColorWheel2_gen, self).update(dt)
-        self._color = self.get_color_array(self._t, self.num_pixels)
-
-    def process(self):
-        if self._outputBuffer is not None:
-            self._outputBuffer[0] = self._color
-
-    def get_color_array(self, t, num_pixels):
-        return np.ones(num_pixels) * self.get_color(t, -1)
-
-
-class ColorDimEffect(Effect):
-    """ Dim colors, set cycle_time=0 and 0 <  offset < 1 for static dimming
-    """
-
-    def __init__(self, num_pixels=1, cycle_time=30.0, offset=0.0):
-        self.cycle_time = cycle_time
-        self.offset = offset
-        self.num_pixels = num_pixels
-
-    def __initstate__(self):
-        # state
-        self._color = None
-        super(ColorDimEffect, self).__initstate__()
-
-    def numInputChannels(self):
-        return 2
-
-    def numOutputChannels(self):
-        return 1
-
-    async def update(self, dt):
-        await super(ColorDimEffect, self).update(dt)
-        self._color = self.get_color_array(self._t, self.num_pixels)
-
-    def process(self):
-        if self._outputBuffer is not None:
-            self._outputBuffer[0] = self._color
-
-    def get_color(self, t, pixel):
-        if self.cycle_time == 0:
-            dim = self.offset
-        else:
-            dim = abs(math.sin((2 * math.pi * t / self.cycle_time) + self.offset))
-
-        return np.array([[dim * 255.0], [dim * 255.0], [dim * 255.0]])
-
-    def get_color_array(self, t, num_pixels):
-        return np.ones(num_pixels) * self.get_color(t, -1)
-
-
 class InterpolateRGB(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "RGB interpolation between two color inputs."
+
     def __init__(self, num_pixels):
         self.num_pixels = num_pixels
         self.__initstate__()
@@ -301,6 +270,12 @@ class InterpolateRGB(Effect):
 
 
 class InterpolateHSV(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "HSV interpolation between two color inputs."
+
     def __init__(self, num_pixels):
         self.num_pixels = num_pixels
         self.__initstate__()

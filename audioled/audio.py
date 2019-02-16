@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import time
 from collections import OrderedDict
@@ -37,11 +36,12 @@ def numInputChannels(device_index=None):
 class AudioInput(Effect):
     overrideDeviceIndex = None
     global_stream = None
-    """
-    Outputs:
-    0: Audio Channel 0
-    1: Audio Channel 1...
-    """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Audio input captures audio from your device and " \
+            "makes each channel available as an output. "
 
     def __init__(self,
                  device_index=None,
@@ -176,6 +176,22 @@ class AudioInput(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_channels":
+                "Number of input channels of the audio device.",
+                "autogain":
+                "Automatically adjust the gain of the input channels.\nThe input signal will be scaled up to 'autogain_max', gain will be reduced if the audio signal would clip.",
+                "autogain_max":
+                "Maximum gain makeup.",
+                "autogain_time":
+                "Control the lag of the gain adjustment. Higher values will result in slower gain makeup."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
