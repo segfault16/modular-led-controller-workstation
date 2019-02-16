@@ -9,6 +9,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Select from '@material-ui/core/Select';
 import Checkbox from '@material-ui/core/Checkbox';
 import Typography from '@material-ui/core/Typography';
+import Tooltip from '@material-ui/core/Tooltip'
 
 const styles = theme => ({
 });
@@ -18,14 +19,16 @@ class Configurator extends Component {
         super(props)
         this.state = {
             parameters: props.parameters,
-            values: props.values
+            values: props.values,
+            parameterHelp: props.parameterHelp
         }
     }
 
     componentWillReceiveProps(nextProps) {
         this.setState({
             parameters: nextProps.parameters,
-            values: nextProps.values
+            values: nextProps.values,
+            parameterHelp: nextProps.parameterHelp
         })
     }
 
@@ -99,7 +102,7 @@ class Configurator extends Component {
         </React.Fragment>
     }
 
-    domCreateConfigList = (parameters, values) => {
+    domCreateConfigList = (parameters, values, parameterHelp) => {
         if (parameters) {
             return Object.keys(parameters).map((data, index) => {
                 let control;
@@ -117,7 +120,9 @@ class Configurator extends Component {
                     control = this.domCreateParameterCheckbox(parameters, values, data);
                 }
                 if (control) {
+                    var helpText = (parameterHelp != null && data in parameterHelp) ? parameterHelp[data] : "";
                     return (
+                        <Tooltip title={helpText}>
                         <Grid key={index} container spacing={24}   alignItems="center" justify="center">
                             <Grid item xs={3} >
                             <Typography>
@@ -126,6 +131,7 @@ class Configurator extends Component {
                             </Grid>
                             {control}
                         </Grid>
+                        </Tooltip>
                     )
                 } else {
                     console.error("undefined control for data", parameters[data])
@@ -139,7 +145,7 @@ class Configurator extends Component {
         const { classes } = this.props;
         return (
             <div>
-                {this.domCreateConfigList(this.state.parameters, this.state.values)}
+                {this.domCreateConfigList(this.state.parameters, this.state.values, this.state.parameterHelp)}
             </div>
         )
     }
@@ -148,6 +154,7 @@ class Configurator extends Component {
 Configurator.propTypes = {
     classes: PropTypes.object.isRequired,
     parameters: PropTypes.object.isRequired,
+    parameterHelp: PropTypes.object,
     values: PropTypes.object.isRequired,
     onChange: PropTypes.func
 };

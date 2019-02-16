@@ -13,6 +13,12 @@ SHORT_NORMALIZE = 1.0 / 32768.0
 
 
 class Shift(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Shift effect for shifting pixels through the strip."
+
     def __init__(self, speed=100.0):
         self.speed = speed
         self.__initstate__()
@@ -43,6 +49,15 @@ class Shift(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "speed": "Speed of the shifting effect.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         definition['parameters']['speed'][0] = self.speed
@@ -64,6 +79,12 @@ class Shift(Effect):
 
 
 class Append(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Append combines multiple channels into one output."
+
     def __init__(self,
                  num_channels=2,
                  flip0=False,
@@ -116,6 +137,23 @@ class Append(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_channels": "Number of input channels of the effect.",
+                "flip0": "Change pixel direction of input channel 0.",
+                "flip1": "Change pixel direction of input channel 1.",
+                "flip2": "Change pixel direction of input channel 2.",
+                "flip3": "Change pixel direction of input channel 3.",
+                "flip4": "Change pixel direction of input channel 4.",
+                "flip5": "Change pixel direction of input channel 5.",
+                "flip6": "Change pixel direction of input channel 6.",
+                "flip7": "Change pixel direction of input channel 7.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_channels']  # not editable at runtime
@@ -154,6 +192,12 @@ class Append(Effect):
 
 
 class Combine(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for blending two channels into one using several color blend modes."
+
     def __init__(self, mode=colors.blend_mode_default):
         self.mode = mode
         self.__initstate__()
@@ -168,6 +212,15 @@ class Combine(Effect):
     def getParameterDefinition():
         definition = {"parameters": OrderedDict([("mode", colors.blend_modes)])}
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "mode": "Color blend mode for combining input channel 0 and input channel 1.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -194,9 +247,11 @@ class Combine(Effect):
 
 
 class AfterGlow(Effect):
-    """
-    Effect that
-    """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Afterglow makes pixels hold their value and fade out smoothly."
 
     def __init__(self, glow_time=1.0):
         self.glow_time = glow_time
@@ -223,6 +278,15 @@ class AfterGlow(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "glow_time": "Amount of time for the pixels to glow.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -263,6 +327,12 @@ class AfterGlow(Effect):
 
 
 class Mirror(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Mirrors the upper or lower half of the input channel."
+
     def __init__(self, mirror_lower=True, recursion=0):
         self.mirror_lower = mirror_lower
         self.recursion = recursion
@@ -287,10 +357,21 @@ class Mirror(Effect):
             OrderedDict([
                 ("mirror_lower", True),
                 # default, min, max, stepsize
-                ("recursion", [1, 0, 8, 1]),
+                ("recursion", [0, 0, 8, 1]),
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "mirror_lower": "Switch between mirroring the lower or the upper part of input channel 0.",
+                "recursion": "Recursion depth of the mirroring effect. If recursion is set to 1, "\
+                    "the lower and upper half of the strip are mirrored again at their centers."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -389,6 +470,15 @@ class SpringCombine(Effect):
 
     """
 
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Spring simulation effect that interpolates between three inputs based on displacement of the springs. "\
+            "The trigger input (channel 0) actuates on the springs (if value exceeds trigger_threshold). "\
+            "Depending on the displacement of each spring, the output value is a linear interpolation between:\n"\
+            "- channel 1 and channel 2 if displacement < 0\n"\
+            "- channel 2 and channel 3 if displacement > 0"
+
     def __init__(self,
                  dampening=0.99,
                  tension=0.001,
@@ -435,6 +525,23 @@ class SpringCombine(Effect):
             }
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "dampening": "Dampening factory of the springs.",
+                "tension": "Tension of the springs.",
+                "spread": "Interaction between neighboring springs.",
+                "scale_low": "Scaling factor for input channel 1.",
+                "scale_mid": "Scaling factor for input channel 2.",
+                "scale_high": "Scaling factor for input channel 3.",
+                "speed": "Controls the speed of the spring simulation.",
+                "trigger_threshold": "Above this threshold springs are actuated based on brightness of input channel 0."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -510,6 +617,11 @@ class Swing(Effect):
     - 0: Pixels
     """
 
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Makes the pixels shift in both directions like a pendulum."
+
     def __init__(self, displacement=50, swingspeed=1):
         self.displacement = displacement
         self.swingspeed = swingspeed
@@ -530,6 +642,17 @@ class Swing(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_pixels": "Number of pixels.",
+                "displacement": "Defines maximum amount of pixels that the input is shifted.",
+                "swingspeed": "Speed of the swing."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
