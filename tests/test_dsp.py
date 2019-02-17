@@ -4,11 +4,10 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 import unittest
 import numpy as np
-from audioled import dsp 
+from audioled import dsp
 
 
 class TestDSP(unittest.TestCase):
-
     def test_fir_moving_average_1D(self):
         """Verify FIR filter output for 1D 3-point moving average"""
         taps = [1 / 3, 1 / 3, 1 / 3]
@@ -25,7 +24,6 @@ class TestDSP(unittest.TestCase):
         ismatch = np.isclose(data_out, np.tile(np.arange(1, 9), (3, 1)).T)
         self.assertTrue(ismatch.all())
 
-
     # def test_warped_psd(self):
     #     import matplotlib.pyplot as plt
     #     plt.style.use('lawson')
@@ -40,7 +38,6 @@ class TestDSP(unittest.TestCase):
     #     print(np.sum(y**2))
     #     plt.plot(bins, energy)
     #     plt.show()
-
 
     # def test_rollwin_output(self):
     #     """Verify correct rolling window output for rollwin generator"""
@@ -99,7 +96,6 @@ class TestDSP(unittest.TestCase):
         # First 8 elements should be 1
         self.assertTrue((padded[:, :-2] == 1).all())
 
-
     def test_normalize_scale(self):
         """Verifies that normalize_scale returns values in range 0 to 1"""
         signal = 2 * np.sin(np.linspace(0, 2 * np.pi, 128)) + 4
@@ -116,8 +112,6 @@ class TestDSP(unittest.TestCase):
         signal = dsp.normalize_scale(signal, past_n=4)
         signal = np.array(list(signal))
         self.assertTrue((signal == 0).all())
-
-
 
 
 if __name__ == '__main__':

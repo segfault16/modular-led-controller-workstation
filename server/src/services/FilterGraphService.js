@@ -14,12 +14,15 @@ const FilterGraphService = {
             headers: {
                 'Content-Type': 'application/json'
             }
+        }).catch(error => {
+            throw error
         }).then(res => res.json()
         ).then(connection => {
             console.debug('Create connection successful:', data);
             return connection
         }).catch(error => {
             console.error('Error on creating connection:', error);
+            throw error
         });
     },
     deleteConnection: function (slotId, id) {

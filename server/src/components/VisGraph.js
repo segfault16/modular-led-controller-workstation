@@ -9,6 +9,7 @@ import CreateIcon from '@material-ui/icons/Create';
 import AddIcon from '@material-ui/icons/Add';
 import ClearIcon from '@material-ui/icons/Clear';
 import InfoIcon from '@material-ui/icons/Info';
+import CloseIcon from '@material-ui/icons/Close';
 import ToggleButtonGroup from '@material-ui/lab/ToggleButtonGroup';
 import ToggleButton from '@material-ui/lab/ToggleButton';
 import Modal from '@material-ui/core/Modal';
@@ -16,6 +17,8 @@ import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import Paper from '@material-ui/core/Paper';
 import Tooltip from '@material-ui/core/Tooltip'
+import { withSnackbar } from 'notistack';
+import IconButton from '@material-ui/core/IconButton';
 
 import Graph from "react-graph-vis";
 import 'vis/dist/vis-network.min.css';
@@ -115,6 +118,9 @@ class VisGraph extends React.Component {
       editNodePopup: {
         isShown: false,
         nodeUid: 0,
+      },
+      errorMessage: {
+        isShown: true
       },
       events: {
         select: ({ nodes, edges }) => {
@@ -255,6 +261,9 @@ class VisGraph extends React.Component {
                 // manual drag end
                 is_dragging = false
                 this.updateHelpText(null, null)
+              }).catch(err => {
+                console.error(err)
+                this.props.enqueueSnackbar("Error creating connection", { variant: 'error' })
               });
             } else {
               console.log("could not add edge")
@@ -308,11 +317,16 @@ class VisGraph extends React.Component {
     await this.resetNetwork();
     window.addEventListener("resize", this.updateDimensions);
     await this.updateDimensions();
+    this.intervalID = setInterval(
+      () => this.fetchErrors(),
+      2000
+    );
     await this.createFromBackend();
   }
 
   componentWillUnmount() {
     window.removeEventListener("resize", this.updateDimensions);
+    clearInterval(this.intervalID);
   }
 
   async componentWillReceiveProps(nextProps) {
@@ -721,6 +735,42 @@ class VisGraph extends React.Component {
     }
   };
 
+  fetchErrors = async() => fetch('./errors').then(response => response.json()).then(json => {
+    // Reset error on nodes
+    var changed = false;
+    var nodes = [];
+    this.state.graph.nodes.map( node => {
+      var newNode = Object.assign({}, node);
+      if(newNode.group == 'error') {
+        newNode.group = 'ok';
+        changed = true;
+      }
+      nodes.push(newNode);
+    })
+    for (var key in json) {
+      // check if the property/key is defined in the object itself, not in parent
+      if (json.hasOwnProperty(key)) {
+        var node = nodes.find(node => node.id === key);
+        if (node != null) {
+          node.group = 'error';
+          changed = true
+        }
+        this.props.enqueueSnackbar(json[key], { variant: 'error' })
+      }
+    }
+    if(changed) {  
+    this.setState(oldState => {
+      return {
+        graph: {
+          nodes: nodes,
+          edges: oldState.graph.edges,
+        },
+      }
+    })
+  }
+    
+  }); 
+
   render() {
     const { classes, theme } = this.props;
     const graph = this.state.graph;
@@ -811,4 +861,4 @@ VisGraph.defaultProps = {
   slot: 0
 };
 
-export default withStyles(styles)(VisGraph);
+export default withSnackbar(withStyles(styles)(VisGraph));

@@ -1,5 +1,8 @@
 import asyncio
 import uuid
+import sys
+import os
+import traceback
 from timeit import default_timer as timer
 
 from audioled import devices
@@ -40,10 +43,18 @@ class Node(object):
         for con in self._incomingConnections:
             self._inputBuffer[con.toChannel] = con.fromNode._outputBuffer[con.fromChannel]
         # process
-        self.effect.process()
+        try:
+            self.effect.process()
+        except Exception as e:
+            traceback.print_exc()
+            raise NodeException("{}".format(e), self, e)
 
     async def update(self, dt):
-        await self.effect.update(dt)
+        try:
+            await self.effect.update(dt)
+        except Exception as e:
+            traceback.print_exc()
+            raise NodeException("{}".format(e), self, e)
 
     def __cleanState__(self, stateDict):
         """
@@ -93,10 +104,11 @@ class Timing(object):
         self._count = 0
 
     def update(self, timing):
-        if self._count == 0:
+        if self._count % 100 == 0:
             self._max = timing
             self._min = timing
             self._avg = timing
+            self._count = 0
         else:
             self._max = max(self._max, timing)
             self._min = min(self._min, timing)
@@ -125,16 +137,17 @@ class FilterGraph(Updateable):
         self._outputNode = None
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
+        if self._outputNode is None:
+            # Pass the update, since no num_pixels can be provided to the effects
+            return
         if self.asyncUpdate:
             time = timer()
             # gather all async updates
             asyncio.set_event_loop(event_loop)
 
             async def handle_async_exception(node, func, param):
-                try:
-                    await func(param)
-                except Exception as e:
-                    raise NodeException("{}".format(e), node, e)
+                await func(param)
+                
 
             all_tasks = asyncio.gather(
                 *[asyncio.ensure_future(handle_async_exception(node, node.update, dt)) for node in self._processOrder])
@@ -143,27 +156,30 @@ class FilterGraph(Updateable):
             self.updateUpdateTiming("all_async", timer() - time)
         else:
             for node in self._processOrder:
-                try:
-                    if self.recordTimings:
-                        time = timer()
-                    event_loop.run_until_complete(node.update(dt))
-                    if self.recordTimings:
-                        self.updateUpdateTiming(str(node.effect), timer() - time)
-                except Exception as e:
-                    raise NodeException("{}".format(e), node, e)
+                
+                if self.recordTimings:
+                    time = timer()
+                event_loop.run_until_complete(node.update(dt))
+                if self.recordTimings:
+                    self.updateUpdateTiming(str(node.effect), timer() - time)
+                
+                
 
     def process(self):
         time = None
 
+        if self._outputNode is None:
+            # Pass the process, since no num_pixels can be provided to the effects
+            return
+
         for node in self._processOrder:
-            try:
-                if self.recordTimings:
-                    time = timer()
-                node.process()
-                if self.recordTimings:
-                    self.updateProcessTiming(node, timer() - time)
-            except Exception as e:
-                raise NodeException("{}".format(e), node, e)
+            
+            if self.recordTimings:
+                time = timer()
+            node.process()
+            if self.recordTimings:
+                self.updateProcessTiming(node, timer() - time)
+            
 
     def updateProcessTiming(self, node, timing):
         if node not in self._processTimings:
@@ -232,7 +248,9 @@ class FilterGraph(Updateable):
         node = next(node for node in self._filterNodes if node.effect == effect)
         if node is not None:
             self._filterNodes.remove(node)
-            self._processOrder.remove(node)
+            if node in self._processOrder:
+                self._processOrder.remove(node)
+                self._updateProcessOrder()
 
     def addConnection(self, fromEffect, fromEffectChannel, toEffect, toEffectChannel):
         """Adds a connection between two filters
@@ -244,6 +262,8 @@ class FilterGraph(Updateable):
         # construct connection
         newConnection = Connection(fromNode, fromEffectChannel, toNode, toEffectChannel)
         newConnection.uid = uuid.uuid4().hex
+        if self._connectionWillMakeGraphCyclic(newConnection):
+            raise RuntimeError("Connection would make graph cyclic")
         self._filterConnections.append(newConnection)
         toNode._incomingConnections.append(newConnection)
         self._updateProcessOrder()
@@ -258,6 +278,8 @@ class FilterGraph(Updateable):
         toNode = next(node for node in self._filterNodes if node.uid == toNodeUid)
         newConnection = Connection(fromNode, fromEffectChannel, toNode, toEffectChannel)
         newConnection.uid = uuid.uuid4().hex
+        if self._connectionWillMakeGraphCyclic(newConnection):
+            raise RuntimeError("Connection would make graph cyclic")
         self._filterConnections.append(newConnection)
         toNode._incomingConnections.append(newConnection)
         self._updateProcessOrder()
@@ -279,52 +301,73 @@ class FilterGraph(Updateable):
         return self._outputNode
 
     def _updateProcessOrder(self):
-        # reset
-        self._processOrder = []
-        # find nodes without inputs
-        allNodes = self._filterNodes.copy()
-        for con in self._filterConnections:
-            if allNodes.count(con.toNode) > 0:
-                allNodes.remove(con.toNode)
+        processOrder = []
+        if self._outputNode is None:
+            print("No output node")
+            return
 
-        # Add those nodes first
-        for node in allNodes:
-            self._processOrder.append(node)
+        print("Updating process order")
+        
+        unprocessedNodes = self._filterNodes.copy()
+        processOrder.append(self._outputNode)
+        unprocessedNodes.remove(self._outputNode)
 
-        # print("{} of {} nodes without inputs processed".format(len(self._processOrder), len(self._filterNodes)))
+        fatalError = False
+        while not fatalError and len(unprocessedNodes) > 0:
+            sizeBefore = len(unprocessedNodes)
+            for node in unprocessedNodes.copy():
+                # find connections
+                cons = [con for con in self._filterConnections if con.fromNode == node]
+                # check all nodes after this node have been processed
+                satisfied = True
+                for con in cons:
+                    if con.toNode not in processOrder:
+                        satisfied = False
+                        continue
+                
+                if satisfied:
+                    print("Appending {}".format(node.effect))
+                    processOrder.append(node)
+                    unprocessedNodes.remove(node)
+            sizeAfter = len(unprocessedNodes)
+            fatalError = sizeAfter == sizeBefore
+        
+        print("{} nodes total, {} nodes have not been processed".format(len(processOrder), len(unprocessedNodes)))
 
-        # Process others
-        connectionsToProcess = self._filterConnections.copy()
-        while len(connectionsToProcess) > 0:
-            nodesBefore = len(self._processOrder)
-            # find nodes with connections only relying on nodes already in chain
-            candidates = self._filterNodes.copy()
-            for node in self._processOrder:
-                candidates.remove(node)
+        # Check remaining unprocessed nodes for circular connections
+        # for node in unprocessedNodes:
+        #     cons = [con for con in self._filterConnections if con.fromNode == node]
+        #     for con in cons:
+        #         if con.toNode in self._processOrder:
+        #             raise RuntimeError("Circular connection detected")
 
-            # if we find a connection with anything other than input nodes already processed, those are not candidates
-
-            for con in connectionsToProcess:
-                if self._processOrder.count(con.fromNode) <= 0 and candidates.count(con.toNode) > 0:
-                    candidates.remove(con.toNode)
-
-            # append all candidates
-            for node in candidates:
-                self._processOrder.append(node)
-
-            # update connections to process
-            for con in connectionsToProcess.copy():
-                if self._processOrder.count(con.fromNode) > 0 and self._processOrder.count(con.toNode) > 0:
-                    connectionsToProcess.remove(con)
-
-            # print("{} of {} nodes processed".format(len(self._processOrder), len(self._filterNodes)))
-
-            if len(self._processOrder) == nodesBefore:
-                print("circular graph detected")
-                raise RuntimeError("circular graph detected")
-
-        if len(self._processOrder) != len(self._filterNodes):
-            raise RuntimeError("not all nodes processed")
+        processOrder.reverse()
+        
+        # Reset number of pixels
+        for node in self._filterNodes:
+            if node is not self.getLEDOutput():
+                node.effect.setNumOutputPixels(None)
+        # Propagate num pixels
+        for node in reversed(processOrder):
+            # find connections to the current node
+            inputConnections = [con for con in self._filterConnections if con.toNode == node]
+            # print("{} input connections found for node {}".format(len(inputConnections), node.effect))
+            for con in inputConnections:
+                num_pixels = node.effect.getNumInputPixels(con.toChannel)
+                # find node
+                iNode = con.fromNode
+                # propagate pixels
+                if iNode is not None:
+                    print("setting {} pixels for {}".format(num_pixels, iNode.effect))
+                    iNode.effect.setNumOutputPixels(num_pixels)
+        
+        # Debug output
+        for node in processOrder.copy():
+            print("{} with {} pixels".format(node.effect, node.effect._num_pixels))
+            if node.effect._num_pixels is None:
+                processOrder.remove(node)
+        # persist
+        self._processOrder = processOrder
 
     def __getstate__(self):
         state = {}
@@ -349,3 +392,38 @@ class FilterGraph(Updateable):
             fromChannel = con['from_node_channel']
             toChannel = con['to_node_channel']
             self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
+
+    def propagateNumPixels(self, num_pixels):
+        if self.getLEDOutput() is not None:
+            self.getLEDOutput().effect.setNumOutputPixels(num_pixels)
+            self._updateProcessOrder()
+
+    def _connectionWillMakeGraphCyclic(self, connection):
+        targetNode = connection.toNode
+        curNode = connection.fromNode
+        if targetNode == curNode:
+            return True
+        # traverse predecessors and check if connection.toNode is one of them
+        return self._checkHasPredecessor(curNode, targetNode, [])
+        
+    
+    def _checkHasPredecessor(self, curNode, targetNode, visitedNodes):
+        print("Checking {} for {}".format(curNode, targetNode))
+        if targetNode == curNode:
+            return True
+        predecessors = [con for con in self._filterConnections if con.toNode == curNode]
+        furtherNodes = []
+        for con in predecessors:
+            node = con.fromNode
+            if node is targetNode:
+                return True
+            if node not in visitedNodes:
+                furtherNodes.append(node)
+        visitedNodes.append(curNode)
+        for node in furtherNodes:
+            if self._checkHasPredecessor(node, targetNode, visitedNodes):
+                return True
+        return False
+
+            
+            

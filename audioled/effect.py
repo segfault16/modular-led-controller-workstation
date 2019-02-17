@@ -16,7 +16,14 @@ class Effect(object):
         self.__initstate__()
 
     def __initstate__(self):
-        self._t = 0.0
+        try:
+            self._t
+        except AttributeError:
+            self._t = 0
+        try:
+            self._num_pixels
+        except AttributeError:
+            self._num_pixels = None
         try:
             self._inputBuffer
         except AttributeError:
@@ -120,3 +127,13 @@ class Effect(object):
         if self._inputBuffer[index] is None:
             return False
         return True
+
+    def setNumOutputPixels(self, num_pixels):
+        self._num_pixels = num_pixels
+
+    def getNumOutputPixels(self):
+        return self._num_pixels
+
+    def getNumInputPixels(self, channel):
+        # Default: Same pixels as output
+        return self._num_pixels

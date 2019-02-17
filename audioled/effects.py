@@ -183,6 +183,13 @@ class Append(Effect):
                     state = np.concatenate((state, self._inputBuffer[i]), axis=1)
         self._outputBuffer[0] = state
 
+    def getNumInputPixels(self, channel):
+        # Override get num input pixels
+        if self._num_pixels is not None:
+            return int(self._num_pixels / self.num_channels)
+        else:
+            return None
+
 
 class Combine(Effect):
 
@@ -473,7 +480,6 @@ class SpringCombine(Effect):
             "- channel 2 and channel 3 if displacement > 0"
 
     def __init__(self,
-                 num_pixels,
                  dampening=0.99,
                  tension=0.001,
                  spread=0.1,
@@ -482,7 +488,6 @@ class SpringCombine(Effect):
                  scale_high=1.0,
                  speed=50.0,
                  trigger_threshold=0.1):
-        self.num_pixels = num_pixels
         self.dampening = dampening
         self.tension = tension
         self.spread = spread
@@ -495,8 +500,8 @@ class SpringCombine(Effect):
 
     def __initstate__(self):
         super(SpringCombine, self).__initstate__()
-        self._pos = np.zeros(self.num_pixels)
-        self._vel = np.zeros(self.num_pixels)
+        self._pos = None
+        self._vel = None
 
     def numInputChannels(self):
         return 4  # trigger, low, mid, high
@@ -509,7 +514,6 @@ class SpringCombine(Effect):
         definition = {
             "parameters": {
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
                 "dampening": [0.99, 0.9, 1.0, 0.0001],
                 "tension": [0.0001, 0.0, 0.1, 0.0001],
                 "spread": [0.1, 0.0, 1.0, 0.001],
@@ -526,7 +530,6 @@ class SpringCombine(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "dampening": "Dampening factory of the springs.",
                 "tension": "Tension of the springs.",
                 "spread": "Interaction between neighboring springs.",
@@ -541,7 +544,6 @@ class SpringCombine(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['dampening'][0] = self.dampening
         definition['parameters']['tension'][0] = self.tension
         definition['parameters']['spread'][0] = self.spread
@@ -554,9 +556,13 @@ class SpringCombine(Effect):
 
     async def update(self, dt):
         await super().update(dt)
+        if self._pos is None or len(self._pos) != self._num_pixels:
+            self._pos = np.zeros(self._num_pixels)
+        if self._vel is None or len(self._vel) != self._num_pixels:
+            self._vel = np.zeros(self._num_pixels)
 
-        lDeltas = np.zeros(self.num_pixels)  # force from left
-        rDeltas = np.zeros(self.num_pixels)  # force from right
+        lDeltas = np.zeros(self._num_pixels)  # force from left
+        rDeltas = np.zeros(self._num_pixels)  # force from right
         for j in range(4):
             # calculate delta to left and right pixel
             lDeltas[1:] = self.spread * (np.roll(self._pos, 1)[1:] - self._pos[1:])
@@ -572,22 +578,22 @@ class SpringCombine(Effect):
             return
 
         if not self._inputBufferValid(0):
-            trigger = np.zeros(self.num_pixels) * np.array([[0], [0], [0]])
+            trigger = np.zeros(self._num_pixels) * np.array([[0], [0], [0]])
         else:
             trigger = self._inputBuffer[0]
 
         if not self._inputBufferValid(1):
-            lowCol = self.scale_low * np.ones(self.num_pixels) * np.array([[0], [0], [0]])
+            lowCol = self.scale_low * np.ones(self._num_pixels) * np.array([[0], [0], [0]])
         else:
             lowCol = self.scale_low * self._inputBuffer[1]
 
         if not self._inputBufferValid(2):
-            baseCol = self.scale_mid * np.ones(self.num_pixels) * np.array([[127], [127], [127]])
+            baseCol = self.scale_mid * np.ones(self._num_pixels) * np.array([[127], [127], [127]])
         else:
             baseCol = self.scale_mid * self._inputBuffer[2]
 
         if not self._inputBufferValid(3):
-            highCol = self.scale_high * np.ones(self.num_pixels) * np.array([[255], [255], [255]])
+            highCol = self.scale_high * np.ones(self._num_pixels) * np.array([[255], [255], [255]])
         else:
             highCol = self.scale_high * self._inputBuffer[3]
 
@@ -596,7 +602,7 @@ class SpringCombine(Effect):
         self._pos[trigger > self.trigger_threshold] = trigger[trigger > self.trigger_threshold]
 
         # Output: Interpolate between low and mid for self._pos < 0, interpolate between mid and high for self._pos > 0
-        out = np.zeros(self.num_pixels) * np.array([[0], [0], [0]])
+        out = np.zeros(self._num_pixels) * np.array([[0], [0], [0]])
         out[:, self._pos <= 0] = (
             np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
         out[:, self._pos >= 0] = (
@@ -615,8 +621,7 @@ class Swing(Effect):
         return \
             "Makes the pixels shift in both directions like a pendulum."
 
-    def __init__(self, num_pixels, displacement=50, swingspeed=1):
-        self.num_pixels = num_pixels
+    def __init__(self, displacement=50, swingspeed=1):
         self.displacement = displacement
         self.swingspeed = swingspeed
         self.__initstate__()
@@ -631,7 +636,6 @@ class Swing(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("displacement", [50, 1, 1000, 1]),
                 ("swingspeed", [1, 0, 5, 0.01]),
             ])
@@ -642,7 +646,6 @@ class Swing(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "displacement": "Defines maximum amount of pixels that the input is shifted.",
                 "swingspeed": "Speed of the swing."
             }
@@ -651,7 +654,6 @@ class Swing(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['displacement'][0] = self.displacement
         definition['parameters']['swingspeed'][0] = self.swingspeed
         return definition

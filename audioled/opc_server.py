@@ -28,6 +28,8 @@ class OPCMessage:
         self.addr = addr
         self.callback = callback  # this callback is called once a message is fully read
         self._verbose = verbose
+        self._recv_buffer = b""
+        self._send_buffer = b""
         self._resetData()
 
     def _debug(self, message):
@@ -48,8 +50,7 @@ class OPCMessage:
 
     def _resetData(self):
         """Reset all state information in order to re-use the message instance"""
-        self._recv_buffer = b""
-        self._send_buffer = b""
+
         self.opc_header = None
         self._opc_header_len = None
         self.channel = None
@@ -73,7 +74,8 @@ class OPCMessage:
         try:
             # Should be ready to read
             data = self.sock.recv(4096)
-        except BlockingIOError:
+        except BlockingIOError as e:
+            print("Error reading from socket: {}".format(e))
             # Resource temporarily unavailable (errno EWOULDBLOCK)
             pass
         else:
@@ -108,22 +110,46 @@ class OPCMessage:
         # Call the callback
         if self.callback is not None:
             self.callback(data)
-        # Set selector to listen for write events, we're done reading.
-        self._set_selector_events_mask("w")
+        
 
     def read(self):
         """Method to handle the read event"""
         self._read()
+        run = 0
+        # store the callback function
+        store_callback = self.callback
+        needMoreData = False
+        run = 0
+        while not needMoreData:
+            needMoreData = True
 
-        if self.opc_header is None:
-            self.processOpcHeader()
+            if self.opc_header is None:
+                self.processOpcHeader()
 
-        if self.opc_header:
-            if self.messageData is None:
-                self.processMessageData()
+            if self.opc_header:
+                if self.messageData is None:
+                    self.processMessageData()
+            
+            # message successfully read
+            if self.opc_header and self.messageData:
+                needMoreData = False
+                self._resetData()
+            
+            # disable callback
+            self.callback = None
+            if run > 0:
+                self._debug("Frame skipped")
+            run += 1
+        
+        # enable callback again
+        self.callback = store_callback
+
+        if self.opc_header and self.messageData:
+            # Set selector to listen for write events, we're done reading.
+            self._set_selector_events_mask("w")
 
     def close(self):
-        self._debug("closing connection to", self.addr)
+        self._debug("closing connection to".format(self.addr))
         try:
             self.selector.unregister(self.sock)
         except Exception as e:
@@ -219,9 +245,9 @@ class ServerThread(object):
                         message = key.data
                         try:
                             message.process_events(mask)
-                        except Exception:
+                        except Exception as e:
                             message.close()
-                            self._debug("FadeCandy Server: Background thread exiting due to message exception")
+                            self._debug("FadeCandy Server: Background thread exiting due to message exception: {}".format(e))
                             self._stopSignal = True
         except Exception as e:
             self._debug("FadeCandy Server: Background thread exiting due to exception: {}".format(e))
@@ -237,7 +263,7 @@ class Server(object):
     sockets = []
     all_threads = []
 
-    def __init__(self, host, port, verbose=False):
+    def __init__(self, host, port, verbose=True):
         self._host = host
         self._port = port
         self._socket = None
@@ -268,7 +294,8 @@ class Server(object):
         for thread in self.all_threads:
             try:
                 thread._socket.getpeername()
-            except Exception:
+            except Exception as e:
+                print("Error getting peername: {}".format(e))
                 toCleanup.append(thread)
 
         for thread in toCleanup:
@@ -321,8 +348,16 @@ class Server(object):
 
     def _pixelCallback(self, data):
         # Transform byte array to pixel shape
-        pixels = np.frombuffer(data, dtype=np.uint8).reshape((-1, 3)).T
-        self._lastMessage = pixels
+        array = np.frombuffer(data, dtype=np.uint8)
+        # make sure array can be reshaped
+        #size = int(int(len(array)/3)*3)
+        #array = array[:size]
+        try:
+            pixels = array.reshape((-1, 3)).T
+            self._lastMessage = pixels
+        except Exception as e:
+            print("Error decoding to pixels. array length: {}, error: {}".format(len(array),e))
+        
 
     def get_pixels(self, block=False):
         isListening = self._ensure_listening()

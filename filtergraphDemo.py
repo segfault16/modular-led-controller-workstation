@@ -72,7 +72,7 @@ num_pixels = args.num_pixels
 if args.device == deviceRasp:
     device = devices.RaspberryPi(num_pixels)
 elif args.device == deviceCandy:
-    device = devices.FadeCandy(args.device_candy_server)
+    device = devices.FadeCandy(num_pixels, args.device_candy_server)
 
 # Initialize Audio device
 if args.audio_device_index is not None:
@@ -87,41 +87,41 @@ audio.print_audio_devices()
 
 def createFilterGraph(config, num_pixels):
     if config == movingLightConf:
-        return configs.createMovingLightGraph(num_pixels)
+        return configs.createMovingLightGraph()
     elif config == movingLightsConf:
-        return configs.createMovingLightsGraph(num_pixels)
+        return configs.createMovingLightsGraph()
     elif config == spectrumConf:
-        return configs.createSpectrumGraph(num_pixels)
+        return configs.createSpectrumGraph()
     elif config == vu_peakConf:
-        return configs.createVUPeakGraph(num_pixels)
+        return configs.createVUPeakGraph()
     elif config == swimmingConf:
-        return configs.createSwimmingPoolGraph(num_pixels)
+        return configs.createSwimmingPoolGraph()
     elif config == defenceConf:
-        return configs.createDefenceGraph(num_pixels)
+        return configs.createDefenceGraph()
     elif config == keyboardConf:
-        return configs.createKeyboardGraph(num_pixels)
+        return configs.createKeyboardGraph()
     elif config == keyboardSpringConf:
-        return configs.createKeyboardSpringGraph(num_pixels)
+        return configs.createKeyboardSpringGraph()
     elif config == proxyConf:
-        return configs.createProxyServerGraph(num_pixels)
+        return configs.createProxyServerGraph()
     elif config == fallingConf:
-        return configs.createFallingStarsGraph(num_pixels)
+        return configs.createFallingStarsGraph()
     elif config == breathingConf:
-        return configs.createBreathingGraph(num_pixels)
+        return configs.createBreathingGraph()
     elif config == heartbeatConf:
-        return configs.createHeartbeatGraph(num_pixels)
+        return configs.createHeartbeatGraph()
     elif config == pendulumConf:
-        return configs.createPendulumGraph(num_pixels)
+        return configs.createPendulumGraph()
     elif config == rpendulumConf:
-        return configs.createRPendulumGraph(num_pixels)
+        return configs.createRPendulumGraph()
     elif config == testblobConf:
-        return configs.createTestBlobGraph(num_pixels)
+        return configs.createTestBlobGraph()
     elif config == bonfireConf:
-        return configs.createBonfireGraph(num_pixels)
+        return configs.createBonfireGraph()
     elif config == generatewavesConf:
-        return configs.createGenerateWavesGraph(num_pixels)
+        return configs.createGenerateWavesGraph()
     elif config == sortingConf:
-        return configs.createSortingGraph(num_pixels)    
+        return configs.createSortingGraph()    
     else:
         raise NotImplementedError("Config not implemented")
 
@@ -161,6 +161,8 @@ else:
     cur_graph = createFilterGraph(args.config, num_pixels)
     saveAndLoad(args.config, cur_graph)
 
+cur_graph.propagateNumPixels(num_pixels)
+
 while True:
     last_time = current_time
     current_time = timer()
@@ -171,13 +173,14 @@ while True:
         config_idx = (config_idx) % len(configChoices)
         cur_graph = createFilterGraph(configChoices[config_idx], num_pixels)
         cur_graph = saveAndLoad(configChoices[config_idx], cur_graph)
+        cur_graph.propagateNumPixels(num_pixels)
         config_idx = config_idx + 1
         last_switch_time = current_time
 
     cur_graph.update(dt)
     updateTiming.update(timer() - current_time)
     cur_graph.process()
-    if cur_graph.getLEDOutput() is not None:
+    if cur_graph.getLEDOutput() is not None and cur_graph.getLEDOutput()._outputBuffer[0] is not None:
         device.show(cur_graph.getLEDOutput()._outputBuffer[0])
     if count == 100:
         cur_graph.printProcessTimings()

@@ -36,13 +36,11 @@ class Spectrum(Effect):
             "with different colors (channel 1 for bass, channel 2 for melody)."
 
     def __init__(self,
-                 num_pixels,
                  fs,
                  fmax=6000,
                  n_overlaps=4,
                  fft_bins=64,
                  col_blend=colors.blend_mode_default):
-        self.num_pixels = num_pixels
         self.fs = fs
         self.fmax = fmax
         self.n_overlaps = n_overlaps
@@ -52,7 +50,7 @@ class Spectrum(Effect):
 
     def __initstate__(self):
         # state
-        self._norm_dist = np.linspace(0, 1, self.num_pixels)
+        self._norm_dist = None 
         self.fft_bins = 64
         self._fft_dist = np.linspace(0, 1, self.fft_bins)
         self._max_filter = np.ones(8)
@@ -76,7 +74,6 @@ class Spectrum(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("fs", [48000, 44100, 96000, 100]),
                 ("n_overlaps", [4, 0, 20, 1]),
                 ("fft_bins", [64, 32, 128, 1]),
@@ -89,7 +86,6 @@ class Spectrum(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "fs": "Sample Frequency of the audio input.",
                 "n_overlaps": "Number of overlapping samples in time. This smoothes the FFT.",
                 "fft_bins": "Number of bins of the FFT. Increase for a more detailed FFT.",
@@ -100,7 +96,6 @@ class Spectrum(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']  # disable edit
         del definition['parameters']['fs']  # disable edit
         definition['parameters']['n_overlaps'][0] = self.n_overlaps
         definition['parameters']['fft_bins'][0] = self.fft_bins
@@ -116,6 +111,10 @@ class Spectrum(Effect):
         while True:
             yield self._lastAudioChunk
 
+    async def update(self, dt):
+        if self._norm_dist is None or len(self._norm_dist) != self._num_pixels:
+            self._norm_dist = np.linspace(0, 1, self._num_pixels)
+
     def process(self):
 
         if self._inputBuffer is not None and self._outputBuffer is not None:
@@ -124,10 +123,10 @@ class Spectrum(Effect):
             col_bass = self._inputBuffer[2]
             if col_melody is None:
                 # default color: all white
-                col_melody = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+                col_melody = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
             if col_bass is None:
                 # default color: all white
-                col_bass = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+                col_bass = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
             if audio is not None:
                 if self._gen is None:
                     g = self.buffer_coroutine()
@@ -174,8 +173,7 @@ class VUMeterRMS(Effect):
         return \
             "VUMeterRMS visualizes the RMS value of the audio input (channel 0) with the color (channel 1)."
 
-    def __init__(self, num_pixels, db_range=60.0, n_overlaps=1):
-        self.num_pixels = num_pixels
+    def __init__(self, db_range=60.0, n_overlaps=1):
         self.db_range = db_range
         self.n_overlaps = n_overlaps
         self._default_color = None
@@ -193,11 +191,11 @@ class VUMeterRMS(Effect):
         h_a, s_a, v_a = colorsys.rgb_to_hsv(0, 1, 0)
         h_b, s_b, v_b = colorsys.rgb_to_hsv(1, 0, 0)
         scal_value = (self.db_range + (-24)) / self.db_range
-        index = int(self.num_pixels * scal_value)
-        num_pixels = self.num_pixels - index
-        interp_v = np.linspace(v_a, v_b, num_pixels)
-        interp_s = np.linspace(s_a, s_b, num_pixels)
-        interp_h = np.linspace(h_a, h_b, num_pixels)
+        index = int(self._num_pixels * scal_value)
+        np = self._num_pixels - index
+        interp_v = np.linspace(v_a, v_b, np)
+        interp_s = np.linspace(s_a, s_b, np)
+        interp_h = np.linspace(h_a, h_b, np)
         hsv = np.array([interp_h, interp_s, interp_v]).T
 
         rgb = mpl.colors.hsv_to_rgb(hsv)
@@ -216,7 +214,6 @@ class VUMeterRMS(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("db_range", [60.0, 20.0, 100.0, 1.0]),
                 ("n_overlaps", [1, 0, 20, 1])
             ])
@@ -227,7 +224,6 @@ class VUMeterRMS(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "db_range": "Range of the VU Meter in decibels.",
                 "n_overlaps": "Number of overlapping samples in time. This smoothes the VU Meter."
             }
@@ -236,7 +232,6 @@ class VUMeterRMS(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']  # disable edit
         definition['parameters']['db_range'][0] = self.db_range
         definition['parameters']['n_overlaps'][0] = self.n_overlaps
         return definition
@@ -261,9 +256,9 @@ class VUMeterRMS(Effect):
         rms = dsp.rms(self._hold_values)
         db = 20 * math.log10(max(rms, 1e-16))
         scal_value = (self.db_range + db) / self.db_range
-        bar = np.zeros(self.num_pixels) * np.array([[0], [0], [0]])
-        index = int(self.num_pixels * scal_value)
-        index = np.clip(index, 0, self.num_pixels - 1)
+        bar = np.zeros(self._num_pixels) * np.array([[0], [0], [0]])
+        index = int(self._num_pixels * scal_value)
+        index = np.clip(index, 0, self._num_pixels - 1)
         bar[0:3, 0:index] = color[0:3, 0:index]
         self._outputBuffer[0] = bar
 
@@ -280,8 +275,7 @@ class VUMeterPeak(Effect):
         return \
             "VUMeterPeak visualizes the Peak value of the audio input (channel 0) with the color (channel 1)."
 
-    def __init__(self, num_pixels, db_range=60.0, n_overlaps=1):
-        self.num_pixels = num_pixels
+    def __init__(self, db_range=60.0, n_overlaps=1):
         self.db_range = db_range
         self.n_overlaps = n_overlaps
         self._default_color = None
@@ -291,29 +285,10 @@ class VUMeterPeak(Effect):
         super().__initstate__()
         try:
             self._hold_values
-            self._default_color
         except AttributeError:
             self._hold_values = []
-            self._default_color = None
-        # default color: VU Meter style
-        # green from -inf to -24
-        # green to red from -24 to 0
-        h_a, s_a, v_a = colorsys.rgb_to_hsv(0, 1, 0)
-        h_b, s_b, v_b = colorsys.rgb_to_hsv(1, 0, 0)
-        scal_value = (self.db_range + (-24)) / self.db_range
-        index = int(self.num_pixels * scal_value)
-        num_pixels = self.num_pixels - index
-        interp_v = np.linspace(v_a, v_b, num_pixels)
-        interp_s = np.linspace(s_a, s_b, num_pixels)
-        interp_h = np.linspace(h_a, h_b, num_pixels)
-        hsv = np.array([interp_h, interp_s, interp_v]).T
+        self._default_color = None
 
-        rgb = mpl.colors.hsv_to_rgb(hsv)
-        if (index > 0):
-            green = np.array([[0, 255.0, 0] for i in range(index)]).T
-            self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
-        else:
-            self._default_color = rgb.T * 255.0
 
     def numInputChannels(self):
         return 2
@@ -327,7 +302,6 @@ class VUMeterPeak(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("db_range", [60.0, 20.0, 100.0, 1.0]),
                 ("n_overlaps", [1, 0, 20, 1])
             ])
@@ -338,7 +312,6 @@ class VUMeterPeak(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "db_range": "Range of the VU Meter in decibels.",
                 "n_overlaps": "Number of overlapping samples in time. This smoothes the VU Meter."
             }
@@ -347,10 +320,31 @@ class VUMeterPeak(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']  # disable edit
         definition['parameters']['db_range'][0] = self.db_range
         definition['parameters']['n_overlaps'][0] = self.n_overlaps
         return definition
+
+    async def update(self, dt):
+        if self._default_color is None or np.size(self._default_color, 1) != self._num_pixels:
+            # default color: VU Meter style
+            # green from -inf to -24
+            # green to red from -24 to 0
+            h_a, s_a, v_a = colorsys.rgb_to_hsv(0, 1, 0)
+            h_b, s_b, v_b = colorsys.rgb_to_hsv(1, 0, 0)
+            scal_value = (self.db_range + (-24)) / self.db_range
+            index = int(self._num_pixels * scal_value)
+            num_pix = self._num_pixels - index
+            interp_v = np.linspace(v_a, v_b, num_pix)
+            interp_s = np.linspace(s_a, s_b, num_pix)
+            interp_h = np.linspace(h_a, h_b, num_pix)
+            hsv = np.array([interp_h, interp_s, interp_v]).T
+
+            rgb = mpl.colors.hsv_to_rgb(hsv)
+            if (index > 0):
+                green = np.array([[0, 255.0, 0] for i in range(index)]).T
+                self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
+            else:
+                self._default_color = rgb.T * 255.0
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -366,7 +360,7 @@ class VUMeterPeak(Effect):
             except Exception:
                 self.__initstate__()
                 color = self._default_color
-        if self.num_pixels != np.size(color, axis=1):
+        if self._num_pixels != np.size(color, axis=1):
             self.__initstate__()
             color = self._default_color
 
@@ -381,9 +375,9 @@ class VUMeterPeak(Effect):
 
         db = (20 * (math.log10(max(peak, 1e-16))))
         scal_value = (self.db_range + db) / self.db_range
-        bar = np.zeros(self.num_pixels) * np.array([[0], [0], [0]])
-        index = int(self.num_pixels * scal_value)
-        index = np.clip(index, 0, self.num_pixels - 1)
+        bar = np.zeros(self._num_pixels) * np.array([[0], [0], [0]])
+        index = int(self._num_pixels * scal_value)
+        index = np.clip(index, 0, self._num_pixels - 1)
         bar[0:3, 0:index] = color[0:3, 0:index]
         self._outputBuffer[0] = bar
 
@@ -404,7 +398,6 @@ class MovingLight(Effect):
             "at the beginning of the strip. This peak moves down the strip until it dissipates."
 
     def __init__(self,
-                 num_pixels,
                  fs,
                  speed=100.0,
                  dim_time=2.5,
@@ -413,7 +406,6 @@ class MovingLight(Effect):
                  peak_scale=4.0,
                  peak_filter=2.6,
                  highlight=0.6):
-        self.num_pixels = num_pixels
         self.speed = speed
         self.dim_time = dim_time
         self.fs = fs
@@ -426,7 +418,7 @@ class MovingLight(Effect):
 
     def __initstate__(self):
         # state
-        self._pixel_state = np.zeros(self.num_pixels) * np.array([[0.0], [0.0], [0.0]])
+        self._pixel_state = None
         self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, self.fs, 3)
         self._last_t = 0.0
         self._last_move_t = 0.0
@@ -444,7 +436,6 @@ class MovingLight(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("speed", [10.0, 1.0, 200.0, 1.0]),
                 ("dim_time", [1.0, 0.01, 10.0, 0.01]),
                 ("lowcut_hz", [50.0, 0.0, 8000.0, 1.0]),
@@ -460,7 +451,6 @@ class MovingLight(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "speed": "Speed of the moving peak.",
                 "dim_time": "Amount of time for the afterglow of the moving peak.",
                 "lowcut_hz": "Lowcut frequency of the audio input.",
@@ -474,7 +464,6 @@ class MovingLight(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']  # disable edit
         definition['parameters']['speed'][0] = self.speed
         definition['parameters']['dim_time'][0] = self.dim_time
         definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
@@ -484,6 +473,11 @@ class MovingLight(Effect):
         definition['parameters']['highlight'][0] = self.highlight
         return definition
 
+    async def update(self, dt):
+        await super().update(dt)
+        if self._pixel_state is None or np.size(self._pixel_state, 1) != self._num_pixels:
+            self._pixel_state = np.zeros(self._num_pixels) * np.array([[0.0], [0.0], [0.0]])
+
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
@@ -491,7 +485,7 @@ class MovingLight(Effect):
         color = self._inputBuffer[1]
         if color is None:
             # default color: all white
-            color = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if buffer is not None:
             audio = self._inputBuffer[0]
             # apply bandpass to audio
@@ -500,7 +494,7 @@ class MovingLight(Effect):
             dt_move = self._t - self._last_move_t
             if dt_move * self.speed > 1:
                 shift_pixels = int(dt_move * self.speed)
-                shift_pixels = np.clip(shift_pixels, 1, self.num_pixels - 1)
+                shift_pixels = np.clip(shift_pixels, 1, self._num_pixels - 1)
                 self._pixel_state[:, shift_pixels:] = self._pixel_state[:, :-shift_pixels]
                 self._pixel_state[:, 0:shift_pixels] = self._pixel_state[:, shift_pixels:shift_pixels + 1]
                 # convolve to smooth edges
@@ -542,8 +536,7 @@ class Bonfire(Effect):
             "Bonfire performs an audio-reactive color splitting of input channel 1 based on "\
             "the audio input (channel 0)."
 
-    def __init__(self, num_pixels, fs, spread=100, lowcut_hz=50.0, highcut_hz=200.0):
-        self.num_pixels = num_pixels
+    def __init__(self, fs, spread=100, lowcut_hz=50.0, highcut_hz=200.0):
         self.spread = spread
         self.lowcut_hz = lowcut_hz
         self.highcut_hz = highcut_hz
@@ -567,7 +560,6 @@ class Bonfire(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("spread", [10, 0, 100, 1]),
                 ("lowcut_hz", [50.0, 0.0, 8000.0, 1.0]),
                 ("highcut_hz", [100.0, 0.0, 8000.0, 1.0]),
@@ -579,7 +571,6 @@ class Bonfire(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_pixels": "Number of pixels.",
                 "spread": "Amount of pixels the splitted colors are moved.",
                 "lowcut_hz": "Lowcut frequency of the audio input.",
                 "highcut_hz": "Highcut frequency of the audio input.",
@@ -589,7 +580,6 @@ class Bonfire(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']  # disable edit
         definition['parameters']['spread'][0] = self.spread
         definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
         definition['parameters']['highcut_hz'][0] = self.highcut_hz
@@ -602,7 +592,7 @@ class Bonfire(Effect):
             pixelbuffer = self._inputBuffer[1]
         else:
             # default color: all white
-            pixelbuffer = np.ones(self.num_pixels) * np.array([[255.0], [255.0], [255.0]])
+            pixelbuffer = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if not self._inputBufferValid(0):
             self._outputBuffer[0] = pixelbuffer
             return
