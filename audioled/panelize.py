@@ -329,3 +329,81 @@ class MakeLabyrinth(Effect):
                 allowed_range_l = [0, num_rows]
 
         return mapMask.astype(np.int64)
+
+
+class FlipRows(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect that enables flipping the ordering of pixels for even or odd rows in a panel."
+
+    def __init__(self, flip_odd_rows=False, flip_even_rows=True):
+        super().__init__()
+        self.flip_odd_rows = flip_odd_rows
+        self.flip_even_rows = flip_even_rows
+        self.__initstate__()
+
+    def __initstate__(self):
+        super().__initstate__()
+
+    def numOutputChannels(self):
+        return 1
+
+    def numInputChannels(self):
+        return 1
+    
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("flip_odd_rows", False),
+                ("flip_even_rows", True),
+            ])
+        }
+        return definition
+    
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "flip_odd_rows": "Flip ordering of pixels in odd rows.",
+                "flip_even_rows": "Flip ordering of pixels in even rows."
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['flip_odd_rows'] = self.flip_odd_rows
+        definition['parameters']['flip_even_rows'] = self.flip_even_rows
+        return definition
+
+    async def update(self, dt):
+        await super().update(dt)
+    
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = None
+            return
+        buffer = self._inputBuffer[0]
+
+        cols = int(self._num_pixels / self._num_rows)
+        for row in range(self._num_rows - 1):
+            if row % 2 == 0:
+                if self.flip_even_rows:
+                    buffer[:, row * cols:(row + 1) * cols] = self._inputBuffer[0][:, row * cols:(row + 1) * cols][:, ::-1]
+                else:
+                    buffer[:, row * cols:(row + 1) * cols] = self._inputBuffer[0][:, row * cols:(row + 1) * cols]
+            else:
+                if self.flip_odd_rows:
+                    buffer[:, row * cols:(row + 1) * cols] = self._inputBuffer[0][:, row * cols:(row + 1) * cols][:, ::-1]
+                else:
+                    buffer[:, row * cols:(row + 1) * cols] = self._inputBuffer[0][:, row * cols:(row + 1) * cols]
+        
+        self._outputBuffer[0] = buffer
+

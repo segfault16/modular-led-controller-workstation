@@ -477,7 +477,7 @@ def strandTest(device, num_pixels):
         h = t / dt / num_pixels
         r, g, b, = 0, 0, 0
         if i < num_pixels / 2:
-            r, g, b = colorsys.hsv_to_rgb(h, 0.5, 1.0)
+            r, g, b = colorsys.hsv_to_rgb(h, 1.0, 1.0)
         pixels = np.roll(pixels, -1, axis=1)
         pixels[0][0] = r * 255.0
         pixels[1][0] = g * 255.0
@@ -592,7 +592,7 @@ if __name__ == '__main__':
             serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
 
     # strand test
-    #strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
+    strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # print audio information
     print("The following audio devices are available:")
