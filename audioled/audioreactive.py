@@ -289,7 +289,6 @@ class VUMeterPeak(Effect):
             self._hold_values = []
         self._default_color = None
 
-
     def numInputChannels(self):
         return 2
 
