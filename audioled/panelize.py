@@ -23,7 +23,7 @@ class MakeSquare(Effect):
         return \
             "Effect that converts the pixel input into a square pattern if displayed on a panel."
 
-    def __init__(self, displacement=0.0, input_displacement=0.0):
+    def __init__(self, displacement=0.0, input_displacement=5.0):
         super().__init__()
         self.displacement = displacement
         self.input_displacement = input_displacement
@@ -51,8 +51,8 @@ class MakeSquare(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("displacement", [0.0, 0.0, 1.0, .001]),
-                ("input_displacement", [0.0, 0.0, 1.0, .001]),
+                ("displacement", [0.0, -1.0, 1.0, .001]),
+                ("input_displacement", [0.5, 0.0, 1.0, .001]),
             ])
         }
         return definition
