@@ -18,7 +18,12 @@ class MakeSquare(Effect):
     1 1 1 1 1 1 1 1
     """
 
-    def __init__(self, displacement=0.0, input_displacement=0.5):
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect that converts the pixel input into a square pattern if displayed on a panel."
+
+    def __init__(self, displacement=0.0, input_displacement=0.0):
         super().__init__()
         self.displacement = displacement
         self.input_displacement = input_displacement
@@ -47,10 +52,20 @@ class MakeSquare(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("displacement", [0.0, 0.0, 1.0, .001]),
-                ("input_displacement", [0.5, 0.0, 1.0, .001]),
+                ("input_displacement", [0.0, 0.0, 1.0, .001]),
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "displacement": "Moves the pattern out of the center of the panel.",
+                "input_displacement": "Adjusts size of the center of the pattern."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -104,6 +119,12 @@ class MakeSquare(Effect):
 
 
 class MakeBatman(MakeSquare):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect that converts the pixel input into a batman sign shaped pattern if displayed on a panel."
+
     def _indexFor(self, row, col, num_rows, num_cols, input_displacement=0.5):
         adjusted_row = row
         adjusted_col = col
@@ -123,6 +144,12 @@ class MakeBatman(MakeSquare):
 
 
 class MakeRuby(MakeSquare):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect that converts the pixel input into a ruby shaped pattern if displayed on a panel."
+
     def _indexFor(self, row, col, num_rows, num_cols, input_displacement=0.5):
         adjusted_row = row
         adjusted_col = col
@@ -155,6 +182,11 @@ class MakeDiamond(MakeSquare):
     1 1 1 2 2 2 1 1
     1 1 1 1 1 1 1 1
     """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect that converts the pixel input into a diamond shaped pattern if displayed on a panel."
 
     def _indexFor(self, row, col, num_rows, num_cols, input_displacement=0.5):
         adjusted_row = row
@@ -222,6 +254,12 @@ def next_dir(cur_dir, cur_row, cur_col, visited, pref_dir, allowed_row_range):
 
 
 class MakeLabyrinth(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect that reorders pixels on a panel into a pattern that resembles a labyrinth."
+
     def __init__(self):
         super().__init__()
         self.__initstate__()
