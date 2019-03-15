@@ -2,6 +2,7 @@ from __future__ import (absolute_import, division, print_function, unicode_liter
 
 import colorsys
 import math
+import random
 from collections import OrderedDict
 
 import matplotlib as mpl
@@ -35,12 +36,7 @@ class Spectrum(Effect):
             "Spectrum performs a FFT on the audio input (channel 0) and visualizes bass and melody frequencies "\
             "with different colors (channel 1 for bass, channel 2 for melody)."
 
-    def __init__(self,
-                 fs,
-                 fmax=6000,
-                 n_overlaps=4,
-                 fft_bins=64,
-                 col_blend=colors.blend_mode_default):
+    def __init__(self, fs, fmax=6000, n_overlaps=4, fft_bins=64, col_blend=colors.blend_mode_default):
         self.fs = fs
         self.fmax = fmax
         self.n_overlaps = n_overlaps
@@ -50,7 +46,7 @@ class Spectrum(Effect):
 
     def __initstate__(self):
         # state
-        self._norm_dist = None 
+        self._norm_dist = None
         self.fft_bins = 64
         self._fft_dist = np.linspace(0, 1, self.fft_bins)
         self._max_filter = np.ones(8)
@@ -450,13 +446,20 @@ class MovingLight(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "speed": "Speed of the moving peak.",
-                "dim_time": "Amount of time for the afterglow of the moving peak.",
-                "lowcut_hz": "Lowcut frequency of the audio input.",
-                "highcut_hz": "Highcut frequency of the audio input.",
-                "peak_filter": "Filters the audio peaks. Increase this value to transform only high audio peaks into visual peaks.",
-                "peak_scale": "Scales the visual peak after the filter.",
-                "highlight": "Amount of white light added to the audio peak.",
+                "speed":
+                "Speed of the moving peak.",
+                "dim_time":
+                "Amount of time for the afterglow of the moving peak.",
+                "lowcut_hz":
+                "Lowcut frequency of the audio input.",
+                "highcut_hz":
+                "Highcut frequency of the audio input.",
+                "peak_filter":
+                "Filters the audio peaks. Increase this value to transform only high audio peaks into visual peaks.",
+                "peak_scale":
+                "Scales the visual peak after the filter.",
+                "highlight":
+                "Amount of white light added to the audio peak.",
             }
         }
         return help
@@ -605,3 +608,165 @@ class Bonfire(Effect):
             pixelbuffer[0], -self.spread * peak, mode='wrap', prefilter=True)
         pixelbuffer[2] = sp.ndimage.interpolation.shift(pixelbuffer[2], self.spread * peak, mode='wrap', prefilter=True)
         self._outputBuffer[0] = pixelbuffer
+
+
+class FallingStars(Effect):
+    """Effect for creating random stars that fade over time."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for creating random stars based on audio input that fade over time."
+
+    def __init__(self,
+                 fs,
+                 lowcut_hz=50.0,
+                 highcut_hz=300.0,
+                 peak_filter=1.0,
+                 peak_scale=1.0,
+                 dim_speed=100,
+                 thickness=1,
+                 probability=0.1,
+                 min_brightness=0.1,
+                 max_spawns=10):
+        self.dim_speed = dim_speed
+        self.thickness = thickness  # getting down with it
+        self.probability = probability
+        self.fs = fs
+        self.lowcut_hz = lowcut_hz
+        self.highcut_hz = highcut_hz
+        self.peak_filter = peak_filter
+        self.peak_scale = peak_scale
+        self.min_brightness = min_brightness
+        self.max_spawns = max_spawns
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        self._t0Array = []
+        self._spawnArray = []
+        self._peakArray = []
+        self._starCounter = 0
+        self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, self.fs, 3)
+        super(FallingStars, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("lowcut_hz", [50.0, 0.0, 8000.0, 1.0]),
+                ("highcut_hz", [100.0, 0.0, 8000.0, 1.0]),
+                ("peak_filter", [1.0, 0.0, 10.0, .01]),
+                ("peak_scale", [1.0, 0.0, 10.0, .01]),
+                ("dim_speed", [100, 1, 1000, 1]),
+                ("thickness", [1, 1, 300, 1]),
+                ("probability", [0.1, 0.0, 1.0, 0.01]),
+                ("min_brightness", [0.1, 0.0, 1.0, 0.01]),
+                ("max_spawns", [10, 1, 10, 1])
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "lowcut_hz":
+                "Lowcut frequency of the audio input.",
+                "highcut_hz":
+                "Highcut frequency of the audio input.",
+                "peak_filter":
+                "Filters the audio peaks. Increase this value to transform only high audio peaks into visual peaks.",
+                "peak_scale":
+                "Scales the visual peak after the filter.",
+                "dim_speed":
+                "Time to fade out one star.",
+                "thickness":
+                "Thickness of one star in pixels.",
+                "probability":
+                "Probability of spawning a new star even if there's no audio peak.",
+                "max_spawns":
+                "Maximum number of spawning stars per frame.",
+                "min_brightness":
+                "Adjust minimum brightness of stars."
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
+        definition['parameters']['highcut_hz'][0] = self.highcut_hz
+        definition['parameters']['peak_filter'][0] = self.peak_filter
+        definition['parameters']['peak_scale'][0] = self.peak_scale
+        definition['parameters']['dim_speed'][0] = self.dim_speed
+        definition['parameters']['thickness'][0] = self.thickness
+        definition['parameters']['probability'][0] = self.probability
+        definition['parameters']['min_brightness'][0] = self.min_brightness
+        definition['parameters']['max_spawns'][0] = self.max_spawns
+        return definition
+
+    def numInputChannels(self):
+        return 2
+
+    def numOutputChannels(self):
+        return 1
+
+    def spawnStar(self, peak):
+        self._starCounter += 1
+        self._t0Array.append(self._t)
+        self._spawnArray.append(random.randint(0, self._num_pixels - self.thickness))
+        self._peakArray.append(peak)
+        if self._starCounter > 100:
+            self._starCounter -= 1
+            self._t0Array.pop(0)
+            self._spawnArray.pop(0)
+            self._peakArray.pop(0)
+
+    def allStars(self, t, dim_speed, thickness, t0, spawnSpot, peak):
+        controlArray = []
+        for i in range(0, self._starCounter):
+            oneStarArray = np.zeros(self._num_pixels)
+            for j in range(0, thickness):
+                if i < len(spawnSpot):
+                    index = spawnSpot[i] + j
+                    if index < self._num_pixels:
+                        oneStarArray[index] = math.exp(-(100 / dim_speed) * (self._t - t0[i])) * max(
+                            self.min_brightness, peak[i])
+            controlArray.append(oneStarArray)
+        return controlArray
+
+    def starControl(self, prob, peak):
+        for i in range(int(self.max_spawns)):
+            if random.random() <= prob:
+                self.spawnStar(peak)
+        outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray,
+                                    self._peakArray)
+        return np.sum(outputArray, axis=0)
+
+    async def update(self, dt):
+        await super().update(dt)
+
+    def process(self):
+        audio = self._inputBuffer[0]
+        # apply bandpass to audio
+        y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audio), zi=self._filter_zi)
+
+        color = self._inputBuffer[1]
+        if color is None:
+            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        # adjust probability according to peak of audio
+        peak = np.max(y) * 1.0
+        try:
+            peak = peak**self.peak_filter
+        except Exception:
+            peak = peak
+        prob = min(self.probability + peak, 1.0)
+        if self._outputBuffer is not None:
+            self._output = np.multiply(
+                color,
+                self.starControl(prob, peak) * np.array([[self.peak_scale * 1.0], [self.peak_scale * 1.0],
+                                                         [self.peak_scale * 1.0]]))
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
