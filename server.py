@@ -529,6 +529,8 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Print process timing')
+    parser.add_argument(
+        '--strand', dest='strand', action='store_true', default=False, help="Perform strand test at start of server.")
 
     # print audio information
     print("The following audio devices are available:")
@@ -598,7 +600,8 @@ if __name__ == '__main__':
             serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
 
     # strand test
-    strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
+    if args.strand:
+        strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # Initialize project
     proj = serverconfig.getActiveProjectOrDefault()
