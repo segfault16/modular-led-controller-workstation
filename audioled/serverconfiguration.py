@@ -249,8 +249,8 @@ class PersistentConfiguration(ServerConfiguration):
                 self._projectMetadatas[projUid] = data
             except RuntimeError:
                 pass
-        print("Warming project {}".format(self.getConfiguration(CONFIG_ACTIVE_PROJECT)))
-        self.getProject(self.getConfiguration(CONFIG_ACTIVE_PROJECT))
+        #print("Warming project {}".format(self.getConfiguration(CONFIG_ACTIVE_PROJECT)))
+        #self.getProject(self.getConfiguration(CONFIG_ACTIVE_PROJECT))
 
     def _getProjectPath(self):
         return os.path.join(self.storageLocation, "projects")

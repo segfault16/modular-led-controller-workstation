@@ -530,6 +530,10 @@ if __name__ == '__main__':
         default=False,
         help='Print process timing')
 
+    # print audio information
+    print("The following audio devices are available:")
+    audio.print_audio_devices()
+
     args = parser.parse_args()
     config_location = None
     if args.config_location is None:
@@ -543,6 +547,8 @@ if __name__ == '__main__':
     else:
         print("Using configuration from {}".format(config_location))
         serverconfig = serverconfiguration.PersistentConfiguration(config_location, args.no_store)
+
+    print("Applying arguments")
 
     # Update num pixels
     if args.num_pixels is not None:
@@ -593,10 +599,6 @@ if __name__ == '__main__':
 
     # strand test
     strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
-
-    # print audio information
-    print("The following audio devices are available:")
-    audio.print_audio_devices()
 
     # Initialize project
     proj = serverconfig.getActiveProjectOrDefault()
