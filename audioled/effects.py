@@ -482,11 +482,11 @@ class SpringCombine(Effect):
     def __init__(self,
                  dampening=0.99,
                  tension=0.001,
-                 spread=0.1,
+                 spread=0.8,
                  scale_low=0.0,
                  scale_mid=0.5,
                  scale_high=1.0,
-                 speed=50.0,
+                 speed=5.0,
                  trigger_threshold=0.1):
         self.dampening = dampening
         self.tension = tension
@@ -516,11 +516,11 @@ class SpringCombine(Effect):
                 # default, min, max, stepsize
                 "dampening": [0.99, 0.9, 1.0, 0.0001],
                 "tension": [0.0001, 0.0, 0.1, 0.0001],
-                "spread": [0.1, 0.0, 1.0, 0.001],
+                "spread": [0.8, 0.0, 1.0, 0.001],
                 "scale_low": [0.0, 0.0, 1.0, 0.001],
                 "scale_mid": [0.5, 0.0, 1.0, 0.001],
                 "scale_high": [1.0, 0.0, 1.0, 0.001],
-                "speed": [50.0, 0.0, 100.0, 0.001],
+                "speed": [5.0, 0.0, 100.0, 0.001],
                 "trigger_threshold": [0.1, 0.01, 1.0, 0.01]
             }
         }
@@ -530,7 +530,7 @@ class SpringCombine(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "dampening": "Dampening factory of the springs.",
+                "dampening": "Dampening factor of the springs. Lower value means stiffer spring.",
                 "tension": "Tension of the springs.",
                 "spread": "Interaction between neighboring springs.",
                 "scale_low": "Scaling factor for input channel 1.",
