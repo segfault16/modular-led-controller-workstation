@@ -378,6 +378,88 @@ class LEDOutput(Effect):
                 self._outputBuffer[0] = None
 
 
+class ControllerWrapper(LEDController):
+    """Device Wrapper for LED Panels
+    
+    This class can be used as a wrapper for arbitrary devices and maps
+    2d pixel information to the correct pixels on a LED panel.
+    A LED panel is assumed to be a combination of short LED strips forming
+    rows and columns.
+
+    The format for the mapping JSON:
+    {
+        "num_rows" : 11, // Number of rows of the panel
+        "num_cols" : 44, // Number of columns of the panel
+        "substrips": [
+            {
+                "start_index": 0, // Starting index of the substrip
+                "row": 0, // Starting row of the substrip
+                "col": 43, // Starting column of the substrip
+                "dir": "L", // Direction of the substrip (L, R, U, D)
+                "num_pixels": 44 // Number of pixels of the substrip
+            },
+            {
+                "start_index": 44,
+                "row": 1,
+                "col": 0,
+                "dir": "R",
+                "num_pixels": 44
+            },
+            ...
+        ]
+    }
+    """
+
+    def __init__(self, device, mappingJson):
+        self.device = device
+        self.num_pixels = device.num_pixels
+        self.num_rows = device.num_rows
+        self.pixel_mapping = None
+        if mappingJson is not None:
+            self.pixel_mapping = self._createPixelMapping(mappingJson)
+    
+    def getBrightness(self):
+        return self.device.getBrightness()
+    
+    def setBrightness(self, value):
+        return self.device.setBrightness(value)
+    
+    def show(self, pixels):
+        mapped_pixels = pixels
+        if self.pixel_mapping is not None:
+            mapped_pixels = pixels[self.pixel_mapping[:, :, 0], self.pixel_mapping[:, :, 1]]
+        self.device.show(mapped_pixels)
+    
+    def _createPixelMapping(self, mappingJson):
+        num_rows = mappingJson['num_rows']
+        num_cols = mappingJson['num_cols']
+        mapping = np.zeros((3, num_rows, num_cols, 2), dtype=np.int64)
+
+        for substrip in mappingJson['substrips']:
+            start_index = substrip['start_index']
+            row = substrip['row']
+            col = substrip['col']
+            dir = substrip['dir']
+            num_pixels = substrip['num_pixels']
+            cur_row = row
+            cur_col = col
+            for i in range(num_pixels):
+                index = start_index + i
+                mapping[0, cur_row, cur_col, :] = [0, index]
+                mapping[1, cur_row, cur_col, :] = [1, index]
+                mapping[2, cur_row, cur_col, :] = [2, index]
+                if dir == 'L':
+                    cur_col = cur_col - 1
+                elif dir == 'R':
+                    cur_col = cur_col + 1
+                elif dir == 'U':
+                    cur_row = cur_row + 1
+                else:
+                    cur_row = cur_row - 1
+
+        mapping = np.reshape(mapping, (3, -1, 2))
+        return mapping
+
 # # Execute this file to run a LED strand test
 # # If everything is working, you should see a red, green, and blue pixel scroll
 # # across the LED strip continously

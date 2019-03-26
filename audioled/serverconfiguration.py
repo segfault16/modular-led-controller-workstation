@@ -11,6 +11,7 @@ CONFIG_DEVICE = 'device'
 CONFIG_DEVICE_CANDY_SERVER = 'device.candy.server'
 CONFIG_AUDIO_DEVICE_INDEX = 'audio.device_index'
 CONFIG_ACTIVE_PROJECT = 'active_project'
+CONFIG_DEVICE_PANEL_MAPPING = 'device.panel.mapping'
 
 
 class ServerConfiguration:
@@ -21,6 +22,7 @@ class ServerConfiguration:
         self._config[CONFIG_NUM_ROWS] = 1
         self._config[CONFIG_DEVICE] = 'FadeCandy'
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
+        self._config[CONFIG_DEVICE_PANEL_MAPPING] = ''
         self._projects = {}
         self._projectMetadatas = {}
 
@@ -35,7 +37,7 @@ class ServerConfiguration:
     def setConfiguration(self, key, value):
         print("Updating {} to {}".format(key, value))
         self._config[key] = value
-        if key in [CONFIG_NUM_PIXELS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_NUM_ROWS]:
+        if key in [CONFIG_NUM_PIXELS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_NUM_ROWS, CONFIG_DEVICE_PANEL_MAPPING]:
             print("Renewing device")
             self.getActiveProjectOrDefault().setDevice(self._createOutputDevice())
 
@@ -130,6 +132,15 @@ class ServerConfiguration:
             device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS), self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
+        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) != '':
+            mappingFile = self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
+            if os.path.exists(mappingFile):
+                with open(mappingFile, "r", encoding='utf-8') as f:
+                    content = f.read()
+                    mapping = json.loads(content)
+                    wrapper = devices.ControllerWrapper(device, mapping)
+                    device = wrapper
+                    print("Active pixel mapping: {}".format(mappingFile))
         return device
 
     def _metadataForProject(self, project, projectUid):

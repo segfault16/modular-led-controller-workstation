@@ -516,6 +516,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--device_candy_server', dest='device_candy_server', default=None, help='Server for device FadeCandy')
     parser.add_argument(
+        '--device_panel_mapping', dest='device_panel_mapping', default='', help='Mapping file for panels'
+    )
+    parser.add_argument(
         '-A',
         '--audio_device_index',
         dest='audio_device_index',
@@ -568,6 +571,9 @@ if __name__ == '__main__':
 
     if args.device_candy_server is not None:
         serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER, args.device_candy_server)
+
+    if args.device_panel_mapping is not None:
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_PANEL_MAPPING, args.device_panel_mapping)
 
     # Update Audio device
     if args.audio_device_index is not None:
