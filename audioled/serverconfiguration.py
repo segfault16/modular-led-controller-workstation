@@ -132,7 +132,7 @@ class ServerConfiguration:
             device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS), self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
-        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) != '':
+        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) is not None and self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) != '':
             mappingFile = self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
             if os.path.exists(mappingFile):
                 with open(mappingFile, "r", encoding='utf-8') as f:
