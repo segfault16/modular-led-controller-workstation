@@ -516,7 +516,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--device_candy_server', dest='device_candy_server', default=None, help='Server for device FadeCandy')
     parser.add_argument(
-        '--device_panel_mapping', dest='device_panel_mapping', default='', help='Mapping file for panels'
+        '--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels'
     )
     parser.add_argument(
         '-A',
