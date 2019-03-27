@@ -13,20 +13,21 @@ class Test_Panelize(unittest.TestCase):
         self._makeSquare_works(4 * 4, 1)
         self._makeSquare_works(4 * 4, 2)
         self._makeSquare_works(4 * 4, 4)
-        #self._makeSquare_works(4*4, 8) # ToDo: Fix
-        #self._makeSquare_works(4*4, 16) # ToDo: Fix
+        self._makeSquare_works(4 * 4, 8)
+        self._makeSquare_works(4 * 4, 16)
 
     def test_makeSquare8x8_works(self):
         self._makeSquare_works(8 * 8, 1)
         self._makeSquare_works(8 * 8, 2)
         self._makeSquare_works(8 * 8, 4)
         self._makeSquare_works(8 * 8, 8)
-        #self._makeSquare_works(8*8,16) # ToDo: Fix
-        #self._makeSquare_works(8*8,32) # ToDo: Fix
+        self._makeSquare_works(8 * 8, 16)
+        self._makeSquare_works(8 * 8, 32)
 
     def test_makeSquare44x22_works(self):
         self._makeSquare_works(44 * 22, 1)
-        #self._makeSquare_works(44 * 22, 22)
+        self._makeSquare_works(44 * 22, 22)
+        self._makeSquare_works(44 * 22, 44)
 
     def _makeSquare_works(self, num_pixels, num_rows):
         self.assertEqual(num_pixels % num_rows, 0)
