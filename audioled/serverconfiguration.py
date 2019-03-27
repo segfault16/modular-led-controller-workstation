@@ -138,7 +138,7 @@ class ServerConfiguration:
                 with open(mappingFile, "r", encoding='utf-8') as f:
                     content = f.read()
                     mapping = json.loads(content)
-                    wrapper = devices.ControllerWrapper(device, mapping)
+                    wrapper = devices.PanelWrapper(device, mapping)
                     device = wrapper
                     print("Active pixel mapping: {}".format(mappingFile))
         return device

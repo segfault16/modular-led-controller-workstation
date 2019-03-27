@@ -378,7 +378,7 @@ class LEDOutput(Effect):
                 self._outputBuffer[0] = None
 
 
-class ControllerWrapper(LEDController):
+class PanelWrapper(LEDController):
     """Device Wrapper for LED Panels
     
     This class can be used as a wrapper for arbitrary devices and maps
