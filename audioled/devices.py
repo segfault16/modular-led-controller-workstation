@@ -51,6 +51,18 @@ class LEDController:
             self.brightness = 1.0
             return min(1.0, self.brightness)
 
+    def getNumPixels(self):
+        return self.num_pixels
+    
+    def setNumPixels(self, num_pixels):
+        self.num_pixels = num_pixels
+    
+    def getNumRows(self):
+        return self.num_rows
+
+    def setNumRows(self, num_rows):
+        self.num_rows = num_rows
+
     def show(self, pixels):
         """Set LED pixels to the values given in the array
 
@@ -422,8 +434,20 @@ class PanelWrapper(LEDController):
         return self.device.getBrightness()
     
     def setBrightness(self, value):
-        return self.device.setBrightness(value)
+        self.device.setBrightness(value)
     
+    def getNumPixels(self):
+        return self.device.getNumPixels()
+
+    def setNumPixels(self, num_pixels):
+        self.device.setNumPixels(num_pixels)
+    
+    def getNumRows(self):
+        return self.device.getNumRows()
+
+    def setNumRows(self, num_rows):
+        self.device.setNumRows(num_rows)
+
     def show(self, pixels):
         mapped_pixels = pixels
         if self.pixel_mapping is not None:

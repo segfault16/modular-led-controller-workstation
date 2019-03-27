@@ -41,10 +41,10 @@ class Project(Updateable):
         if activeFilterGraph is not None:
             # Propagate num pixels from server configuration
             if self._device is not None and activeFilterGraph.getLEDOutput() is not None:
-                if (self._device.num_pixels != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels()
-                        or self._device.num_rows != activeFilterGraph.getLEDOutput().effect.getNumOutputRows()):
-                    print("propagating {} pixels on {} cols".format(self._device.num_pixels, self._device.num_rows))
-                    activeFilterGraph.propagateNumPixels(self._device.num_pixels, self._device.num_rows)
+                if (self._device.getNumPixels() != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels()
+                        or self._device.getNumRows() != activeFilterGraph.getLEDOutput().effect.getNumOutputRows()):
+                    print("propagating {} pixels on {} rows".format(self._device.getNumPixels(), self._device.getNumRows()))
+                    activeFilterGraph.propagateNumPixels(self._device.getNumPixels(), self._device.getNumRows())
                 activeFilterGraph.update(dt, event_loop)
 
     def process(self):
