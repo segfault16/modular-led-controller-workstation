@@ -239,9 +239,13 @@ class PersistentConfiguration(ServerConfiguration):
             with open(os.path.join(self.storageLocation, "configuration.json"), "r", encoding='utf-8') as f:
                 print("Reading configuration from {}".format(configFile))
                 content = f.read()
-                self._config = json.loads(content)
+                config_from_file = json.loads(content)
+                # Merge configuration with default config
+                self._config.update(config_from_file)
+                # Calculate new hash value
+                current_config = json.dumps(self._config)
                 m = hashlib.md5()
-                m.update(content.encode('utf-8'))
+                m.update(current_config.encode('utf-8'))
                 self._lastHash = m.hexdigest()
         else:
             print("Configuration not found. Skipping read.")
