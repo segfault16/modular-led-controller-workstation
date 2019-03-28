@@ -62,15 +62,16 @@ class AudioInput(Effect):
         super(AudioInput, self).__initstate__()
         deviceIndex = self.device_index
         if self.overrideDeviceIndex is not None:
+            print("Using overrideDeviceIndex {} for audio".format(self.overrideDeviceIndex))
             deviceIndex = self.overrideDeviceIndex
             self.device_index = self.overrideDeviceIndex
         try:
             self._audioStream, self._sampleRate = self.stream_audio(
                 chunk_rate=self.chunk_rate, channels=self.num_channels, device_index=deviceIndex)
             self._chunk_size = int(self._sampleRate / self.chunk_rate)
-        except Exception as e:
+        except Exception:
             print("Error?")
-            self._sampleRate=44800
+            self._sampleRate = 44800
         self._buffer = []
         
         # increase cur_gain by percentage
@@ -214,8 +215,7 @@ class AudioInput(Effect):
         await super(AudioInput, self).update(dt)
         try:
             self._buffer = next(self._audioStream)
-        except Exception as e:
-            #print("Error processing buffer. ")
+        except Exception:
             print("Audio Input not supported.")
             self._inputBuffer = None
 

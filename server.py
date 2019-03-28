@@ -7,11 +7,9 @@ import importlib
 import inspect
 import json
 import os.path
-from os.path import expanduser
 import threading
 import time
 from timeit import default_timer as timer
-import atexit
 
 import jsonpickle
 import numpy as np
@@ -19,7 +17,7 @@ from flask import Flask, abort, jsonify, request, send_from_directory, redirect
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, configs, devices, effects, panelize, filtergraph, project, serverconfiguration
+from audioled import audio, devices, effects, filtergraph, serverconfiguration
 
 proj = None
 default_values = {}
@@ -584,29 +582,29 @@ if __name__ == '__main__':
 
     # Adjust from configuration
 
-    # LED Device
-    device = None
-    if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
-        device = devices.RaspberryPi(
-            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
-            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
-        )
-    elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
-        device = devices.FadeCandy(
-            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
-            serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
-            serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
-    else:
-        print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
-        exit
-
     # Audio
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
+        print("Overriding Audio device with device index {}".format(serverconfig.getConfiguration(
+            serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
         audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(
             serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
 
     # strand test
     if args.strand:
+        device = None
+        if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
+            device = devices.RaspberryPi(
+                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
+                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
+            )
+        elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
+            device = devices.FadeCandy(
+                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
+                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
+                serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
+        else:
+            print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
+            exit
         strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # Initialize project

@@ -25,6 +25,7 @@ class ServerConfiguration:
         self._config[CONFIG_DEVICE_PANEL_MAPPING] = ''
         self._projects = {}
         self._projectMetadatas = {}
+        self._activeProject = None
 
     @staticmethod
     def getConfigurationParameters():
@@ -37,7 +38,7 @@ class ServerConfiguration:
     def setConfiguration(self, key, value):
         print("Updating {} to {}".format(key, value))
         self._config[key] = value
-        if key in [CONFIG_NUM_PIXELS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_NUM_ROWS, CONFIG_DEVICE_PANEL_MAPPING]:
+        if self._activeProject is not None and key in [CONFIG_NUM_PIXELS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_NUM_ROWS, CONFIG_DEVICE_PANEL_MAPPING]:
             print("Renewing device")
             self.getActiveProjectOrDefault().setDevice(self._createOutputDevice())
 
@@ -71,11 +72,15 @@ class ServerConfiguration:
             self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
             self._config[CONFIG_ACTIVE_PROJECT] = projectUid
             activeProjectUid = projectUid
-        return self.getProject(activeProjectUid)
+        activeProj = self.getProject(activeProjectUid)
+        self._activeProject = activeProj
+        return activeProj
 
     def getProject(self, uid):
         if uid in self._projects:
-            return self._projects[uid]
+            proj = self._projects[uid]
+            proj.setDevice(self._createOutputDevice())
+            return proj
         print("Get project from non-persistent")
         return None
 
@@ -264,8 +269,6 @@ class PersistentConfiguration(ServerConfiguration):
                 self._projectMetadatas[projUid] = data
             except RuntimeError:
                 pass
-        #print("Warming project {}".format(self.getConfiguration(CONFIG_ACTIVE_PROJECT)))
-        #self.getProject(self.getConfiguration(CONFIG_ACTIVE_PROJECT))
 
     def _getProjectPath(self):
         return os.path.join(self.storageLocation, "projects")
