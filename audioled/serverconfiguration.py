@@ -240,7 +240,7 @@ class PersistentConfiguration(ServerConfiguration):
                 self._lastProjectHashs[key] = projHash
 
     def _getStoreConfig(self):
-        return json.dumps(self._config)
+        return json.dumps(self._config, indent=4, sort_keys=True)
 
     def _load(self):
         # Read configuration file
@@ -253,7 +253,7 @@ class PersistentConfiguration(ServerConfiguration):
                 # Merge configuration with default config
                 self._config.update(config_from_file)
                 # Calculate new hash value
-                current_config = json.dumps(self._config)
+                current_config = json.dumps(self._config, indent=4, sort_keys=True)
                 m = hashlib.md5()
                 m.update(current_config.encode('utf-8'))
                 self._lastHash = m.hexdigest()
@@ -326,12 +326,12 @@ class PersistentConfiguration(ServerConfiguration):
 
     def _writeProject(self, proj, projFile):
         print("Writing project to {}".format(projFile))
-        projJson = jsonpickle.encode(proj)
+        projJson = json.dumps(json.loads(jsonpickle.encode(proj)), indent=4, sort_keys=True)
         with open(projFile, "w") as f:
             f.write(projJson)
 
     def _getProjectHash(self, proj):
-        projJson = jsonpickle.encode(proj)
+        projJson = json.dumps(json.loads(jsonpickle.encode(proj)), indent=4, sort_keys=True)
         mp = hashlib.md5()
         mp.update(projJson.encode('utf-8'))
         projHash = mp.hexdigest()
