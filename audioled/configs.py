@@ -308,7 +308,7 @@ def createGifPlayerGraph():
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    gifPlayer = generative.GIFPlayer("gifs/test.gif")
+    gifPlayer = generative.GIFPlayer("gifs/nyancat.gif")
     fg.addEffectNode(gifPlayer)
 
     fg.addConnection(gifPlayer, 0, led_out, 0)

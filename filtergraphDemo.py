@@ -124,7 +124,7 @@ def createFilterGraph(config, num_pixels):
     elif config == sortingConf:
         return configs.createSortingGraph()
     elif config == gifConf:
-        return configs.createGifPlayerGraph(num_pixels, device)
+        return configs.createGifPlayerGraph()
     else:
         raise NotImplementedError("Config not implemented")
 

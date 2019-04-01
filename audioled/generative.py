@@ -1134,8 +1134,7 @@ class Sorting(Effect):
 
 
 class GIFPlayer(Effect):
-    def __init__(self, num_pixels, gif_file, fps=30):
-        self.num_pixels = num_pixels
+    def __init__(self, gif_file, fps=30):
         self.file = gif_file
         self.fps = fps
         self.__initstate__()
@@ -1153,7 +1152,6 @@ class GIFPlayer(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("num_pixels", [300, 1, 1000, 1]),
                 ("fps", [30, 0, 120, 0.1]),
             ])
         }
@@ -1161,7 +1159,6 @@ class GIFPlayer(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['fps'][0] = self.fps
         return definition
 
@@ -1179,8 +1176,11 @@ class GIFPlayer(Effect):
                 self._gif.seek(self._gif.tell() + 1)
             except EOFError:
                 self._gif = Image.open(self.file)
+            
+            num_cols = int(self._num_pixels / self._num_rows)
+            # Resize image
+            self._cur_image = self._gif.convert('RGB').resize((num_cols, self._num_rows), Image.ANTIALIAS)
             # update time
-            self._cur_image = self._gif.convert('RGB')
             self._last_t = self._t
 
     def process(self):
@@ -1190,4 +1190,5 @@ class GIFPlayer(Effect):
 
             img = np.asarray(self._cur_image, dtype=np.uint8)
             img = img.reshape(-1, img.shape[-1]).T
-            self._outputBuffer[0] = img.astype(int)
+            img = img[:, 0:20000]
+            self._outputBuffer[0] = img
