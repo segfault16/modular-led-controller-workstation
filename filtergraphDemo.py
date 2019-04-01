@@ -33,10 +33,11 @@ bonfireConf = 'bonfire'
 generatewavesConf = 'generatewaves'
 sortingConf = 'sorting'
 gifConf = 'gif'
+panelConf = 'panel'
 configChoices = [
     movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf,
     breathingConf, heartbeatConf, pendulumConf, rpendulumConf, keyboardConf, keyboardSpringConf, testblobConf,
-    bonfireConf, generatewavesConf, sortingConf, gifConf
+    bonfireConf, generatewavesConf, sortingConf, gifConf, panelConf
 ]
 
 deviceRasp = 'RaspberryPi'
@@ -46,6 +47,8 @@ parser = argparse.ArgumentParser(description='Audio Reactive LED Strip')
 
 parser.add_argument(
     '-N', '--num_pixels', dest='num_pixels', type=int, default=300, help='number of pixels (default: 300)')
+parser.add_argument(
+    '-R', '--num_rows', dest='num_rows', type=int, default=1, help='number of rows (default: 1)')
 parser.add_argument(
     '-D',
     '--device',
@@ -68,12 +71,13 @@ parser.add_argument(
 args = parser.parse_args()
 
 num_pixels = args.num_pixels
+num_rows = args.num_rows
 
 # Initialize device
 if args.device == deviceRasp:
-    device = devices.RaspberryPi(num_pixels, 1)
+    device = devices.RaspberryPi(num_pixels, num_rows)
 elif args.device == deviceCandy:
-    device = devices.FadeCandy(num_pixels, 1, server=args.device_candy_server)
+    device = devices.FadeCandy(num_pixels, num_rows, server=args.device_candy_server)
 
 # Initialize Audio device
 if args.audio_device_index is not None:
@@ -125,6 +129,8 @@ def createFilterGraph(config, num_pixels):
         return configs.createSortingGraph()
     elif config == gifConf:
         return configs.createGifPlayerGraph()
+    elif config == panelConf:
+        return configs.createPanelPendulum()
     else:
         raise NotImplementedError("Config not implemented")
 
@@ -164,7 +170,7 @@ else:
     cur_graph = createFilterGraph(args.config, num_pixels)
     saveAndLoad(args.config, cur_graph)
 
-cur_graph.propagateNumPixels(num_pixels)
+cur_graph.propagateNumPixels(num_pixels, num_rows)
 
 while True:
     last_time = current_time
