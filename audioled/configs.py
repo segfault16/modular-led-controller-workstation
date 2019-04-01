@@ -6,6 +6,7 @@ from audioled import audioreactive
 from audioled import generative
 from audioled import effects
 from audioled import input
+from audioled import panelize
 
 
 def createMovingLightGraph():
@@ -387,4 +388,21 @@ def createSortingGraph():
     fg.addEffectNode(Sorting)
 
     fg.addConnection(Sorting, 0, led_out, 0)
+    return fg
+
+
+def createPanelPendulum():
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput()
+    fg.addEffectNode(led_out)
+
+    makeSquare = panelize.MakeSquare()
+    fg.addEffectNode(makeSquare)
+
+    pendulum = generative.Pendulum()
+    fg.addEffectNode(pendulum)
+
+    fg.addConnection(makeSquare, 0, led_out, 0)
+    fg.addConnection(pendulum, 0, makeSquare, 0)
     return fg
