@@ -4,7 +4,7 @@ from audioled import effect, opc_server
 
 
 class CandyServer(effect.Effect):
-    def __init__(self, num_pixels, host='', port=7891):
+    def __init__(self, num_pixels=300, host='', port=7891):
         self.num_pixels = num_pixels
         self.host = host
         self.port = port

@@ -124,6 +124,7 @@ class Client(object):
         len_hi_byte = int(len(pixels) * 3 / 256)
         len_lo_byte = (len(pixels) * 3) % 256
         header = chr(channel) + chr(0) + chr(len_hi_byte) + chr(len_lo_byte)
+        
         pieces = [header]
         for r, g, b in pixels:
             r = min(255, max(0, int(r)))
@@ -137,9 +138,10 @@ class Client(object):
 
         self._debug('put_pixels: sending pixels to server')
         try:
-            self._socket.send(message)
-        except socket.error:
+            self._socket.sendall(message)
+        except socket.error as e:
             self._debug('put_pixels: connection lost.  could not send pixels.')
+            print("Error on sending pixel data to FadeCandy Server: {}".format(e))
             self._socket = None
             return False
 

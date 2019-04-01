@@ -1,9 +1,10 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 from collections import OrderedDict
 
 import numpy as np
+import scipy as sp
+import math
 
 import audioled.colors as colors
 from audioled.effect import Effect
@@ -12,21 +13,25 @@ SHORT_NORMALIZE = 1.0 / 32768.0
 
 
 class Shift(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Shift effect for shifting pixels through the strip."
+
     def __init__(self, speed=100.0):
         self.speed = speed
         self.__initstate__()
 
     def __initstate__(self):
         # state
+        super(Shift, self).__initstate__()
         try:
             self._shift_pixels
         except AttributeError:
             self._shift_pixels = 0
-        try:
-            self._last_t
-        except AttributeError:
-            self._last_t = 0.0
-        super(Shift, self).__initstate__()
+
+        self._last_t = self._t
 
     def numInputChannels(self):
         return 1
@@ -39,10 +44,19 @@ class Shift(Effect):
         definition = {
             "parameters": OrderedDict([
                 # default, min, max, stepsize
-                ("speed", [100.0, 0.0, 1000.0, 1.0]),
+                ("speed", [100.0, -1000.0, 1000.0, 1.0]),
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "speed": "Speed of the shifting effect.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -58,13 +72,19 @@ class Shift(Effect):
 
         y = self._inputBuffer[0]
         dt_move = self._t - self._last_t
-        if dt_move * self.speed > 1:
-            self._shift_pixels = int(self._shift_pixels + dt_move * self.speed) % np.size(y, axis=1)
+        shift = dt_move * self.speed * 0.1
+        self._shift_pixels = math.fmod((self._shift_pixels + shift), np.size(y, axis=1))
         self._last_t = self._t
-        self._outputBuffer[0] = np.roll(y, self._shift_pixels, axis=1)
+        self._outputBuffer[0] = sp.ndimage.interpolation.shift(y, [0, self._shift_pixels], mode='wrap', prefilter=True)
 
 
 class Append(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Append combines multiple channels into one output."
+
     def __init__(self,
                  num_channels=2,
                  flip0=False,
@@ -117,6 +137,23 @@ class Append(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_channels": "Number of input channels of the effect.",
+                "flip0": "Change pixel direction of input channel 0.",
+                "flip1": "Change pixel direction of input channel 1.",
+                "flip2": "Change pixel direction of input channel 2.",
+                "flip3": "Change pixel direction of input channel 3.",
+                "flip4": "Change pixel direction of input channel 4.",
+                "flip5": "Change pixel direction of input channel 5.",
+                "flip6": "Change pixel direction of input channel 6.",
+                "flip7": "Change pixel direction of input channel 7.",
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         del definition['parameters']['num_channels']  # not editable at runtime
@@ -146,8 +183,21 @@ class Append(Effect):
                     state = np.concatenate((state, self._inputBuffer[i]), axis=1)
         self._outputBuffer[0] = state
 
+    def getNumInputPixels(self, channel):
+        # Override get num input pixels
+        if self._num_pixels is not None:
+            return int(self._num_pixels / self.num_channels)
+        else:
+            return None
+
 
 class Combine(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for blending two channels into one using several color blend modes."
+
     def __init__(self, mode=colors.blend_mode_default):
         self.mode = mode
         self.__initstate__()
@@ -162,6 +212,15 @@ class Combine(Effect):
     def getParameterDefinition():
         definition = {"parameters": OrderedDict([("mode", colors.blend_modes)])}
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "mode": "Color blend mode for combining input channel 0 and input channel 1.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -188,9 +247,11 @@ class Combine(Effect):
 
 
 class AfterGlow(Effect):
-    """
-    Effect that
-    """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Afterglow makes pixels hold their value and fade out smoothly."
 
     def __init__(self, glow_time=1.0):
         self.glow_time = glow_time
@@ -217,6 +278,15 @@ class AfterGlow(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "glow_time": "Amount of time for the pixels to glow.",
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -257,6 +327,12 @@ class AfterGlow(Effect):
 
 
 class Mirror(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Mirrors the upper or lower half of the input channel."
+
     def __init__(self, mirror_lower=True, recursion=0):
         self.mirror_lower = mirror_lower
         self.recursion = recursion
@@ -281,10 +357,21 @@ class Mirror(Effect):
             OrderedDict([
                 ("mirror_lower", True),
                 # default, min, max, stepsize
-                ("recursion", [1, 0, 8, 1]),
+                ("recursion", [0, 0, 8, 1]),
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "mirror_lower": "Switch between mirroring the lower or the upper part of input channel 0.",
+                "recursion": "Recursion depth of the mirroring effect. If recursion is set to 1, "\
+                    "the lower and upper half of the strip are mirrored again at their centers."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
@@ -359,7 +446,7 @@ class Mirror(Effect):
 
 class SpringCombine(Effect):
     """Spring simulation effect that interpolates between three inputs based on displacement of the springs.
-    
+
     The trigger input actuates on the springs (if value exceeds trigger_threshold).
     Depending on the displacement of each spring, the output value is a linear interpolation between:
     - Input 1 and Input 2 if displacement < 0
@@ -370,7 +457,7 @@ class SpringCombine(Effect):
         1 -- Pixel input for displacement in negative direction
         2 -- Pixel input for no displacement
         3 -- Pixel input for displacement in positive direction
-    
+
     Parameters:
         dampening           -- Dampening factory of the springs
         tension             -- Tension of the springs
@@ -383,17 +470,24 @@ class SpringCombine(Effect):
 
     """
 
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Spring simulation effect that interpolates between three inputs based on displacement of the springs. "\
+            "The trigger input (channel 0) actuates on the springs (if value exceeds trigger_threshold). "\
+            "Depending on the displacement of each spring, the output value is a linear interpolation between:\n"\
+            "- channel 1 and channel 2 if displacement < 0\n"\
+            "- channel 2 and channel 3 if displacement > 0"
+
     def __init__(self,
-                 num_pixels,
                  dampening=0.99,
                  tension=0.001,
-                 spread=0.1,
+                 spread=0.8,
                  scale_low=0.0,
                  scale_mid=0.5,
                  scale_high=1.0,
-                 speed=50.0,
+                 speed=5.0,
                  trigger_threshold=0.1):
-        self.num_pixels = num_pixels
         self.dampening = dampening
         self.tension = tension
         self.spread = spread
@@ -406,8 +500,8 @@ class SpringCombine(Effect):
 
     def __initstate__(self):
         super(SpringCombine, self).__initstate__()
-        self._pos = np.zeros(self.num_pixels)
-        self._vel = np.zeros(self.num_pixels)
+        self._pos = None
+        self._vel = None
 
     def numInputChannels(self):
         return 4  # trigger, low, mid, high
@@ -420,22 +514,36 @@ class SpringCombine(Effect):
         definition = {
             "parameters": {
                 # default, min, max, stepsize
-                "num_pixels": [300, 1, 1000, 1],
                 "dampening": [0.99, 0.9, 1.0, 0.0001],
                 "tension": [0.0001, 0.0, 0.1, 0.0001],
-                "spread": [0.1, 0.0, 1.0, 0.001],
+                "spread": [0.8, 0.0, 1.0, 0.001],
                 "scale_low": [0.0, 0.0, 1.0, 0.001],
                 "scale_mid": [0.5, 0.0, 1.0, 0.001],
                 "scale_high": [1.0, 0.0, 1.0, 0.001],
-                "speed": [50.0, 0.0, 100.0, 0.001],
+                "speed": [5.0, 0.0, 100.0, 0.001],
                 "trigger_threshold": [0.1, 0.01, 1.0, 0.01]
             }
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "dampening": "Dampening factor of the springs. Lower value means stiffer spring.",
+                "tension": "Tension of the springs.",
+                "spread": "Interaction between neighboring springs.",
+                "scale_low": "Scaling factor for input channel 1.",
+                "scale_mid": "Scaling factor for input channel 2.",
+                "scale_high": "Scaling factor for input channel 3.",
+                "speed": "Controls the speed of the spring simulation.",
+                "trigger_threshold": "Above this threshold springs are actuated based on brightness of input channel 0."
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['dampening'][0] = self.dampening
         definition['parameters']['tension'][0] = self.tension
         definition['parameters']['spread'][0] = self.spread
@@ -448,9 +556,13 @@ class SpringCombine(Effect):
 
     async def update(self, dt):
         await super().update(dt)
+        if self._pos is None or len(self._pos) != self._num_pixels:
+            self._pos = np.zeros(self._num_pixels)
+        if self._vel is None or len(self._vel) != self._num_pixels:
+            self._vel = np.zeros(self._num_pixels)
 
-        lDeltas = np.zeros(self.num_pixels)  # force from left
-        rDeltas = np.zeros(self.num_pixels)  # force from right
+        lDeltas = np.zeros(self._num_pixels)  # force from left
+        rDeltas = np.zeros(self._num_pixels)  # force from right
         for j in range(4):
             # calculate delta to left and right pixel
             lDeltas[1:] = self.spread * (np.roll(self._pos, 1)[1:] - self._pos[1:])
@@ -466,22 +578,22 @@ class SpringCombine(Effect):
             return
 
         if not self._inputBufferValid(0):
-            trigger = np.zeros(self.num_pixels) * np.array([[0], [0], [0]])
+            trigger = np.zeros(self._num_pixels) * np.array([[0], [0], [0]])
         else:
             trigger = self._inputBuffer[0]
 
         if not self._inputBufferValid(1):
-            lowCol = self.scale_low * np.ones(self.num_pixels) * np.array([[0], [0], [0]])
+            lowCol = self.scale_low * np.ones(self._num_pixels) * np.array([[0], [0], [0]])
         else:
             lowCol = self.scale_low * self._inputBuffer[1]
 
         if not self._inputBufferValid(2):
-            baseCol = self.scale_mid * np.ones(self.num_pixels) * np.array([[127], [127], [127]])
+            baseCol = self.scale_mid * np.ones(self._num_pixels) * np.array([[127], [127], [127]])
         else:
             baseCol = self.scale_mid * self._inputBuffer[2]
 
         if not self._inputBufferValid(3):
-            highCol = self.scale_high * np.ones(self.num_pixels) * np.array([[255], [255], [255]])
+            highCol = self.scale_high * np.ones(self._num_pixels) * np.array([[255], [255], [255]])
         else:
             highCol = self.scale_high * self._inputBuffer[3]
 
@@ -490,9 +602,76 @@ class SpringCombine(Effect):
         self._pos[trigger > self.trigger_threshold] = trigger[trigger > self.trigger_threshold]
 
         # Output: Interpolate between low and mid for self._pos < 0, interpolate between mid and high for self._pos > 0
-        out = np.zeros(self.num_pixels) * np.array([[0], [0], [0]])
+        out = np.zeros(self._num_pixels) * np.array([[0], [0], [0]])
         out[:, self._pos <= 0] = (
             np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
         out[:, self._pos >= 0] = (
             np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
         self._outputBuffer[0] = out
+
+
+class Swing(Effect):
+    """PendulumEffect with pixel input.
+    Inputs:
+    - 0: Pixels
+    """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Makes the pixels shift in both directions like a pendulum."
+
+    def __init__(self, displacement=50, swingspeed=1):
+        self.displacement = displacement
+        self.swingspeed = swingspeed
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(Swing, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("displacement", [50, 1, 1000, 1]),
+                ("swingspeed", [1, 0, 5, 0.01]),
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "displacement": "Defines maximum amount of pixels that the input is shifted.",
+                "swingspeed": "Speed of the swing."
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['displacement'][0] = self.displacement
+        definition['parameters']['swingspeed'][0] = self.swingspeed
+        return definition
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = None
+            return
+
+        pixels = self._inputBuffer[0]
+        config = self.displacement * math.sin(self._t * self.swingspeed)
+
+        self._outputBuffer[0] = sp.ndimage.interpolation.shift(pixels, [0, config], mode='wrap', prefilter=True)

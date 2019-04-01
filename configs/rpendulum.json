@@ -1,0 +1,58 @@
+{
+    "py/object": "audioled.filtergraph.FilterGraph",
+    "py/state": {
+        "connections": [
+            {
+                "from_node_uid": "6d2b35a2e81640d9b618c949e8e2d377",
+                "uid": "65e481a9f6454ce7b4bf8c6087a31d51",
+                "to_node_uid": "e35ce8be7ee045e6b3449eb402c72847",
+                "to_node_channel": 0,
+                "from_node_channel": 0
+            }
+        ],
+        "recordTimings": true,
+        "nodes": [
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "uid": "e35ce8be7ee045e6b3449eb402c72847",
+                    "numOutputChannels": 0,
+                    "numInputChannels": 1,
+                    "effect": {
+                        "py/object": "audioled.devices.LEDOutput",
+                        "py/state": {
+                            "controller": {
+                                "py/object": "audioled.devices.RaspberryPi",
+                                "py/state": {
+                                    "freq_hz": 800000,
+                                    "num_pixels": 300,
+                                    "brightness": 1,
+                                    "invert": false,
+                                    "pin": 18,
+                                    "dma": 5
+                                }
+                            },
+                            "brightness": 1
+                        }
+                    }
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "uid": "6d2b35a2e81640d9b618c949e8e2d377",
+                    "numOutputChannels": 1,
+                    "numInputChannels": 1,
+                    "effect": {
+                        "py/object": "audioled.generative.RandomPendulums",
+                        "py/state": {
+                            "num_pendulums": 100,
+                            "num_pixels": 300,
+                            "dim": 0.1
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}

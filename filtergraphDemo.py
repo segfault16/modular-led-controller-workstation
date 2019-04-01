@@ -7,7 +7,7 @@ from timeit import default_timer as timer
 
 import jsonpickle
 
-from audioled import configs, devices, filtergraph
+from audioled import configs, devices, filtergraph, audio
 
 num_pixels = 300
 device = None
@@ -26,10 +26,17 @@ proxyConf = 'proxy'
 fallingConf = 'falling'
 breathingConf = 'breathing'
 heartbeatConf = 'heartbeat'
+pendulumConf = 'pendulum'
+rpendulumConf = 'rpendulum'
+testblobConf = 'testblob'
+bonfireConf = 'bonfire'
+generatewavesConf = 'generatewaves'
+sortingConf = 'sorting'
 gifConf = 'gif'
 configChoices = [
-    movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, keyboardConf,
-    keyboardSpringConf, proxyConf, fallingConf, breathingConf, heartbeatConf, gifConf
+    movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf,
+    breathingConf, heartbeatConf, pendulumConf, rpendulumConf, keyboardConf, keyboardSpringConf, testblobConf,
+    bonfireConf, generatewavesConf, sortingConf, gifConf
 ]
 
 deviceRasp = 'RaspberryPi'
@@ -56,45 +63,66 @@ parser.add_argument(
     choices=configChoices,
     help='config to use, default is rolling through all configs')
 parser.add_argument('-s', '--save_config', dest='save_config', type=bool, default=False, help='Save config to config/')
+parser.add_argument(
+    '-A', '--audio_device_index', dest='audio_device_index', type=int, default=None, help='Audio device index to use')
 args = parser.parse_args()
 
 num_pixels = args.num_pixels
 
 # Initialize device
 if args.device == deviceRasp:
-    device = devices.RaspberryPi(num_pixels)
+    device = devices.RaspberryPi(num_pixels, 1)
 elif args.device == deviceCandy:
-    device = devices.FadeCandy(args.device_candy_server)
+    device = devices.FadeCandy(num_pixels, 1, server=args.device_candy_server)
+
+# Initialize Audio device
+if args.audio_device_index is not None:
+    audio.AudioInput.overrideDeviceIndex = args.audio_device_index
 
 # select config to show
 config = args.config
 
+print("The following audio devices are available:")
+audio.print_audio_devices()
 
-def createFilterGraph(config, num_pixels, device):
+
+def createFilterGraph(config, num_pixels):
     if config == movingLightConf:
-        return configs.createMovingLightGraph(num_pixels, device)
+        return configs.createMovingLightGraph()
     elif config == movingLightsConf:
-        return configs.createMovingLightsGraph(num_pixels, device)
+        return configs.createMovingLightsGraph()
     elif config == spectrumConf:
-        return configs.createSpectrumGraph(num_pixels, device)
+        return configs.createSpectrumGraph()
     elif config == vu_peakConf:
-        return configs.createVUPeakGraph(num_pixels, device)
+        return configs.createVUPeakGraph()
     elif config == swimmingConf:
-        return configs.createSwimmingPoolGraph(num_pixels, device)
+        return configs.createSwimmingPoolGraph()
     elif config == defenceConf:
-        return configs.createDefenceGraph(num_pixels, device)
+        return configs.createDefenceGraph()
     elif config == keyboardConf:
-        return configs.createKeyboardGraph(num_pixels, device)
+        return configs.createKeyboardGraph()
     elif config == keyboardSpringConf:
-        return configs.createKeyboardSpringGraph(num_pixels, device)
+        return configs.createKeyboardSpringGraph()
     elif config == proxyConf:
-        return configs.createProxyServerGraph(num_pixels, device)
+        return configs.createProxyServerGraph()
     elif config == fallingConf:
-        return configs.createFallingStarsGraph(num_pixels, device)
+        return configs.createFallingStarsGraph()
     elif config == breathingConf:
-        return configs.createBreathingGraph(num_pixels, device)
+        return configs.createBreathingGraph()
     elif config == heartbeatConf:
-        return configs.createHeartbeatGraph(num_pixels, device)
+        return configs.createHeartbeatGraph()
+    elif config == pendulumConf:
+        return configs.createPendulumGraph()
+    elif config == rpendulumConf:
+        return configs.createRPendulumGraph()
+    elif config == testblobConf:
+        return configs.createTestBlobGraph()
+    elif config == bonfireConf:
+        return configs.createBonfireGraph()
+    elif config == generatewavesConf:
+        return configs.createGenerateWavesGraph()
+    elif config == sortingConf:
+        return configs.createSortingGraph()
     elif config == gifConf:
         return configs.createGifPlayerGraph(num_pixels, device)
     else:
@@ -131,10 +159,12 @@ config_idx = 0
 last_switch_time = current_time
 cur_graph = None
 if args.config == '':
-    cur_graph = createFilterGraph(configChoices[config_idx], num_pixels, device)
+    cur_graph = createFilterGraph(configChoices[config_idx], num_pixels)
 else:
-    cur_graph = createFilterGraph(args.config, num_pixels, device)
+    cur_graph = createFilterGraph(args.config, num_pixels)
     saveAndLoad(args.config, cur_graph)
+
+cur_graph.propagateNumPixels(num_pixels)
 
 while True:
     last_time = current_time
@@ -144,14 +174,17 @@ while True:
         # switch configuration
         print('---switching configuration---')
         config_idx = (config_idx) % len(configChoices)
-        cur_graph = createFilterGraph(configChoices[config_idx], num_pixels, device)
+        cur_graph = createFilterGraph(configChoices[config_idx], num_pixels)
         cur_graph = saveAndLoad(configChoices[config_idx], cur_graph)
+        cur_graph.propagateNumPixels(num_pixels)
         config_idx = config_idx + 1
         last_switch_time = current_time
 
     cur_graph.update(dt)
     updateTiming.update(timer() - current_time)
     cur_graph.process()
+    if cur_graph.getLEDOutput() is not None and cur_graph.getLEDOutput()._outputBuffer[0] is not None:
+        device.show(cur_graph.getLEDOutput()._outputBuffer[0])
     if count == 100:
         cur_graph.printProcessTimings()
         print(updateTiming.__dict__)

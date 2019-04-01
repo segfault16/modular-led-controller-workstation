@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import time
 from collections import OrderedDict
@@ -37,11 +36,12 @@ def numInputChannels(device_index=None):
 class AudioInput(Effect):
     overrideDeviceIndex = None
     global_stream = None
-    """
-    Outputs:
-    0: Audio Channel 0
-    1: Audio Channel 1...
-    """
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Audio input captures audio from your device and " \
+            "makes each channel available as an output. "
 
     def __init__(self,
                  device_index=None,
@@ -62,11 +62,18 @@ class AudioInput(Effect):
         super(AudioInput, self).__initstate__()
         deviceIndex = self.device_index
         if self.overrideDeviceIndex is not None:
+            print("Using overrideDeviceIndex {} for audio".format(self.overrideDeviceIndex))
             deviceIndex = self.overrideDeviceIndex
-        self._audioStream, self._sampleRate = self.stream_audio(
-            chunk_rate=self.chunk_rate, channels=self.num_channels, device_index=deviceIndex)
+            self.device_index = self.overrideDeviceIndex
+        try:
+            self._audioStream, self._sampleRate = self.stream_audio(
+                chunk_rate=self.chunk_rate, channels=self.num_channels, device_index=deviceIndex)
+            self._chunk_size = int(self._sampleRate / self.chunk_rate)
+        except Exception:
+            print("Error?")
+            self._sampleRate = 44800
         self._buffer = []
-        self._chunk_size = int(self._sampleRate / self.chunk_rate)
+        
         # increase cur_gain by percentage
         # we want to get to self.autogain_max in approx. self.autogain_time seconds
         min_value = 1. / self.autogain_max  # the minimum input value we want to bring to 1.0
@@ -142,8 +149,9 @@ class AudioInput(Effect):
                 try:
                     if AudioInput.global_stream is None:
                         AudioInput.global_stream, fs = self._open_input_stream(device_index, channels=channels)
-
-                    chunk = AudioInput.global_stream.read(chunk_length)
+                    # Reading audio by default with exception_on_overflow=False
+                    # Exceptions on overflow result in hickups. Enable only for debugging.
+                    chunk = AudioInput.global_stream.read(chunk_length, exception_on_overflow=False)
                 except IOError as e:
                     if e.errno == pyaudio.paInputOverflowed:
                         print('Audio buffer full')
@@ -177,6 +185,22 @@ class AudioInput(Effect):
         }
         return definition
 
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_channels":
+                "Number of input channels of the audio device.",
+                "autogain":
+                "Automatically adjust the gain of the input channels.\nThe input signal will be scaled up to 'autogain_max', gain will be reduced if the audio signal would clip.",
+                "autogain_max":
+                "Maximum gain makeup.",
+                "autogain_time":
+                "Control the lag of the gain adjustment. Higher values will result in slower gain makeup."
+            }
+        }
+        return help
+
     def getParameter(self):
         definition = self.getParameterDefinition()
         definition['parameters']['autogain_max'][0] = self.autogain_max
@@ -189,9 +213,16 @@ class AudioInput(Effect):
 
     async def update(self, dt):
         await super(AudioInput, self).update(dt)
-        self._buffer = next(self._audioStream)
+        try:
+            self._buffer = next(self._audioStream)
+        except Exception:
+            print("Audio Input not supported.")
+            self._inputBuffer = None
 
     def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+
         if self.autogain:
             # determine max value -> in range 0,1
             maxVal = np.max(self._buffer)
