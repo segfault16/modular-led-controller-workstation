@@ -480,8 +480,9 @@ class PanelWrapper(LEDController):
                     cur_row = cur_row + 1
                 else:
                     cur_row = cur_row - 1
-
-        mapping = np.reshape(mapping, (3, -1, 2))
+                    
+        mapping = np.reshape(mapping, (3, -1, 2), order='F')
+        
         return mapping
 
 # # Execute this file to run a LED strand test

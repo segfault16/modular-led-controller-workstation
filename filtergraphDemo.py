@@ -49,6 +49,9 @@ parser.add_argument(
 parser.add_argument(
     '-R', '--num_rows', dest='num_rows', type=int, default=1, help='number of rows (default: 1)')
 parser.add_argument(
+    '--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels'
+)
+parser.add_argument(
     '-D',
     '--device',
     dest='device',
@@ -77,6 +80,15 @@ if args.device == deviceRasp:
     device = devices.RaspberryPi(num_pixels, num_rows)
 elif args.device == deviceCandy:
     device = devices.FadeCandy(num_pixels, num_rows, server=args.device_candy_server)
+
+if args.device_panel_mapping is not None:
+    mappingFile = args.device_panel_mapping
+    if os.path.exists(mappingFile):
+        with open(mappingFile, "r", encoding='utf-8') as f:
+            content = f.read()
+            mapping = json.loads(content)
+            print("Panel mapping loaded")
+            device = devices.PanelWrapper(device, mapping)
 
 # Initialize Audio device
 if args.audio_device_index is not None:
