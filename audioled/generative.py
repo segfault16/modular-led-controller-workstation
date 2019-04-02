@@ -1179,6 +1179,7 @@ class GIFPlayer(Effect):
             
             num_cols = int(self._num_pixels / self._num_rows)
             # Resize image
+            #self._cur_image = self._gif.convert('RGB').resize((self._num_rows, num_cols), Image.ANTIALIAS)
             self._cur_image = self._gif.convert('RGB').resize((num_cols, self._num_rows), Image.ANTIALIAS)
             # update time
             self._last_t = self._t
@@ -1188,7 +1189,6 @@ class GIFPlayer(Effect):
             return
         if self._cur_image is not None:
 
-            img = np.asarray(self._cur_image, dtype=np.uint8)
+            img = np.swapaxes(np.asarray(self._cur_image, dtype=np.uint8), 0, 1)
             img = img.reshape(-1, img.shape[-1]).T
-            img = img[:, 0:20000]
             self._outputBuffer[0] = img
