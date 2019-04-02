@@ -323,7 +323,7 @@ def createPendulumGraph():
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    Pendulum = generative.Pendulum()
+    Pendulum = generative.Pendulum(heightactivator=False, displacement=.5)
     fg.addEffectNode(Pendulum)
 
     fg.addConnection(Pendulum, 0, led_out, 0)
@@ -414,7 +414,7 @@ def createPanelPendulum():
     makeSquare = panelize.MakeSquare()
     fg.addEffectNode(makeSquare)
 
-    pendulum = generative.Pendulum()
+    pendulum = generative.Pendulum(heightactivator=False, displacement=0.5)
     fg.addEffectNode(pendulum)
 
     fg.addConnection(makeSquare, 0, led_out, 0)
