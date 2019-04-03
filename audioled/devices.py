@@ -455,9 +455,11 @@ class PanelWrapper(LEDController):
         self.device.show(mapped_pixels)
     
     def _createPixelMapping(self, mappingJson):
+        def toIdx(row, col, num_cols):
+            return row * num_cols + col
         num_rows = mappingJson['num_rows']
         num_cols = mappingJson['num_cols']
-        mapping = np.zeros((3, num_rows, num_cols, 2), dtype=np.int64)
+        mapping = np.zeros((3, num_rows * num_cols, 2), dtype=np.int64)
 
         for substrip in mappingJson['substrips']:
             start_index = substrip['start_index']
@@ -469,20 +471,17 @@ class PanelWrapper(LEDController):
             cur_col = col
             for i in range(num_pixels):
                 index = start_index + i
-                mapping[0, cur_row, cur_col, :] = [0, index]
-                mapping[1, cur_row, cur_col, :] = [1, index]
-                mapping[2, cur_row, cur_col, :] = [2, index]
+                mapping[0, index, :] = [0, toIdx(cur_row, cur_col, num_cols)]
+                mapping[1, index, :] = [1, toIdx(cur_row, cur_col, num_cols)]
+                mapping[2, index, :] = [2, toIdx(cur_row, cur_col, num_cols)]
                 if dir == 'L':
                     cur_col = cur_col - 1
                 elif dir == 'R':
                     cur_col = cur_col + 1
                 elif dir == 'U':
-                    cur_row = cur_row + 1
-                else:
                     cur_row = cur_row - 1
-                    
-        mapping = np.reshape(mapping, (3, -1, 2), order='F')
-        
+                else:
+                    cur_row = cur_row + 1
         return mapping
 
 # # Execute this file to run a LED strand test

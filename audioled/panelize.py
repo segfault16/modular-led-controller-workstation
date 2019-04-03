@@ -93,11 +93,11 @@ class MakeSquare(Effect):
         print("Generating map mask for {}x{} pixels".format(num_cols, num_rows))
         dp = int(displacement * num_cols)
         mapMask = np.array([[[0, self._indexFor(i, j + dp, num_rows, num_cols, input_displacement)]
-                             for j, i in np.ndindex(num_cols, num_rows)],
+                             for i, j in np.ndindex(num_rows, num_cols)],
                             [[1, self._indexFor(i, j + dp, num_rows, num_cols, input_displacement)]
-                             for j, i in np.ndindex(num_cols, num_rows)],
+                             for i, j in np.ndindex(num_rows, num_cols)],
                             [[2, self._indexFor(i, j + dp, num_rows, num_cols, input_displacement)]
-                             for j, i in np.ndindex(num_cols, num_rows)]],
+                             for i, j in np.ndindex(num_rows, num_cols)]],
                            dtype=np.int64)
         return mapMask
 
@@ -205,8 +205,8 @@ class MakeDiamond(MakeSquare):
         return index
 
 
-def toIdx(row, col, num_rows):
-    return row + col * num_rows
+def toIdx(row, col, num_cols):
+    return row * num_cols + col
 
 
 def move(row, col, direction):
@@ -301,16 +301,16 @@ class MakeLabyrinth(Effect):
         cur_col_l = int(num_cols / 2) - 1
         # visit first pixels
         for i in range(0, 1):
-            mapMask[0, toIdx(cur_row_u, cur_col_u, num_rows), :] = [0, cur_idx_u]
-            mapMask[1, toIdx(cur_row_u, cur_col_u, num_rows), :] = [1, cur_idx_u]
-            mapMask[2, toIdx(cur_row_u, cur_col_u, num_rows), :] = [2, cur_idx_u]
+            mapMask[0, toIdx(cur_row_u, cur_col_u, num_cols), :] = [0, cur_idx_u]
+            mapMask[1, toIdx(cur_row_u, cur_col_u, num_cols), :] = [1, cur_idx_u]
+            mapMask[2, toIdx(cur_row_u, cur_col_u, num_cols), :] = [2, cur_idx_u]
             visited[cur_row_u, cur_col_u] = 1
             cur_idx_u -= 1
             cur_col_u -= 1
         for i in range(0, 1):
-            mapMask[0, toIdx(cur_row_l, cur_col_l, num_rows), :] = [0, cur_idx_l]
-            mapMask[1, toIdx(cur_row_l, cur_col_l, num_rows), :] = [1, cur_idx_l]
-            mapMask[2, toIdx(cur_row_l, cur_col_l, num_rows), :] = [2, cur_idx_l]
+            mapMask[0, toIdx(cur_row_l, cur_col_l, num_cols), :] = [0, cur_idx_l]
+            mapMask[1, toIdx(cur_row_l, cur_col_l, num_cols), :] = [1, cur_idx_l]
+            mapMask[2, toIdx(cur_row_l, cur_col_l, num_cols), :] = [2, cur_idx_l]
             visited[cur_row_l, cur_col_l] = 1
             cur_idx_l += 1
             cur_col_l += 1
@@ -328,13 +328,13 @@ class MakeLabyrinth(Effect):
             cur_row_u, cur_col_u = move(cur_row_u, cur_col_u, dir_u)
             cur_row_l, cur_col_l = move(cur_row_l, cur_col_l, dir_l)
             # set new value
-            mapMask[0, toIdx(cur_row_u, cur_col_u, num_rows), :] = [0, cur_idx_u]
-            mapMask[1, toIdx(cur_row_u, cur_col_u, num_rows), :] = [1, cur_idx_u]
-            mapMask[2, toIdx(cur_row_u, cur_col_u, num_rows), :] = [2, cur_idx_u]
+            mapMask[0, toIdx(cur_row_u, cur_col_u, num_cols), :] = [0, cur_idx_u]
+            mapMask[1, toIdx(cur_row_u, cur_col_u, num_cols), :] = [1, cur_idx_u]
+            mapMask[2, toIdx(cur_row_u, cur_col_u, num_cols), :] = [2, cur_idx_u]
             visited[cur_row_u, cur_col_u] = 1
-            mapMask[0, toIdx(cur_row_l, cur_col_l, num_rows), :] = [0, cur_idx_l]
-            mapMask[1, toIdx(cur_row_l, cur_col_l, num_rows), :] = [1, cur_idx_l]
-            mapMask[2, toIdx(cur_row_l, cur_col_l, num_rows), :] = [2, cur_idx_l]
+            mapMask[0, toIdx(cur_row_l, cur_col_l, num_cols), :] = [0, cur_idx_l]
+            mapMask[1, toIdx(cur_row_l, cur_col_l, num_cols), :] = [1, cur_idx_l]
+            mapMask[2, toIdx(cur_row_l, cur_col_l, num_cols), :] = [2, cur_idx_l]
             visited[cur_row_l, cur_col_l] = 1
             # determine new direction upper
             try:
