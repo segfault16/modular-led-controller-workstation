@@ -1189,6 +1189,6 @@ class GIFPlayer(Effect):
             return
         if self._cur_image is not None:
 
-            img = np.swapaxes(np.asarray(self._cur_image, dtype=np.uint8), 0, 1)
+            img = np.asarray(self._cur_image, dtype=np.uint8)
             img = img.reshape(-1, img.shape[-1]).T
             self._outputBuffer[0] = img
