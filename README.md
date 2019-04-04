@@ -16,6 +16,8 @@ For runtime configuration there is a REST webserver with a web UI.
 
 ![web UI](images/server-ui.png)
 
+Configurations can be stored in git and do adapt to output strip or panel.
+
 
 The works in this project is based on [https://github.com/scottlawsonbc/audio-reactive-led-strip](https://github.com/scottlawsonbc/audio-reactive-led-strip).
 
