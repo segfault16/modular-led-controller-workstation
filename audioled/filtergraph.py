@@ -394,7 +394,8 @@ class FilterGraph(Updateable):
         for con in connections:
             fromChannel = con['from_node_channel']
             toChannel = con['to_node_channel']
-            self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
+            newcon = self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
+            newcon.uid = con['uid']
 
     def propagateNumPixels(self, num_pixels, num_rows=1):
         if self.getLEDOutput() is not None:
