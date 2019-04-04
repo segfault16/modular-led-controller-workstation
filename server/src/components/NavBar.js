@@ -9,7 +9,7 @@ const NavBar = () => {
         <AppBar position="static">
             <Toolbar>
                 <Typography variant="title" color="inherit">
-                Audio Reactive LED Strip
+                MOLECOLE - A Modular LED Controller Workstation
                 </Typography>
             </Toolbar>
         </AppBar>

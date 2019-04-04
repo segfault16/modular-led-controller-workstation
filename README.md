@@ -1,8 +1,21 @@
-# Audio Reactive LED Strip
+# MOLECOLE - A Modular LED Controller Workstation
 
 [![Build Status](https://travis-ci.org/segfault16/audio-reactive-led-strip.svg?branch=develop)](https://travis-ci.org/segfault16/audio-reactive-led-strip)
 
-Real-time LED strip music visualization using Python and the ESP8266 or Raspberry Pi.
+MOLECOLE is a real-time LED controller for the Raspberry Pi. 
+
+It comes with a bunch of modules to generate and manipulate pixels, so you can configure your own music visualizer or ambient lighting for LED strips.
+
+![Strip](./images/strip.gif)
+
+It even supports LED panels!
+
+![Panel](./images/panel.gif)
+
+For runtime configuration there is a REST webserver with a web UI.
+
+![web UI](images/server-ui.png)
+
 
 The works in this project is based on [https://github.com/scottlawsonbc/audio-reactive-led-strip](https://github.com/scottlawsonbc/audio-reactive-led-strip).
 
@@ -10,7 +23,9 @@ The works in this project is based on [https://github.com/scottlawsonbc/audio-re
 # Getting started (local machine)
 
 ## Python Dependencies
-Visualization code is compatible with Python 2.7 or 3.5. A few Python dependencies must also be installed:
+MOLECOLE requires at least Python 3.5.
+
+A few Python dependencies must also be installed, e.g.
 - Numpy
 - Scipy (for digital signal processing)
 - PyAudio (for recording audio with microphone)
@@ -19,115 +34,57 @@ On Windows machines, the use of [Anaconda](https://www.continuum.io/downloads) i
 
 ### Installing dependencies with Anaconda
 Create a [conda virtual environment](http://conda.pydata.org/docs/using/envs.html) (this step is optional but recommended)
-```
+```bash
 conda create --name visualization-env python=3.5
 source activate visualization-env
 ```
 On Mac, you need to install portaudio
-```
+```bash
 brew install portaudio
 ```
 
 Install dependencies using pip and the conda package manager
-```
+```bash
 conda install numpy scipy
 
 pip install pyaudio matplotlib jsonpickle flask mido python-rtmidi apscheduler
 ```
 
-## Visualization Server
+## OpenPixelControl Visualization Server
 
-For local development we need to somehow visualize the RGB data.
+For running MOLECOLE without a RaspberryPi we need to somehow visualize the RGB data.
 For this you can use [openpixelcontrol](https://github.com/zestyping/openpixelcontrol).
 
 - Clone the project parallel to this repository
 - Follow the instructions to compile the project
-- Use the compiled binary `gl_server` to start an OpenGL visualization server on port 7890 to visualize the LED strip configuration for the demo program
+- Use the compiled binary `gl_server` to start an OpenGL visualization server on localhost port 7890 to visualize the RGB data
 
-```
+```bash
+# A LED Strip with 300 pixels
 ../openpixelcontrol/bin/gl_server -l layouts/demo_layout.json
+# or a LED Panel with 44x22 pixels
+../openpixelcontrol/bin/gl_server -l layouts/wall_44x22.json
 ```
 
-## Running the demo
+## Running MOLECOLE
 
-```
-python filtergraphDemo.py
+```bash
+# Run with LED Strip configuration
+python server.py -N 300
+# Run with LED Panel configuration
+python server.py -N 968 -R 22
 # For more information:
-python filtergraphDemo.py -h
-# e.g.
-python filtergraphDemo.py -N 300 -D FadeCandy --device_candy_server 192.168.9.241:7890 -C spectrum
-# Running on RaspberryPi:
-sudo python filtergraphDemo.py
+python server.py -h
 ```
 
-## Running unit tests
+You should now see some RGB data in OpenPixelControl and should be able to access the MOLECOLE UI on https://localhost:5000.
 
-```
-python -m unittest discover
-# To run a single test:
-python -m unittest tests.test_opc_server.Test_OPC_Server.test_serverReceives
-```
+Start playing around or upload some sample configurations from [configurations](./configurations).
 
-# Getting started (raspberry pi)
 
-## Install dependencies
-```
-sudo apt-get remove python2.7
-sudo apt-get autoremove
-sudo apt-get update
-sudo apt-get install python3-numpy python3-scipy python3-pyaudio python3-matplotlib python3-jsonpickle libasound-dev libjack-dev
-sudo pip3 install mido python-rtmidi apscheduler
-```
 
-## Install rpi_ws281x
-```
-git clone https://github.com/rpi-ws281x/rpi-ws281x-python
-cd rpi-ws281x-python
-git submodule update --init --recursive
-cd library
-sudo python3.5 setup.py install
-```
+# Getting started (Raspberry Pi)
 
-## Audio configuration
+See [Running on RaspberryPi](./docs/pi_setup.md).
 
-See [Audio setup on RaspberryPi](docs/audio_setup_pi.md).
 
-## Server 
-
-For runtime configuration there is a REST webserver with a web UI.
-
-![web UI](images/server-ui.png)
-
-```
-# Run on local machine
-python3 server.py
-# Run on Raspberry Pi
-sudo python3 server.py -D RaspberryPi
-```
-
-## Run as service
-
-e.g. by copying the following file to `/etc/systemd/system/ledserver.service`
-
-```
-[Unit]
-Description=Audio-reactive LED Strip
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/python3 server.py -D RaspberryPi
-WorkingDirectory=/home/pi/projects/audio-reactive-led-strip
-StandardOutput=inherit
-StandardError=inherit
-Restart=always
-User=root
-
-[Install]
-WantedBy=multi-user.target
-```
-
-and starting the service with `sudo systemctl start ledserver`
-
-# Development
-
-All files under [resources](./resources) are generated by running `npm run build` in [server](./server).
