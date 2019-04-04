@@ -89,6 +89,9 @@ if args.device_panel_mapping is not None:
             mapping = json.loads(content)
             print("Panel mapping loaded")
             device = devices.PanelWrapper(device, mapping)
+    else:
+        print("Fatal: Cannot find mapping file {}".format(mappingFile))
+        exit(1)
 
 # Initialize Audio device
 if args.audio_device_index is not None:
