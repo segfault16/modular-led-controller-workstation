@@ -33,6 +33,7 @@ bonfireConf = 'bonfire'
 generatewavesConf = 'generatewaves'
 sortingConf = 'sorting'
 panelConf = 'panel'
+
 configChoices = [
     movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf,
     breathingConf, heartbeatConf, pendulumConf, rpendulumConf, keyboardConf, keyboardSpringConf, testblobConf,
@@ -46,11 +47,8 @@ parser = argparse.ArgumentParser(description='Audio Reactive LED Strip')
 
 parser.add_argument(
     '-N', '--num_pixels', dest='num_pixels', type=int, default=300, help='number of pixels (default: 300)')
-parser.add_argument(
-    '-R', '--num_rows', dest='num_rows', type=int, default=1, help='number of rows (default: 1)')
-parser.add_argument(
-    '--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels'
-)
+parser.add_argument('-R', '--num_rows', dest='num_rows', type=int, default=1, help='number of rows (default: 1)')
+parser.add_argument('--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels')
 parser.add_argument(
     '-D',
     '--device',
@@ -140,7 +138,7 @@ def createFilterGraph(config, num_pixels):
     elif config == generatewavesConf:
         return configs.createGenerateWavesGraph()
     elif config == sortingConf:
-        return configs.createSortingGraph()   
+        return configs.createSortingGraph()
     elif config == panelConf:
         return configs.createPanelPendulum()
     else:
