@@ -62,11 +62,18 @@ class AudioInput(Effect):
         super(AudioInput, self).__initstate__()
         deviceIndex = self.device_index
         if self.overrideDeviceIndex is not None:
+            #print("Using overrideDeviceIndex {} for audio".format(self.overrideDeviceIndex))
             deviceIndex = self.overrideDeviceIndex
-        self._audioStream, self._sampleRate = self.stream_audio(
-            chunk_rate=self.chunk_rate, channels=self.num_channels, device_index=deviceIndex)
+            self.device_index = self.overrideDeviceIndex
+        try:
+            self._audioStream, self._sampleRate = self.stream_audio(
+                chunk_rate=self.chunk_rate, channels=self.num_channels, device_index=deviceIndex)
+            self._chunk_size = int(self._sampleRate / self.chunk_rate)
+        except Exception:
+            print("Error?")
+            self._sampleRate = 44800
         self._buffer = []
-        self._chunk_size = int(self._sampleRate / self.chunk_rate)
+        
         # increase cur_gain by percentage
         # we want to get to self.autogain_max in approx. self.autogain_time seconds
         min_value = 1. / self.autogain_max  # the minimum input value we want to bring to 1.0
@@ -206,9 +213,16 @@ class AudioInput(Effect):
 
     async def update(self, dt):
         await super(AudioInput, self).update(dt)
-        self._buffer = next(self._audioStream)
+        try:
+            self._buffer = next(self._audioStream)
+        except Exception:
+            print("Audio Input not supported.")
+            self._inputBuffer = None
 
     def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+
         if self.autogain:
             # determine max value -> in range 0,1
             maxVal = np.max(self._buffer)

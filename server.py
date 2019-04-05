@@ -7,11 +7,9 @@ import importlib
 import inspect
 import json
 import os.path
-from os.path import expanduser
 import threading
 import time
 from timeit import default_timer as timer
-import atexit
 
 import jsonpickle
 import numpy as np
@@ -19,7 +17,7 @@ from flask import Flask, abort, jsonify, request, send_from_directory, redirect
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, configs, devices, effects, filtergraph, project, serverconfiguration
+from audioled import audio, devices, effects, filtergraph, serverconfiguration
 
 proj = None
 default_values = {}
@@ -268,7 +266,10 @@ def create_app():
 
     def getModuleAndClassName(full_class_name):
         module_name, class_name = full_class_name.rsplit(".", 1)
-        if module_name != "audioled.audio" and module_name != "audioled.effects" and module_name != "audioled.devices" and module_name != "audioled.colors" and module_name != "audioled.audioreactive" and module_name != "audioled.generative" and module_name != "audioled.input":
+        if (module_name != "audioled.audio" and module_name != "audioled.effects" and module_name != "audioled.devices"
+                and module_name != "audioled.colors" and module_name != "audioled.audioreactive"
+                and module_name != "audioled.generative" and module_name != "audioled.input"
+                and module_name != "audioled.panelize"):
             raise RuntimeError("Not allowed")
         return module_name, class_name
     
@@ -474,7 +475,7 @@ def strandTest(device, num_pixels):
         h = t / dt / num_pixels
         r, g, b, = 0, 0, 0
         if i < num_pixels / 2:
-            r, g, b = colorsys.hsv_to_rgb(h, 0.5, 1.0)
+            r, g, b = colorsys.hsv_to_rgb(h, 1.0, 1.0)
         pixels = np.roll(pixels, -1, axis=1)
         pixels[0][0] = r * 255.0
         pixels[1][0] = g * 255.0
@@ -502,6 +503,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '-N', '--num_pixels', dest='num_pixels', type=int, default=None, help='number of pixels (default: 300)')
     parser.add_argument(
+        '-R', '--num_rows', dest='num_rows', type=int, default=None, help='number of rows (default: 1)')
+    parser.add_argument(
         '-D',
         '--device',
         dest='device',
@@ -510,6 +513,9 @@ if __name__ == '__main__':
         help='device to send RGB to (default: FadeCandy)')
     parser.add_argument(
         '--device_candy_server', dest='device_candy_server', default=None, help='Server for device FadeCandy')
+    parser.add_argument(
+        '--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels'
+    )
     parser.add_argument(
         '-A',
         '--audio_device_index',
@@ -524,6 +530,12 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Print process timing')
+    parser.add_argument(
+        '--strand', dest='strand', action='store_true', default=False, help="Perform strand test at start of server.")
+
+    # print audio information
+    print("The following audio devices are available:")
+    audio.print_audio_devices()
 
     args = parser.parse_args()
     config_location = None
@@ -539,10 +551,17 @@ if __name__ == '__main__':
         print("Using configuration from {}".format(config_location))
         serverconfig = serverconfiguration.PersistentConfiguration(config_location, args.no_store)
 
+    print("Applying arguments")
+
     # Update num pixels
     if args.num_pixels is not None:
         num_pixels = args.num_pixels
         serverconfig.setConfiguration(serverconfiguration.CONFIG_NUM_PIXELS, num_pixels)
+
+    # Update num rows
+    if args.num_rows is not None:
+        num_rows = args.num_rows
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_NUM_ROWS, num_rows)
 
     # Update LED device
     if args.device is not None:
@@ -550,6 +569,9 @@ if __name__ == '__main__':
 
     if args.device_candy_server is not None:
         serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER, args.device_candy_server)
+
+    if args.device_panel_mapping is not None:
+        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_PANEL_MAPPING, args.device_panel_mapping)
 
     # Update Audio device
     if args.audio_device_index is not None:
@@ -560,28 +582,30 @@ if __name__ == '__main__':
 
     # Adjust from configuration
 
-    # LED Device
-    device = None
-    if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
-        device = devices.RaspberryPi(serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
-    elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
-        device = devices.FadeCandy(serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS), 
-            serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
-    else:
-        print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
-        exit
-
     # Audio
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
+        print("Overriding Audio device with device index {}".format(serverconfig.getConfiguration(
+            serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
         audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(
             serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
 
     # strand test
-    strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
-
-    # print audio information
-    print("The following audio devices are available:")
-    audio.print_audio_devices()
+    if args.strand:
+        device = None
+        if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
+            device = devices.RaspberryPi(
+                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
+                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
+            )
+        elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
+            device = devices.FadeCandy(
+                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
+                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
+                serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
+        else:
+            print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
+            exit
+        strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # Initialize project
     proj = serverconfig.getActiveProjectOrDefault()

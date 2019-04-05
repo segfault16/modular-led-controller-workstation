@@ -36,8 +36,9 @@ class LEDController:
         device.show(pixels)
     """
 
-    def __init__(self, num_pixels, brightness=1.0):
+    def __init__(self, num_pixels, num_rows=1, brightness=1.0):
         self.num_pixels = num_pixels
+        self.num_rows = num_rows
         self.brightness = brightness
 
     def setBrightness(self, value):
@@ -49,6 +50,18 @@ class LEDController:
         except AttributeError:
             self.brightness = 1.0
             return min(1.0, self.brightness)
+
+    def getNumPixels(self):
+        return self.num_pixels
+    
+    def setNumPixels(self, num_pixels):
+        self.num_pixels = num_pixels
+    
+    def getNumRows(self):
+        return self.num_rows
+
+    def setNumRows(self, num_rows):
+        self.num_rows = num_rows
 
     def show(self, pixels):
         """Set LED pixels to the values given in the array
@@ -95,8 +108,8 @@ class LEDController:
 
 
 class ESP8266(LEDController):
-    def __init__(self, num_pixels, ip='192.168.0.150', port=7777):
-        super().__init__(num_pixels)
+    def __init__(self, num_pixels, num_rows=1, ip='192.168.0.150', port=7777):
+        super().__init__(num_pixels, num_rows)
         """Initialize object for communicating with as ESP8266
 
         Parameters
@@ -133,8 +146,8 @@ class ESP8266(LEDController):
 
 
 class FadeCandy(LEDController):
-    def __init__(self, num_pixels, server='localhost:7890'):
-        super().__init__(num_pixels)
+    def __init__(self, num_pixels, num_rows=1, server='localhost:7890'):
+        super().__init__(num_pixels, num_rows)
         """Initializes object for communicating with a FadeCandy device
 
         Parameters
@@ -155,7 +168,8 @@ class FadeCandy(LEDController):
 
 
 class BlinkStick(LEDController):
-    def __init__(self):
+    def __init__(self, num_pixels, num_rows=1):
+        super().__init__(num_pixels, num_rows)
         """Initializes a BlinkStick controller"""
         try:
             from blinkstick import blinkstick
@@ -192,7 +206,8 @@ class BlinkStick(LEDController):
 
 
 class RaspberryPi(LEDController):
-    def __init__(self, pixels, pin=18, invert_logic=False, freq=800000, dma=5):
+    def __init__(self, num_pixels, num_rows=1, pin=18, invert_logic=False, freq=800000, dma=5):
+        super().__init__(num_pixels, num_rows)
         """Creates a Raspberry Pi output device
 
         Parameters
@@ -213,7 +228,6 @@ class RaspberryPi(LEDController):
             If you aren't sure, try 5.
         """
         print('construct')
-        self.num_pixels = pixels
         self.pin = pin
         self.freq_hz = freq
         self.dma = dma
@@ -288,7 +302,8 @@ class RaspberryPi(LEDController):
 
 
 class DotStar(LEDController):
-    def __init__(self, pixels, brightness=31):
+    def __init__(self, num_pixels, num_rows=1, brightness=31):
+        super().__init__(num_pixels, num_rows)
         """Creates an APA102-based output device
 
         Parameters
@@ -305,12 +320,12 @@ class DotStar(LEDController):
             print('Could not import the apa102 library')
             print('For installation instructions, see {}'.format(url))
             raise e
-        self._strip = apa102.APA102(numLEDs=pixels, globalBrightness=brightness)  # Initialize the strip
+        self._strip = apa102.APA102(numLEDs=num_pixels, globalBrightness=brightness)  # Initialize the strip
         led_data = np.array(self._strip.leds, dtype=np.uint8)
         # memoryview preserving the first 8 bits of LED frames (w/ global brightness)
         self._strip.leds = led_data.data
         # 2D view of led_data
-        self.led_data = led_data.reshape((pixels, 4))  # or (-1, 4)
+        self.led_data = led_data.reshape((num_pixels, 4))  # or (-1, 4)
 
     def show(self, pixels):
         bgr = [2, 1, 0]
@@ -374,6 +389,100 @@ class LEDOutput(Effect):
             else:
                 self._outputBuffer[0] = None
 
+
+class PanelWrapper(LEDController):
+    """Device Wrapper for LED Panels
+    
+    This class can be used as a wrapper for arbitrary devices and maps
+    2d pixel information to the correct pixels on a LED panel.
+    A LED panel is assumed to be a combination of short LED strips forming
+    rows and columns.
+
+    The format for the mapping JSON:
+    {
+        "num_rows" : 11, // Number of rows of the panel
+        "num_cols" : 44, // Number of columns of the panel
+        "substrips": [
+            {
+                "start_index": 0, // Starting index of the substrip
+                "row": 0, // Starting row of the substrip
+                "col": 43, // Starting column of the substrip
+                "dir": "L", // Direction of the substrip (L, R, U, D)
+                "num_pixels": 44 // Number of pixels of the substrip
+            },
+            {
+                "start_index": 44,
+                "row": 1,
+                "col": 0,
+                "dir": "R",
+                "num_pixels": 44
+            },
+            ...
+        ]
+    }
+    """
+
+    def __init__(self, device, mappingJson):
+        self.device = device
+        self.num_pixels = device.num_pixels
+        self.num_rows = device.num_rows
+        self.pixel_mapping = None
+        if mappingJson is not None:
+            self.pixel_mapping = self._createPixelMapping(mappingJson)
+    
+    def getBrightness(self):
+        return self.device.getBrightness()
+    
+    def setBrightness(self, value):
+        self.device.setBrightness(value)
+    
+    def getNumPixels(self):
+        return self.device.getNumPixels()
+
+    def setNumPixels(self, num_pixels):
+        self.device.setNumPixels(num_pixels)
+    
+    def getNumRows(self):
+        return self.device.getNumRows()
+
+    def setNumRows(self, num_rows):
+        self.device.setNumRows(num_rows)
+
+    def show(self, pixels):
+        mapped_pixels = pixels
+        if self.pixel_mapping is not None:
+            mapped_pixels = pixels[self.pixel_mapping[:, :, 0], self.pixel_mapping[:, :, 1]]
+        self.device.show(mapped_pixels)
+    
+    def _createPixelMapping(self, mappingJson):
+        def toIdx(row, col, num_cols):
+            return row * num_cols + col
+        num_rows = mappingJson['num_rows']
+        num_cols = mappingJson['num_cols']
+        mapping = np.zeros((3, num_rows * num_cols, 2), dtype=np.int64)
+
+        for substrip in mappingJson['substrips']:
+            start_index = substrip['start_index']
+            row = substrip['row']
+            col = substrip['col']
+            dir = substrip['dir']
+            num_pixels = substrip['num_pixels']
+            cur_row = row
+            cur_col = col
+            for i in range(num_pixels):
+                index = start_index + i
+                mapping[0, index, :] = [0, toIdx(cur_row, cur_col, num_cols)]
+                mapping[1, index, :] = [1, toIdx(cur_row, cur_col, num_cols)]
+                mapping[2, index, :] = [2, toIdx(cur_row, cur_col, num_cols)]
+                if dir == 'L':
+                    cur_col = cur_col - 1
+                elif dir == 'R':
+                    cur_col = cur_col + 1
+                elif dir == 'U':
+                    cur_row = cur_row - 1
+                else:
+                    cur_row = cur_row + 1
+        return mapping
 
 # # Execute this file to run a LED strand test
 # # If everything is working, you should see a red, green, and blue pixel scroll

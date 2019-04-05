@@ -4,7 +4,6 @@ from audioled.filtergraph import (FilterGraph, Updateable)
 
 
 class Project(Updateable):
-
     def __init__(self, name='Empty project', description='', device=None):
         self.slots = [None for i in range(127)]
         self.activeSlotId = 0
@@ -42,11 +41,12 @@ class Project(Updateable):
         if activeFilterGraph is not None:
             # Propagate num pixels from server configuration
             if self._device is not None and activeFilterGraph.getLEDOutput() is not None:
-                if self._device.num_pixels != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels():
-                    print("propagating pixels")
-                    activeFilterGraph.propagateNumPixels(self._device.num_pixels)
+                if (self._device.getNumPixels() != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels()
+                        or self._device.getNumRows() != activeFilterGraph.getLEDOutput().effect.getNumOutputRows()):
+                    print("propagating {} pixels on {} rows".format(self._device.getNumPixels(), self._device.getNumRows()))
+                    activeFilterGraph.propagateNumPixels(self._device.getNumPixels(), self._device.getNumRows())
                 activeFilterGraph.update(dt, event_loop)
-    
+
     def process(self):
         """Process active FilterGraph
         """

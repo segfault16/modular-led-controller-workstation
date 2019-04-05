@@ -1,11 +1,10 @@
 import asyncio
 import uuid
-import sys
-import os
 import traceback
 from timeit import default_timer as timer
 
 from audioled import devices
+from audioled import generative
 
 
 class NodeException(Exception):
@@ -28,6 +27,9 @@ class Node(object):
         self.numOutputChannels = self.effect.numOutputChannels()
 
     def __initstate__(self):
+        
+        self.effect.numOutputChannels()
+        
         self._outputBuffer = [None for i in range(0, self.effect.numOutputChannels())]
         self._inputBuffer = [None for i in range(0, self.effect.numInputChannels())]
         self._incomingConnections = []
@@ -120,7 +122,7 @@ class Timing(object):
 class Updateable(object):
     def update(self, dt, event_loop):
         raise NotImplementedError("Update not implemented")
-    
+
     def process(self):
         raise NotImplementedError("Process not implemented")
 
@@ -147,7 +149,6 @@ class FilterGraph(Updateable):
 
             async def handle_async_exception(node, func, param):
                 await func(param)
-                
 
             all_tasks = asyncio.gather(
                 *[asyncio.ensure_future(handle_async_exception(node, node.update, dt)) for node in self._processOrder])
@@ -156,14 +157,12 @@ class FilterGraph(Updateable):
             self.updateUpdateTiming("all_async", timer() - time)
         else:
             for node in self._processOrder:
-                
+
                 if self.recordTimings:
                     time = timer()
                 event_loop.run_until_complete(node.update(dt))
                 if self.recordTimings:
                     self.updateUpdateTiming(str(node.effect), timer() - time)
-                
-                
 
     def process(self):
         time = None
@@ -173,13 +172,12 @@ class FilterGraph(Updateable):
             return
 
         for node in self._processOrder:
-            
+
             if self.recordTimings:
                 time = timer()
             node.process()
             if self.recordTimings:
                 self.updateProcessTiming(node, timer() - time)
-            
 
     def updateProcessTiming(self, node, timing):
         if node not in self._processTimings:
@@ -217,8 +215,8 @@ class FilterGraph(Updateable):
         ----------
         filterNode: node to add
         """
-        print("add node {}".format(effect))
-        
+        #print("add node {}".format(effect))
+
         node = Node(effect)
         node.uid = uuid.uuid4().hex
         if isinstance(effect, devices.LEDOutput):
@@ -272,8 +270,8 @@ class FilterGraph(Updateable):
     def addNodeConnection(self, fromNodeUid, fromEffectChannel, toNodeUid, toEffectChannel):
         """Adds a connection between two filters based on node uid
         """
-        print("add node connection from {} channel {} to {} channel {}".format(fromNodeUid, fromEffectChannel,
-                                                                               toNodeUid, toEffectChannel))
+        #print("add node connection from {} channel {} to {} channel {}".format(fromNodeUid, fromEffectChannel,
+        #                                                                       toNodeUid, toEffectChannel))
         fromNode = next(node for node in self._filterNodes if node.uid == fromNodeUid)
         toNode = next(node for node in self._filterNodes if node.uid == toNodeUid)
         newConnection = Connection(fromNode, fromEffectChannel, toNode, toEffectChannel)
@@ -306,8 +304,8 @@ class FilterGraph(Updateable):
             print("No output node")
             return
 
-        print("Updating process order")
-        
+        #print("Updating process order")
+
         unprocessedNodes = self._filterNodes.copy()
         processOrder.append(self._outputNode)
         unprocessedNodes.remove(self._outputNode)
@@ -324,15 +322,15 @@ class FilterGraph(Updateable):
                     if con.toNode not in processOrder:
                         satisfied = False
                         continue
-                
+
                 if satisfied:
-                    print("Appending {}".format(node.effect))
+                    #print("Appending {}".format(node.effect))
                     processOrder.append(node)
                     unprocessedNodes.remove(node)
             sizeAfter = len(unprocessedNodes)
             fatalError = sizeAfter == sizeBefore
-        
-        print("{} nodes total, {} nodes have not been processed".format(len(processOrder), len(unprocessedNodes)))
+
+        #print("{} nodes total, {} nodes have not been processed".format(len(processOrder), len(unprocessedNodes)))
 
         # Check remaining unprocessed nodes for circular connections
         # for node in unprocessedNodes:
@@ -342,28 +340,30 @@ class FilterGraph(Updateable):
         #             raise RuntimeError("Circular connection detected")
 
         processOrder.reverse()
-        
+
         # Reset number of pixels
         for node in self._filterNodes:
             if node is not self.getLEDOutput():
                 node.effect.setNumOutputPixels(None)
-        # Propagate num pixels
+        # Propagate num pixels and num cols
         for node in reversed(processOrder):
             # find connections to the current node
             inputConnections = [con for con in self._filterConnections if con.toNode == node]
             # print("{} input connections found for node {}".format(len(inputConnections), node.effect))
             for con in inputConnections:
                 num_pixels = node.effect.getNumInputPixels(con.toChannel)
+                num_rows = node.effect.getNumInputRows(con.toChannel)
                 # find node
                 iNode = con.fromNode
                 # propagate pixels
                 if iNode is not None:
-                    print("setting {} pixels for {}".format(num_pixels, iNode.effect))
+                    #print("setting {} pixels with {} rows for {}".format(num_pixels, num_rows, iNode.effect))
+                    iNode.effect.setNumOutputRows(num_rows)
                     iNode.effect.setNumOutputPixels(num_pixels)
-        
+
         # Debug output
         for node in processOrder.copy():
-            print("{} with {} pixels".format(node.effect, node.effect._num_pixels))
+            #print("{} with {} pixels".format(node.effect, node.effect._num_pixels))
             if node.effect._num_pixels is None:
                 processOrder.remove(node)
         # persist
@@ -391,11 +391,13 @@ class FilterGraph(Updateable):
         for con in connections:
             fromChannel = con['from_node_channel']
             toChannel = con['to_node_channel']
-            self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
+            newcon = self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
+            newcon.uid = con['uid']
 
-    def propagateNumPixels(self, num_pixels):
+    def propagateNumPixels(self, num_pixels, num_rows=1):
         if self.getLEDOutput() is not None:
             self.getLEDOutput().effect.setNumOutputPixels(num_pixels)
+            self.getLEDOutput().effect.setNumOutputRows(num_rows)
             self._updateProcessOrder()
 
     def _connectionWillMakeGraphCyclic(self, connection):
@@ -405,10 +407,9 @@ class FilterGraph(Updateable):
             return True
         # traverse predecessors and check if connection.toNode is one of them
         return self._checkHasPredecessor(curNode, targetNode, [])
-        
-    
+
     def _checkHasPredecessor(self, curNode, targetNode, visitedNodes):
-        print("Checking {} for {}".format(curNode, targetNode))
+        #print("Checking {} for {}".format(curNode, targetNode))
         if targetNode == curNode:
             return True
         predecessors = [con for con in self._filterConnections if con.toNode == curNode]
@@ -424,6 +425,3 @@ class FilterGraph(Updateable):
             if self._checkHasPredecessor(node, targetNode, visitedNodes):
                 return True
         return False
-
-            
-            

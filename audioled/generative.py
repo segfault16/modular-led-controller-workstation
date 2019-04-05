@@ -115,7 +115,7 @@ class SwimmingPool(Effect):
             
         if self._Wave is None or self._WaveSpecSpeed is None:
             self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.scale, self.wavespread_low,
-                                                            self.wavespread_high, self.max_speed)
+                                                                self.wavespread_high, self.max_speed)
 
     def process(self):
         if self._outputBuffer is not None:
@@ -224,14 +224,13 @@ class MidiKeyboard(Effect):
         try:
             import mido
             return mido.get_input_names()
-        except ImportError as e:
+        except ImportError:
             print('Unable to import the mido library')
             print('You can install this library with `pip install mido`')
             return []
         except Exception:
             print("Error while getting midi inputs")
             return []
-
 
     @staticmethod
     def getParameterDefinition():
@@ -696,7 +695,6 @@ class RandomPendulums(Effect):
         self._lightflip = []
         self._offset = []
         self._swingspeed = []
-
 
     @staticmethod
     def getParameterDefinition():

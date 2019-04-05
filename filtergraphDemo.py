@@ -32,10 +32,12 @@ testblobConf = 'testblob'
 bonfireConf = 'bonfire'
 generatewavesConf = 'generatewaves'
 sortingConf = 'sorting'
+panelConf = 'panel'
+
 configChoices = [
     movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf,
     breathingConf, heartbeatConf, pendulumConf, rpendulumConf, keyboardConf, keyboardSpringConf, testblobConf,
-    bonfireConf, generatewavesConf, sortingConf
+    bonfireConf, generatewavesConf, sortingConf, panelConf
 ]
 
 deviceRasp = 'RaspberryPi'
@@ -45,6 +47,8 @@ parser = argparse.ArgumentParser(description='Audio Reactive LED Strip')
 
 parser.add_argument(
     '-N', '--num_pixels', dest='num_pixels', type=int, default=300, help='number of pixels (default: 300)')
+parser.add_argument('-R', '--num_rows', dest='num_rows', type=int, default=1, help='number of rows (default: 1)')
+parser.add_argument('--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels')
 parser.add_argument(
     '-D',
     '--device',
@@ -67,12 +71,25 @@ parser.add_argument(
 args = parser.parse_args()
 
 num_pixels = args.num_pixels
+num_rows = args.num_rows
 
 # Initialize device
 if args.device == deviceRasp:
-    device = devices.RaspberryPi(num_pixels)
+    device = devices.RaspberryPi(num_pixels, num_rows)
 elif args.device == deviceCandy:
-    device = devices.FadeCandy(num_pixels, args.device_candy_server)
+    device = devices.FadeCandy(num_pixels, num_rows, server=args.device_candy_server)
+
+if args.device_panel_mapping is not None:
+    mappingFile = args.device_panel_mapping
+    if os.path.exists(mappingFile):
+        with open(mappingFile, "r", encoding='utf-8') as f:
+            content = f.read()
+            mapping = json.loads(content)
+            print("Panel mapping loaded")
+            device = devices.PanelWrapper(device, mapping)
+    else:
+        print("Fatal: Cannot find mapping file {}".format(mappingFile))
+        exit(1)
 
 # Initialize Audio device
 if args.audio_device_index is not None:
@@ -121,7 +138,9 @@ def createFilterGraph(config, num_pixels):
     elif config == generatewavesConf:
         return configs.createGenerateWavesGraph()
     elif config == sortingConf:
-        return configs.createSortingGraph()    
+        return configs.createSortingGraph()
+    elif config == panelConf:
+        return configs.createPanelPendulum()
     else:
         raise NotImplementedError("Config not implemented")
 
@@ -161,7 +180,7 @@ else:
     cur_graph = createFilterGraph(args.config, num_pixels)
     saveAndLoad(args.config, cur_graph)
 
-cur_graph.propagateNumPixels(num_pixels)
+cur_graph.propagateNumPixels(num_pixels, num_rows)
 
 while True:
     last_time = current_time
