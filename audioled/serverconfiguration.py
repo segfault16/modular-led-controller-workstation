@@ -53,28 +53,41 @@ class ServerConfiguration:
     def getActiveProjectOrDefault(self):
         activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)
         if activeProjectUid is None:
-            # Initialize default project
-            proj = project.Project("Default project", "This is the default project.", self._createOutputDevice())
-            # Initialize filtergraph
-            # fg = configs.createSpectrumGraph(num_pixels, device)
-            # fg = configs.createMovingLightGraph(num_pixels, device)
-            # fg = configs.createMovingLightsGraph(num_pixels, device)
-            # fg = configs.createVUPeakGraph(num_pixels, device)
-            initial = configs.createSwimmingPoolGraph()
-            second = configs.createDefenceGraph()
-            # fg = configs.createKeyboardGraph(num_pixels, device)
-
-            proj.setFiltergraphForSlot(12, initial)
-            proj.setFiltergraphForSlot(13, second)
-            proj.activateSlot(12)
-            projectUid = uuid.uuid4().hex
-            self._projects[projectUid] = proj
-            self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
-            self._config[CONFIG_ACTIVE_PROJECT] = projectUid
-            activeProjectUid = projectUid
-        activeProj = self.getProject(activeProjectUid)
+            print("No active project ID. Initializing new default project")
+            activeProjectUid = self.initDefaultProject()
+            print("Default project initialized: {}".format(activeProjectUid))
+        try:
+            activeProj = self.getProject(activeProjectUid)
+        except Exception as e:
+            print("Error reading project {}: {}".format(activeProjectUid, e))
+            print("Initializing new default project")
+            activeProjectUid = self.initDefaultProject()
+            activeProj = self.getProject(activeProjectUid)
+            print("Default project initialized: {}".format(activeProjectUid))
         self._activeProject = activeProj
         return activeProj
+
+    def initDefaultProject(self):
+        # Initialize default project
+        proj = project.Project("Default project", "This is the default project.", self._createOutputDevice())
+        # Initialize filtergraph
+        # fg = configs.createSpectrumGraph(num_pixels, device)
+        # fg = configs.createMovingLightGraph(num_pixels, device)
+        # fg = configs.createMovingLightsGraph(num_pixels, device)
+        # fg = configs.createVUPeakGraph(num_pixels, device)
+        initial = configs.createSwimmingPoolGraph()
+        second = configs.createDefenceGraph()
+        # fg = configs.createKeyboardGraph(num_pixels, device)
+
+        proj.setFiltergraphForSlot(12, initial)
+        proj.setFiltergraphForSlot(13, second)
+        proj.activateSlot(12)
+        projectUid = uuid.uuid4().hex
+        self._projects[projectUid] = proj
+        self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
+        self._config[CONFIG_ACTIVE_PROJECT] = projectUid
+        activeProjectUid = projectUid
+        return activeProjectUid
 
     def getProject(self, uid):
         if uid in self._projects:
@@ -182,13 +195,22 @@ class PersistentConfiguration(ServerConfiguration):
         """Overrides deleteProject and deletes the corresponding project file from disk
         """
         print("Deleting project {} from disk".format(uid))
-        path = os.path.join(self.storageLocation, "projects", "{}.json".format(uid))
-        if os.path.isfile(path):
-            os.remove(path)
+        if uid not in self._projectMetadatas:
+            print("Cannot delete project {}: No metadata".format(uid))
+            return
+        projMeta = self._projectMetadatas[uid]
+        projFile = projMeta['location']
+        if os.path.isfile(projFile):
+            os.remove(projFile)
+        path = os.path.dirname(projFile)
+        if os.path.isdir(path):
+            os.removedirs(path)
         super().deleteProject(uid)
 
     def getProject(self, uid):
         """Overrides getProject and loads the project from disk"""
+        if uid is None:
+            raise RuntimeError("Error getting project: No project id given")
         if uid in self._projects and self._projects.get(uid) is not None:
             # Project should already be loaded
             return super().getProject(uid)
@@ -221,21 +243,27 @@ class PersistentConfiguration(ServerConfiguration):
 
         # Check and write projects
         for key, proj in self._projects.items():
+            projMeta = self._projectMetadatas[key]
+            if projMeta is None:
+                print("No metadata found. Can't write project {}".format(key))
+                continue
             lastProjHash = None
             if key in self._lastProjectHashs:
                 lastProjHash = self._lastProjectHashs[key]
+            # get hash we have read and check if project needs to be written
             projHash = self._getProjectHash(proj)
             needProjWrite = lastProjHash is None or lastProjHash != projHash
+            # Write project
             if not self.no_store and needProjWrite:
-                path = self._getProjectPath()
+                projFile = projMeta['location']
+                path = os.path.dirname(projFile)
                 if not os.path.exists(path):
                     os.makedirs(path)
-                projFile = os.path.join(path, "{}.json".format(key))
                 self._writeProject(proj, projFile)
                 self._lastProjectHashs[key] = projHash
 
     def _getStoreConfig(self):
-        return json.dumps(self._config)
+        return json.dumps(self._config, indent=4, sort_keys=True)
 
     def _load(self):
         # Read configuration file
@@ -248,7 +276,7 @@ class PersistentConfiguration(ServerConfiguration):
                 # Merge configuration with default config
                 self._config.update(config_from_file)
                 # Calculate new hash value
-                current_config = json.dumps(self._config)
+                current_config = json.dumps(self._config, indent=4, sort_keys=True)
                 m = hashlib.md5()
                 m.update(current_config.encode('utf-8'))
                 self._lastHash = m.hexdigest()
@@ -260,15 +288,29 @@ class PersistentConfiguration(ServerConfiguration):
         if not os.path.exists(projPath):
             # No projects -> finished
             return
-        onlyfiles = [f for f in os.listdir(projPath) if os.path.isfile(os.path.join(projPath, f))]
+        onlyfiles = [f for f in os.listdir(projPath) if os.path.isfile(os.path.join(projPath, f)) and os.path.splitext(os.path.basename(f))[1] == '.json']
+        # Backwards compatibility: Move file to new folder
         for f in onlyfiles:
-            print("Reading project metadata from {}".format(f))
             projUid = os.path.splitext(os.path.basename(f))[0]
-            try:
-                data = self._readProjectMetadata(os.path.join(projPath, f), projUid)
-                self._projectMetadatas[projUid] = data
-            except RuntimeError:
-                pass
+            print("Moving project {} to folder".format(f))
+            os.makedirs(os.path.join(projPath, projUid))
+            os.rename(os.path.join(projPath, f), os.path.join(os.path.join(projPath, projUid), f))
+        # Read projects from subfolders
+        onlyfolders = [f for f in os.listdir(projPath) if os.path.isdir(os.path.join(projPath, f))]
+        for p in onlyfolders:
+            path = os.path.join(projPath, p)
+            jsonFiles = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and os.path.splitext(os.path.basename(f))[1] == '.json']
+            if len(jsonFiles) == 1:
+                f = os.path.basename(jsonFiles[0])
+                print("Reading project metadata from {}/{}".format(path, f))
+                projUid = os.path.splitext(os.path.basename(f))[0]
+                try:
+                    data = self._readProjectMetadata(os.path.join(path, f), projUid)
+                    self._projectMetadatas[projUid] = data
+                except RuntimeError:
+                    pass
+            else:
+                print("Couldn't read project from {}, only one json file expected".format(p))
 
     def _getProjectPath(self):
         return os.path.join(self.storageLocation, "projects")
@@ -292,12 +334,24 @@ class PersistentConfiguration(ServerConfiguration):
             else:
                 data['description'] = ''
             data['id'] = projUid
+            data['location'] = filepath
             return data
+    
+    def _metadataForProject(self, project, projectUid):
+        projData = super()._metadataForProject(project, projectUid)
+        # Add storage location to metadata
+        projData['location'] = os.path.join(os.path.join(self._getProjectPath(), projectUid), "{}.json".format(projectUid))
+        print("Storage location for project {}: {}".format(projectUid, projData['location']))
+        return projData
 
     def _readProject(self, uid):
-        filepath = os.path.join(self._getProjectPath(), "{}.json".format(uid))
+        if uid not in self._projectMetadatas:
+            raise RuntimeError("No metadata for project {}. Does the file exist?".format(uid))
+        projMeta = self._projectMetadatas[uid]
+
+        filepath = projMeta['location']
+        print("Reading project {} from {}".format(uid, filepath))
         with open(filepath, "r", encoding='utf-8') as fc:
-            print("Reading project from {}".format(filepath))
             content = fc.read()
             proj = jsonpickle.decode(content)
             proj.setDevice(self._createOutputDevice())
@@ -305,12 +359,12 @@ class PersistentConfiguration(ServerConfiguration):
 
     def _writeProject(self, proj, projFile):
         print("Writing project to {}".format(projFile))
-        projJson = jsonpickle.encode(proj)
+        projJson = json.dumps(json.loads(jsonpickle.encode(proj)), indent=4, sort_keys=True)
         with open(projFile, "w") as f:
             f.write(projJson)
 
     def _getProjectHash(self, proj):
-        projJson = jsonpickle.encode(proj)
+        projJson = json.dumps(json.loads(jsonpickle.encode(proj)), indent=4, sort_keys=True)
         mp = hashlib.md5()
         mp.update(projJson.encode('utf-8'))
         projHash = mp.hexdigest()

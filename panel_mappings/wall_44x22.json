@@ -1,4 +1,5 @@
 {
+    "description":"Panel mapping that corresponds to the openpixelcontrol layout ../layouts/wall_44x22.json",
     "num_rows" : 22,
     "num_cols" : 44,
     "substrips": [
