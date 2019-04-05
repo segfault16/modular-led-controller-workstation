@@ -218,7 +218,7 @@ class FilterGraph(Updateable):
         ----------
         filterNode: node to add
         """
-        print("add node {}".format(effect))
+        #print("add node {}".format(effect))
 
         node = Node(effect)
         node.uid = uuid.uuid4().hex
@@ -273,8 +273,8 @@ class FilterGraph(Updateable):
     def addNodeConnection(self, fromNodeUid, fromEffectChannel, toNodeUid, toEffectChannel):
         """Adds a connection between two filters based on node uid
         """
-        print("add node connection from {} channel {} to {} channel {}".format(fromNodeUid, fromEffectChannel,
-                                                                               toNodeUid, toEffectChannel))
+        #print("add node connection from {} channel {} to {} channel {}".format(fromNodeUid, fromEffectChannel,
+        #                                                                       toNodeUid, toEffectChannel))
         fromNode = next(node for node in self._filterNodes if node.uid == fromNodeUid)
         toNode = next(node for node in self._filterNodes if node.uid == toNodeUid)
         newConnection = Connection(fromNode, fromEffectChannel, toNode, toEffectChannel)
@@ -307,7 +307,7 @@ class FilterGraph(Updateable):
             print("No output node")
             return
 
-        print("Updating process order")
+        #print("Updating process order")
 
         unprocessedNodes = self._filterNodes.copy()
         processOrder.append(self._outputNode)
@@ -327,13 +327,13 @@ class FilterGraph(Updateable):
                         continue
 
                 if satisfied:
-                    print("Appending {}".format(node.effect))
+                    #print("Appending {}".format(node.effect))
                     processOrder.append(node)
                     unprocessedNodes.remove(node)
             sizeAfter = len(unprocessedNodes)
             fatalError = sizeAfter == sizeBefore
 
-        print("{} nodes total, {} nodes have not been processed".format(len(processOrder), len(unprocessedNodes)))
+        #print("{} nodes total, {} nodes have not been processed".format(len(processOrder), len(unprocessedNodes)))
 
         # Check remaining unprocessed nodes for circular connections
         # for node in unprocessedNodes:
@@ -360,13 +360,13 @@ class FilterGraph(Updateable):
                 iNode = con.fromNode
                 # propagate pixels
                 if iNode is not None:
-                    print("setting {} pixels with {} rows for {}".format(num_pixels, num_rows, iNode.effect))
+                    #print("setting {} pixels with {} rows for {}".format(num_pixels, num_rows, iNode.effect))
                     iNode.effect.setNumOutputRows(num_rows)
                     iNode.effect.setNumOutputPixels(num_pixels)
 
         # Debug output
         for node in processOrder.copy():
-            print("{} with {} pixels".format(node.effect, node.effect._num_pixels))
+            #print("{} with {} pixels".format(node.effect, node.effect._num_pixels))
             if node.effect._num_pixels is None:
                 processOrder.remove(node)
         # persist
@@ -412,7 +412,7 @@ class FilterGraph(Updateable):
         return self._checkHasPredecessor(curNode, targetNode, [])
 
     def _checkHasPredecessor(self, curNode, targetNode, visitedNodes):
-        print("Checking {} for {}".format(curNode, targetNode))
+        #print("Checking {} for {}".format(curNode, targetNode))
         if targetNode == curNode:
             return True
         predecessors = [con for con in self._filterConnections if con.toNode == curNode]

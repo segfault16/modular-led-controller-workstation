@@ -53,28 +53,41 @@ class ServerConfiguration:
     def getActiveProjectOrDefault(self):
         activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)
         if activeProjectUid is None:
-            # Initialize default project
-            proj = project.Project("Default project", "This is the default project.", self._createOutputDevice())
-            # Initialize filtergraph
-            # fg = configs.createSpectrumGraph(num_pixels, device)
-            # fg = configs.createMovingLightGraph(num_pixels, device)
-            # fg = configs.createMovingLightsGraph(num_pixels, device)
-            # fg = configs.createVUPeakGraph(num_pixels, device)
-            initial = configs.createSwimmingPoolGraph()
-            second = configs.createDefenceGraph()
-            # fg = configs.createKeyboardGraph(num_pixels, device)
-
-            proj.setFiltergraphForSlot(12, initial)
-            proj.setFiltergraphForSlot(13, second)
-            proj.activateSlot(12)
-            projectUid = uuid.uuid4().hex
-            self._projects[projectUid] = proj
-            self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
-            self._config[CONFIG_ACTIVE_PROJECT] = projectUid
-            activeProjectUid = projectUid
-        activeProj = self.getProject(activeProjectUid)
+            print("No active project ID. Initializing new default project")
+            activeProjectUid = self.initDefaultProject()
+            print("Default project initialized: {}".format(activeProjectUid))
+        try:
+            activeProj = self.getProject(activeProjectUid)
+        except Exception as e:
+            print("Error reading project {}: {}".format(activeProjectUid, e))
+            print("Initializing new default project")
+            activeProjectUid = self.initDefaultProject()
+            activeProj = self.getProject(activeProjectUid)
+            print("Default project initialized: {}".format(activeProjectUid))
         self._activeProject = activeProj
         return activeProj
+
+    def initDefaultProject(self):
+        # Initialize default project
+        proj = project.Project("Default project", "This is the default project.", self._createOutputDevice())
+        # Initialize filtergraph
+        # fg = configs.createSpectrumGraph(num_pixels, device)
+        # fg = configs.createMovingLightGraph(num_pixels, device)
+        # fg = configs.createMovingLightsGraph(num_pixels, device)
+        # fg = configs.createVUPeakGraph(num_pixels, device)
+        initial = configs.createSwimmingPoolGraph()
+        second = configs.createDefenceGraph()
+        # fg = configs.createKeyboardGraph(num_pixels, device)
+
+        proj.setFiltergraphForSlot(12, initial)
+        proj.setFiltergraphForSlot(13, second)
+        proj.activateSlot(12)
+        projectUid = uuid.uuid4().hex
+        self._projects[projectUid] = proj
+        self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
+        self._config[CONFIG_ACTIVE_PROJECT] = projectUid
+        activeProjectUid = projectUid
+        return activeProjectUid
 
     def getProject(self, uid):
         if uid in self._projects:
@@ -182,13 +195,22 @@ class PersistentConfiguration(ServerConfiguration):
         """Overrides deleteProject and deletes the corresponding project file from disk
         """
         print("Deleting project {} from disk".format(uid))
-        path = os.path.join(self.storageLocation, "projects", "{}.json".format(uid))
-        if os.path.isfile(path):
-            os.remove(path)
+        if uid not in self._projectMetadatas:
+            print("Cannot delete project {}: No metadata".format(uid))
+            return
+        projMeta = self._projectMetadatas[uid]
+        projFile = projMeta['location']
+        if os.path.isfile(projFile):
+            os.remove(projFile)
+        path = os.path.dirname(projFile)
+        if os.path.isdir(path):
+            os.removedirs(path)
         super().deleteProject(uid)
 
     def getProject(self, uid):
         """Overrides getProject and loads the project from disk"""
+        if uid is None:
+            raise RuntimeError("Error getting project: No project id given")
         if uid in self._projects and self._projects.get(uid) is not None:
             # Project should already be loaded
             return super().getProject(uid)
@@ -233,10 +255,11 @@ class PersistentConfiguration(ServerConfiguration):
             needProjWrite = lastProjHash is None or lastProjHash != projHash
             # Write project
             if not self.no_store and needProjWrite:
-                path = projMeta['location']
+                projFile = projMeta['location']
+                path = os.path.dirname(projFile)
                 if not os.path.exists(path):
                     os.makedirs(path)
-                self._writeProject(proj, path)
+                self._writeProject(proj, projFile)
                 self._lastProjectHashs[key] = projHash
 
     def _getStoreConfig(self):
@@ -313,12 +336,22 @@ class PersistentConfiguration(ServerConfiguration):
             data['id'] = projUid
             data['location'] = filepath
             return data
+    
+    def _metadataForProject(self, project, projectUid):
+        projData = super()._metadataForProject(project, projectUid)
+        # Add storage location to metadata
+        projData['location'] = os.path.join(os.path.join(self._getProjectPath(), projectUid), "{}.json".format(projectUid))
+        print("Storage location for project {}: {}".format(projectUid, projData['location']))
+        return projData
 
     def _readProject(self, uid):
+        if uid not in self._projectMetadatas:
+            raise RuntimeError("No metadata for project {}. Does the file exist?".format(uid))
         projMeta = self._projectMetadatas[uid]
+
         filepath = projMeta['location']
+        print("Reading project {} from {}".format(uid, filepath))
         with open(filepath, "r", encoding='utf-8') as fc:
-            print("Reading project from {}".format(filepath))
             content = fc.read()
             proj = jsonpickle.decode(content)
             proj.setDevice(self._createOutputDevice())
