@@ -62,7 +62,7 @@ class AudioInput(Effect):
         super(AudioInput, self).__initstate__()
         deviceIndex = self.device_index
         if self.overrideDeviceIndex is not None:
-            print("Using overrideDeviceIndex {} for audio".format(self.overrideDeviceIndex))
+            #print("Using overrideDeviceIndex {} for audio".format(self.overrideDeviceIndex))
             deviceIndex = self.overrideDeviceIndex
             self.device_index = self.overrideDeviceIndex
         try:
