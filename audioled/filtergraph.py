@@ -27,12 +27,9 @@ class Node(object):
         self.numOutputChannels = self.effect.numOutputChannels()
 
     def __initstate__(self):
-        try:
-            self.effect.numOutputChannels()
-        except Exception:
-            print("Node effect not present. Replacing with Defense Mode effect.")
-            self.effect = generative.DefenceMode()
-
+        
+        self.effect.numOutputChannels()
+        
         self._outputBuffer = [None for i in range(0, self.effect.numOutputChannels())]
         self._inputBuffer = [None for i in range(0, self.effect.numInputChannels())]
         self._incomingConnections = []
