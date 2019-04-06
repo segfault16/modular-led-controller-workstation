@@ -133,7 +133,7 @@ class SwimmingPool(Effect):
             self._Wave = None
             self._WaveSpecSpeed = None
             
-        if self._Wave is None or self._WaveSpecSpeed is None:
+        if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < self.num_waves:
             self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low,
                                                                 self.wavespread_high, self.max_speed)
         # Rotate waves
@@ -158,10 +158,15 @@ class SwimmingPool(Effect):
             color = self._inputBuffer[0]
 
         self._output = np.multiply(color, 0.5 * np.zeros(self._num_pixels))
-        scale_wave = np.hamming(self.num_waves)
         for i in range(0, self.num_waves):
-            step = np.multiply(color, np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1)) * self.scale * scale_wave[i]
-            self._output += step
+            fact = 1.0
+            if i == 0:
+                fact = (self._rotate_counter / 30)
+            if i == self.num_waves - 1:
+                fact = (1.0 - self._rotate_counter / 30)
+            if i < len(self._Wave) and i < len(self._WaveSpecSpeed):
+                step = np.multiply(color, np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1)) * self.scale * fact
+                self._output += step
 
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
