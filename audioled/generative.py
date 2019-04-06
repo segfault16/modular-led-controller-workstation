@@ -35,11 +35,30 @@ class SwimmingPool(Effect):
 
     def __initstate__(self):
         # state
-        self._pixel_state = None
-        self._last_t = 0.0
-        self._output = None
-        self._Wave = None
-        self._WaveSpecSpeed = None
+        try:
+            self._pixel_state
+        except AttributeError:
+            self._pixel_state = None
+        try:
+            self._last_t
+        except AttributeError:
+            self._last_t = 0.0
+        try:
+            self._output
+        except AttributeError:
+            self._output = None
+        try:
+            self._Wave
+        except AttributeError:
+            self._Wave = None
+        try:
+            self._WaveSpecSpeed
+        except AttributeError:
+            self._WaveSpecSpeed = None
+        try:
+            self._rotate_counter
+        except AttributeError:
+            self._rotate_counter = 0
         super(SwimmingPool, self).__initstate__()
 
     @staticmethod
@@ -79,25 +98,26 @@ class SwimmingPool(Effect):
         definition['parameters']['max_speed'][0] = self.max_speed
         return definition
 
-    def _SinArray(self, _spread, _scale, _wavehight):
+    def _SinArray(self, _spread, _wavehight):
         _CArray = []
         _spread = min(int(self._num_pixels / 2) - 1, _spread)
         for i in range(-_spread, _spread + 1):
-            _CArray.append(math.sin((math.pi / _spread) * i) * _scale * _wavehight)
-            _output = np.copy(self._pixel_state)
-            _output[0][:len(_CArray)] += _CArray
-            _output[1][:len(_CArray)] += _CArray
-            _output[2][:len(_CArray)] += _CArray
+            _CArray.append(math.sin((math.pi / _spread) * i) * _wavehight)
+        _output = np.copy(self._pixel_state)
+        _output[0][:len(_CArray)] += _CArray
+        _output[1][:len(_CArray)] += _CArray
+        _output[2][:len(_CArray)] += _CArray
         return _output.clip(0.0, 255.0)
 
-    def _CreateWaves(self, num_waves, scale, wavespread_low=10, wavespread_high=50, max_speed=30):
+    def _CreateWaves(self, num_waves, wavespread_low=10, wavespread_high=50, max_speed=30):
         _WaveArray = []
         _wavespread = np.random.randint(wavespread_low, wavespread_high, num_waves)
         _WaveArraySpecSpeed = np.random.randint(-max_speed, max_speed, num_waves)
         _WaveArraySpecHeight = np.random.rand(num_waves)
         for i in range(0, num_waves):
-            _WaveArray.append(self._SinArray(_wavespread[i], scale, _WaveArraySpecHeight[i]))
+            _WaveArray.append(self._SinArray(_wavespread[i], _WaveArraySpecHeight[i]))
         return _WaveArray, _WaveArraySpecSpeed
+
 
     def numInputChannels(self):
         return 2
@@ -114,8 +134,20 @@ class SwimmingPool(Effect):
             self._WaveSpecSpeed = None
             
         if self._Wave is None or self._WaveSpecSpeed is None:
-            self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.scale, self.wavespread_low,
+            self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low,
                                                                 self.wavespread_high, self.max_speed)
+        # Rotate waves
+        self._rotate_counter += 1
+        if self._rotate_counter > 30:
+            self._Wave = np.roll(self._Wave, 1, axis=0)
+            self._WaveSpecSpeed = np.roll(self._WaveSpecSpeed, 1)
+            speed = np.random.randint(-self.max_speed, self.max_speed)
+            spread = np.random.randint(self.wavespread_low, self.wavespread_high)
+            height = np.random.rand()
+            wave = self._SinArray(spread, height)
+            self._Wave[0] = wave
+            self._WaveSpecSpeed[0] = speed
+            self._rotate_counter = 0
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -126,9 +158,9 @@ class SwimmingPool(Effect):
             color = self._inputBuffer[0]
 
         self._output = np.multiply(color, 0.5 * np.zeros(self._num_pixels))
-
+        scale_wave = np.hamming(self.num_waves)
         for i in range(0, self.num_waves):
-            step = np.multiply(color, np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1))
+            step = np.multiply(color, np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1)) * self.scale * scale_wave[i]
             self._output += step
 
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
