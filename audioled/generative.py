@@ -99,6 +99,7 @@ class SwimmingPool(Effect):
         return definition
 
     def _SinArray(self, _spread, _wavehight):
+        # Create array for a single wave
         _CArray = []
         _spread = min(int(self._num_pixels / 2) - 1, _spread)
         for i in range(-_spread, _spread + 1):
@@ -107,6 +108,8 @@ class SwimmingPool(Effect):
         _output[0][:len(_CArray)] += _CArray
         _output[1][:len(_CArray)] += _CArray
         _output[2][:len(_CArray)] += _CArray
+        # Move somewhere
+        _output = np.roll(_output, np.random.randint(0, self._num_pixels), axis=1)
         return _output.clip(0.0, 255.0)
 
     def _CreateWaves(self, num_waves, wavespread_low=10, wavespread_high=50, max_speed=30):
@@ -117,7 +120,6 @@ class SwimmingPool(Effect):
         for i in range(0, num_waves):
             _WaveArray.append(self._SinArray(_wavespread[i], _WaveArraySpecHeight[i]))
         return _WaveArray, _WaveArraySpecSpeed
-
 
     def numInputChannels(self):
         return 2
@@ -132,7 +134,7 @@ class SwimmingPool(Effect):
             self._output = np.copy(self._pixel_state)
             self._Wave = None
             self._WaveSpecSpeed = None
-            
+
         if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < self.num_waves:
             self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low,
                                                                 self.wavespread_high, self.max_speed)
@@ -165,7 +167,11 @@ class SwimmingPool(Effect):
             if i == self.num_waves - 1:
                 fact = (1.0 - self._rotate_counter / 30)
             if i < len(self._Wave) and i < len(self._WaveSpecSpeed):
-                step = np.multiply(color, np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1)) * self.scale * fact
+                step = np.multiply(
+                    color,
+                    sp.ndimage.interpolation.shift(
+                        self._Wave[i], [0, self._t * self._WaveSpecSpeed[i]], mode='wrap',
+                        prefilter=True)) * self.scale * fact
                 self._output += step
 
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
@@ -227,7 +233,7 @@ class MidiKeyboard(Effect):
             self.release_time = 0.0
 
     def __init__(self, midiPort='', attack=0.0, decay=0.0, sustain=1.0, release=0.0):
-        
+
         self.midiPort = midiPort
         self.attack = attack
         self.decay = decay
@@ -393,8 +399,7 @@ class Breathing(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters":
-            OrderedDict([
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
                 ("cycle", [5, 0.1, 10, 0.1]),
             ])
@@ -455,8 +460,7 @@ class Heartbeat(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters":
-            OrderedDict([
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
                 ("speed", [1, 0.1, 100, 0.1]),
             ])
@@ -603,14 +607,9 @@ class Pendulum(Effect):
         return \
             "Generates a blob of light to swing back and forth."
 
-    def __init__(self,
-                 spread=0.03,
-                 location=0.5,
-                 displacement=0.15,
-                 heightactivator=True,
-                 lightflip=True,
+    def __init__(self, spread=0.03, location=0.5, displacement=0.15, heightactivator=True, lightflip=True,
                  swingspeed=1):
-        
+
         self.spread = spread
         self.location = location
         self.displacement = displacement
@@ -622,7 +621,7 @@ class Pendulum(Effect):
     def __initstate__(self):
         # state
         super(Pendulum, self).__initstate__()
-    
+
     def __setstate__(self, state):
         if 'spread' in state and state['spread'] > 1:
             state['spread'] = state['spread'] / 300
@@ -853,7 +852,7 @@ class StaticBlob(Effect):
     def __initstate__(self):
         # state
         super(StaticBlob, self).__initstate__()
-    
+
     def __setstate__(self, state):
         # Backwards compatibility from absolute -> relative sizes
         if 'spread' in state and state['spread'] > 1:
@@ -876,12 +875,7 @@ class StaticBlob(Effect):
 
     @staticmethod
     def getParameterHelp():
-        help = {
-            "parameters": {
-                "location": "Location where the blob is created.",
-                "spread": "Spreading of the blob."
-            }
-        }
+        help = {"parameters": {"location": "Location where the blob is created.", "spread": "Spreading of the blob."}}
         return help
 
     def getParameter(self):
@@ -892,7 +886,7 @@ class StaticBlob(Effect):
 
     def createBlob(self, spread_rel, location_rel):
         blobArray = np.zeros(self._num_pixels)
-        
+
         # convert relative to absolute values
         spread = max(int(spread_rel * self._num_pixels), 1)
         location = int(location_rel * self._num_pixels)
@@ -935,10 +929,10 @@ class GenerateWaves(Effect):
             period=20,
             scale=1,
     ):
-        
+
         self.period = period
         self.scale = scale
-        self.wavemode = wavemode 
+        self.wavemode = wavemode
         self.__initstate__()
 
     def __initstate__(self):
@@ -1043,7 +1037,7 @@ class Sorting(Effect):
             reversed=False,
             looping=True,
     ):
-        
+
         self.sortby = sortby
         self.reversed = reversed
         self.looping = looping
@@ -1072,10 +1066,13 @@ class Sorting(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "sortby": "Parameter which the effect sorts by.",
-                "reversed": "Flips the parameter which is sorted by.",
-                "looping": "If activated, the effect randomly picks another parameter to sort by. "
-                           "If deactivated, the effects spawns a new pattern after sorting."
+                "sortby":
+                "Parameter which the effect sorts by.",
+                "reversed":
+                "Flips the parameter which is sorted by.",
+                "looping":
+                "If activated, the effect randomly picks another parameter to sort by. "
+                "If deactivated, the effects spawns a new pattern after sorting."
             }
         }
         return help
