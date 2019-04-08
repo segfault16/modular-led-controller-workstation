@@ -48,6 +48,8 @@ import diamondIcon from '../../img/audioled.panelize.MakeDiamond.png'
 import rubyIcon from '../../img/audioled.panelize.MakeRuby.png'
 import batmanIcon from '../../img/audioled.panelize.MakeBatman.png'
 import labyrinthIcon from '../../img/audioled.panelize.MakeLabyrinth.png'
+import keyboardIcon from '../../img/audioled.generative.MidiKeyboard.png'
+import candyIcon from '../../img/audioled.input.CandyServer.png'
 
 import FilterGraphConfigurationService from "../services/FilterGraphConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
@@ -82,7 +84,9 @@ var icons = {
   'audioled.panelize.MakeDiamond': diamondIcon,
   'audioled.panelize.MakeRuby': rubyIcon,
   'audioled.panelize.MakeBatman': batmanIcon,
-  'audioled.panelize.MakeLabyrinth': labyrinthIcon
+  'audioled.panelize.MakeLabyrinth': labyrinthIcon,
+  'audioled.generative.MidiKeyboard': keyboardIcon,
+  'audioled.input.CandyServer': candyIcon
 
 }
 
