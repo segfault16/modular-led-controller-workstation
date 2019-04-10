@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package molecole.proto.perform;
+
+message Performance {
+    int64 activeSlot = 1;
+}
+
+message QueryPerformanceRequest {
+    string project_uid = 1;
+}
+
+service PerformanceService {
+    rpc QueryPerformance(QueryPerformanceRequest) returns (stream Performance) {}
+}

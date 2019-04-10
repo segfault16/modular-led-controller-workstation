@@ -9,12 +9,14 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import FormGroup from '@material-ui/core/FormGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
-
+import {grpc} from "@improbable-eng/grpc-web";
 
 import { Piano } from 'react-piano';
 
 import { firstNote, lastNote, keyboardShortcuts } from '../config/PianoConfig'
 import FilterGraphService from '../services/FilterGraphService'
+import PerformService, { PerformanceService } from "../_proto/molecole/proto/perform/perform_service_pb_service"
+import {QueryPerformance, Performance, QueryPerformanceRequest} from "../_proto/molecole/proto/perform/perform_service_pb"
 
 const styles = theme => ({
 
@@ -33,6 +35,9 @@ class PerformPage extends Component {
     }
 
     async componentDidMount() {
+
+        this.queryPerformance();
+
         var latch = localStorage.getItem(PERFORM_LATCH);
         if(latch !== null) {
             this.setState(state => {
@@ -93,6 +98,25 @@ class PerformPage extends Component {
                 latch: val
             }
         })
+    }
+
+    queryPerformance() {
+        const req = new QueryPerformanceRequest();
+        req.setProjectUid("test");
+        const client = grpc.client(PerformanceService.QueryPerformance, {
+            host: "http://localhost:50051"
+        });
+        client.onHeaders((headers) => {
+            console.log("queryBooks.onHeaders", headers);
+          });
+        client.onMessage((message) => {
+            console.log("Performance update". message.toObject())
+        });
+        client.onEnd((code, msg, trailers) => {
+            console.log("queryBooks.onEnd", code, msg, trailers);
+          });
+        client.start();
+        client.send(req);
     }
 
     render() {
