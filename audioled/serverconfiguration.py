@@ -262,6 +262,17 @@ class PersistentConfiguration(ServerConfiguration):
                 self._writeProject(proj, projFile)
                 self._lastProjectHashs[key] = projHash
 
+    def updateMd5HashFromFiles(self):
+        for key, proj in self._projects.items():
+            projMeta = self._projectMetadatas[key]
+            fname = projMeta['location']
+            hash_md5 = hashlib.md5()
+            with open(fname, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    hash_md5.update(chunk)
+            self._lastProjectHashs[key] = hash_md5.hexdigest()
+            
+
     def _getStoreConfig(self):
         return json.dumps(self._config, indent=4, sort_keys=True)
 

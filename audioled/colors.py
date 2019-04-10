@@ -108,7 +108,6 @@ class StaticRGBColor(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['num_pixels']
         definition['parameters']['r'][0] = self.r
         definition['parameters']['g'][0] = self.g
         definition['parameters']['b'][0] = self.b
