@@ -4,6 +4,7 @@ import math
 import random
 import threading
 from collections import OrderedDict
+import os.path
 
 import numpy as np
 import scipy as sp
@@ -1147,9 +1148,10 @@ class GIFPlayer(Effect):
     def __initstate__(self):
         super(GIFPlayer, self).__initstate__()
         self._last_t = 0.0
-        self._gif = Image.open(self.file)
         self._cur_index = 0
         self._cur_image = None
+        self._gif = None
+        self._openGif()
 
     @staticmethod
     def getParameterDefinition():
@@ -1175,14 +1177,23 @@ class GIFPlayer(Effect):
     def numOutputChannels(self):
         return 1
 
+    def _openGif(self):
+        adjustedFile = self.file
+        if self._filterGraph is not None and self._filterGraph._project is not None and self._filterGraph._project._contentRoot is not None:
+            adjustedFile = os.path.join(self._filterGraph._project._contentRoot, self.file)
+        try:
+            self._gif = Image.open(adjustedFile)
+        except Exception:
+            print("Cannot open file {}".format(adjustedFile))
+
     async def update(self, dt):
         await super().update(dt)
         if self._t - self._last_t > 1.0 / self.fps:
             # go to next image
             try:
                 self._gif.seek(self._gif.tell() + 1)
-            except EOFError:
-                self._gif = Image.open(self.file)
+            except Exception:
+                self._openGif()
             
             num_cols = int(self._num_pixels / self._num_rows)
             # Resize image

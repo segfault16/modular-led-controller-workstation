@@ -11,6 +11,8 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Typography from '@material-ui/core/Typography';
 import Tooltip from '@material-ui/core/Tooltip'
 
+import ProjectService from '../services/ProjectService'
+
 const styles = theme => ({
     image : {
         width: '400pt',
@@ -108,7 +110,7 @@ class Configurator extends Component {
     }
 
     handleGifUpload = async (event, parameterName) => {
-        console.log("TODO: File upload")
+        await ProjectService.uploadProjectAsset(event).then( res => this.handleParameterChange(res['filename'], parameterName))
     }
 
     domCreateParameterGif = (parameters, values, parameterName) => {
@@ -118,8 +120,8 @@ class Configurator extends Component {
             </Grid>
             <Grid item xs={2}>
             <Typography>
-            <input type="file" id="file-input" onChange={(e) => this.handleGifUpload(e, parameterName)} style={{ display: 'none' }} />
-                  <label htmlFor="file-input">
+            <input type="file" id="gif-input" onChange={(e) => this.handleGifUpload(e, parameterName)} style={{ display: 'none' }} />
+                  <label htmlFor="gif-input">
                   
                   <Button component="span" size="small">
                   Upload

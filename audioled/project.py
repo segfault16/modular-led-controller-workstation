@@ -11,6 +11,7 @@ class Project(Updateable):
         self.description = description
         self.id = None
         self._device = device
+        self._contentRoot = None
 
     def __cleanState__(self, stateDict):
         """
@@ -28,6 +29,13 @@ class Project(Updateable):
         state = self.__dict__.copy()
         self.__cleanState__(state)
         return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        for slot in self.slots:
+            if slot is not None:
+                slot._project = self
+
 
     def setDevice(self, device):
         self._device = device
@@ -61,6 +69,7 @@ class Project(Updateable):
     def setFiltergraphForSlot(self, slotId, filterGraph):
         print("Set {} for slot {}".format(filterGraph, slotId))
         if isinstance(filterGraph, FilterGraph):
+            filterGraph._project = self
             self.slots[slotId] = filterGraph
 
     def activateSlot(self, slotId):

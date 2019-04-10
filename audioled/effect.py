@@ -17,6 +17,10 @@ class Effect(object):
 
     def __initstate__(self):
         try:
+            self._filterGraph
+        except AttributeError:
+            self._filterGraph = None
+        try:
             self._t
         except AttributeError:
             self._t = 0

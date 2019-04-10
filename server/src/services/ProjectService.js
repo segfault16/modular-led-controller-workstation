@@ -55,6 +55,28 @@ const ProjectService = {
         return this._readUploadedFileAsText(file).then(contents => this._importProject(contents)).then(res => res.json())
 
     },
+    uploadProjectAsset: async function(e) {
+        var file = e.target.files[0];
+        if (!file) {
+            return;
+        }
+        return this._readUploadedFileAsBinary(file).then(contents => this._postBinary(contents)).then(res => res.json())
+    },
+    _postBinary: async function (contents) {
+        console.log("Load binary")
+        return fetch('./project/assets', {
+            method: 'POST',
+            body: contents
+        })
+        .then(
+            (res) => {
+                console.log("Successfully loaded");
+                return res
+            })
+        .catch(error => {
+            console.error('Error on uploading asset:', error);
+        })
+    },
     _importProject: async function (contents) {
         console.log("Load config from service")
         return fetch('./projects/import', {
@@ -73,6 +95,14 @@ const ProjectService = {
             console.error('Error on loading configuration:', error);
         })
 
+    },
+    _readUploadedFileAsBinary: function (inputFile) {
+
+        return new Promise((resolve, reject) => {
+            var data = new FormData()
+            data.append('file', inputFile)
+            resolve(data)
+        })
     },
     _readUploadedFileAsText: function (inputFile) {
         const temporaryFileReader = new FileReader();

@@ -139,6 +139,12 @@ class ServerConfiguration:
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
         return self.getProjectMetadata(projectUid)
 
+    def updateMd5HashFromFiles(self):
+        pass
+
+    def postStore(self):
+        pass
+
     def _store(self):
         pass
 
@@ -185,8 +191,8 @@ class ServerConfiguration:
         print("Cannot find project asset {}".format(location))
         return None
     
-    def tryAddProjectAsset(self, projectUid, file):
-        return False
+    def addProjectAsset(self, projectUid, file):
+        raise RuntimeError("Cannot add project asset for in-memory server configuration")
 
 
 class PersistentConfiguration(ServerConfiguration):
@@ -278,6 +284,15 @@ class PersistentConfiguration(ServerConfiguration):
                     os.makedirs(path)
                 self._writeProject(proj, projFile)
                 self._lastProjectHashs[key] = projHash
+    
+    def postStore(self):
+        for key, proj in self._projects.items():
+            projMeta = self._projectMetadatas[key]
+            if projMeta is None:
+                continue
+            if proj._contentRoot is None or proj._contentRoot != os.path.dirname(projMeta['location']):
+                print("Adjusting content root for project {}".format(key))
+                proj._contentRoot = os.path.dirname(projMeta['location'])
 
     def updateMd5HashFromFiles(self):
         for key, proj in self._projects.items():
@@ -295,12 +310,13 @@ class PersistentConfiguration(ServerConfiguration):
         dirname = os.path.dirname(fname)
         return super().getProjectAsset(projectUid, os.path.join(dirname, location))
     
-    def tryAddProjectAsset(self, projectUid, file):
+    def addProjectAsset(self, projectUid, file):
         projMeta = self._projectMetadatas[projectUid]
         fname = projMeta['location']
         dirname = os.path.dirname(fname)
-        file.save(os.path.join(dirname, file.filename))
-        return True
+        fullpath = os.path.join(dirname, file.filename)
+        file.save(fullpath)
+        return file.filename
             
     def _getStoreConfig(self):
         return json.dumps(self._config, indent=4, sort_keys=True)
@@ -398,6 +414,7 @@ class PersistentConfiguration(ServerConfiguration):
         with open(filepath, "r", encoding='utf-8') as fc:
             content = fc.read()
             proj = jsonpickle.decode(content)
+            proj._contentRoot = os.path.dirname(filepath)
             proj.setDevice(self._createOutputDevice())
             return proj
 

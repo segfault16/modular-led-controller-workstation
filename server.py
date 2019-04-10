@@ -60,6 +60,7 @@ def create_app():
         p.join()
         # Update MD5 hashes from file, since data was written in separate process
         serverconfig.updateMd5HashFromFiles()
+        serverconfig.postStore()
 
     sched = BackgroundScheduler(daemon=True)
     sched.add_job(store_configuration, 'interval', seconds=5)
@@ -335,13 +336,18 @@ def create_app():
         global serverconfig
         global proj
         if 'file' not in request.files:
+            print("No file in request")
             abort(400)
         file = request.files['file']
         if file.filename == '':
+            print("File has no filename")
             abort(400)
         if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ['gif']:
-            if serverconfig.tryAddProjectAsset(proj.id, file):
-                return "OK"
+            filename = serverconfig.addProjectAsset(proj.id, file)
+            return jsonify({
+                'filename': filename
+            })
+        print("Unknown content for asset: {}".format(file.filename))
         abort(400)
 
     @app.route('/projects', methods=['GET'])
