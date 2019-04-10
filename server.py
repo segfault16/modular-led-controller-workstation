@@ -10,11 +10,12 @@ import os.path
 import threading
 import time
 import multiprocessing
+import io
 from timeit import default_timer as timer
 
 import jsonpickle
 import numpy as np
-from flask import Flask, abort, jsonify, request, send_from_directory, redirect
+from flask import Flask, abort, jsonify, request, send_from_directory, redirect, send_file
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
@@ -44,15 +45,17 @@ count = 0
 # def home():
 #     return app.send_static_file('index.html')
 
+
 def multiprocessing_func(sc):
     sc.store()
+
 
 def create_app():
     app = Flask(__name__, static_url_path='/')
 
     def store_configuration():
         global serverconfig
-        p = multiprocessing.Process(target=multiprocessing_func, args=(serverconfig,))
+        p = multiprocessing.Process(target=multiprocessing_func, args=(serverconfig, ))
         p.start()
         p.join()
         # Update MD5 hashes from file, since data was written in separate process
@@ -279,11 +282,11 @@ def create_app():
                 and module_name != "audioled.panelize"):
             raise RuntimeError("Not allowed")
         return module_name, class_name
-    
+
     def getFullClassName(o):
         module = o.__class__.__module__
         if module is None or module == str.__class__.__module__:
-            return o.__class__.__name__  
+            return o.__class__.__name__
         else:
             return module + '.' + o.__class__.__name__
 
@@ -319,6 +322,27 @@ def create_app():
     def project_activeSlot_get():
         global proj
         return jsonify({'slot': proj.activeSlotId})
+
+    @app.route('/project/assets/<path:path>', methods=['GET'])
+    def project_assets_get(path):
+        global serverconfig
+        global proj
+        asset = serverconfig.getProjectAsset(proj.id, path)
+        return send_file(asset[0], attachment_filename=asset[1], mimetype=asset[2])
+
+    @app.route('/project/assets', methods=['POST'])
+    def project_assets_post():
+        global serverconfig
+        global proj
+        if 'file' not in request.files:
+            abort(400)
+        file = request.files['file']
+        if file.filename == '':
+            abort(400)
+        if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ['gif']:
+            if serverconfig.tryAddProjectAsset(proj.id, file):
+                return "OK"
+        abort(400)
 
     @app.route('/projects', methods=['GET'])
     def projects_get():
@@ -509,8 +533,7 @@ if __name__ == '__main__':
         '--no_store', dest='no_store', action='store_true', default=False, help="Don't save anything to disk")
     parser.add_argument(
         '-N', '--num_pixels', dest='num_pixels', type=int, default=None, help='number of pixels (default: 300)')
-    parser.add_argument(
-        '-R', '--num_rows', dest='num_rows', type=int, default=None, help='number of rows (default: 1)')
+    parser.add_argument('-R', '--num_rows', dest='num_rows', type=int, default=None, help='number of rows (default: 1)')
     parser.add_argument(
         '-D',
         '--device',
@@ -521,8 +544,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--device_candy_server', dest='device_candy_server', default=None, help='Server for device FadeCandy')
     parser.add_argument(
-        '--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels'
-    )
+        '--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels')
     parser.add_argument(
         '-A',
         '--audio_device_index',
@@ -591,8 +613,8 @@ if __name__ == '__main__':
 
     # Audio
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
-        print("Overriding Audio device with device index {}".format(serverconfig.getConfiguration(
-            serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
+        print("Overriding Audio device with device index {}".format(
+            serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
         audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(
             serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
 

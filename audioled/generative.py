@@ -1158,6 +1158,7 @@ class GIFPlayer(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("fps", [30, 0, 120, 0.1]),
+                ("file", ['gif', None])
             ])
         }
         return definition
@@ -1165,6 +1166,7 @@ class GIFPlayer(Effect):
     def getParameter(self):
         definition = self.getParameterDefinition()
         definition['parameters']['fps'][0] = self.fps
+        definition['parameters']['file'][1] = self.file
         return definition
 
     def numInputChannels(self):

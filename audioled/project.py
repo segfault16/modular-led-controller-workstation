@@ -9,6 +9,7 @@ class Project(Updateable):
         self.activeSlotId = 0
         self.name = name
         self.description = description
+        self.id = None
         self._device = device
 
     def __cleanState__(self, stateDict):
