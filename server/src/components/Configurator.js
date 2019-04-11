@@ -15,8 +15,8 @@ import ProjectService from '../services/ProjectService'
 
 const styles = theme => ({
     image : {
-        width: '400pt',
-        height: '400pt'
+        maxWidth: '100px',
+        maxHeight: '100px'
       }
 });
 
@@ -116,7 +116,7 @@ class Configurator extends Component {
     domCreateParameterGif = (parameters, values, parameterName) => {
         return <React.Fragment>
             <Grid container xs={7} justify="flex-end">
-                <img src={"project/assets/" + values[parameterName]} role="presentation" style={styles.image} />
+                <img src={"project/assets/" + values[parameterName]} role="presentation" style={{maxWidht: '100px', maxHeight: '100px'}} />
             </Grid>
             <Grid item xs={2}>
             <Typography>
