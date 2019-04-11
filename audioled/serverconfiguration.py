@@ -159,6 +159,8 @@ class ServerConfiguration:
                     wrapper = devices.PanelWrapper(device, mapping)
                     device = wrapper
                     print("Active pixel mapping: {}".format(mappingFile))
+            else:
+                raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
         return device
 
     def _metadataForProject(self, project, projectUid):
