@@ -30,7 +30,7 @@ class ServerConfiguration:
     @staticmethod
     def getConfigurationParameters():
         return {
-            CONFIG_NUM_PIXELS: [300, 1, 2000, 1], 
+            CONFIG_NUM_PIXELS: [300, 1, 2000, 1],
             CONFIG_NUM_ROWS: [1, 1, 100, 1],
             CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
         }
@@ -38,7 +38,13 @@ class ServerConfiguration:
     def setConfiguration(self, key, value):
         print("Updating {} to {}".format(key, value))
         self._config[key] = value
-        if self._activeProject is not None and key in [CONFIG_NUM_PIXELS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_NUM_ROWS, CONFIG_DEVICE_PANEL_MAPPING]:
+        if self._activeProject is not None and key in [
+                CONFIG_NUM_PIXELS, 
+                CONFIG_DEVICE, 
+                CONFIG_DEVICE_CANDY_SERVER, 
+                CONFIG_NUM_ROWS,
+                CONFIG_DEVICE_PANEL_MAPPING
+        ]:
             print("Renewing device")
             self.getActiveProjectOrDefault().setDevice(self._createOutputDevice())
 
@@ -94,7 +100,6 @@ class ServerConfiguration:
             proj = self._projects[uid]
             proj.setDevice(self._createOutputDevice())
             return proj
-        print("Get project from non-persistent")
         return None
 
     def deleteProject(self, uid):
@@ -104,6 +109,8 @@ class ServerConfiguration:
             self._projectMetadatas.pop(uid)
 
     def activateProject(self, uid):
+        if self._activeProject is not None:
+            self._activeProject.setDevice(None)
         self._config[CONFIG_ACTIVE_PROJECT] = uid
         return self.getActiveProjectOrDefault()
 
@@ -144,13 +151,20 @@ class ServerConfiguration:
 
     def _createOutputDevice(self):
         device = None
+        print("Injecting device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
-            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS))
+            device = devices.RaspberryPi(
+                self.getConfiguration(CONFIG_NUM_PIXELS), 
+                self.getConfiguration(CONFIG_NUM_ROWS))
         elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
-            device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS), self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
+            device = devices.FadeCandy(
+                self.getConfiguration(CONFIG_NUM_PIXELS), 
+                self.getConfiguration(CONFIG_NUM_ROWS),
+                self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
-        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) is not None and self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) != '':
+        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) is not None and self.getConfiguration(
+                CONFIG_DEVICE_PANEL_MAPPING) != '':
             mappingFile = self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
             if os.path.exists(mappingFile):
                 with open(mappingFile, "r", encoding='utf-8') as f:
@@ -159,6 +173,8 @@ class ServerConfiguration:
                     wrapper = devices.PanelWrapper(device, mapping)
                     device = wrapper
                     print("Active pixel mapping: {}".format(mappingFile))
+            else:
+                raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
         return device
 
     def _metadataForProject(self, project, projectUid):
@@ -271,7 +287,6 @@ class PersistentConfiguration(ServerConfiguration):
                 for chunk in iter(lambda: f.read(4096), b""):
                     hash_md5.update(chunk)
             self._lastProjectHashs[key] = hash_md5.hexdigest()
-            
 
     def _getStoreConfig(self):
         return json.dumps(self._config, indent=4, sort_keys=True)
@@ -299,7 +314,10 @@ class PersistentConfiguration(ServerConfiguration):
         if not os.path.exists(projPath):
             # No projects -> finished
             return
-        onlyfiles = [f for f in os.listdir(projPath) if os.path.isfile(os.path.join(projPath, f)) and os.path.splitext(os.path.basename(f))[1] == '.json']
+        onlyfiles = [
+            f for f in os.listdir(projPath)
+            if os.path.isfile(os.path.join(projPath, f)) and os.path.splitext(os.path.basename(f))[1] == '.json'
+        ]
         # Backwards compatibility: Move file to new folder
         for f in onlyfiles:
             projUid = os.path.splitext(os.path.basename(f))[0]
@@ -310,7 +328,10 @@ class PersistentConfiguration(ServerConfiguration):
         onlyfolders = [f for f in os.listdir(projPath) if os.path.isdir(os.path.join(projPath, f))]
         for p in onlyfolders:
             path = os.path.join(projPath, p)
-            jsonFiles = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and os.path.splitext(os.path.basename(f))[1] == '.json']
+            jsonFiles = [
+                f for f in os.listdir(path)
+                if os.path.isfile(os.path.join(path, f)) and os.path.splitext(os.path.basename(f))[1] == '.json'
+            ]
             if len(jsonFiles) == 1:
                 f = os.path.basename(jsonFiles[0])
                 print("Reading project metadata from {}/{}".format(path, f))
@@ -347,11 +368,12 @@ class PersistentConfiguration(ServerConfiguration):
             data['id'] = projUid
             data['location'] = filepath
             return data
-    
+
     def _metadataForProject(self, project, projectUid):
         projData = super()._metadataForProject(project, projectUid)
         # Add storage location to metadata
-        projData['location'] = os.path.join(os.path.join(self._getProjectPath(), projectUid), "{}.json".format(projectUid))
+        projData['location'] = os.path.join(
+            os.path.join(self._getProjectPath(), projectUid), "{}.json".format(projectUid))
         print("Storage location for project {}: {}".format(projectUid, projData['location']))
         return projData
 
