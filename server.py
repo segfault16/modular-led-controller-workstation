@@ -9,6 +9,7 @@ import json
 import os.path
 import threading
 import time
+import multiprocessing
 from timeit import default_timer as timer
 
 import jsonpickle
@@ -43,13 +44,19 @@ count = 0
 # def home():
 #     return app.send_static_file('index.html')
 
+def multiprocessing_func(sc):
+    sc.store()
 
 def create_app():
     app = Flask(__name__, static_url_path='/')
 
     def store_configuration():
         global serverconfig
-        serverconfig.store()
+        p = multiprocessing.Process(target=multiprocessing_func, args=(serverconfig,))
+        p.start()
+        p.join()
+        # Update MD5 hashes from file, since data was written in separate process
+        serverconfig.updateMd5HashFromFiles()
 
     sched = BackgroundScheduler(daemon=True)
     sched.add_job(store_configuration, 'interval', seconds=5)

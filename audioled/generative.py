@@ -118,15 +118,20 @@ class SwimmingPool(Effect):
                                                                 self.wavespread_high, self.max_speed)
 
     def process(self):
-        if self._outputBuffer is not None:
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            color = np.ones(self._num_pixels) * np.array([[255], [255], [255]])
+        else:
             color = self._inputBuffer[0]
-            self._output = np.multiply(color, 0.5 * np.zeros(self._num_pixels))
 
-            for i in range(0, self.num_waves):
-                step = np.multiply(color, np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1))
-                self._output += step
+        self._output = np.multiply(color, 0.5 * np.zeros(self._num_pixels))
 
-            self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+        for i in range(0, self.num_waves):
+            step = np.multiply(color, np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=1))
+            self._output += step
+
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class DefenceMode(Effect):

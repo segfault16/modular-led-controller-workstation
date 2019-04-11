@@ -750,13 +750,19 @@ class FallingStars(Effect):
         await super().update(dt)
 
     def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            return
+        if self._inputBufferValid(1):
+            color = self._inputBuffer[1]
+        else:
+            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        
         audio = self._inputBuffer[0]
         # apply bandpass to audio
         y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audio), zi=self._filter_zi)
 
-        color = self._inputBuffer[1]
-        if color is None:
-            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         # adjust probability according to peak of audio
         peak = np.max(y) * 1.0
         try:

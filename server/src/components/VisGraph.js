@@ -42,6 +42,14 @@ import springCombineIcon from '../../img/audioled.effects.SpringCombine.png';
 import fallingStarsIcon from '../../img/audioled.generative.FallingStars.png';
 import pendulumIcon from '../../img/audioled.generative.Pendulum.png'
 import bonfireIcon from '../../img/audioled.audioreactive.Bonfire.png'
+import swingIcon from '../../img/audioled.effects.Swing.png'
+import squareIcon from '../../img/audioled.panelize.MakeSquare.png'
+import diamondIcon from '../../img/audioled.panelize.MakeDiamond.png'
+import rubyIcon from '../../img/audioled.panelize.MakeRuby.png'
+import batmanIcon from '../../img/audioled.panelize.MakeBatman.png'
+import labyrinthIcon from '../../img/audioled.panelize.MakeLabyrinth.png'
+import keyboardIcon from '../../img/audioled.generative.MidiKeyboard.png'
+import candyIcon from '../../img/audioled.input.CandyServer.png'
 
 import FilterGraphConfigurationService from "../services/FilterGraphConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
@@ -71,6 +79,14 @@ var icons = {
   'audioled.generative.FallingStars': fallingStarsIcon,
   'audioled.generative.Pendulum': pendulumIcon,
   'audioled.audioreactive.Bonfire': bonfireIcon,
+  'audioled.effects.Swing': swingIcon,
+  'audioled.panelize.MakeSquare': squareIcon,
+  'audioled.panelize.MakeDiamond': diamondIcon,
+  'audioled.panelize.MakeRuby': rubyIcon,
+  'audioled.panelize.MakeBatman': batmanIcon,
+  'audioled.panelize.MakeLabyrinth': labyrinthIcon,
+  'audioled.generative.MidiKeyboard': keyboardIcon,
+  'audioled.input.CandyServer': candyIcon
 
 }
 
