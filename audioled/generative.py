@@ -12,7 +12,7 @@ from scipy import signal as signal
 
 from audioled.effect import Effect
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
@@ -1140,9 +1140,11 @@ class Sorting(Effect):
 
 
 class GIFPlayer(Effect):
-    def __init__(self, gif_file, fps=30):
+    def __init__(self, gif_file, fps=30, center_x=0.5, center_y=0.5):
         self.file = gif_file
         self.fps = fps
+        self.center_x = center_x
+        self.center_y = center_y
         self.__initstate__()
 
     def __initstate__(self):
@@ -1160,6 +1162,8 @@ class GIFPlayer(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("fps", [30, 0, 120, 0.1]),
+                ("center_x", [0.5, 0, 1, 0.01]),
+                ("center_y", [0.5, 0, 1, 0.01]),
                 ("file", ['gif', None])
             ])
         }
@@ -1168,6 +1172,8 @@ class GIFPlayer(Effect):
     def getParameter(self):
         definition = self.getParameterDefinition()
         definition['parameters']['fps'][0] = self.fps
+        definition['parameters']['center_x'][0] = self.center_x
+        definition['parameters']['center_y'][0] = self.center_y
         definition['parameters']['file'][1] = self.file
         return definition
 
@@ -1179,6 +1185,8 @@ class GIFPlayer(Effect):
 
     def _openGif(self):
         adjustedFile = self.file
+        if self.file is None:
+            return
         if self._filterGraph is not None and self._filterGraph._project is not None and self._filterGraph._project._contentRoot is not None:
             adjustedFile = os.path.join(self._filterGraph._project._contentRoot, self.file)
         try:
@@ -1197,8 +1205,8 @@ class GIFPlayer(Effect):
             
             num_cols = int(self._num_pixels / self._num_rows)
             # Resize image
-            #self._cur_image = self._gif.convert('RGB').resize((self._num_rows, num_cols), Image.ANTIALIAS)
-            self._cur_image = self._gif.convert('RGB').resize((num_cols, self._num_rows), Image.ANTIALIAS)
+            if self._gif is not None:
+                self._cur_image = ImageOps.fit(self._gif.convert('RGB'), (num_cols, self._num_rows), Image.ANTIALIAS, centering=(self.center_x, self.center_y))
             # update time
             self._last_t = self._t
 

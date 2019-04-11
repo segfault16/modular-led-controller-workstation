@@ -102,6 +102,7 @@ class ServerConfiguration:
         if uid in self._projects:
             proj = self._projects[uid]
             proj.setDevice(self._createOutputDevice())
+            proj.id = uid
             return proj
         return None
 

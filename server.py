@@ -343,6 +343,7 @@ def create_app():
             print("File has no filename")
             abort(400)
         if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ['gif']:
+            print("Adding asset to proj {}".format(proj.id))
             filename = serverconfig.addProjectAsset(proj.id, file)
             return jsonify({
                 'filename': filename
