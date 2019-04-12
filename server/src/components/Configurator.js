@@ -123,7 +123,7 @@ class Configurator extends Component {
             <input type="file" id="gif-input" onChange={(e) => this.handleGifUpload(e, parameterName)} style={{ display: 'none' }} />
                   <label htmlFor="gif-input">
                   
-                  <Button component="span" size="small">
+                  <Button component="span" variant="contained" size="small">
                   Upload
                       
                     </Button>                    

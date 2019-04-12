@@ -1174,6 +1174,12 @@ class Sorting(Effect):
 
 
 class GIFPlayer(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for displaying GIFs on LED panels."
+
     def __init__(self, gif_file, fps=30, center_x=0.5, center_y=0.5):
         self.file = gif_file
         self.fps = fps
@@ -1202,6 +1208,22 @@ class GIFPlayer(Effect):
             ])
         }
         return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "fps":
+                "The number of frames per second for GIF playback.",
+                "center_x":
+                "Moves the GIF left or right if the image is being cropped.",
+                "center_y":
+                "Moves the GIF up or down if the image is being cropped.",
+                "file":
+                "The GIF to show."
+            }
+        }
+        return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
