@@ -82,8 +82,7 @@ class ServerConfiguration:
         # fg = configs.createMovingLightGraph(num_pixels, device)
         # fg = configs.createMovingLightsGraph(num_pixels, device)
         # fg = configs.createVUPeakGraph(num_pixels, device)
-        #initial = configs.createSwimmingPoolGraph() TODO: Revert
-        initial = configs.createGifPlayerGraph()
+        initial = configs.createSwimmingPoolGraph()
         second = configs.createDefenceGraph()
         # fg = configs.createKeyboardGraph(num_pixels, device)
 
