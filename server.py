@@ -527,7 +527,7 @@ if __name__ == '__main__':
     deviceRasp = 'RaspberryPi'
     deviceCandy = 'FadeCandy'
 
-    parser = argparse.ArgumentParser(description='Audio Reactive LED Strip Server')
+    parser = argparse.ArgumentParser(description='MOLECOLE - A Modular LED Controller Workstation')
     parser.add_argument(
         '-C',
         '--config_location',

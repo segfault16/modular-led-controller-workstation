@@ -44,7 +44,7 @@ configChoices = [
 deviceRasp = 'RaspberryPi'
 deviceCandy = 'FadeCandy'
 
-parser = argparse.ArgumentParser(description='Audio Reactive LED Strip')
+parser = argparse.ArgumentParser(description='MOLECOLE - A Modular LED Controller Workstation')
 
 parser.add_argument(
     '-N', '--num_pixels', dest='num_pixels', type=int, default=300, help='number of pixels (default: 300)')

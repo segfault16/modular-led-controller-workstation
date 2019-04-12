@@ -43,7 +43,7 @@ class App extends Component {
         <AppBar position="fixed" className={classes.appBar}>
           <Toolbar>
             <Typography variant="h6" color="inherit" noWrap>
-              Audio Reactive LED Strip
+              MOLECOLE - A Modular LED Controller Workstation
           </Typography>
           </Toolbar>
         </AppBar>

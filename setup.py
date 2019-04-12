@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(name='audioled',
       version='0.1',
-      description='Audio reactive LED strip visualization',
+      description='MOLECOLE - A Modular LED Controller Workstation',
       url='http://github.com/scottlawsonbc/audio-reactive-led-strip',
       author='Scott Lawson',
       author_email='scottlawsonbc@gmail.com',
