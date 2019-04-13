@@ -116,7 +116,7 @@ class SwimmingPool(Effect):
         return _WaveArray, _WaveArraySpecSpeed
 
     def numInputChannels(self):
-        return 2
+        return 1
 
     def numOutputChannels(self):
         return 1
