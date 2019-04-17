@@ -48,10 +48,6 @@ class SwimmingPool(Effect):
         except AttributeError:
             self._last_t = 0.0
         try:
-            self._output
-        except AttributeError:
-            self._output = None
-        try:
             self._Wave
         except AttributeError:
             self._Wave = None
@@ -108,12 +104,10 @@ class SwimmingPool(Effect):
         _spread = min(int(self._num_pixels / 2) - 1, _spread)
         for i in range(-_spread, _spread + 1):
             _CArray.append(math.sin((math.pi / _spread) * i) * _wavehight)
-        _output = np.copy(self._pixel_state)
-        _output[0][:len(_CArray)] += _CArray
-        _output[1][:len(_CArray)] += _CArray
-        _output[2][:len(_CArray)] += _CArray
+        _output = np.zeros(self._num_pixels)
+        _output[:len(_CArray)] = _CArray
         # Move somewhere
-        _output = np.roll(_output, np.random.randint(0, self._num_pixels), axis=1)
+        _output = np.roll(_output, np.random.randint(0, self._num_pixels), axis=0)
         return _output.clip(0.0, 255.0)
 
     def _CreateWaves(self, num_waves, wavespread_low=10, wavespread_high=50, max_speed=30):
@@ -126,7 +120,7 @@ class SwimmingPool(Effect):
         return _WaveArray, _WaveArraySpecSpeed
 
     def numInputChannels(self):
-        return 2
+        return 1
 
     def numOutputChannels(self):
         return 1
@@ -135,11 +129,11 @@ class SwimmingPool(Effect):
         await super().update(dt)
         if self._pixel_state is None or np.size(self._pixel_state, 1) != self._num_pixels:
             self._pixel_state = np.zeros(self._num_pixels) * np.array([[0.0], [0.0], [0.0]])
-            self._output = np.copy(self._pixel_state)
             self._Wave = None
             self._WaveSpecSpeed = None
 
         if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < self.num_waves:
+            
             self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low,
                                                                 self.wavespread_high, self.max_speed)
         # Rotate waves
@@ -163,7 +157,8 @@ class SwimmingPool(Effect):
         else:
             color = self._inputBuffer[0]
 
-        self._output = np.multiply(color, 0.5 * np.zeros(self._num_pixels))
+        
+        all_waves = np.zeros(self._num_pixels)
         for i in range(0, self.num_waves):
             fact = 1.0
             if i == 0:
@@ -171,14 +166,10 @@ class SwimmingPool(Effect):
             if i == self.num_waves - 1:
                 fact = (1.0 - self._rotate_counter / 30)
             if i < len(self._Wave) and i < len(self._WaveSpecSpeed):
-                step = np.multiply(
-                    color,
-                    sp.ndimage.interpolation.shift(
-                        self._Wave[i], [0, self._t * self._WaveSpecSpeed[i]], mode='wrap',
-                        prefilter=True)) * self.scale * fact
-                self._output += step
-
-        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+                step = np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=0) * self.scale * fact
+                all_waves += step
+        
+        self._outputBuffer[0] = np.multiply(color, all_waves).clip(0, 255.0)
 
 
 class DefenceMode(Effect):

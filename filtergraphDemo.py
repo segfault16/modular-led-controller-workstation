@@ -34,11 +34,11 @@ generatewavesConf = 'generatewaves'
 sortingConf = 'sorting'
 gifConf = 'gif'
 panelConf = 'panel'
-
+oscilloscopeConf = 'oscilloscope'
 configChoices = [
     movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf,
     breathingConf, heartbeatConf, pendulumConf, rpendulumConf, keyboardConf, keyboardSpringConf, testblobConf,
-    bonfireConf, generatewavesConf, sortingConf, gifConf, panelConf
+    bonfireConf, generatewavesConf, sortingConf, gifConf, panelConf, oscilloscopeConf
 ]
 
 deviceRasp = 'RaspberryPi'
@@ -144,6 +144,8 @@ def createFilterGraph(config, num_pixels):
         return configs.createGifPlayerGraph()
     elif config == panelConf:
         return configs.createPanelPendulum()
+    elif config == oscilloscopeConf:
+        return configs.createOscilloscope()
     else:
         raise NotImplementedError("Config not implemented")
 
