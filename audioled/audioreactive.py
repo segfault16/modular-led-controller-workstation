@@ -776,3 +776,54 @@ class FallingStars(Effect):
                 self.starControl(prob, peak) * np.array([[self.peak_scale * 1.0], [self.peak_scale * 1.0],
                                                          [self.peak_scale * 1.0]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+
+
+class Oscilloscope(Effect):
+
+    def __init__(self):
+        return super().__init__()
+    
+    def __initstate__(self):
+        return super().__initstate__()
+
+    def numInputChannels(self):
+        return 2
+
+    def numOutputChannels(self):
+        return 1
+    
+    def getNumInputPixels(self, channel):
+        if self._num_pixels is not None:
+            cols = int(self._num_pixels / self._num_rows)
+            return cols
+        return None
+    
+    async def update(self, dt):
+        await super().update(dt)
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            return
+        audio = self._inputBuffer[0]
+        cols = int(self._num_pixels / self._num_rows)
+        if self._inputBufferValid(1):
+            color = self._inputBuffer[1]
+        else:
+            color = np.ones(cols) * np.array([[255], [255], [255]])
+        
+        output = np.zeros((3, self._num_rows, cols))
+        for i in range(0, cols):
+            # determine index in audio array
+            valIdx = int(i / cols * len(audio))
+            # get value
+            val = audio[valIdx]
+            # convert to row idx
+            rowIdx = int(self._num_rows / 2 + val * self._num_rows / 2)
+            # set value for this col
+            output[:, rowIdx, i] = color[:, i]
+        self._outputBuffer[0] = output.reshape((3, -1))
+
+        
+        

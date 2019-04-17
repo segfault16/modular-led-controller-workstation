@@ -406,3 +406,33 @@ def createPanelPendulum():
     fg.addConnection(makeSquare, 0, led_out, 0)
     fg.addConnection(pendulum, 0, makeSquare, 0)
     return fg
+
+
+def createOscilloscope():
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput()
+    fg.addEffectNode(led_out)
+
+    osc = audioreactive.Oscilloscope()
+    fg.addEffectNode(osc)
+
+    audio_in = audio.AudioInput()
+    fg.addEffectNode(audio_in)
+
+    color_wheel = colors.ColorWheel()
+    fg.addEffectNode(color_wheel)
+
+    color_wheel2 = colors.ColorWheel(cycle_time=5.0)
+    fg.addEffectNode(color_wheel2)
+
+    interpCol = colors.InterpolateHSV()
+    fg.addEffectNode(interpCol)
+
+    fg.addConnection(color_wheel, 0, interpCol, 0)
+    fg.addConnection(color_wheel2, 0, interpCol, 1)
+    fg.addConnection(audio_in, 0, osc, 0)
+    fg.addConnection(osc, 0, led_out, 0)
+    fg.addConnection(interpCol, 0, osc, 1)
+
+    return fg
