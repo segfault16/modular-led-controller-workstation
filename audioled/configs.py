@@ -10,7 +10,7 @@ from audioled import panelize
 
 
 def createMovingLightGraph():
-    fg = filtergraph.FilterGraph(recordTimings=True)
+    fg = filtergraph.FilterGraph(recordTimings=True, asyncUpdate=False)
 
     audio_in = audio.AudioInput(num_channels=2)
     fg.addEffectNode(audio_in)
@@ -44,7 +44,7 @@ def createMovingLightGraph():
 
 
 def createMovingLightsGraph():
-    fg = filtergraph.FilterGraph(recordTimings=True)
+    fg = filtergraph.FilterGraph(recordTimings=True, asyncUpdate=False)
 
     audio_in = audio.AudioInput(num_channels=2)
     fg.addEffectNode(audio_in)
@@ -104,7 +104,7 @@ def createMovingLightsGraph():
 
 
 def createSpectrumGraph():
-    fg = filtergraph.FilterGraph(recordTimings=True)
+    fg = filtergraph.FilterGraph(recordTimings=True, asyncUpdate=False)
 
     audio_in = audio.AudioInput(num_channels=2)
     fg.addEffectNode(audio_in)
@@ -118,7 +118,7 @@ def createSpectrumGraph():
     color_wheel2 = colors.ColorWheel(cycle_time=15.0)
     fg.addEffectNode(color_wheel2)
 
-    spectrum = audioreactive.Spectrum(fs=audio_in.getSampleRate(), chunk_rate=60)
+    spectrum = audioreactive.Spectrum(fs=audio_in.getSampleRate())
     fg.addEffectNode(spectrum)
 
     append = effects.Append(2, flip0=True)
@@ -409,7 +409,7 @@ def createPanelPendulum():
 
 
 def createOscilloscope():
-    fg = filtergraph.FilterGraph(recordTimings=True)
+    fg = filtergraph.FilterGraph(recordTimings=True, asyncUpdate=False)
 
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)

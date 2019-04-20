@@ -62,7 +62,7 @@ class AudioInput(Effect):
         super(AudioInput, self).__initstate__()
         deviceIndex = self.device_index
         if self.overrideDeviceIndex is not None:
-            #print("Using overrideDeviceIndex {} for audio".format(self.overrideDeviceIndex))
+            # print("Using overrideDeviceIndex {} for audio".format(self.overrideDeviceIndex))
             deviceIndex = self.overrideDeviceIndex
             self.device_index = self.overrideDeviceIndex
         try:
@@ -82,6 +82,11 @@ class AudioInput(Effect):
         # perc = root(1.0 / min_value, N) = (1./min_value)**(1/N)
         self._autogain_perc = (1.0 / min_value)**float(1 / N)
         self._cur_gain = 1.0
+
+    def _audio_callback(self, in_data, frame_count, time_info, status):
+        chunk = np.fromstring(in_data, np.float32).astype(np.float)
+        self._buffer = chunk
+        return (None, pyaudio.paContinue)
 
     def _open_input_stream(self, device_index=None, channels=1, retry=0):
         """Opens a PyAudio audio input stream
@@ -112,7 +117,10 @@ class AudioInput(Effect):
                 rate=int(device_info['defaultSampleRate']),
                 input=True,
                 input_device_index=device_index,
-                frames_per_buffer=0)
+                frames_per_buffer=0,
+                stream_callback=self._audio_callback)
+            res = stream.start_stream()
+            print("Started stream")
         except OSError as e:
             if retry == 5:
                 err = 'Error occurred while attempting to open audio device. '
@@ -142,28 +150,7 @@ class AudioInput(Effect):
         samplerate = int(device_info['defaultSampleRate'])
 
         chunk_length = int(samplerate // chunk_rate)
-
-        def audio_chunks():
-            fs = samplerate
-            while True:
-                try:
-                    if AudioInput.global_stream is None:
-                        AudioInput.global_stream, fs = self._open_input_stream(device_index, channels=channels)
-                    # Reading audio by default with exception_on_overflow=False
-                    # Exceptions on overflow result in hickups. Enable only for debugging.
-                    chunk = AudioInput.global_stream.read(chunk_length, exception_on_overflow=False)
-                except IOError as e:
-                    if e.errno == pyaudio.paInputOverflowed:
-                        print('Audio buffer full')
-                        if ignore_overflows:
-                            AudioInput.global_stream, fs = self._open_input_stream(device_index, channels=channels)
-                            continue
-                        else:
-                            raise e
-                chunk = np.fromstring(chunk, np.float32).astype(np.float)
-                yield chunk
-
-        return audio_chunks(), samplerate
+        return self._open_input_stream(device_index, channels=channels)
 
     def numOutputChannels(self):
         return self.num_channels
@@ -213,16 +200,12 @@ class AudioInput(Effect):
 
     async def update(self, dt):
         await super(AudioInput, self).update(dt)
-        try:
-            self._buffer = next(self._audioStream)
-        except Exception:
-            print("Audio Input not supported.")
-            self._inputBuffer = None
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
-
+        if self._buffer is None or len(self._buffer) <= 0:
+            return
         if self.autogain:
             # determine max value -> in range 0,1
             maxVal = np.max(self._buffer)
@@ -237,3 +220,5 @@ class AudioInput(Effect):
             # 00 01 .. 0n 10 11 .. 1n
             self._outputBuffer[i] = self._cur_gain * self._buffer[i::self.num_channels]
             # print("{}: {}".format(i, self._outputBuffer[i]))
+
+        #self._buffer = None

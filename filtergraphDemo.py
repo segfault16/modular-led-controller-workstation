@@ -172,7 +172,7 @@ def saveAndLoad(config, fg):
 
 current_time = timer()
 count = 0
-updateTiming = filtergraph.Timing()
+totalTiming = filtergraph.Timing()
 config_idx = 0
 last_switch_time = current_time
 cur_graph = None
@@ -199,13 +199,14 @@ while True:
         last_switch_time = current_time
 
     cur_graph.update(dt)
-    updateTiming.update(timer() - current_time)
     cur_graph.process()
+    totalTiming.update(timer() - current_time)
     if cur_graph.getLEDOutput() is not None and cur_graph.getLEDOutput()._outputBuffer[0] is not None:
         device.show(cur_graph.getLEDOutput()._outputBuffer[0])
     if count == 100:
         cur_graph.printProcessTimings()
-        print(updateTiming.__dict__)
+        cur_graph.printUpdateTimings()
+        print(totalTiming.__dict__)
         count = 0
     count = count + 1
     if dt < 0.015:
