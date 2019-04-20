@@ -27,6 +27,7 @@ class ServerConfiguration:
         self._projects = {}
         self._projectMetadatas = {}
         self._activeProject = None
+        self._reusableDevice = None
 
     @staticmethod
     def getConfigurationParameters():
@@ -47,6 +48,7 @@ class ServerConfiguration:
                 CONFIG_DEVICE_PANEL_MAPPING
         ]:
             print("Renewing device")
+            self._reusableDevice = None
             self.getActiveProjectOrDefault().setDevice(self._createOutputDevice())
 
     def getConfiguration(self, key):
@@ -112,8 +114,8 @@ class ServerConfiguration:
             self._projectMetadatas.pop(uid)
 
     def activateProject(self, uid):
-        if self._activeProject is not None:
-            self._activeProject.setDevice(None)
+        #if self._activeProject is not None:
+            #self._activeProject.setDevice(None)
         self._config[CONFIG_ACTIVE_PROJECT] = uid
         return self.getActiveProjectOrDefault()
 
@@ -159,6 +161,8 @@ class ServerConfiguration:
         pass
 
     def _createOutputDevice(self):
+        if self._reusableDevice is not None:
+            return self._reusableDevice
         device = None
         print("Injecting device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
@@ -184,6 +188,7 @@ class ServerConfiguration:
                     print("Active pixel mapping: {}".format(mappingFile))
             else:
                 raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
+        self._reusableDevice = device
         return device
 
     def _metadataForProject(self, project, projectUid):

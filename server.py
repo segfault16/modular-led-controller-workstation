@@ -11,6 +11,7 @@ import threading
 import time
 import multiprocessing
 import io
+import traceback
 from timeit import default_timer as timer
 
 import jsonpickle
@@ -471,6 +472,7 @@ def create_app():
             errors.append(ne)
         except Exception as e:
             print("Unknown error: {}".format(e))
+            traceback.print_tb(e.__traceback__)
         finally:
             # Set the next thread to happen
             real_process_time = timer() - current_time
