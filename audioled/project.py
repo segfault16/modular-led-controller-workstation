@@ -54,7 +54,7 @@ class Project(Updateable):
         if activeFilterGraph is not None:
             if self._device is not None and activeFilterGraph.getLEDOutput() is not None:
                 activeFilterGraph.process()
-                if activeFilterGraph.getLEDOutput()._outputBuffer[0] is not None:
+                if activeFilterGraph.getLEDOutput()._outputBuffer[0] is not None and self._device is not None:
                     self._device.show(activeFilterGraph.getLEDOutput()._outputBuffer[0])
 
     def setFiltergraphForSlot(self, slotId, filterGraph):
