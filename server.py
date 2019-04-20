@@ -595,6 +595,10 @@ if __name__ == '__main__':
             serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
         audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(
             serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
+        # Initialize global audio
+        globalAudio = audio.GlobalAudio(serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX))
+    else:
+        globalAudio = audio.GlobalAudio()
 
     # strand test
     if args.strand:
