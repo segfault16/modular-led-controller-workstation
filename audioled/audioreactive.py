@@ -825,7 +825,7 @@ class Oscilloscope(Effect):
             # get value
             val = downsampled_audio[valIdx]
             # convert to row idx
-            rowIdx = max(0, min(int(self._num_rows / 2 + val * self._num_rows / 2), self._num_rows-1))
+            rowIdx = max(0, min(int(self._num_rows / 2 + val * self._num_rows / 2), self._num_rows - 1))
             # set value for this col
             output[:, rowIdx, i] = color[:, i]
         self._outputBuffer[0] = output.reshape((3, -1))

@@ -33,57 +33,24 @@ def numInputChannels(device_index=None):
     return info['maxInputChannels']
 
 
-class AudioInput(Effect):
-    overrideDeviceIndex = None
-    global_stream = None
+class GlobalAudio():
+    device_index = None
+    buffer = None
+    chunk_rate = None
+    frame_rate = None
 
-    @staticmethod
-    def getEffectDescription():
-        return \
-            "Audio input captures audio from your device and " \
-            "makes each channel available as an output. "
-
-    def __init__(self,
-                 device_index=None,
-                 chunk_rate=60,
-                 num_channels=2,
-                 autogain_max=10.0,
-                 autogain=False,
-                 autogain_time=10.0):
-        self.device_index = device_index
-        self.chunk_rate = chunk_rate
+    def __init__(self, device_index=None, chunk_rate=60, num_channels=1):
+        GlobalAudio.device_index = device_index
+        GlobalAudio.chunk_rate = chunk_rate
         self.num_channels = num_channels
-        self.autogain_max = autogain_max
-        self.autogain = autogain
-        self.autogain_time = autogain_time
-        self.__initstate__()
+        self.global_stream, GlobalAudio.frame_rate = self.stream_audio(device_index, chunk_rate, num_channels)
 
-    def __initstate__(self):
-        super(AudioInput, self).__initstate__()
-        deviceIndex = self.device_index
-        if self.overrideDeviceIndex is not None:
-            #print("Using overrideDeviceIndex {} for audio".format(self.overrideDeviceIndex))
-            deviceIndex = self.overrideDeviceIndex
-            self.device_index = self.overrideDeviceIndex
-        try:
-            self._audioStream, self._sampleRate = self.stream_audio(
-                chunk_rate=self.chunk_rate, channels=self.num_channels, device_index=deviceIndex)
-            self._chunk_size = int(self._sampleRate / self.chunk_rate)
-        except Exception:
-            print("Error?")
-            self._sampleRate = 44800
-        self._buffer = []
-        
-        # increase cur_gain by percentage
-        # we want to get to self.autogain_max in approx. self.autogain_time seconds
-        min_value = 1. / self.autogain_max  # the minimum input value we want to bring to 1.0
-        N = self.chunk_rate * self.autogain_time  # N = chunks_per_second * autogain_time
-        # min_value * (perc)^N = 1.0?
-        # perc = root(1.0 / min_value, N) = (1./min_value)**(1/N)
-        self._autogain_perc = (1.0 / min_value)**float(1 / N)
-        self._cur_gain = 1.0
+    def _audio_callback(self, in_data, frame_count, time_info, status):
+        chunk = np.fromstring(in_data, np.float32).astype(np.float)
+        GlobalAudio.buffer = chunk
+        return (None, pyaudio.paContinue)
 
-    def _open_input_stream(self, device_index=None, channels=1, retry=0):
+    def _open_input_stream(self, chunk_length, device_index=None, channels=1, retry=0):
         """Opens a PyAudio audio input stream
 
         Parameters
@@ -106,13 +73,17 @@ class AudioInput(Effect):
             raise OSError(err)
 
         try:
+            frameRate = int(device_info['defaultSampleRate'])
             stream = p.open(
                 format=pyaudio.paFloat32,
                 channels=channels,
-                rate=int(device_info['defaultSampleRate']),
+                rate=frameRate,
                 input=True,
                 input_device_index=device_index,
-                frames_per_buffer=0)
+                frames_per_buffer=chunk_length,
+                stream_callback=self._audio_callback)
+            stream.start_stream()
+            print("Started stream on device {}, fs: {}, chunk_length: {}".format(device_index, frameRate, chunk_length))
         except OSError as e:
             if retry == 5:
                 err = 'Error occurred while attempting to open audio device. '
@@ -125,7 +96,7 @@ class AudioInput(Effect):
             return self._open_input_stream(device_index=device_index, channels=channels, retry=retry + 1)
         return stream, int(device_info['defaultSampleRate'])
 
-    def stream_audio(self, chunk_rate=60, ignore_overflows=True, device_index=None, channels=1):
+    def stream_audio(self, device_index=None, chunk_rate=60, channels=1):
         if device_index is None:
             print("No device_index for audio given. Using default.")
             p = pyaudio.PyAudio()
@@ -142,28 +113,41 @@ class AudioInput(Effect):
         samplerate = int(device_info['defaultSampleRate'])
 
         chunk_length = int(samplerate // chunk_rate)
+        return self._open_input_stream(chunk_length, device_index=device_index, channels=channels)
 
-        def audio_chunks():
-            fs = samplerate
-            while True:
-                try:
-                    if AudioInput.global_stream is None:
-                        AudioInput.global_stream, fs = self._open_input_stream(device_index, channels=channels)
-                    # Reading audio by default with exception_on_overflow=False
-                    # Exceptions on overflow result in hickups. Enable only for debugging.
-                    chunk = AudioInput.global_stream.read(chunk_length, exception_on_overflow=False)
-                except IOError as e:
-                    if e.errno == pyaudio.paInputOverflowed:
-                        print('Audio buffer full')
-                        if ignore_overflows:
-                            AudioInput.global_stream, fs = self._open_input_stream(device_index, channels=channels)
-                            continue
-                        else:
-                            raise e
-                chunk = np.fromstring(chunk, np.float32).astype(np.float)
-                yield chunk
 
-        return audio_chunks(), samplerate
+class AudioInput(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Audio input captures audio from your device and " \
+            "makes each channel available as an output. "
+
+    def __init__(self,
+                 num_channels=2,
+                 autogain_max=10.0,
+                 autogain=False,
+                 autogain_time=10.0):
+        self.num_channels = num_channels
+        self.autogain_max = autogain_max
+        self.autogain = autogain
+        self.autogain_time = autogain_time
+        self.__initstate__()
+
+    def __initstate__(self):
+        super(AudioInput, self).__initstate__()
+        self._buffer = []
+        print("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
+        
+        # increase cur_gain by percentage
+        # we want to get to self.autogain_max in approx. self.autogain_time seconds
+        min_value = 1. / self.autogain_max  # the minimum input value we want to bring to 1.0
+        N = GlobalAudio.chunk_rate * self.autogain_time  # N = chunks_per_second * autogain_time
+        # min_value * (perc)^N = 1.0?
+        # perc = root(1.0 / min_value, N) = (1./min_value)**(1/N)
+        self._autogain_perc = (1.0 / min_value)**float(1 / N)
+        self._cur_gain = 1.0
 
     def numOutputChannels(self):
         return self.num_channels
@@ -209,20 +193,17 @@ class AudioInput(Effect):
         return definition
 
     def getSampleRate(self):
-        return self._sampleRate
+        return GlobalAudio.frame_rate
 
     async def update(self, dt):
         await super(AudioInput, self).update(dt)
-        try:
-            self._buffer = next(self._audioStream)
-        except Exception:
-            print("Audio Input not supported.")
-            self._inputBuffer = None
+        self._buffer = GlobalAudio.buffer
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
-
+        if self._buffer is None or len(self._buffer) <= 0:
+            return
         if self.autogain:
             # determine max value -> in range 0,1
             maxVal = np.max(self._buffer)
