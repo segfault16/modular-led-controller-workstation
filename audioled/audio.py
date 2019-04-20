@@ -32,6 +32,7 @@ def numInputChannels(device_index=None):
     p.terminate()
     return info['maxInputChannels']
 
+
 class GlobalAudio():
     device_index = None
     buffer = None
@@ -148,8 +149,6 @@ class AudioInput(Effect):
         self._autogain_perc = (1.0 / min_value)**float(1 / N)
         self._cur_gain = 1.0
 
-
-
     def numOutputChannels(self):
         return self.num_channels
 
@@ -219,5 +218,3 @@ class AudioInput(Effect):
             # 00 01 .. 0n 10 11 .. 1n
             self._outputBuffer[i] = self._cur_gain * self._buffer[i::self.num_channels]
             # print("{}: {}".format(i, self._outputBuffer[i]))
-
-        #self._buffer = None
