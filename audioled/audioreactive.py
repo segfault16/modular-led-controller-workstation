@@ -814,14 +814,13 @@ class Oscilloscope(Effect):
             color = np.ones(cols) * np.array([[255], [255], [255]])
         
         output = np.zeros((3, self._num_rows, cols))
+        # First downsample to half the cols
+        decimation_ratio = np.round(len(audio) / cols * 2)
+        downsampled_audio = sp.signal.decimate(audio, int(decimation_ratio), ftype='fir', zero_phase=True)
+        # Then resample to the number of cols -> prevents jumping between positive and negative values
+        downsampled_audio = sp.signal.resample(downsampled_audio, cols)
         for i in range(0, cols):
-            # First downsample to half the cols
-            decimation_ratio = np.round(len(audio) / cols * 2)
-            downsampled_audio = sp.signal.decimate(audio, int(decimation_ratio), ftype='fir', zero_phase=True)
-            # Then resample to the number of cols -> prevents jumping between positive and negative values
-            downsampled_audio = sp.signal.resample(downsampled_audio, cols)
             # determine index in audio array
-
             valIdx = i
             # get value
             val = downsampled_audio[valIdx]
