@@ -49,7 +49,7 @@ Install dependencies using pip and the conda package manager
 ```bash
 conda install numpy scipy
 
-pip install pyaudio matplotlib jsonpickle flask mido python-rtmidi apscheduler
+pip install pyaudio matplotlib jsonpickle flask mido python-rtmidi apscheduler Pillow
 ```
 
 ## OpenPixelControl Visualization Server

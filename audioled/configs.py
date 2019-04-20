@@ -303,6 +303,20 @@ def createFallingStarsGraph():
     return fg
 
 
+def createGifPlayerGraph():
+    fg = filtergraph.FilterGraph(recordTimings=True)
+
+    led_out = devices.LEDOutput()
+    fg.addEffectNode(led_out)
+
+    gifPlayer = generative.GIFPlayer("gifs/nyancat.gif")
+    fg.addEffectNode(gifPlayer)
+
+    fg.addConnection(gifPlayer, 0, led_out, 0)
+
+    return fg
+
+
 def createPendulumGraph():
     fg = filtergraph.FilterGraph(recordTimings=True)
 

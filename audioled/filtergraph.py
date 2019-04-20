@@ -137,6 +137,7 @@ class FilterGraph(Updateable):
         self._updateTimings = {}
         self._processTimings = {}
         self._outputNode = None
+        self._project = None
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         if self._outputNode is None:
@@ -216,7 +217,7 @@ class FilterGraph(Updateable):
         filterNode: node to add
         """
         #print("add node {}".format(effect))
-
+        effect._filterGraph = self
         node = Node(effect)
         node.uid = uuid.uuid4().hex
         if isinstance(effect, devices.LEDOutput):

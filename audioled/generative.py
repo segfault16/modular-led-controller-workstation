@@ -4,12 +4,16 @@ import math
 import random
 import threading
 from collections import OrderedDict
+import os.path
 
 import numpy as np
 import scipy as sp
 from scipy import signal as signal
 
 from audioled.effect import Effect
+
+from PIL import Image, ImageOps
+
 
 wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
 wave_mode_default = 'sin'
@@ -1158,3 +1162,106 @@ class Sorting(Effect):
 
         self._output = self.bubble(self._output, self.sortby, self.reversed, self.looping)
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+
+
+class GIFPlayer(Effect):
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect for displaying GIFs on LED panels."
+
+    def __init__(self, gif_file, fps=30, center_x=0.5, center_y=0.5):
+        self.file = gif_file
+        self.fps = fps
+        self.center_x = center_x
+        self.center_y = center_y
+        self.__initstate__()
+
+    def __initstate__(self):
+        super(GIFPlayer, self).__initstate__()
+        self._last_t = 0.0
+        self._cur_index = 0
+        self._cur_image = None
+        self._gif = None
+        self._openGif()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("fps", [30, 0, 120, 0.1]),
+                ("center_x", [0.5, 0, 1, 0.01]),
+                ("center_y", [0.5, 0, 1, 0.01]),
+                ("file", ['gif', None])
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "fps":
+                "The number of frames per second for GIF playback.",
+                "center_x":
+                "Moves the GIF left or right if the image is being cropped.",
+                "center_y":
+                "Moves the GIF up or down if the image is being cropped.",
+                "file":
+                "The GIF to show."
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['fps'][0] = self.fps
+        definition['parameters']['center_x'][0] = self.center_x
+        definition['parameters']['center_y'][0] = self.center_y
+        definition['parameters']['file'][1] = self.file
+        return definition
+
+    def numInputChannels(self):
+        return 0
+
+    def numOutputChannels(self):
+        return 1
+
+    def _openGif(self):
+        adjustedFile = self.file
+        if self.file is None:
+            return
+        if self._filterGraph is not None and self._filterGraph._project is not None and self._filterGraph._project._contentRoot is not None:
+            adjustedFile = os.path.join(self._filterGraph._project._contentRoot, self.file)
+        try:
+            self._gif = Image.open(adjustedFile)
+        except Exception:
+            print("Cannot open file {}".format(adjustedFile))
+
+    async def update(self, dt):
+        await super().update(dt)
+        if self._t - self._last_t > 1.0 / self.fps:
+            # go to next image
+            try:
+                self._gif.seek(self._gif.tell() + 1)
+            except Exception:
+                self._openGif()
+            
+            num_cols = int(self._num_pixels / self._num_rows)
+            # Resize image
+            if self._gif is not None:
+                self._cur_image = ImageOps.fit(self._gif.convert('RGB'), (num_cols, self._num_rows), Image.ANTIALIAS, centering=(self.center_x, self.center_y))
+            # update time
+            self._last_t = self._t
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if self._cur_image is not None:
+
+            img = np.asarray(self._cur_image, dtype=np.uint8)
+            img = img.reshape(-1, img.shape[-1]).T
+            self._outputBuffer[0] = img

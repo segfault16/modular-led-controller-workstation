@@ -32,12 +32,13 @@ testblobConf = 'testblob'
 bonfireConf = 'bonfire'
 generatewavesConf = 'generatewaves'
 sortingConf = 'sorting'
+gifConf = 'gif'
 panelConf = 'panel'
 oscilloscopeConf = 'oscilloscope'
 configChoices = [
     movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf,
     breathingConf, heartbeatConf, pendulumConf, rpendulumConf, keyboardConf, keyboardSpringConf, testblobConf,
-    bonfireConf, generatewavesConf, sortingConf, panelConf, oscilloscopeConf
+    bonfireConf, generatewavesConf, sortingConf, gifConf, panelConf, oscilloscopeConf
 ]
 
 deviceRasp = 'RaspberryPi'
@@ -144,6 +145,8 @@ def createFilterGraph(config, num_pixels):
         return configs.createGenerateWavesGraph()
     elif config == sortingConf:
         return configs.createSortingGraph()
+    elif config == gifConf:
+        return configs.createGifPlayerGraph()
     elif config == panelConf:
         return configs.createPanelPendulum()
     elif config == oscilloscopeConf:

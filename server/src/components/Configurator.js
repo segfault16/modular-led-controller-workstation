@@ -11,8 +11,15 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Typography from '@material-ui/core/Typography';
 import Tooltip from '@material-ui/core/Tooltip'
 
+import ProjectService from '../services/ProjectService'
+
 const styles = theme => ({
+    image : {
+        maxWidth: '100px',
+        maxHeight: '100px'
+      }
 });
+
 
 class Configurator extends Component {
     constructor(props) {
@@ -102,22 +109,53 @@ class Configurator extends Component {
         </React.Fragment>
     }
 
+    handleGifUpload = async (event, parameterName) => {
+        await ProjectService.uploadProjectAsset(event).then( res => this.handleParameterChange(res['filename'], parameterName))
+    }
+
+    domCreateParameterGif = (parameters, values, parameterName) => {
+        return <React.Fragment>
+            <Grid container xs={7} justify="flex-end">
+                <img src={"project/assets/" + values[parameterName]} role="presentation" style={{maxWidht: '100px', maxHeight: '100px'}} />
+            </Grid>
+            <Grid item xs={2}>
+            <Typography>
+            <input type="file" id="gif-input" onChange={(e) => this.handleGifUpload(e, parameterName)} style={{ display: 'none' }} />
+                  <label htmlFor="gif-input">
+                  
+                  <Button component="span" variant="contained" size="small">
+                  Upload
+                      
+                    </Button>                    
+                  </label>
+            </Typography>
+            </Grid>
+        </React.Fragment>
+    }
+
     domCreateConfigList = (parameters, values, parameterHelp) => {
         if (parameters) {
             return Object.keys(parameters).map((data, index) => {
                 let control;
-                if (parameters[data] instanceof Array) {
-                    if (parameters[data].some(isNaN)) {
-                        // Array of non-numbers -> DropDown
-                        control = this.domCreateParameterDropdown(parameters, values, data);
-
-                    } else if (!parameters[data].some(isNaN)) {
-                        // Array of numbers -> Slider
-                        control = this.domCreateParameterSlider(parameters, values, data);
+                try {
+                    if (parameters[data] instanceof Array) {
+                        if (parameters[data].length >= 2 && parameters[data][0] == 'gif') {
+                            control = this.domCreateParameterGif(parameters, values, data);
+                        }
+                        else if (parameters[data].length == 4 && !parameters[data].some(isNaN)) {
+                            // Array of numbers -> Slider
+                            control = this.domCreateParameterSlider(parameters, values, data);
+                        }
+                        else if (parameters[data].some(isNaN)) {
+                            // Array of non-numbers -> DropDown
+                            control = this.domCreateParameterDropdown(parameters, values, data);
+                        } 
+                    } else if (typeof (parameters[data]) === "boolean") {
+                        // Simple boolean -> Checkbox
+                        control = this.domCreateParameterCheckbox(parameters, values, data);
                     }
-                } else if (typeof (parameters[data]) === "boolean") {
-                    // Simple boolean -> Checkbox
-                    control = this.domCreateParameterCheckbox(parameters, values, data);
+                } catch (error) {
+                    console.error("Cannot create configurator entry for "+data, error)
                 }
                 if (control) {
                     var helpText = (parameterHelp != null && data in parameterHelp) ? parameterHelp[data] : "";

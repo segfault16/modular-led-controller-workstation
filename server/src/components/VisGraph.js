@@ -50,6 +50,7 @@ import batmanIcon from '../../img/audioled.panelize.MakeBatman.png'
 import labyrinthIcon from '../../img/audioled.panelize.MakeLabyrinth.png'
 import keyboardIcon from '../../img/audioled.generative.MidiKeyboard.png'
 import candyIcon from '../../img/audioled.input.CandyServer.png'
+import gifIcon from '../../img/audioled.generative.GIFPlayer.png'
 
 import FilterGraphConfigurationService from "../services/FilterGraphConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
@@ -86,7 +87,8 @@ var icons = {
   'audioled.panelize.MakeBatman': batmanIcon,
   'audioled.panelize.MakeLabyrinth': labyrinthIcon,
   'audioled.generative.MidiKeyboard': keyboardIcon,
-  'audioled.input.CandyServer': candyIcon
+  'audioled.input.CandyServer': candyIcon,
+  'audioled.generative.GIFPlayer': gifIcon,
 
 }
 

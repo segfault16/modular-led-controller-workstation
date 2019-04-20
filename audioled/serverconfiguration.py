@@ -4,6 +4,7 @@ import jsonpickle
 import json
 import os.path
 import hashlib
+import io
 
 CONFIG_NUM_PIXELS = 'num_pixels'
 CONFIG_NUM_ROWS = 'num_rows'
@@ -89,6 +90,7 @@ class ServerConfiguration:
         proj.setFiltergraphForSlot(13, second)
         proj.activateSlot(12)
         projectUid = uuid.uuid4().hex
+        proj.id = projectUid
         self._projects[projectUid] = proj
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
         self._config[CONFIG_ACTIVE_PROJECT] = projectUid
@@ -99,6 +101,7 @@ class ServerConfiguration:
         if uid in self._projects:
             proj = self._projects[uid]
             proj.setDevice(self._createOutputDevice())
+            proj.id = uid
             return proj
         return None
 
@@ -143,6 +146,12 @@ class ServerConfiguration:
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
         return self.getProjectMetadata(projectUid)
 
+    def updateMd5HashFromFiles(self):
+        pass
+
+    def postStore(self):
+        pass
+
     def _store(self):
         pass
 
@@ -186,6 +195,20 @@ class ServerConfiguration:
 
     def store(self):
         pass
+    
+    def getProjectAsset(self, projectUid, location):
+        if os.path.exists(location):
+            filename = os.path.basename(location)
+            mimetype = None
+            if filename.endswith('.gif'):
+                mimetype = 'image/gif'
+            with open(location, 'rb') as b:
+                return [io.BytesIO(b.read()), filename, mimetype]
+        print("Cannot find project asset {}".format(location))
+        return None
+    
+    def addProjectAsset(self, projectUid, file):
+        raise RuntimeError("Cannot add project asset for in-memory server configuration")
 
 
 class PersistentConfiguration(ServerConfiguration):
@@ -277,6 +300,15 @@ class PersistentConfiguration(ServerConfiguration):
                     os.makedirs(path)
                 self._writeProject(proj, projFile)
                 self._lastProjectHashs[key] = projHash
+    
+    def postStore(self):
+        for key, proj in self._projects.items():
+            projMeta = self._projectMetadatas[key]
+            if projMeta is None:
+                continue
+            if proj._contentRoot is None or proj._contentRoot != os.path.dirname(projMeta['location']):
+                print("Adjusting content root for project {}".format(key))
+                proj._contentRoot = os.path.dirname(projMeta['location'])
 
     def updateMd5HashFromFiles(self):
         for key, proj in self._projects.items():
@@ -288,6 +320,20 @@ class PersistentConfiguration(ServerConfiguration):
                     hash_md5.update(chunk)
             self._lastProjectHashs[key] = hash_md5.hexdigest()
 
+    def getProjectAsset(self, projectUid, location):
+        projMeta = self._projectMetadatas[projectUid]
+        fname = projMeta['location']
+        dirname = os.path.dirname(fname)
+        return super().getProjectAsset(projectUid, os.path.join(dirname, location))
+    
+    def addProjectAsset(self, projectUid, file):
+        projMeta = self._projectMetadatas[projectUid]
+        fname = projMeta['location']
+        dirname = os.path.dirname(fname)
+        fullpath = os.path.join(dirname, file.filename)
+        file.save(fullpath)
+        return file.filename
+            
     def _getStoreConfig(self):
         return json.dumps(self._config, indent=4, sort_keys=True)
 
@@ -347,7 +393,7 @@ class PersistentConfiguration(ServerConfiguration):
     def _getProjectPath(self):
         return os.path.join(self.storageLocation, "projects")
 
-    def _readProjectMetadata(self, filepath, projUid):
+    def _readProjectMetadata(self, filepath, fallbackUid):
         with open(filepath, "r", encoding='utf-8') as fc:
             content = fc.read()
             projData = json.loads(content)
@@ -365,7 +411,11 @@ class PersistentConfiguration(ServerConfiguration):
                 data['description'] = description
             else:
                 data['description'] = ''
-            data['id'] = projUid
+            uid = p.get("id")
+            if uid is not None:
+                data['id'] = uid
+            else:
+                data['id'] = fallbackUid
             data['location'] = filepath
             return data
 
@@ -387,6 +437,7 @@ class PersistentConfiguration(ServerConfiguration):
         with open(filepath, "r", encoding='utf-8') as fc:
             content = fc.read()
             proj = jsonpickle.decode(content)
+            proj._contentRoot = os.path.dirname(filepath)
             proj.setDevice(self._createOutputDevice())
             return proj
 
