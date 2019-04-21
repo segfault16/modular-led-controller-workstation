@@ -1,16 +1,21 @@
 import { saveAs } from 'file-saver';
+function handleErrors(response) {
+    if (!response.ok) {
+        console.error(response)
+        throw Error(response.status);
+    }
+    return response;
+}
 
 const ProjectService = {
     getProjects: function() {
-        return fetch('./projects').then(res => res.json()).then(dict => this._toArrayData(dict))
+        return fetch('./projects').then(handleErrors).then(res => res.json()).then(dict => this._toArrayData(dict))
     },
     deleteProject: function(uid) {
         return fetch('./projects/'+uid, {
             method: 'DELETE'
-        }).then(res => {
+        }).then(handleErrors).then(res => {
             console.debug('Delete project successful:', uid);
-        }).catch(error => {
-            console.error('Error on deleting project:', error)
         })
     },
     exportProject: async function(uid) {
@@ -19,7 +24,7 @@ const ProjectService = {
         } catch (e) {
             console.error("FileSaver not supported")
         }
-        await fetch('./projects/'+uid+'/export').then(response => response.json()).then(json => {
+        await fetch('./projects/'+uid+'/export').then(handleErrors).then(response => response.json()).then(json => {
             var blob = new Blob([JSON.stringify(json, null, 4)], { type: "text/plain;charset=utf-8" });
             saveAs(blob, uid + ".json");
         })
@@ -32,7 +37,7 @@ const ProjectService = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        })
+        }).then(handleErrors)
     },
     createProject: function(title, description) {
         var postData = {
@@ -45,7 +50,7 @@ const ProjectService = {
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then(res => res.json())
+        }).then(handleErrors).then(res => res.json())
     },
     importProject: async function (e) {
         var file = e.target.files[0];
@@ -73,9 +78,6 @@ const ProjectService = {
                 console.log("Successfully loaded");
                 return res
             })
-        .catch(error => {
-            console.error('Error on uploading asset:', error);
-        })
     },
     _importProject: async function (contents) {
         console.log("Load config from service")
@@ -86,14 +88,11 @@ const ProjectService = {
                 'Content-Type': 'application/json'
             }
         })
-        .then(
+        .then(handleErrors).then(
             (res) => {
                 console.log("Successfully loaded");
                 return res
             })
-        .catch(error => {
-            console.error('Error on loading configuration:', error);
-        })
 
     },
     _readUploadedFileAsBinary: function (inputFile) {

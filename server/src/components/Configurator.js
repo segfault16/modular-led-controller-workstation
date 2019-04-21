@@ -10,6 +10,7 @@ import Select from '@material-ui/core/Select';
 import Checkbox from '@material-ui/core/Checkbox';
 import Typography from '@material-ui/core/Typography';
 import Tooltip from '@material-ui/core/Tooltip'
+import { withSnackbar } from 'notistack';
 
 import ProjectService from '../services/ProjectService'
 
@@ -110,7 +111,10 @@ class Configurator extends Component {
     }
 
     handleGifUpload = async (event, parameterName) => {
-        await ProjectService.uploadProjectAsset(event).then( res => this.handleParameterChange(res['filename'], parameterName))
+        await ProjectService.uploadProjectAsset(event).then( res => this.handleParameterChange(res['filename'], parameterName)).catch(err => {
+            console.error("Error uploading asset:", err);
+            this.props.enqueueSnackbar("Error uploading asset. Check console for details.", { variant: 'error' })
+        })
     }
 
     domCreateParameterGif = (parameters, values, parameterName) => {
@@ -197,4 +201,4 @@ Configurator.propTypes = {
     onChange: PropTypes.func
 };
 
-export default withStyles(styles)(Configurator);
+export default withSnackbar(withStyles(styles)(Configurator));

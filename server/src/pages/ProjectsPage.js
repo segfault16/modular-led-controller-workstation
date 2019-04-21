@@ -21,6 +21,7 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 
 import ProjectService from '../services/ProjectService';
 import ConfigurationService from '../services/ConfigurationService';
+import { withSnackbar } from 'notistack';
 
 const styles = theme => ({
     toggleContainer: {
@@ -71,21 +72,31 @@ class ProjectsPage extends Component {
                 projects: res,
                 activeProject: activeProj ? activeProj.id : null
             })
+        }).catch(err => {
+            console.error("Error getting projects:", err);
+            this.props.enqueueSnackbar("Error getting projects. Check console for details.", { variant: 'error' })
         })
     }
 
     handleProjectLoad = (proj) => {
         console.log("load", proj)
-        ProjectService.activateProject(proj.id).then(
+        ProjectService.activateProject(proj.id).then(res => {
             this.setState({
                 activeProject: proj.id
             })
-        )
+        }
+        ).catch(err => {
+            console.error("Error loading project:", err);
+            this.props.enqueueSnackbar("Error loading project. Check console for details.", { variant: 'error' })
+        })
     }
 
     handleProjectExport = async (proj) => {
         console.log("export", proj)
-        return ProjectService.exportProject(proj.id)
+        return ProjectService.exportProject(proj.id).catch(err => {
+            console.error("Error exporting project project:", err);
+            this.props.enqueueSnackbar("Error exporting project. Check console for details.", { variant: 'error' })
+        })
     }
 
     handleProjectDelete = (proj) => {
@@ -96,6 +107,9 @@ class ProjectsPage extends Component {
                     projects: oldState.projects.filter(p => p.id != proj.id)
                 }
             })
+        }).catch(err => {
+            console.error("Error deleting project:", err);
+            this.props.enqueueSnackbar("Error deleting project. Check console for details.", { variant: 'error' })
         })
     }
 
@@ -107,6 +121,9 @@ class ProjectsPage extends Component {
                     projects: [...oldState.projects, res]
                 }
             })
+        }).catch(err => {
+            console.error("Error creating project:", err);
+            this.props.enqueueSnackbar("Error creating project. Check console for details.", { variant: 'error' })
         })
     }
 
@@ -118,6 +135,9 @@ class ProjectsPage extends Component {
                     projects: [...oldState.projects, res]
                 }
             })
+        }).catch(err => {
+            console.error("Error importing project:", err);
+            this.props.enqueueSnackbar("Error importing project. Check console for details.", { variant: 'error' })
         })
     }
 
@@ -218,5 +238,4 @@ class ProjectsPage extends Component {
 ProjectsPage.propTypes = {
     classes: PropTypes.object.isRequired,
 };
-
-export default withStyles(styles)(ProjectsPage);
+export default withSnackbar(withStyles(styles)(ProjectsPage));

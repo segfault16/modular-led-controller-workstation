@@ -398,7 +398,15 @@ def create_app():
             abort(400)
         uid = request.json['project']
         print("Activating project {}".format(uid))
-        proj = serverconfig.activateProject(uid)
+        try:
+            proj = serverconfig.activateProject(uid)
+        except Exception as e:
+            print("Error opening project: {}".format(e))
+            if serverconfig._activeProject is None:
+                serverconfig.initDefaultProject()
+                abort(500, "Could not active project. No other project found. Initializing default.")
+            else:
+                abort(500, "Project could not be activated. Reason: {}".format(e))
         return "OK"
 
     @app.route('/configuration', methods=['GET'])

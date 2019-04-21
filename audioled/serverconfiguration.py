@@ -69,10 +69,7 @@ class ServerConfiguration:
             activeProj = self.getProject(activeProjectUid)
         except Exception as e:
             print("Error reading project {}: {}".format(activeProjectUid, e))
-            print("Initializing new default project")
-            activeProjectUid = self.initDefaultProject()
-            activeProj = self.getProject(activeProjectUid)
-            print("Default project initialized: {}".format(activeProjectUid))
+            raise e
         self._activeProject = activeProj
         return activeProj
 
@@ -116,7 +113,9 @@ class ServerConfiguration:
     def activateProject(self, uid):
         #if self._activeProject is not None:
             #self._activeProject.setDevice(None)
-        self._config[CONFIG_ACTIVE_PROJECT] = uid
+        proj = self.getProject(uid)
+        if proj is not None:
+            self._config[CONFIG_ACTIVE_PROJECT] = uid
         return self.getActiveProjectOrDefault()
 
     def getProjectsMetadata(self):
