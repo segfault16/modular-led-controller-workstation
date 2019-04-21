@@ -14,6 +14,7 @@ from scipy.signal import lfilter
 import audioled.colors as colors
 import audioled.dsp as dsp
 from audioled.effects import Effect
+from audioled.audio import GlobalAudio
 
 
 class Spectrum(Effect):
@@ -780,11 +781,51 @@ class FallingStars(Effect):
 
 class Oscilloscope(Effect):
 
-    def __init__(self):
-        return super().__init__()
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Displays audio as a wave signal over time."
+
+    def __init__(self,
+                 lowcut_hz=1.0,
+                 highcut_hz=22000.0):
+        self.lowcut_hz = lowcut_hz
+        self.highcut_hz = highcut_hz
+        self.__initstate__()
     
     def __initstate__(self):
-        return super().__initstate__()
+        super().__initstate__()
+        self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, max(self.highcut_hz, self.lowcut_hz), GlobalAudio.sample_rate, 3)
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("lowcut_hz", [1.0, 1.0, 8000.0, 1.0]),
+                ("highcut_hz", [22000.0, 0.0, 22000.0, 1.0])
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "lowcut_hz":
+                "Lowcut frequency of the audio input.",
+                "highcut_hz":
+                "Highcut frequency of the audio input."
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
+        definition['parameters']['highcut_hz'][0] = self.highcut_hz
+        return definition
 
     def numInputChannels(self):
         return 2
@@ -813,6 +854,9 @@ class Oscilloscope(Effect):
         else:
             color = np.ones(cols) * np.array([[255], [255], [255]])
         
+        # apply bandpass to audio
+        audio, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audio), zi=self._filter_zi)
+
         output = np.zeros((3, self._num_rows, cols))
         # First downsample to half the cols
         decimation_ratio = np.round(len(audio) / cols * 2)

@@ -37,13 +37,13 @@ class GlobalAudio():
     device_index = None
     buffer = None
     chunk_rate = None
-    frame_rate = None
+    sample_rate = None
 
     def __init__(self, device_index=None, chunk_rate=60, num_channels=1):
         GlobalAudio.device_index = device_index
         GlobalAudio.chunk_rate = chunk_rate
         self.num_channels = num_channels
-        self.global_stream, GlobalAudio.frame_rate = self.stream_audio(device_index, chunk_rate, num_channels)
+        self.global_stream, GlobalAudio.sample_rate = self.stream_audio(device_index, chunk_rate, num_channels)
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
         chunk = np.fromstring(in_data, np.float32).astype(np.float)
@@ -193,7 +193,7 @@ class AudioInput(Effect):
         return definition
 
     def getSampleRate(self):
-        return GlobalAudio.frame_rate
+        return GlobalAudio.sample_rate
 
     async def update(self, dt):
         await super(AudioInput, self).update(dt)
