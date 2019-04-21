@@ -247,6 +247,8 @@ class FilterGraph(Updateable):
         node = next(node for node in self._filterNodes if node.effect == effect)
         if node is not None:
             self._filterNodes.remove(node)
+            if node == self._outputNode:
+                self._outputNode = None
             if node in self._processOrder:
                 self._processOrder.remove(node)
                 self._updateProcessOrder()
