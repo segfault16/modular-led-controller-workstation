@@ -346,9 +346,7 @@ def create_app():
         if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ['gif']:
             print("Adding asset to proj {}".format(proj.id))
             filename = serverconfig.addProjectAsset(proj.id, file)
-            return jsonify({
-                'filename': filename
-            })
+            return jsonify({'filename': filename})
         print("Unknown content for asset: {}".format(file.filename))
         abort(400)
 
@@ -534,9 +532,6 @@ def strandTest(device, num_pixels):
 
 
 if __name__ == '__main__':
-    deviceRasp = 'RaspberryPi'
-    deviceCandy = 'FadeCandy'
-
     parser = argparse.ArgumentParser(description='MOLECOLE - A Modular LED Controller Workstation')
     parser.add_argument(
         '-C',
@@ -551,12 +546,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '-N', '--num_pixels', dest='num_pixels', type=int, default=None, help='number of pixels (default: 300)')
     parser.add_argument('-R', '--num_rows', dest='num_rows', type=int, default=None, help='number of rows (default: 1)')
+    deviceChoices = serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')
     parser.add_argument(
         '-D',
         '--device',
         dest='device',
         default=None,
-        choices=[deviceRasp, deviceCandy],
+        choices=deviceChoices,
         help='device to send RGB to (default: FadeCandy)')
     parser.add_argument(
         '--device_candy_server', dest='device_candy_server', default=None, help='Server for device FadeCandy')
@@ -641,21 +637,8 @@ if __name__ == '__main__':
 
     # strand test
     if args.strand:
-        device = None
-        if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
-            device = devices.RaspberryPi(
-                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
-                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
-            )
-        elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
-            device = devices.FadeCandy(
-                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
-                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
-                serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
-        else:
-            print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
-            exit
-        strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
+        strandTest(serverconfig.createOutputDevice(),
+                   serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # Initialize project
     proj = serverconfig.getActiveProjectOrDefault()

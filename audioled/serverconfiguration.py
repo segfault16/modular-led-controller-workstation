@@ -49,7 +49,7 @@ class ServerConfiguration:
         ]:
             print("Renewing device")
             self._reusableDevice = None
-            self.getActiveProjectOrDefault().setDevice(self._createOutputDevice())
+            self.getActiveProjectOrDefault().setDevice(self._createOrReuseOutputDevice())
 
     def getConfiguration(self, key):
         if key in self._config:
@@ -75,7 +75,7 @@ class ServerConfiguration:
 
     def initDefaultProject(self):
         # Initialize default project
-        proj = project.Project("Default project", "This is the default project.", self._createOutputDevice())
+        proj = project.Project("Default project", "This is the default project.", self._createOrReuseOutputDevice())
         # Initialize filtergraph
         # fg = configs.createSpectrumGraph(num_pixels, device)
         # fg = configs.createMovingLightGraph(num_pixels, device)
@@ -99,7 +99,7 @@ class ServerConfiguration:
     def getProject(self, uid):
         if uid in self._projects:
             proj = self._projects[uid]
-            proj.setDevice(self._createOutputDevice())
+            proj.setDevice(self._createOrReuseOutputDevice())
             proj.id = uid
             return proj
         return None
@@ -112,7 +112,7 @@ class ServerConfiguration:
 
     def activateProject(self, uid):
         #if self._activeProject is not None:
-            #self._activeProject.setDevice(None)
+        #self._activeProject.setDevice(None)
         proj = self.getProject(uid)
         if proj is not None:
             self._config[CONFIG_ACTIVE_PROJECT] = uid
@@ -130,7 +130,7 @@ class ServerConfiguration:
         return data
 
     def createEmptyProject(self, title, description):
-        proj = project.Project(title, description, self._createOutputDevice())
+        proj = project.Project(title, description, self._createOrReuseOutputDevice())
         projectUid = uuid.uuid4().hex
         self._projects[projectUid] = proj
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
@@ -142,7 +142,7 @@ class ServerConfiguration:
         if not isinstance(proj, project.Project):
             raise RuntimeError("Imported object is not a project")
         projectUid = uuid.uuid4().hex
-        proj.setDevice(self._createOutputDevice())
+        proj.setDevice(self._createOrReuseOutputDevice())
         self._projects[projectUid] = proj
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
         return self.getProjectMetadata(projectUid)
@@ -159,19 +159,21 @@ class ServerConfiguration:
     def _load(self):
         pass
 
-    def _createOutputDevice(self):
+    def _createOrReuseOutputDevice(self):
         if self._reusableDevice is not None:
             return self._reusableDevice
-        device = None
-        print("Injecting device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
+        device = self.createOutputDevice()
+        self._reusableDevice = device
+        return device
+
+    def createOutputDevice(self):
+        print("Creating device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
             device = devices.RaspberryPi(
-                self.getConfiguration(CONFIG_NUM_PIXELS), 
-                self.getConfiguration(CONFIG_NUM_ROWS))
+                self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS))
         elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
             device = devices.FadeCandy(
-                self.getConfiguration(CONFIG_NUM_PIXELS), 
-                self.getConfiguration(CONFIG_NUM_ROWS),
+                self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS),
                 self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
@@ -187,7 +189,6 @@ class ServerConfiguration:
                     print("Active pixel mapping: {}".format(mappingFile))
             else:
                 raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
-        self._reusableDevice = device
         return device
 
     def _metadataForProject(self, project, projectUid):
@@ -199,7 +200,7 @@ class ServerConfiguration:
 
     def store(self):
         pass
-    
+
     def getProjectAsset(self, projectUid, location):
         if os.path.exists(location):
             filename = os.path.basename(location)
@@ -210,7 +211,7 @@ class ServerConfiguration:
                 return [io.BytesIO(b.read()), filename, mimetype]
         print("Cannot find project asset {}".format(location))
         return None
-    
+
     def addProjectAsset(self, projectUid, file):
         raise RuntimeError("Cannot add project asset for in-memory server configuration")
 
@@ -304,7 +305,7 @@ class PersistentConfiguration(ServerConfiguration):
                     os.makedirs(path)
                 self._writeProject(proj, projFile)
                 self._lastProjectHashs[key] = projHash
-    
+
     def postStore(self):
         for key, proj in self._projects.items():
             projMeta = self._projectMetadatas[key]
@@ -329,7 +330,7 @@ class PersistentConfiguration(ServerConfiguration):
         fname = projMeta['location']
         dirname = os.path.dirname(fname)
         return super().getProjectAsset(projectUid, os.path.join(dirname, location))
-    
+
     def addProjectAsset(self, projectUid, file):
         projMeta = self._projectMetadatas[projectUid]
         fname = projMeta['location']
@@ -337,7 +338,7 @@ class PersistentConfiguration(ServerConfiguration):
         fullpath = os.path.join(dirname, file.filename)
         file.save(fullpath)
         return file.filename
-            
+
     def _getStoreConfig(self):
         return json.dumps(self._config, indent=4, sort_keys=True)
 
@@ -442,7 +443,7 @@ class PersistentConfiguration(ServerConfiguration):
             content = fc.read()
             proj = jsonpickle.decode(content)
             proj._contentRoot = os.path.dirname(filepath)
-            proj.setDevice(self._createOutputDevice())
+            proj.setDevice(self._createOrReuseOutputDevice())
             return proj
 
     def _writeProject(self, proj, projFile):
