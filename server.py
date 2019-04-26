@@ -641,21 +641,10 @@ if __name__ == '__main__':
 
     # strand test
     if args.strand:
-        device = None
-        if serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceRasp:
-            device = devices.RaspberryPi(
-                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
-                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
-            )
-        elif serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE) == deviceCandy:
-            device = devices.FadeCandy(
-                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS),
-                serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_ROWS),
-                serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER))
-        else:
-            print("Unknown device: {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_DEVICE)))
-            exit
-        strandTest(device, serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
+        strandTest(
+            serverconfig.createOutputDevice()
+            , serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
+        )
 
     # Initialize project
     proj = serverconfig.getActiveProjectOrDefault()

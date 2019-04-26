@@ -49,7 +49,7 @@ class ServerConfiguration:
         ]:
             print("Renewing device")
             self._reusableDevice = None
-            self.getActiveProjectOrDefault().setDevice(self._createOutputDevice())
+            self.getActiveProjectOrDefault().setDevice(self.createOutputDevice())
 
     def getConfiguration(self, key):
         if key in self._config:
@@ -75,7 +75,7 @@ class ServerConfiguration:
 
     def initDefaultProject(self):
         # Initialize default project
-        proj = project.Project("Default project", "This is the default project.", self._createOutputDevice())
+        proj = project.Project("Default project", "This is the default project.", self.createOutputDevice())
         # Initialize filtergraph
         # fg = configs.createSpectrumGraph(num_pixels, device)
         # fg = configs.createMovingLightGraph(num_pixels, device)
@@ -99,7 +99,7 @@ class ServerConfiguration:
     def getProject(self, uid):
         if uid in self._projects:
             proj = self._projects[uid]
-            proj.setDevice(self._createOutputDevice())
+            proj.setDevice(self.createOutputDevice())
             proj.id = uid
             return proj
         return None
@@ -130,7 +130,7 @@ class ServerConfiguration:
         return data
 
     def createEmptyProject(self, title, description):
-        proj = project.Project(title, description, self._createOutputDevice())
+        proj = project.Project(title, description, self.createOutputDevice())
         projectUid = uuid.uuid4().hex
         self._projects[projectUid] = proj
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
@@ -142,7 +142,7 @@ class ServerConfiguration:
         if not isinstance(proj, project.Project):
             raise RuntimeError("Imported object is not a project")
         projectUid = uuid.uuid4().hex
-        proj.setDevice(self._createOutputDevice())
+        proj.setDevice(self.createOutputDevice())
         self._projects[projectUid] = proj
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
         return self.getProjectMetadata(projectUid)
@@ -159,20 +159,22 @@ class ServerConfiguration:
     def _load(self):
         pass
 
-    def _createOutputDevice(self):
+    def createOutputDevice(self):
         if self._reusableDevice is not None:
             return self._reusableDevice
         device = None
         print("Injecting device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
             device = devices.RaspberryPi(
-                self.getConfiguration(CONFIG_NUM_PIXELS), 
-                self.getConfiguration(CONFIG_NUM_ROWS))
+                    self.getConfiguration(CONFIG_NUM_PIXELS)
+                    , self.getConfiguration(CONFIG_NUM_ROWS)
+                )
         elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
             device = devices.FadeCandy(
-                self.getConfiguration(CONFIG_NUM_PIXELS), 
-                self.getConfiguration(CONFIG_NUM_ROWS),
-                self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
+                    self.getConfiguration(CONFIG_NUM_PIXELS)
+                    , self.getConfiguration(CONFIG_NUM_ROWS)
+                    , self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER)
+                )
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) is not None and self.getConfiguration(
@@ -442,7 +444,7 @@ class PersistentConfiguration(ServerConfiguration):
             content = fc.read()
             proj = jsonpickle.decode(content)
             proj._contentRoot = os.path.dirname(filepath)
-            proj.setDevice(self._createOutputDevice())
+            proj.setDevice(self.createOutputDevice())
             return proj
 
     def _writeProject(self, proj, projFile):
