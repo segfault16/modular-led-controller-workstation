@@ -346,9 +346,7 @@ def create_app():
         if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ['gif']:
             print("Adding asset to proj {}".format(proj.id))
             filename = serverconfig.addProjectAsset(proj.id, file)
-            return jsonify({
-                'filename': filename
-            })
+            return jsonify({'filename': filename})
         print("Unknown content for asset: {}".format(file.filename))
         abort(400)
 
@@ -548,12 +546,13 @@ if __name__ == '__main__':
     parser.add_argument(
         '-N', '--num_pixels', dest='num_pixels', type=int, default=None, help='number of pixels (default: 300)')
     parser.add_argument('-R', '--num_rows', dest='num_rows', type=int, default=None, help='number of rows (default: 1)')
+    deviceChoices = serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')
     parser.add_argument(
         '-D',
         '--device',
         dest='device',
         default=None,
-        choices=[serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')],
+        choices=deviceChoices,
         help='device to send RGB to (default: FadeCandy)')
     parser.add_argument(
         '--device_candy_server', dest='device_candy_server', default=None, help='Server for device FadeCandy')
@@ -638,10 +637,8 @@ if __name__ == '__main__':
 
     # strand test
     if args.strand:
-        strandTest(
-            serverconfig.createOutputDevice()
-            , serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
-        )
+        strandTest(serverconfig.createOutputDevice(),
+                   serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # Initialize project
     proj = serverconfig.getActiveProjectOrDefault()
