@@ -534,9 +534,6 @@ def strandTest(device, num_pixels):
 
 
 if __name__ == '__main__':
-    deviceRasp = 'RaspberryPi'
-    deviceCandy = 'FadeCandy'
-
     parser = argparse.ArgumentParser(description='MOLECOLE - A Modular LED Controller Workstation')
     parser.add_argument(
         '-C',
@@ -556,7 +553,7 @@ if __name__ == '__main__':
         '--device',
         dest='device',
         default=None,
-        choices=[deviceRasp, deviceCandy],
+        choices=[serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')],
         help='device to send RGB to (default: FadeCandy)')
     parser.add_argument(
         '--device_candy_server', dest='device_candy_server', default=None, help='Server for device FadeCandy')
