@@ -1,2 +1,3 @@
 [style]
 column_limit = 120
+SPLIT_ARGUMENTS_WHEN_COMMA_TERMINATED = true
