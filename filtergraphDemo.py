@@ -36,9 +36,27 @@ gifConf = 'gif'
 panelConf = 'panel'
 oscilloscopeConf = 'oscilloscope'
 configChoices = [
-    movingLightConf, spectrumConf, vu_peakConf, movingLightsConf, swimmingConf, defenceConf, proxyConf, fallingConf,
-    breathingConf, heartbeatConf, pendulumConf, rpendulumConf, keyboardConf, keyboardSpringConf, testblobConf,
-    bonfireConf, generatewavesConf, sortingConf, gifConf, panelConf, oscilloscopeConf
+    movingLightConf,
+    spectrumConf,
+    vu_peakConf,
+    movingLightsConf,
+    swimmingConf,
+    defenceConf,
+    proxyConf,
+    fallingConf,
+    breathingConf,
+    heartbeatConf,
+    pendulumConf,
+    rpendulumConf,
+    keyboardConf,
+    keyboardSpringConf,
+    testblobConf,
+    bonfireConf,
+    generatewavesConf,
+    sortingConf,
+    gifConf,
+    panelConf,
+    oscilloscopeConf,
 ]
 
 deviceRasp = 'RaspberryPi'
