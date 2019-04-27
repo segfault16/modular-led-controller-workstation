@@ -177,6 +177,8 @@ class ServerConfiguration:
                 )
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
+            return None
+
         if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) is not None and self.getConfiguration(
                 CONFIG_DEVICE_PANEL_MAPPING) != '':
             mappingFile = self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
