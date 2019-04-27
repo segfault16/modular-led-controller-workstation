@@ -159,11 +159,15 @@ class ServerConfiguration:
     def _load(self):
         pass
 
+    def _createOrReuseOutputDevice(self):
+        if self._reusableDevice is not None:
+            return self._reusableDevice
+        device = self.createOutputDevice()
+        self._reusableDevice = device
+        return device
+
     def createOutputDevice(self):
-        if self._reusableDevice: return self._reusableDevice
-
-        print("Injecting device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
-
+        print("Creating device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
             device = devices.RaspberryPi(
                     self.getConfiguration(CONFIG_NUM_PIXELS)
