@@ -160,10 +160,10 @@ class ServerConfiguration:
         pass
 
     def createOutputDevice(self):
-        if self._reusableDevice is not None:
-            return self._reusableDevice
-        device = None
+        if self._reusableDevice: return self._reusableDevice
+
         print("Injecting device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
+
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
             device = devices.RaspberryPi(
                     self.getConfiguration(CONFIG_NUM_PIXELS)
@@ -179,15 +179,13 @@ class ServerConfiguration:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
             return None
 
-        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) is not None and self.getConfiguration(
-                CONFIG_DEVICE_PANEL_MAPPING) != '':
+        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) and self.getConfiguration(
+                CONFIG_DEVICE_PANEL_MAPPING):
             mappingFile = self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
             if os.path.exists(mappingFile):
                 with open(mappingFile, "r", encoding='utf-8') as f:
-                    content = f.read()
-                    mapping = json.loads(content)
-                    wrapper = devices.PanelWrapper(device, mapping)
-                    device = wrapper
+                    mapping = json.loads( f.read() )
+                    device = devices.PanelWrapper(device, mapping)
                     print("Active pixel mapping: {}".format(mappingFile))
             else:
                 raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
