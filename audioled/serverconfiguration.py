@@ -177,26 +177,26 @@ class ServerConfiguration:
                 self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
-        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) is not None and self.getConfiguration(
-                CONFIG_DEVICE_PANEL_MAPPING) != '':
+            return None
+
+        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) and self.getConfiguration(
+                CONFIG_DEVICE_PANEL_MAPPING):
             mappingFile = self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
             if os.path.exists(mappingFile):
                 with open(mappingFile, "r", encoding='utf-8') as f:
-                    content = f.read()
-                    mapping = json.loads(content)
-                    wrapper = devices.PanelWrapper(device, mapping)
-                    device = wrapper
+                    mapping = json.loads( f.read() )
+                    device = devices.PanelWrapper(device, mapping)
                     print("Active pixel mapping: {}".format(mappingFile))
             else:
                 raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
         return device
 
     def _metadataForProject(self, project, projectUid):
-        data = {}
-        data['name'] = project.name
-        data['description'] = project.description
-        data['id'] = projectUid
-        return data
+        return {
+            'name' : project.name
+            , 'description' : project.description
+            , 'id' : projectUid
+        }
 
     def store(self):
         pass
@@ -400,29 +400,17 @@ class PersistentConfiguration(ServerConfiguration):
 
     def _readProjectMetadata(self, filepath, fallbackUid):
         with open(filepath, "r", encoding='utf-8') as fc:
-            content = fc.read()
-            projData = json.loads(content)
+            projData = json.loads(fc.read())
             p = projData.get("py/state")
-            data = {}
-            if p is None:
+            if not p:
                 raise RuntimeError("Not a project")
-            name = p.get("name")
-            if name is not None:
-                data['name'] = name
-            else:
-                data['name'] = ''
-            description = p.get("description")
-            if description is not None:
-                data['description'] = description
-            else:
-                data['description'] = ''
-            uid = p.get("id")
-            if uid is not None:
-                data['id'] = uid
-            else:
-                data['id'] = fallbackUid
-            data['location'] = filepath
-            return data
+
+            return {
+                'name' : p.get('name', '')
+                , 'description' : p.get('description', '')
+                , 'id'          : p.get('id', fallbackUid)
+                , 'location'    : filepath
+            }
 
     def _metadataForProject(self, project, projectUid):
         projData = super()._metadataForProject(project, projectUid)
