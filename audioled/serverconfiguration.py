@@ -193,11 +193,11 @@ class ServerConfiguration:
         return device
 
     def _metadataForProject(self, project, projectUid):
-        data = {}
-        data['name'] = project.name
-        data['description'] = project.description
-        data['id'] = projectUid
-        return data
+        return {
+            'name' : project.name
+            , 'description' : project.description
+            , 'id' : projectUid
+        }
 
     def store(self):
         pass
@@ -401,29 +401,17 @@ class PersistentConfiguration(ServerConfiguration):
 
     def _readProjectMetadata(self, filepath, fallbackUid):
         with open(filepath, "r", encoding='utf-8') as fc:
-            content = fc.read()
-            projData = json.loads(content)
+            projData = json.loads(fc.read())
             p = projData.get("py/state")
-            data = {}
-            if p is None:
+            if not p:
                 raise RuntimeError("Not a project")
-            name = p.get("name")
-            if name is not None:
-                data['name'] = name
-            else:
-                data['name'] = ''
-            description = p.get("description")
-            if description is not None:
-                data['description'] = description
-            else:
-                data['description'] = ''
-            uid = p.get("id")
-            if uid is not None:
-                data['id'] = uid
-            else:
-                data['id'] = fallbackUid
-            data['location'] = filepath
-            return data
+
+            return {
+                'name' : p.get('name', '')
+                , 'description' : p.get('description', '')
+                , 'id'          : p.get('id', fallbackUid)
+                , 'location'    : filepath
+            }
 
     def _metadataForProject(self, project, projectUid):
         projData = super()._metadataForProject(project, projectUid)
