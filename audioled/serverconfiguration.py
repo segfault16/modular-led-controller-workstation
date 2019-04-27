@@ -41,10 +41,7 @@ class ServerConfiguration:
         print("Updating {} to {}".format(key, value))
         self._config[key] = value
         if self._activeProject is not None and key in [
-                CONFIG_NUM_PIXELS, 
-                CONFIG_DEVICE, 
-                CONFIG_DEVICE_CANDY_SERVER, 
-                CONFIG_NUM_ROWS,
+                CONFIG_NUM_PIXELS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_NUM_ROWS,
                 CONFIG_DEVICE_PANEL_MAPPING
         ]:
             print("Renewing device")
@@ -112,7 +109,7 @@ class ServerConfiguration:
 
     def activateProject(self, uid):
         #if self._activeProject is not None:
-            #self._activeProject.setDevice(None)
+        #self._activeProject.setDevice(None)
         proj = self.getProject(uid)
         if proj is not None:
             self._config[CONFIG_ACTIVE_PROJECT] = uid
@@ -169,26 +166,20 @@ class ServerConfiguration:
     def createOutputDevice(self):
         print("Creating device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
-            device = devices.RaspberryPi(
-                    self.getConfiguration(CONFIG_NUM_PIXELS)
-                    , self.getConfiguration(CONFIG_NUM_ROWS)
-                )
+            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS),
+                                         self.getConfiguration(CONFIG_NUM_ROWS))
         elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
-            device = devices.FadeCandy(
-                    self.getConfiguration(CONFIG_NUM_PIXELS)
-                    , self.getConfiguration(CONFIG_NUM_ROWS)
-                    , self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER)
-                )
+            device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS),
+                                       self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
             return None
 
-        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) and self.getConfiguration(
-                CONFIG_DEVICE_PANEL_MAPPING):
+        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) and self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING):
             mappingFile = self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
             if os.path.exists(mappingFile):
                 with open(mappingFile, "r", encoding='utf-8') as f:
-                    mapping = json.loads( f.read() )
+                    mapping = json.loads(f.read())
                     device = devices.PanelWrapper(device, mapping)
                     print("Active pixel mapping: {}".format(mappingFile))
             else:
@@ -197,15 +188,11 @@ class ServerConfiguration:
         return device
 
     def _metadataForProject(self, project, projectUid):
-        return {
-            'name' : project.name
-            , 'description' : project.description
-            , 'id' : projectUid
-        }
+        return {'name': project.name, 'description': project.description, 'id': projectUid}
 
     def store(self):
         pass
-    
+
     def getProjectAsset(self, projectUid, location):
         if os.path.exists(location):
             filename = os.path.basename(location)
@@ -216,7 +203,7 @@ class ServerConfiguration:
                 return [io.BytesIO(b.read()), filename, mimetype]
         print("Cannot find project asset {}".format(location))
         return None
-    
+
     def addProjectAsset(self, projectUid, file):
         raise RuntimeError("Cannot add project asset for in-memory server configuration")
 
@@ -310,7 +297,7 @@ class PersistentConfiguration(ServerConfiguration):
                     os.makedirs(path)
                 self._writeProject(proj, projFile)
                 self._lastProjectHashs[key] = projHash
-    
+
     def postStore(self):
         for key, proj in self._projects.items():
             projMeta = self._projectMetadatas[key]
@@ -335,7 +322,7 @@ class PersistentConfiguration(ServerConfiguration):
         fname = projMeta['location']
         dirname = os.path.dirname(fname)
         return super().getProjectAsset(projectUid, os.path.join(dirname, location))
-    
+
     def addProjectAsset(self, projectUid, file):
         projMeta = self._projectMetadatas[projectUid]
         fname = projMeta['location']
@@ -343,7 +330,7 @@ class PersistentConfiguration(ServerConfiguration):
         fullpath = os.path.join(dirname, file.filename)
         file.save(fullpath)
         return file.filename
-            
+
     def _getStoreConfig(self):
         return json.dumps(self._config, indent=4, sort_keys=True)
 
@@ -411,17 +398,17 @@ class PersistentConfiguration(ServerConfiguration):
                 raise RuntimeError("Not a project")
 
             return {
-                'name' : p.get('name', '')
-                , 'description' : p.get('description', '')
-                , 'id'          : p.get('id', fallbackUid)
-                , 'location'    : filepath
+                'name': p.get('name', ''),
+                'description': p.get('description', ''),
+                'id': p.get('id', fallbackUid),
+                'location': filepath
             }
 
     def _metadataForProject(self, project, projectUid):
         projData = super()._metadataForProject(project, projectUid)
         # Add storage location to metadata
-        projData['location'] = os.path.join(
-            os.path.join(self._getProjectPath(), projectUid), "{}.json".format(projectUid))
+        projData['location'] = os.path.join(os.path.join(self._getProjectPath(), projectUid),
+                                            "{}.json".format(projectUid))
         print("Storage location for project {}: {}".format(projectUid, projData['location']))
         return projData
 
