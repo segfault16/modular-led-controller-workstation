@@ -97,6 +97,9 @@ class GlobalAudio():
         return stream, int(device_info['defaultSampleRate'])
 
     def stream_audio(self, device_index=None, chunk_rate=60, channels=1):
+        if device_index == -1:
+            print("Audio device disabled by device_index -1.")
+            return None, None
         if device_index is None:
             print("No device_index for audio given. Using default.")
             p = pyaudio.PyAudio()
