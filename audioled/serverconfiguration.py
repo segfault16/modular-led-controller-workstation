@@ -49,7 +49,7 @@ class ServerConfiguration:
         ]:
             print("Renewing device")
             self._reusableDevice = None
-            self.getActiveProjectOrDefault().setDevice(self.createOutputDevice())
+            self.getActiveProjectOrDefault().setDevice(self._createOrReuseOutputDevice())
 
     def getConfiguration(self, key):
         if key in self._config:
@@ -75,7 +75,7 @@ class ServerConfiguration:
 
     def initDefaultProject(self):
         # Initialize default project
-        proj = project.Project("Default project", "This is the default project.", self.createOutputDevice())
+        proj = project.Project("Default project", "This is the default project.", self._createOrReuseOutputDevice())
         # Initialize filtergraph
         # fg = configs.createSpectrumGraph(num_pixels, device)
         # fg = configs.createMovingLightGraph(num_pixels, device)
@@ -99,7 +99,7 @@ class ServerConfiguration:
     def getProject(self, uid):
         if uid in self._projects:
             proj = self._projects[uid]
-            proj.setDevice(self.createOutputDevice())
+            proj.setDevice(self._createOrReuseOutputDevice())
             proj.id = uid
             return proj
         return None
@@ -111,8 +111,6 @@ class ServerConfiguration:
             self._projectMetadatas.pop(uid)
 
     def activateProject(self, uid):
-        #if self._activeProject is not None:
-        #self._activeProject.setDevice(None)
         proj = self.getProject(uid)
         if proj is not None:
             self._config[CONFIG_ACTIVE_PROJECT] = uid
@@ -130,7 +128,7 @@ class ServerConfiguration:
         return data
 
     def createEmptyProject(self, title, description):
-        proj = project.Project(title, description, self.createOutputDevice())
+        proj = project.Project(title, description, self._createOrReuseOutputDevice())
         projectUid = uuid.uuid4().hex
         self._projects[projectUid] = proj
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
@@ -142,7 +140,7 @@ class ServerConfiguration:
         if not isinstance(proj, project.Project):
             raise RuntimeError("Imported object is not a project")
         projectUid = uuid.uuid4().hex
-        proj.setDevice(self.createOutputDevice())
+        proj.setDevice(self._createOrReuseOutputDevice())
         self._projects[projectUid] = proj
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
         return self.getProjectMetadata(projectUid)
@@ -188,7 +186,6 @@ class ServerConfiguration:
                     print("Active pixel mapping: {}".format(mappingFile))
             else:
                 raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
-        self._reusableDevice = device
         return device
 
     def _metadataForProject(self, project, projectUid):
@@ -427,7 +424,7 @@ class PersistentConfiguration(ServerConfiguration):
             content = fc.read()
             proj = jsonpickle.decode(content)
             proj._contentRoot = os.path.dirname(filepath)
-            proj.setDevice(self.createOutputDevice())
+            proj.setDevice(self._createOrReuseOutputDevice())
             return proj
 
     def _writeProject(self, proj, projFile):
