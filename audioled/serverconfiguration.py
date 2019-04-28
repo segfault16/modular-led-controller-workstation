@@ -41,8 +41,11 @@ class ServerConfiguration:
         print("Updating {} to {}".format(key, value))
         self._config[key] = value
         if self._activeProject is not None and key in [
-                CONFIG_NUM_PIXELS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_NUM_ROWS,
-                CONFIG_DEVICE_PANEL_MAPPING
+                CONFIG_NUM_PIXELS,
+                CONFIG_DEVICE,
+                CONFIG_DEVICE_CANDY_SERVER,
+                CONFIG_NUM_ROWS,
+                CONFIG_DEVICE_PANEL_MAPPING,
         ]:
             print("Renewing device")
             self._reusableDevice = None
