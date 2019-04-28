@@ -33,6 +33,7 @@ POOL_TIME = 0.0  # Seconds
 dataLock = threading.Lock()
 # thread handler
 ledThread = threading.Thread()
+stop_signal = False
 event_loop = None
 # timing
 current_time = None
@@ -70,8 +71,12 @@ def create_app():
     def interrupt():
         print('cancelling LED thread')
         global ledThread
-        ledThread.cancel()
-        ledThread.join()
+        stop_signal = True
+        try:
+            ledThread.join()
+        except RuntimeError:
+            pass
+
         print('LED thread cancelled')
 
     @app.after_request
@@ -450,6 +455,7 @@ def create_app():
     def processLED():
         global proj
         global ledThread
+        global stop_signal
         global event_loop
         global last_time
         global current_time
@@ -490,8 +496,9 @@ def create_app():
                     print("Process time: {}".format(real_process_time))
                     print("Waiting {}".format(timeToWait))
                 count = 0
-            ledThread = threading.Timer(timeToWait, processLED, ())
-            ledThread.start()
+            if not stop_signal:
+                ledThread = threading.Timer(timeToWait, processLED, ())
+                ledThread.start()
 
     def startLEDThread():
         # Do initialisation stuff here
@@ -534,6 +541,13 @@ def strandTest(device, num_pixels):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='MOLECOLE - A Modular LED Controller Workstation')
     parser.add_argument(
+        '-p',
+        '--port',
+        dest='port',
+        default='5000',
+        help='Port to listen on'
+    )
+    parser.add_argument(
         '-C',
         '--config_location',
         dest='config_location',
@@ -555,7 +569,7 @@ if __name__ == '__main__':
         choices=deviceChoices,
         help='device to send RGB to (default: FadeCandy)')
     parser.add_argument(
-        '--device_candy_server', dest='device_candy_server', default=None, help='Server for device FadeCandy')
+        '--device_candy_server', '-DCS', dest='device_candy_server', default=None, help='Server for device FadeCandy')
     parser.add_argument(
         '--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels')
     parser.add_argument(
@@ -648,4 +662,6 @@ if __name__ == '__main__':
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
 
     app = create_app()
-    app.run(debug=False, host="0.0.0.0")
+    app.run(debug=False, host="0.0.0.0", port=args.port)
+    print("End of server main")
+    stop_signal = True

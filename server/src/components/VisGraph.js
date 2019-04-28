@@ -149,7 +149,7 @@ class VisGraph extends React.Component {
             }
           } else if (this.state.mode === MODE_DELETE) {
             if (nodes.length == 1) {
-              this.deleteNode({ nodes: nodes, edges: edges }, data => {
+              this.confirmDeleteNode({ nodes: nodes, edges: edges }, data => {
                 this.setState(oldState => {
                   return {
                     graph: {
@@ -422,6 +422,11 @@ class VisGraph extends React.Component {
       }
     }
     
+  }
+
+  confirmDeleteNode = (data, callback) => {
+    window.confirm("Are you sure you want to delete the node?") &&
+          this.deleteNode(data, callback)
   }
 
   deleteNode = (data, callback) => {
