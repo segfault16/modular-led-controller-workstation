@@ -1,5 +1,4 @@
 #!flask/bin/python
-import argparse
 import asyncio
 import atexit
 import colorsys
@@ -10,7 +9,6 @@ import os.path
 import threading
 import time
 import multiprocessing
-import io
 import traceback
 from timeit import default_timer as timer
 
@@ -20,7 +18,7 @@ from flask import Flask, abort, jsonify, request, send_from_directory, redirect,
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, devices, effects, filtergraph, serverconfiguration
+from audioled import audio, devices, effects, filtergraph, serverconfiguration, runtimeconfiguration
 
 proj = None
 default_values = {}
@@ -188,8 +186,12 @@ def create_app():
         if not request.json:
             abort(400)
         json = request.json
-        connection = fg.addNodeConnection(json['from_node_uid'], int(json['from_node_channel']), json['to_node_uid'],
-                                          int(json['to_node_channel']))
+        connection = fg.addNodeConnection(
+            json['from_node_uid'],
+            int(json['from_node_channel']),
+            json['to_node_uid'],
+            int(json['to_node_channel']),
+        )
 
         return jsonpickle.encode(connection)
 
@@ -199,8 +201,12 @@ def create_app():
         fg = proj.getSlot(slotId)
         try:
             connection = next(connection for connection in fg._filterConnections if connection.uid == connectionUid)
-            fg.removeConnection(connection.fromNode.effect, connection.fromChannel, connection.toNode.effect,
-                                connection.toChannel)
+            fg.removeConnection(
+                connection.fromNode.effect,
+                connection.fromChannel,
+                connection.toNode.effect,
+                connection.toChannel,
+            )
             return "OK"
         except StopIteration:
             abort(404, "Node not found")
@@ -539,13 +545,20 @@ def strandTest(device, num_pixels):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='MOLECOLE - A Modular LED Controller Workstation')
+    parser = runtimeconfiguration.commonRuntimeArgumentParser()
+    # Adjust defaults from commonRuntimeArgumentParser
+    parser.set_defaults(
+        device_candy_server=None,
+        num_rows=None,
+        num_pixels=None,
+    )
+    # Add specific arguments
     parser.add_argument(
         '-p',
         '--port',
         dest='port',
         default='5000',
-        help='Port to listen on'
+        help='Port to listen on',
     )
     parser.add_argument(
         '-C',
@@ -554,12 +567,19 @@ if __name__ == '__main__':
         default=None,
         help='Location of the server configuration to store. Defaults to $HOME/.ledserver.')
     parser.add_argument(
-        '--no_conf', dest='no_conf', action='store_true', default=False, help="Don't load config from file")
+        '--no_conf',
+        dest='no_conf',
+        action='store_true',
+        default=False,
+        help="Don't load config from file",
+    )
     parser.add_argument(
-        '--no_store', dest='no_store', action='store_true', default=False, help="Don't save anything to disk")
-    parser.add_argument(
-        '-N', '--num_pixels', dest='num_pixels', type=int, default=None, help='number of pixels (default: 300)')
-    parser.add_argument('-R', '--num_rows', dest='num_rows', type=int, default=None, help='number of rows (default: 1)')
+        '--no_store',
+        dest='no_store',
+        action='store_true',
+        default=False,
+        help="Don't save anything to disk",
+    )
     deviceChoices = serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')
     parser.add_argument(
         '-D',
@@ -569,17 +589,6 @@ if __name__ == '__main__':
         choices=deviceChoices,
         help='device to send RGB to (default: FadeCandy)')
     parser.add_argument(
-        '--device_candy_server', '-DCS', dest='device_candy_server', default=None, help='Server for device FadeCandy')
-    parser.add_argument(
-        '--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels')
-    parser.add_argument(
-        '-A',
-        '--audio_device_index',
-        dest='audio_device_index',
-        type=int,
-        default=None,
-        help='Audio device index to use')
-    parser.add_argument(
         '-P',
         '--process_timing',
         dest='process_timing',
@@ -587,7 +596,12 @@ if __name__ == '__main__':
         default=False,
         help='Print process timing')
     parser.add_argument(
-        '--strand', dest='strand', action='store_true', default=False, help="Perform strand test at start of server.")
+        '--strand',
+        dest='strand',
+        action='store_true',
+        default=False,
+        help="Perform strand test at start of server.",
+    )
 
     # print audio information
     print("The following audio devices are available:")
