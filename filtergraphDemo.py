@@ -1,4 +1,3 @@
-import argparse
 import errno
 import json
 import os
@@ -7,7 +6,7 @@ from timeit import default_timer as timer
 
 import jsonpickle
 
-from audioled import configs, devices, filtergraph, audio
+from audioled import configs, devices, filtergraph, audio, runtimeconfiguration, serverconfiguration
 
 num_pixels = 300
 device = None
@@ -62,21 +61,16 @@ configChoices = [
 deviceRasp = 'RaspberryPi'
 deviceCandy = 'FadeCandy'
 
-parser = argparse.ArgumentParser(description='MOLECOLE - A Modular LED Controller Workstation')
-
-parser.add_argument(
-    '-N', '--num_pixels', dest='num_pixels', type=int, default=300, help='number of pixels (default: 300)')
-parser.add_argument('-R', '--num_rows', dest='num_rows', type=int, default=1, help='number of rows (default: 1)')
-parser.add_argument('--device_panel_mapping', dest='device_panel_mapping', default=None, help='Mapping file for panels')
+parser = runtimeconfiguration.commonRuntimeArgumentParser()
+# Add specific arguments
+deviceChoices = serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')
 parser.add_argument(
     '-D',
     '--device',
     dest='device',
-    default=deviceCandy,
-    choices=[deviceRasp, deviceCandy],
+    default=devices.FadeCandy.__name__,
+    choices=deviceChoices,
     help='device to send RGB to')
-parser.add_argument(
-    '--device_candy_server', dest='device_candy_server', default='127.0.0.1:7890', help='Server for device FadeCandy')
 parser.add_argument(
     '-C',
     '--config',
@@ -84,9 +78,15 @@ parser.add_argument(
     default='',
     choices=configChoices,
     help='config to use, default is rolling through all configs')
-parser.add_argument('-s', '--save_config', dest='save_config', type=bool, default=False, help='Save config to config/')
 parser.add_argument(
-    '-A', '--audio_device_index', dest='audio_device_index', type=int, default=None, help='Audio device index to use')
+    '-s',
+    '--save_config',
+    dest='save_config',
+    type=bool,
+    default=False,
+    help='Save config to config/',
+)
+
 args = parser.parse_args()
 
 num_pixels = args.num_pixels

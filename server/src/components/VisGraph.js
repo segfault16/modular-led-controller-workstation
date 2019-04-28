@@ -233,8 +233,8 @@ class VisGraph extends React.Component {
           },
           hierarchicalRepulsion: {
             centralGravity: .05,
-            nodeDistance: 150,
-            springLength: 100,
+            nodeDistance: 100,
+            springLength: 10,
             springConstant: 0.5,
             damping: 0.8,
           },
@@ -246,7 +246,7 @@ class VisGraph extends React.Component {
           },
           maxVelocity: 146,
           timestep: 0.35,
-          solver: 'barnesHut',
+          solver: 'hierarchicalRepulsion',
           stabilization: {
             enabled: false,
             onlyDynamicEdges: true
@@ -269,10 +269,37 @@ class VisGraph extends React.Component {
               callback(null);
               return;
             }
-            var fromNode = this.state.graph.nodes.find(item => item.id === data.from);
-            var toNode = this.state.graph.nodes.find(item => item.id === data.to);
+            var fromId = data.from
+            var toId = data.to
+            var fromNode = this.state.graph.nodes.find(item => item.id === fromId);
+            var toNode = this.state.graph.nodes.find(item => item.id === toId);
+            // Revert fromNode and toNode if the connection was made from input to output
+            if (fromNode.nodeType == 'channel' && fromNode.group == 'in' && toNode.nodeType == 'channel' && toNode.group == 'out') {
+              var temp = fromNode
+              fromNode = toNode
+              toNode = temp
+              var tempId = fromId
+              fromId = toId
+              toId = tempId
+            }
             if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in') {
               console.log("could add edge")
+              // See if we have already a connection to this node. This connection has to be removed
+              var foundConnection = this.state.graph.edges.find(item => item.to === toId)
+              if (foundConnection) {
+                console.log("found connections: ", foundConnection)
+                this.deleteEdge({nodes: [], edges: [foundConnection.id]}, data => {
+                  this.setState(oldState => {
+                    return {
+                      graph: {
+                        nodes: oldState.graph.nodes.filter((el) => !data.nodes.includes(el.id)),
+                        edges: oldState.graph.edges.filter((el) => !data.edges.includes(el.id))
+                      }
+                    }
+                  })
+                })
+              }
+              this.props.enqueueSnackbar("Connection replaced", { variant: 'info' })
               FilterGraphService.addConnection(this.state.slot, fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback).then(connection => {
                 this.updateVisConnection(data, connection)
                 this.addStateNodesAndEdges([],[data])
@@ -285,6 +312,7 @@ class VisGraph extends React.Component {
               });
             } else {
               console.log("could not add edge")
+              this.props.enqueueSnackbar("Connections can only be added from output to input", { variant: 'error' })
             }
             return;
           },
@@ -309,20 +337,22 @@ class VisGraph extends React.Component {
               border: '#222222',
               background: '#666666'
             },
+            physics: false,
             mass: 10
           }, error: {
             color: {
               border: '#ee0000',
               background: '#666666'
             },
+            physics: false,
             mass: 10
           },
           in: {
-            //physics: false
+            physics: true,
             mass: 1
           },
           out: {
-            //physics: false
+            physics: true,
             mass: 1
           }
         }
@@ -587,7 +617,7 @@ class VisGraph extends React.Component {
       outNode.nodeUid = visNode.id;
       outNode.nodeChannel = i;
       nodes.push(outNode);
-      edges.push({ id: outNode.id, from: visNode.id, to: outNode.id });
+      edges.push({ id: outNode.id, from: visNode.id, to: outNode.id, width: 4, arrows: {to: { enabled: false } } });
     }
     for (var i = 0; i < numInputChannels; i++) {
       var uid = this.conUid('in', i, visNode.id);
@@ -600,7 +630,7 @@ class VisGraph extends React.Component {
       inNode.nodeUid = visNode.id;
       inNode.nodeChannel = i;
       nodes.push(inNode);
-      edges.push({ id: inNode.id, from: inNode.id, to: visNode.id });
+      edges.push({ id: inNode.id, from: inNode.id, to: visNode.id, width: 4, arrows: {to: { enabled: false } } });
     }
     return { nodes, edges };
   }
@@ -635,8 +665,11 @@ class VisGraph extends React.Component {
     //edge.to = state["to_node_uid"];
     edge.to = this.conUid('in', state['to_node_channel'], state['to_node_uid'])
     edge.to_channel = state["to_node_channel"];
-    edge.arrows = 'to'
+    edge.arrows = 'middle'
     edge.group = "connection"
+    //edge.color = {color: '#666666'}
+    edge.width = 4
+    edge.physics = false
   }
 
 
