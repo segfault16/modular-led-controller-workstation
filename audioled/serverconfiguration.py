@@ -166,11 +166,12 @@ class ServerConfiguration:
     def createOutputDevice(self):
         print("Creating device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
         if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
-            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS),
-                                         self.getConfiguration(CONFIG_NUM_ROWS))
+            device = devices.RaspberryPi(
+                self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS))
         elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
-            device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS),
-                                       self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
+            device = devices.FadeCandy(
+                self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS),
+                self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
             print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
             return None
@@ -407,8 +408,8 @@ class PersistentConfiguration(ServerConfiguration):
     def _metadataForProject(self, project, projectUid):
         projData = super()._metadataForProject(project, projectUid)
         # Add storage location to metadata
-        projData['location'] = os.path.join(os.path.join(self._getProjectPath(), projectUid),
-                                            "{}.json".format(projectUid))
+        projData['location'] = os.path.join(
+            os.path.join(self._getProjectPath(), projectUid), "{}.json".format(projectUid))
         print("Storage location for project {}: {}".format(projectUid, projData['location']))
         return projData
 
