@@ -37,8 +37,7 @@ class Spectrum(Effect):
             "Spectrum performs a FFT on the audio input (channel 0) and visualizes bass and melody frequencies "\
             "with different colors (channel 1 for bass, channel 2 for melody)."
 
-    def __init__(self, fs, fmax=6000, n_overlaps=4, fft_bins=64, col_blend=colors.blend_mode_default):
-        self.fs = fs
+    def __init__(self, fmax=6000, n_overlaps=4, fft_bins=64, col_blend=colors.blend_mode_default):
         self.fmax = fmax
         self.n_overlaps = n_overlaps
         self.fft_bins = fft_bins
@@ -71,7 +70,6 @@ class Spectrum(Effect):
             "parameters":
             OrderedDict([
                 # default, min, max, stepsize
-                ("fs", [48000, 44100, 96000, 100]),
                 ("n_overlaps", [4, 0, 20, 1]),
                 ("fft_bins", [64, 32, 128, 1]),
                 ("col_blend", colors.blend_modes)
@@ -83,7 +81,6 @@ class Spectrum(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "fs": "Sample Frequency of the audio input.",
                 "n_overlaps": "Number of overlapping samples in time. This smoothes the FFT.",
                 "fft_bins": "Number of bins of the FFT. Increase for a more detailed FFT.",
                 "col_blend": "Color blend mode for combining bass and melody FFT."
@@ -93,7 +90,6 @@ class Spectrum(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        del definition['parameters']['fs']  # disable edit
         definition['parameters']['n_overlaps'][0] = self.n_overlaps
         definition['parameters']['fft_bins'][0] = self.fft_bins
         definition['parameters']['col_blend'] = [self.col_blend
@@ -101,7 +97,7 @@ class Spectrum(Effect):
         return definition
 
     def _audio_gen(self, audio_gen):
-        audio, self._fs_ds = dsp.preprocess(audio_gen, self.fs, self.fmax, self.n_overlaps)
+        audio, self._fs_ds = dsp.preprocess(audio_gen, GlobalAudio.sample_rate, self.fmax, self.n_overlaps)
         return audio
 
     def buffer_coroutine(self):
@@ -109,6 +105,9 @@ class Spectrum(Effect):
             yield self._lastAudioChunk
 
     async def update(self, dt):
+        await super().update(dt)
+        if self._num_pixels is None:
+            return
         if self._norm_dist is None or len(self._norm_dist) != self._num_pixels:
             self._norm_dist = np.linspace(0, 1, self._num_pixels)
 
@@ -173,7 +172,6 @@ class VUMeterRMS(Effect):
     def __init__(self, db_range=60.0, n_overlaps=1):
         self.db_range = db_range
         self.n_overlaps = n_overlaps
-        self._default_color = None
         self.__initstate__()
 
     def __initstate__(self):
@@ -182,22 +180,7 @@ class VUMeterRMS(Effect):
             self._hold_values
         except AttributeError:
             self._hold_values = []
-        # default color: VU Meter style
-        # green from -inf to -24
-        # green to red from -24 to 0
-        h_a, s_a, v_a = colorsys.rgb_to_hsv(0, 1, 0)
-        h_b, s_b, v_b = colorsys.rgb_to_hsv(1, 0, 0)
-        scal_value = (self.db_range + (-24)) / self.db_range
-        index = int(self._num_pixels * scal_value)
-        np = self._num_pixels - index
-        interp_v = np.linspace(v_a, v_b, np)
-        interp_s = np.linspace(s_a, s_b, np)
-        interp_h = np.linspace(h_a, h_b, np)
-        hsv = np.array([interp_h, interp_s, interp_v]).T
-
-        rgb = mpl.colors.hsv_to_rgb(hsv)
-        green = np.array([[0, 255.0, 0] for i in range(index)]).T
-        self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
+        self._default_color = None
 
     def numInputChannels(self):
         return 2
@@ -232,6 +215,28 @@ class VUMeterRMS(Effect):
         definition['parameters']['db_range'][0] = self.db_range
         definition['parameters']['n_overlaps'][0] = self.n_overlaps
         return definition
+
+    async def update(self, dt):
+        await super().update(dt)
+        if self._num_pixels is None:
+            return
+        if self._default_color is None:
+            # default color: VU Meter style
+            # green from -inf to -24
+            # green to red from -24 to 0
+            h_a, s_a, v_a = colorsys.rgb_to_hsv(0, 1, 0)
+            h_b, s_b, v_b = colorsys.rgb_to_hsv(1, 0, 0)
+            scal_value = (self.db_range + (-24)) / self.db_range
+            index = int(self._num_pixels * scal_value)
+            np = self._num_pixels - index
+            interp_v = np.linspace(v_a, v_b, np)
+            interp_s = np.linspace(s_a, s_b, np)
+            interp_h = np.linspace(h_a, h_b, np)
+            hsv = np.array([interp_h, interp_s, interp_v]).T
+
+            rgb = mpl.colors.hsv_to_rgb(hsv)
+            green = np.array([[0, 255.0, 0] for i in range(index)]).T
+            self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -321,6 +326,8 @@ class VUMeterPeak(Effect):
         return definition
 
     async def update(self, dt):
+        if self._num_pixels is None:
+            return
         if self._default_color is None or np.size(self._default_color, 1) != self._num_pixels:
             # default color: VU Meter style
             # green from -inf to -24
@@ -394,7 +401,6 @@ class MovingLight(Effect):
             "at the beginning of the strip. This peak moves down the strip until it dissipates."
 
     def __init__(self,
-                 fs,
                  speed=100.0,
                  dim_time=2.5,
                  lowcut_hz=50.0,
@@ -404,7 +410,6 @@ class MovingLight(Effect):
                  highlight=0.6):
         self.speed = speed
         self.dim_time = dim_time
-        self.fs = fs
         self.lowcut_hz = lowcut_hz
         self.highcut_hz = highcut_hz
         self.peak_scale = peak_scale
@@ -415,7 +420,8 @@ class MovingLight(Effect):
     def __initstate__(self):
         # state
         self._pixel_state = None
-        self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, self.fs, 3)
+        if GlobalAudio.sample_rate is not None:
+            self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, GlobalAudio.sample_rate, 3)
         self._last_t = 0.0
         self._last_move_t = 0.0
         super(MovingLight, self).__initstate__()
@@ -539,16 +545,16 @@ class Bonfire(Effect):
             "Bonfire performs an audio-reactive color splitting of input channel 1 based on "\
             "the audio input (channel 0)."
 
-    def __init__(self, fs, spread=100, lowcut_hz=50.0, highcut_hz=200.0):
+    def __init__(self, spread=100, lowcut_hz=50.0, highcut_hz=200.0):
         self.spread = spread
         self.lowcut_hz = lowcut_hz
         self.highcut_hz = highcut_hz
-        self.fs = fs
         self._default_color = None
         self.__initstate__()
 
     def __initstate__(self):
-        self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, self.fs, 3)
+        if GlobalAudio.sample_rate is not None:
+            self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, GlobalAudio.sample_rate, 3)
         super(Bonfire, self).__initstate__()
 
     def numInputChannels(self):
@@ -620,7 +626,6 @@ class FallingStars(Effect):
             "Effect for creating random stars based on audio input that fade over time."
 
     def __init__(self,
-                 fs,
                  lowcut_hz=50.0,
                  highcut_hz=300.0,
                  peak_filter=1.0,
@@ -633,7 +638,6 @@ class FallingStars(Effect):
         self.dim_speed = dim_speed
         self.thickness = thickness  # getting down with it
         self.probability = probability
-        self.fs = fs
         self.lowcut_hz = lowcut_hz
         self.highcut_hz = highcut_hz
         self.peak_filter = peak_filter
@@ -648,7 +652,8 @@ class FallingStars(Effect):
         self._spawnArray = []
         self._peakArray = []
         self._starCounter = 0
-        self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, self.fs, 3)
+        if GlobalAudio.sample_rate is not None:
+            self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, GlobalAudio.sample_rate, 3)
         super(FallingStars, self).__initstate__()
 
     @staticmethod
@@ -795,8 +800,9 @@ class Oscilloscope(Effect):
     
     def __initstate__(self):
         super().__initstate__()
-        self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, max(self.highcut_hz, self.lowcut_hz), GlobalAudio.sample_rate, 3)
-
+        if GlobalAudio.sample_rate is not None:
+            self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, max(self.highcut_hz, self.lowcut_hz), GlobalAudio.sample_rate, 3)
+            
     @staticmethod
     def getParameterDefinition():
         definition = {

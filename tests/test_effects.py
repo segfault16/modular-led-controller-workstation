@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
 import unittest
+import asyncio
 from audioled import effects, audio, audioreactive, colors, generative  # noqa: F401
 
 
@@ -33,6 +34,19 @@ class Test_Effects(unittest.TestCase):
                     effectsWithMissingParameterDescription.append("{} has no parameter help at all".format(_class))
 
         self.assertEqual([], effectsWithMissingParameterDescription)
+    
+    def test_allEffectsUpdateAndProcessWithoutConnection(self):
+        childclasses = inheritors(effects.Effect)
+        for _class in childclasses:
+            instance = None
+            try:
+                instance = _class()
+            except Exception as e:
+                print("Error instanciating effect {}".format(_class.__name__))
+                raise ValueError("Error instanciating effect {}: {}".format(_class.__name__, e)) from e
+            event_loop = asyncio.get_event_loop()
+            event_loop.run_until_complete(instance.update(0.01))
+            instance.process()
 
 
 def inheritors(klass):

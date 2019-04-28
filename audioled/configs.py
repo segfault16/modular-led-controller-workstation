@@ -21,7 +21,7 @@ def createMovingLightGraph():
     color_wheel = colors.ColorWheel()
     fg.addEffectNode(color_wheel)
 
-    movingLight = audioreactive.MovingLight(fs=audio_in.getSampleRate())
+    movingLight = audioreactive.MovingLight()
     fg.addEffectNode(movingLight)
 
     mirrorLower = effects.Mirror(mirror_lower=True, recursion=0)
@@ -56,8 +56,7 @@ def createMovingLightsGraph():
     color_wheel1 = colors.ColorWheel()
     fg.addEffectNode(color_wheel1)
 
-    movingLight1 = audioreactive.MovingLight(
-        fs=audio_in.getSampleRate(), speed=150.0, dim_time=.5, highcut_hz=200)
+    movingLight1 = audioreactive.MovingLight(speed=150.0, dim_time=.5, highcut_hz=200)
     fg.addEffectNode(movingLight1)
 
     afterglow1 = effects.AfterGlow()
@@ -76,7 +75,7 @@ def createMovingLightsGraph():
     color_wheel2 = colors.ColorWheel()
     fg.addEffectNode(color_wheel2)
 
-    movingLight2 = audioreactive.MovingLight(audio_in.getSampleRate(), speed=150.0, dim_time=1.0, highcut_hz=500)
+    movingLight2 = audioreactive.MovingLight(speed=150.0, dim_time=1.0, highcut_hz=500)
     fg.addEffectNode(movingLight2)
 
     afterglow2 = effects.AfterGlow()
@@ -118,7 +117,7 @@ def createSpectrumGraph():
     color_wheel2 = colors.ColorWheel(cycle_time=15.0)
     fg.addEffectNode(color_wheel2)
 
-    spectrum = audioreactive.Spectrum(fs=audio_in.getSampleRate())
+    spectrum = audioreactive.Spectrum()
     fg.addEffectNode(spectrum)
 
     append = effects.Append(2, flip0=True)
@@ -366,7 +365,7 @@ def createBonfireGraph():
     led_out = devices.LEDOutput()
     fg.addEffectNode(led_out)
 
-    bonfire = audioreactive.Bonfire(fs=audio_in.getSampleRate())
+    bonfire = audioreactive.Bonfire()
     fg.addEffectNode(bonfire)
 
     testblob = generative.StaticBlob()

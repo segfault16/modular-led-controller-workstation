@@ -127,6 +127,7 @@ else:
 
 
 def createFilterGraph(config, num_pixels):
+    print("Creating config {}".format(config))
     if config == movingLightConf:
         return configs.createMovingLightGraph()
     elif config == movingLightsConf:
