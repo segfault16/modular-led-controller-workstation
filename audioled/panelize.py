@@ -75,6 +75,8 @@ class MakeSquare(Effect):
 
     async def update(self, dt):
         await super().update(dt)
+        if self._num_pixels is None:
+            return
         if self._mapMask is None or np.size(self._mapMask, 1) != self._num_pixels:
             self._mapMask = self._genMapMask(self._num_pixels, self._num_rows, self.displacement,
                                              self.input_displacement)
@@ -276,6 +278,8 @@ class MakeLabyrinth(Effect):
 
     async def update(self, dt):
         await super().update(dt)
+        if self._num_pixels is None:
+            return
         if self._mapMask is None or np.size(self._mapMask, 1) != self._num_pixels:
             self._mapMask = self._genMapMask(self._num_pixels, self._num_rows)
 

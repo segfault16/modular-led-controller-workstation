@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from __future__ import absolute_import
 import unittest
 import asyncio
-from audioled import effects, audio, audioreactive, colors, generative  # noqa: F401
+from audioled import effects, audio, audioreactive, colors, generative, panelize  # noqa: F401
 
 
 class Test_Effects(unittest.TestCase):
