@@ -7,6 +7,7 @@ import numpy as np
 import pyaudio
 
 from audioled.effects import Effect
+from audioled.effect import AudioBuffer
 
 
 def print_audio_devices():
@@ -142,6 +143,7 @@ class AudioInput(Effect):
     def __initstate__(self):
         super(AudioInput, self).__initstate__()
         self._buffer = []
+        self._outBuffer = []
         self._autogain_perc = None
         self._cur_gain = 1.0
         print("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
@@ -203,6 +205,10 @@ class AudioInput(Effect):
             # perc = root(1.0 / min_value, N) = (1./min_value)**(1/N)
             self._autogain_perc = (1.0 / min_value)**float(1 / N)
         self._buffer = GlobalAudio.buffer
+        if len(self._outBuffer) != self.num_channels:
+            self._outBuffer = []
+            for i in range(0, self.num_channels):
+                self._outBuffer.append(AudioBuffer(GlobalAudio.sample_rate))
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -223,5 +229,6 @@ class AudioInput(Effect):
         for i in range(0, self.num_channels):
             # layout for multiple channel is interleaved:
             # 00 01 .. 0n 10 11 .. 1n
-            self._outputBuffer[i] = self._cur_gain * self._buffer[i::self.num_channels]
+            self._outBuffer[i].audio = self._cur_gain * self._buffer[i::self.num_channels]
+            self._outputBuffer[i] = self._outBuffer[i]
             # print("{}: {}".format(i, self._outputBuffer[i]))

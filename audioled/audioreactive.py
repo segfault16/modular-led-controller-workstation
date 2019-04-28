@@ -15,6 +15,7 @@ import audioled.colors as colors
 import audioled.dsp as dsp
 from audioled.effects import Effect
 from audioled.audio import GlobalAudio
+import audioled.effect as effect
 
 
 class Spectrum(Effect):
@@ -112,32 +113,35 @@ class Spectrum(Effect):
             self._norm_dist = np.linspace(0, 1, self._num_pixels)
 
     def process(self):
-
-        if self._inputBuffer is not None and self._outputBuffer is not None:
-            audio = self._inputBuffer[0]
-            col_melody = self._inputBuffer[1]
-            col_bass = self._inputBuffer[2]
-            if col_melody is None:
-                # default color: all white
-                col_melody = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
-            if col_bass is None:
-                # default color: all white
-                col_bass = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
-            if audio is not None:
-                if self._gen is None:
-                    g = self.buffer_coroutine()
-                    next(g)
-                    self._lastAudioChunk = audio
-                    self._gen = self._audio_gen(g)
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
+            self._outputBuffer[0] = None
+            return
+        audio = self._inputBuffer[0].audio
+        col_melody = self._inputBuffer[1]
+        col_bass = self._inputBuffer[2]
+        if col_melody is None:
+            # default color: all white
+            col_melody = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        if col_bass is None:
+            # default color: all white
+            col_bass = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        if audio is not None:
+            if self._gen is None:
+                g = self.buffer_coroutine()
+                next(g)
                 self._lastAudioChunk = audio
-                y = next(self._gen)
-                bass = dsp.warped_psd(y, self.fft_bins, self._fs_ds, [32.7, 261.0], 'bark')
-                melody = dsp.warped_psd(y, self.fft_bins, self._fs_ds, [261.0, self.fmax], 'bark')
-                bass = self.process_line(bass)
-                melody = self.process_line(melody)
-                pixels = colors.blend(1. / 255.0 * np.multiply(col_bass, bass),
-                                      1. / 255. * np.multiply(col_melody, melody), self.col_blend)
-                self._outputBuffer[0] = pixels.clip(0, 255).astype(int)
+                self._gen = self._audio_gen(g)
+            self._lastAudioChunk = audio
+            y = next(self._gen)
+            bass = dsp.warped_psd(y, self.fft_bins, self._fs_ds, [32.7, 261.0], 'bark')
+            melody = dsp.warped_psd(y, self.fft_bins, self._fs_ds, [261.0, self.fmax], 'bark')
+            bass = self.process_line(bass)
+            melody = self.process_line(melody)
+            pixels = colors.blend(1. / 255.0 * np.multiply(col_bass, bass),
+                                    1. / 255. * np.multiply(col_melody, melody), self.col_blend)
+            self._outputBuffer[0] = pixels.clip(0, 255).astype(int)
 
     def process_line(self, fft):
 
@@ -241,15 +245,14 @@ class VUMeterRMS(Effect):
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
-        buffer = self._inputBuffer[0]
-        if buffer is None:
+        if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
             self._outputBuffer[0] = None
             return
         color = self._inputBuffer[1]
         if color is None:
             color = self._default_color
 
-        y = self._inputBuffer[0]
+        y = self._inputBuffer[0].audio
         rms = dsp.rms(y)
         # calculate rms over hold_time
         while len(self._hold_values) > self.n_overlaps:
@@ -352,8 +355,7 @@ class VUMeterPeak(Effect):
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
-        buffer = self._inputBuffer[0]
-        if buffer is None:
+        if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
             self._outputBuffer[0] = None
             return
         color = self._inputBuffer[1]
@@ -367,7 +369,7 @@ class VUMeterPeak(Effect):
             self.__initstate__()
             color = self._default_color
 
-        y = self._inputBuffer[0]
+        y = self._inputBuffer[0].audio
 
         peak = np.max(y)
         # calculate max over hold_time
@@ -490,45 +492,46 @@ class MovingLight(Effect):
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
-        buffer = self._inputBuffer[0]
+        if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
+            self._outputBuffer[0] = None
+            return
+        audio = self._inputBuffer[0].audio
         color = self._inputBuffer[1]
         if color is None:
             # default color: all white
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
-        if buffer is not None:
-            audio = self._inputBuffer[0]
-            # apply bandpass to audio
-            y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audio), zi=self._filter_zi)
-            # move in speed
-            dt_move = self._t - self._last_move_t
-            if dt_move * self.speed > 1:
-                shift_pixels = int(dt_move * self.speed)
-                shift_pixels = np.clip(shift_pixels, 1, self._num_pixels - 1)
-                self._pixel_state[:, shift_pixels:] = self._pixel_state[:, :-shift_pixels]
-                self._pixel_state[:, 0:shift_pixels] = self._pixel_state[:, shift_pixels:shift_pixels + 1]
-                # convolve to smooth edges
-                self._pixel_state[:, 0:2 * shift_pixels] = gaussian_filter1d(
-                    self._pixel_state[:, 0:2 * shift_pixels], sigma=0.5, axis=1)
-                self._last_move_t = self._t
-            # dim with time
-            dt = self._t - self._last_t
-            self._last_t = self._t
-            self._pixel_state *= (1.0 - dt / self.dim_time)
-            self._pixel_state = gaussian_filter1d(self._pixel_state, sigma=0.5, axis=1)
-            self._pixel_state = gaussian_filter1d(self._pixel_state, sigma=0.5, axis=1)
-            # new color at origin
-            peak = np.max(y) * 1.0
-            try:
-                peak = peak**self.peak_filter
-            except Exception:
-                peak = peak
-            peak = peak * self.peak_scale
-            r, g, b = color[0, 0], color[1, 0], color[2, 0]
-            self._pixel_state[0][0] = r * peak + self.highlight * peak * 255.0
-            self._pixel_state[1][0] = g * peak + self.highlight * peak * 255.0
-            self._pixel_state[2][0] = b * peak + self.highlight * peak * 255.0
-            self._pixel_state = np.nan_to_num(self._pixel_state).clip(0.0, 255.0)
-            self._outputBuffer[0] = self._pixel_state
+        # apply bandpass to audio
+        y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audio), zi=self._filter_zi)
+        # move in speed
+        dt_move = self._t - self._last_move_t
+        if dt_move * self.speed > 1:
+            shift_pixels = int(dt_move * self.speed)
+            shift_pixels = np.clip(shift_pixels, 1, self._num_pixels - 1)
+            self._pixel_state[:, shift_pixels:] = self._pixel_state[:, :-shift_pixels]
+            self._pixel_state[:, 0:shift_pixels] = self._pixel_state[:, shift_pixels:shift_pixels + 1]
+            # convolve to smooth edges
+            self._pixel_state[:, 0:2 * shift_pixels] = gaussian_filter1d(
+                self._pixel_state[:, 0:2 * shift_pixels], sigma=0.5, axis=1)
+            self._last_move_t = self._t
+        # dim with time
+        dt = self._t - self._last_t
+        self._last_t = self._t
+        self._pixel_state *= (1.0 - dt / self.dim_time)
+        self._pixel_state = gaussian_filter1d(self._pixel_state, sigma=0.5, axis=1)
+        self._pixel_state = gaussian_filter1d(self._pixel_state, sigma=0.5, axis=1)
+        # new color at origin
+        peak = np.max(y) * 1.0
+        try:
+            peak = peak**self.peak_filter
+        except Exception:
+            peak = peak
+        peak = peak * self.peak_scale
+        r, g, b = color[0, 0], color[1, 0], color[2, 0]
+        self._pixel_state[0][0] = r * peak + self.highlight * peak * 255.0
+        self._pixel_state[1][0] = g * peak + self.highlight * peak * 255.0
+        self._pixel_state[2][0] = b * peak + self.highlight * peak * 255.0
+        self._pixel_state = np.nan_to_num(self._pixel_state).clip(0.0, 255.0)
+        self._outputBuffer[0] = self._pixel_state
 
 
 class Bonfire(Effect):
@@ -597,16 +600,16 @@ class Bonfire(Effect):
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
+        if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
+            self._outputBuffer[0] = None
+            return
         if self._inputBufferValid(1):
             pixelbuffer = self._inputBuffer[1]
         else:
             # default color: all white
             pixelbuffer = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
-        if not self._inputBufferValid(0):
-            self._outputBuffer[0] = pixelbuffer
-            return
 
-        audiobuffer = self._inputBuffer[0]
+        audiobuffer = self._inputBuffer[0].audio
 
         y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audiobuffer), zi=self._filter_zi)
         peak = np.max(y) * 1.0
@@ -758,14 +761,15 @@ class FallingStars(Effect):
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
-        if not self._inputBufferValid(0):
+        if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
+            self._outputBuffer[0] = None
             return
         if self._inputBufferValid(1):
             color = self._inputBuffer[1]
         else:
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         
-        audio = self._inputBuffer[0]
+        audio = self._inputBuffer[0].audio
         # apply bandpass to audio
         y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audio), zi=self._filter_zi)
 
@@ -851,9 +855,9 @@ class Oscilloscope(Effect):
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
-        if not self._inputBufferValid(0):
+        if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
             return
-        audio = self._inputBuffer[0]
+        audio = self._inputBuffer[0].audio
         cols = int(self._num_pixels / self._num_rows)
         if self._inputBufferValid(1):
             color = self._inputBuffer[1]
