@@ -9,12 +9,10 @@ import matplotlib as mpl
 import numpy as np
 import scipy as sp
 from scipy.ndimage.filters import gaussian_filter1d
-from scipy.signal import lfilter
 
 import audioled.colors as colors
 import audioled.dsp as dsp
 from audioled.effects import Effect
-from audioled.audio import GlobalAudio
 import audioled.effect as effect
 
 
@@ -140,8 +138,11 @@ class Spectrum(Effect):
             melody = dsp.warped_psd(y, self.fft_bins, self._fs_ds, [261.0, self.fmax], 'bark')
             bass = self.process_line(bass)
             melody = self.process_line(melody)
-            pixels = colors.blend(1. / 255.0 * np.multiply(col_bass, bass),
-                                    1. / 255. * np.multiply(col_melody, melody), self.col_blend)
+            pixels = colors.blend(
+                1. / 255.0 * np.multiply(col_bass, bass),
+                1. / 255. * np.multiply(col_melody, melody),
+                self.col_blend,
+            )
             self._outputBuffer[0] = pixels.clip(0, 255).astype(int)
 
     def process_line(self, fft):
@@ -775,7 +776,7 @@ class FallingStars(Effect):
             color = self._inputBuffer[1]
         else:
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
-        
+
         audio = self._inputBuffer[0].audio
         fs = self._inputBuffer[0].sample_rate
 
@@ -801,23 +802,20 @@ class FallingStars(Effect):
 
 
 class Oscilloscope(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
             "Displays audio as a wave signal over time."
 
-    def __init__(self,
-                 lowcut_hz=1.0,
-                 highcut_hz=22000.0):
+    def __init__(self, lowcut_hz=1.0, highcut_hz=22000.0):
         self.lowcut_hz = lowcut_hz
         self.highcut_hz = highcut_hz
         self.__initstate__()
-    
+
     def __initstate__(self):
         super().__initstate__()
         self._bandpass = None
-    
+
     @staticmethod
     def getParameterDefinition():
         definition = {
@@ -834,10 +832,8 @@ class Oscilloscope(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "lowcut_hz":
-                "Lowcut frequency of the audio input.",
-                "highcut_hz":
-                "Highcut frequency of the audio input."
+                "lowcut_hz": "Lowcut frequency of the audio input.",
+                "highcut_hz": "Highcut frequency of the audio input."
             }
         }
         return help
@@ -853,13 +849,13 @@ class Oscilloscope(Effect):
 
     def numOutputChannels(self):
         return 1
-    
+
     def getNumInputPixels(self, channel):
         if self._num_pixels is not None:
             cols = int(self._num_pixels / self._num_rows)
             return cols
         return None
-    
+
     async def update(self, dt):
         await super().update(dt)
 
@@ -874,7 +870,7 @@ class Oscilloscope(Effect):
             color = self._inputBuffer[1]
         else:
             color = np.ones(cols) * np.array([[255], [255], [255]])
-        
+
         audio = self._inputBuffer[0].audio
         fs = self._inputBuffer[0].sample_rate
 
@@ -886,8 +882,8 @@ class Oscilloscope(Effect):
 
         output = np.zeros((3, self._num_rows, cols))
         # First downsample to half the cols
-        decimation_ratio = np.round(len(audio) / cols * 2)
-        downsampled_audio = sp.signal.decimate(audio, int(decimation_ratio), ftype='fir', zero_phase=True)
+        decimation_ratio = np.round(len(y) / cols * 2)
+        downsampled_audio = sp.signal.decimate(y, int(decimation_ratio), ftype='fir', zero_phase=True)
         # Then resample to the number of cols -> prevents jumping between positive and negative values
         downsampled_audio = sp.signal.resample(downsampled_audio, cols)
         for i in range(0, cols):
@@ -900,6 +896,3 @@ class Oscilloscope(Effect):
             # set value for this col
             output[:, rowIdx, i] = color[:, i]
         self._outputBuffer[0] = output.reshape((3, -1))
-
-        
-        
