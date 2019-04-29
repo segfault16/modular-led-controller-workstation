@@ -98,7 +98,7 @@ class Spectrum(Effect):
         return definition
 
     def _audio_gen(self, audio_gen):
-        audio, self._fs_ds = dsp.preprocess(audio_gen, GlobalAudio.sample_rate, self.fmax, self.n_overlaps)
+        audio, self._fs_ds = dsp.preprocess(audio_gen, self._fs, self.fmax, self.n_overlaps)
         return audio
 
     def buffer_coroutine(self):
@@ -119,6 +119,7 @@ class Spectrum(Effect):
             self._outputBuffer[0] = None
             return
         audio = self._inputBuffer[0].audio
+        self._fs = self._inputBuffer[0].sample_rate
         col_melody = self._inputBuffer[1]
         col_bass = self._inputBuffer[2]
         if col_melody is None:
@@ -422,8 +423,7 @@ class MovingLight(Effect):
     def __initstate__(self):
         # state
         self._pixel_state = None
-        if GlobalAudio.sample_rate is not None:
-            self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, GlobalAudio.sample_rate, 3)
+        self._bandpass = None
         self._last_t = 0.0
         self._last_move_t = 0.0
         super(MovingLight, self).__initstate__()
@@ -496,12 +496,16 @@ class MovingLight(Effect):
             self._outputBuffer[0] = None
             return
         audio = self._inputBuffer[0].audio
+        fs = self._inputBuffer[0].sample_rate
         color = self._inputBuffer[1]
         if color is None:
             # default color: all white
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        # construct filter if needed
+        if self._bandpass is None:
+            self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
         # apply bandpass to audio
-        y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audio), zi=self._filter_zi)
+        y = self._bandpass.filter(np.array(audio), fs)
         # move in speed
         dt_move = self._t - self._last_move_t
         if dt_move * self.speed > 1:
@@ -556,8 +560,7 @@ class Bonfire(Effect):
         self.__initstate__()
 
     def __initstate__(self):
-        if GlobalAudio.sample_rate is not None:
-            self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, GlobalAudio.sample_rate, 3)
+        self._bandpass = None
         super(Bonfire, self).__initstate__()
 
     def numInputChannels(self):
@@ -609,9 +612,14 @@ class Bonfire(Effect):
             # default color: all white
             pixelbuffer = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
 
-        audiobuffer = self._inputBuffer[0].audio
+        audio = self._inputBuffer[0].audio
+        fs = self._inputBuffer[0].sample_rate
 
-        y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audiobuffer), zi=self._filter_zi)
+        # construct filter if needed
+        if self._bandpass is None:
+            self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
+        # apply bandpass to audio
+        y = self._bandpass.filter(np.array(audio), fs)
         peak = np.max(y) * 1.0
 
         pixelbuffer[0] = sp.ndimage.interpolation.shift(
@@ -655,8 +663,7 @@ class FallingStars(Effect):
         self._spawnArray = []
         self._peakArray = []
         self._starCounter = 0
-        if GlobalAudio.sample_rate is not None:
-            self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, self.highcut_hz, GlobalAudio.sample_rate, 3)
+        self._bandpass = None
         super(FallingStars, self).__initstate__()
 
     @staticmethod
@@ -770,8 +777,13 @@ class FallingStars(Effect):
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         
         audio = self._inputBuffer[0].audio
+        fs = self._inputBuffer[0].sample_rate
+
+        # construct filter if needed
+        if self._bandpass is None:
+            self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
         # apply bandpass to audio
-        y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audio), zi=self._filter_zi)
+        y = self._bandpass.filter(np.array(audio), fs)
 
         # adjust probability according to peak of audio
         peak = np.max(y) * 1.0
@@ -804,9 +816,8 @@ class Oscilloscope(Effect):
     
     def __initstate__(self):
         super().__initstate__()
-        if GlobalAudio.sample_rate is not None:
-            self._filter_b, self._filter_a, self._filter_zi = dsp.design_filter(self.lowcut_hz, max(self.highcut_hz, self.lowcut_hz), GlobalAudio.sample_rate, 3)
-            
+        self._bandpass = None
+    
     @staticmethod
     def getParameterDefinition():
         definition = {
@@ -864,8 +875,14 @@ class Oscilloscope(Effect):
         else:
             color = np.ones(cols) * np.array([[255], [255], [255]])
         
+        audio = self._inputBuffer[0].audio
+        fs = self._inputBuffer[0].sample_rate
+
+        # construct filter if needed
+        if self._bandpass is None:
+            self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
         # apply bandpass to audio
-        audio, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=np.array(audio), zi=self._filter_zi)
+        y = self._bandpass.filter(np.array(audio), fs)
 
         output = np.zeros((3, self._num_rows, cols))
         # First downsample to half the cols
