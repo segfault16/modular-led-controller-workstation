@@ -7,6 +7,7 @@ import numpy as np
 import pyaudio
 
 from audioled.effects import Effect
+from audioled.effect import AudioBuffer
 
 
 def print_audio_devices():
@@ -84,6 +85,7 @@ class GlobalAudio():
                 stream_callback=self._audio_callback)
             stream.start_stream()
             print("Started stream on device {}, fs: {}, chunk_length: {}".format(device_index, frameRate, chunk_length))
+            GlobalAudio.buffer = np.zeros(chunk_length)
         except OSError as e:
             if retry == 5:
                 err = 'Error occurred while attempting to open audio device. '
@@ -93,10 +95,13 @@ class GlobalAudio():
                 print(err)
                 raise e
             time.sleep(retry)
-            return self._open_input_stream(device_index=device_index, channels=channels, retry=retry + 1)
+            return self._open_input_stream(chunk_length, device_index=device_index, channels=channels, retry=retry + 1)
         return stream, int(device_info['defaultSampleRate'])
 
     def stream_audio(self, device_index=None, chunk_rate=60, channels=1):
+        if device_index == -1:
+            print("Audio device disabled by device_index -1.")
+            return None, None
         if device_index is None:
             print("No device_index for audio given. Using default.")
             p = pyaudio.PyAudio()
@@ -138,17 +143,11 @@ class AudioInput(Effect):
     def __initstate__(self):
         super(AudioInput, self).__initstate__()
         self._buffer = []
+        self._outBuffer = []
+        self._autogain_perc = None
+        self._cur_gain = 1.0
         print("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
         
-        # increase cur_gain by percentage
-        # we want to get to self.autogain_max in approx. self.autogain_time seconds
-        min_value = 1. / self.autogain_max  # the minimum input value we want to bring to 1.0
-        N = GlobalAudio.chunk_rate * self.autogain_time  # N = chunks_per_second * autogain_time
-        # min_value * (perc)^N = 1.0?
-        # perc = root(1.0 / min_value, N) = (1./min_value)**(1/N)
-        self._autogain_perc = (1.0 / min_value)**float(1 / N)
-        self._cur_gain = 1.0
-
     def numOutputChannels(self):
         return self.num_channels
 
@@ -197,12 +196,26 @@ class AudioInput(Effect):
 
     async def update(self, dt):
         await super(AudioInput, self).update(dt)
+        if self._autogain_perc is None and GlobalAudio.chunk_rate is not None:
+            # increase cur_gain by percentage
+            # we want to get to self.autogain_max in approx. self.autogain_time seconds
+            min_value = 1. / self.autogain_max  # the minimum input value we want to bring to 1.0
+            N = GlobalAudio.chunk_rate * self.autogain_time  # N = chunks_per_second * autogain_time
+            # min_value * (perc)^N = 1.0?
+            # perc = root(1.0 / min_value, N) = (1./min_value)**(1/N)
+            self._autogain_perc = (1.0 / min_value)**float(1 / N)
         self._buffer = GlobalAudio.buffer
+        if len(self._outBuffer) != self.num_channels:
+            self._outBuffer = []
+            for i in range(0, self.num_channels):
+                self._outBuffer.append(AudioBuffer(GlobalAudio.sample_rate))
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
-        if self._buffer is None or len(self._buffer) <= 0:
+        if self._buffer is None:
+            raise RuntimeError("No audio signal. Audio device might be not present or disabled.")
+        if len(self._buffer) <= 0:
             return
         if self.autogain:
             # determine max value -> in range 0,1
@@ -216,5 +229,6 @@ class AudioInput(Effect):
         for i in range(0, self.num_channels):
             # layout for multiple channel is interleaved:
             # 00 01 .. 0n 10 11 .. 1n
-            self._outputBuffer[i] = self._cur_gain * self._buffer[i::self.num_channels]
+            self._outBuffer[i].audio = self._cur_gain * self._buffer[i::self.num_channels]
+            self._outputBuffer[i] = self._outBuffer[i]
             # print("{}: {}".format(i, self._outputBuffer[i]))
