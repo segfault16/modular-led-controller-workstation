@@ -1,0 +1,362 @@
+{
+    "py/object": "audioled.filtergraph.FilterGraph",
+    "py/state": {
+        "connections": [
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "27f3abde28444f65945afcc1a630c858",
+                "to_node_channel": 0,
+                "to_node_uid": "5dbff0a14d6640caa4abf0f2be344b55",
+                "uid": "70f8e845a02a483daa15b497b108e608"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "66f9a73e9c36459aa78aff0e8e392dbe",
+                "to_node_channel": 1,
+                "to_node_uid": "9839ac80b9544396b30b6c3dd1b8e473",
+                "uid": "4130763a5ab34f7189210a35342a861d"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "5dbff0a14d6640caa4abf0f2be344b55",
+                "to_node_channel": 0,
+                "to_node_uid": "1279ba693b964130b26f838a0144e502",
+                "uid": "7a8fc07dfd234807b4f3b3e171392500"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "1279ba693b964130b26f838a0144e502",
+                "to_node_channel": 0,
+                "to_node_uid": "9839ac80b9544396b30b6c3dd1b8e473",
+                "uid": "41b390076e0744a8b79d1446cbb0557a"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "646619435c164c0cb42e52329156d311",
+                "to_node_channel": 1,
+                "to_node_uid": "af81757856374c14b495c935fa72852d",
+                "uid": "32cf8041e1b943f8b1424971aace9a2b"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "9839ac80b9544396b30b6c3dd1b8e473",
+                "to_node_channel": 0,
+                "to_node_uid": "af81757856374c14b495c935fa72852d",
+                "uid": "d497925a809f4a6dbd16ceb8efbd563a"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "af81757856374c14b495c935fa72852d",
+                "to_node_channel": 0,
+                "to_node_uid": "9a1b9025d4604416bbdbd4f7f8145b2c",
+                "uid": "9e554c1c852b4634874ac427d7bb34ab"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "c44fb0f42aa44902a411b10a74d57507",
+                "to_node_channel": 0,
+                "to_node_uid": "646619435c164c0cb42e52329156d311",
+                "uid": "69b819018afa4e4e91cde7f6880bcce3"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "90621584b9df468ebfea49a12e9137e3",
+                "to_node_channel": 1,
+                "to_node_uid": "646619435c164c0cb42e52329156d311",
+                "uid": "1b8ec4501e794c99b213b0438ec37751"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "6ec1aa5ff6f8428c9c47d26d8486b8c1",
+                "to_node_channel": 0,
+                "to_node_uid": "90621584b9df468ebfea49a12e9137e3",
+                "uid": "0659978d6f0b423fbc228625421a74b3"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "2d19f2265bad40109dc0cdd4c9f5fcb8",
+                "to_node_channel": 0,
+                "to_node_uid": "c44fb0f42aa44902a411b10a74d57507",
+                "uid": "f8d7ad8582fd45fcb349a83cade139cf"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "b93c8fc44fc941689e8fcef2d1171b3d",
+                "to_node_channel": 1,
+                "to_node_uid": "c44fb0f42aa44902a411b10a74d57507",
+                "uid": "470eaad88bcd435995333065e939fe54"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "3aba1e9d082d4132a9df02f41a2e5439",
+                "to_node_channel": 0,
+                "to_node_uid": "6ec1aa5ff6f8428c9c47d26d8486b8c1",
+                "uid": "842c88dc8942451594024bc6a72ee926"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "c680f579a17a4c49bbdaef61702ed786",
+                "to_node_channel": 0,
+                "to_node_uid": "66f9a73e9c36459aa78aff0e8e392dbe",
+                "uid": "c83eb1923bef455ab6e031e7b88c24b5"
+            },
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "b2cd9d30380e4d8fab39172ebdf43814",
+                "to_node_channel": 1,
+                "to_node_uid": "66f9a73e9c36459aa78aff0e8e392dbe",
+                "uid": "833aef8fa5c5484a8cd820548ee330e3"
+            }
+        ],
+        "nodes": [
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.devices.LEDOutput",
+                        "py/state": {
+                            "brightness": 1,
+                            "controller": {
+                                "py/object": "audioled.devices.RaspberryPi",
+                                "py/state": {
+                                    "brightness": 1,
+                                    "dma": 5,
+                                    "freq_hz": 800000,
+                                    "invert": false,
+                                    "num_pixels": 300,
+                                    "pin": 18
+                                }
+                            }
+                        }
+                    },
+                    "numInputChannels": 1,
+                    "numOutputChannels": 0,
+                    "uid": "9a1b9025d4604416bbdbd4f7f8145b2c"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.audioreactive.Oscilloscope",
+                        "py/state": {
+                            "highcut_hz": 10798,
+                            "lowcut_hz": 418
+                        }
+                    },
+                    "numInputChannels": 2,
+                    "numOutputChannels": 1,
+                    "uid": "5dbff0a14d6640caa4abf0f2be344b55"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.audio.AudioInput",
+                        "py/state": {
+                            "autogain": true,
+                            "autogain_max": 50,
+                            "autogain_time": 10,
+                            "num_channels": 2
+                        }
+                    },
+                    "numInputChannels": 0,
+                    "numOutputChannels": 2,
+                    "uid": "27f3abde28444f65945afcc1a630c858"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.effects.Combine",
+                        "py/state": {
+                            "mode": "multiply"
+                        }
+                    },
+                    "numInputChannels": 2,
+                    "numOutputChannels": 1,
+                    "uid": "9839ac80b9544396b30b6c3dd1b8e473"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.colors.InterpolateRGB",
+                        "py/state": {}
+                    },
+                    "numInputChannels": 2,
+                    "numOutputChannels": 1,
+                    "uid": "66f9a73e9c36459aa78aff0e8e392dbe"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.colors.StaticRGBColor",
+                        "py/state": {
+                            "b": 255,
+                            "g": 0,
+                            "r": 0
+                        }
+                    },
+                    "numInputChannels": 0,
+                    "numOutputChannels": 1,
+                    "uid": "b2cd9d30380e4d8fab39172ebdf43814"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.colors.StaticRGBColor",
+                        "py/state": {
+                            "b": 0,
+                            "g": 0,
+                            "r": 255
+                        }
+                    },
+                    "numInputChannels": 0,
+                    "numOutputChannels": 1,
+                    "uid": "c680f579a17a4c49bbdaef61702ed786"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.effects.AfterGlow",
+                        "py/state": {
+                            "glow_time": 0.03
+                        }
+                    },
+                    "numInputChannels": 1,
+                    "numOutputChannels": 1,
+                    "uid": "1279ba693b964130b26f838a0144e502"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.effects.Combine",
+                        "py/state": {
+                            "mode": "multiply"
+                        }
+                    },
+                    "numInputChannels": 2,
+                    "numOutputChannels": 1,
+                    "uid": "646619435c164c0cb42e52329156d311"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.effects.Combine",
+                        "py/state": {
+                            "mode": "lightenOnly"
+                        }
+                    },
+                    "numInputChannels": 2,
+                    "numOutputChannels": 1,
+                    "uid": "af81757856374c14b495c935fa72852d"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.colors.InterpolateRGB",
+                        "py/state": {}
+                    },
+                    "numInputChannels": 2,
+                    "numOutputChannels": 1,
+                    "uid": "c44fb0f42aa44902a411b10a74d57507"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.effects.AfterGlow",
+                        "py/state": {
+                            "glow_time": 0.03
+                        }
+                    },
+                    "numInputChannels": 1,
+                    "numOutputChannels": 1,
+                    "uid": "90621584b9df468ebfea49a12e9137e3"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.audioreactive.Oscilloscope",
+                        "py/state": {
+                            "highcut_hz": 405,
+                            "lowcut_hz": 1
+                        }
+                    },
+                    "numInputChannels": 2,
+                    "numOutputChannels": 1,
+                    "uid": "6ec1aa5ff6f8428c9c47d26d8486b8c1"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.colors.StaticRGBColor",
+                        "py/state": {
+                            "b": 0,
+                            "g": 255,
+                            "r": 0
+                        }
+                    },
+                    "numInputChannels": 0,
+                    "numOutputChannels": 1,
+                    "uid": "2d19f2265bad40109dc0cdd4c9f5fcb8"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.colors.StaticRGBColor",
+                        "py/state": {
+                            "b": 0,
+                            "g": 0,
+                            "r": 255
+                        }
+                    },
+                    "numInputChannels": 0,
+                    "numOutputChannels": 1,
+                    "uid": "b93c8fc44fc941689e8fcef2d1171b3d"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.audio.AudioInput",
+                        "py/state": {
+                            "autogain": true,
+                            "autogain_max": 50,
+                            "autogain_time": 10,
+                            "num_channels": 2
+                        }
+                    },
+                    "numInputChannels": 0,
+                    "numOutputChannels": 2,
+                    "uid": "3aba1e9d082d4132a9df02f41a2e5439"
+                }
+            }
+        ],
+        "recordTimings": true
+    }
+}
