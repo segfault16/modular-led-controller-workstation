@@ -14,7 +14,6 @@ from audioled.effect import Effect
 
 from PIL import Image, ImageOps
 
-
 wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
 wave_mode_default = 'sin'
 sortby = ['red', 'green', 'blue', 'brightness']
@@ -127,13 +126,15 @@ class SwimmingPool(Effect):
 
     async def update(self, dt):
         await super().update(dt)
+        if self._num_pixels is None:
+            return
         if self._pixel_state is None or np.size(self._pixel_state, 1) != self._num_pixels:
             self._pixel_state = np.zeros(self._num_pixels) * np.array([[0.0], [0.0], [0.0]])
             self._Wave = None
             self._WaveSpecSpeed = None
 
         if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < self.num_waves:
-            
+
             self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low,
                                                                 self.wavespread_high, self.max_speed)
         # Rotate waves
@@ -157,7 +158,6 @@ class SwimmingPool(Effect):
         else:
             color = self._inputBuffer[0]
 
-        
         all_waves = np.zeros(self._num_pixels)
         for i in range(0, self.num_waves):
             fact = 1.0
@@ -168,7 +168,7 @@ class SwimmingPool(Effect):
             if i < len(self._Wave) and i < len(self._WaveSpecSpeed):
                 step = np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=0) * self.scale * fact
                 all_waves += step
-        
+
         self._outputBuffer[0] = np.multiply(color, all_waves).clip(0, 255.0)
 
 
@@ -416,13 +416,17 @@ class Breathing(Effect):
         return definition
 
     def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
         color = self._inputBuffer[0]
         if color is None:
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self._outputBuffer is not None:
             brightness = self.oneStar(self._t, self.cycle)
             self._output = np.multiply(color,
-                                       np.ones(self._num_pixels) * np.array([[brightness], [brightness], [brightness]]))
+                                       np.ones(self._num_pixels) * np.array([[brightness],
+                                                                             [brightness],
+                                                                             [brightness]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
@@ -477,13 +481,18 @@ class Heartbeat(Effect):
         return definition
 
     def process(self):
-        color = self._inputBuffer[0]
-        if color is None:
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
             color = np.ones(self._num_pixels) * np.array([[255.0], [0.0], [0.0]])
-        if self._outputBuffer is not None:
-            brightness = self.oneStar(self._t, self.speed)
-            self._output = np.multiply(color,
-                                       np.ones(self._num_pixels) * np.array([[brightness], [brightness], [brightness]]))
+        else:
+            color = self._inputBuffer[0]
+
+        brightness = self.oneStar(self._t, self.speed)
+        self._output = np.multiply(color,
+                                   np.ones(self._num_pixels) * np.array([[brightness],
+                                                                         [brightness],
+                                                                         [brightness]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
@@ -583,6 +592,8 @@ class FallingStars(Effect):
         await super().update(dt)
 
     def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
         color = self._inputBuffer[0]
         if color is None:
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
@@ -786,6 +797,8 @@ class RandomPendulums(Effect):
 
     async def update(self, dt):
         await super().update(dt)
+        if self._num_pixels is None:
+            return
         if len(self._spread) == 0 or len(self._spread) != self.num_pendulums:
             self._spread = []
             self._location = []
@@ -839,7 +852,7 @@ class StaticBlob(Effect):
         return \
             "Generates a blob of light. Mostly for testing purposes."
 
-    def __init__(self, spread=50, location=150):
+    def __init__(self, spread=0.3, location=0.5):
         self.spread = spread
         self.location = location
         self.__initstate__()
@@ -997,6 +1010,8 @@ class GenerateWaves(Effect):
 
     async def update(self, dt):
         await super().update(dt)
+        if self._num_pixels is None:
+            return
         if self._wavearray is None or len(self._wavearray) != self._num_pixels:
             if self.wavemode == 'sin':
                 self._wavearray = self.createSin(self.period, self.scale)
@@ -1148,6 +1163,8 @@ class Sorting(Effect):
 
     async def update(self, dt):
         await super().update(dt)
+        if self._num_pixels is None:
+            return
         if self._output is None or np.size(self._output, 1) != self._num_pixels:
             self._output = self.disorder()
             self._sorting_done = False
@@ -1165,13 +1182,12 @@ class Sorting(Effect):
 
 
 class GIFPlayer(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
             "Effect for displaying GIFs on LED panels."
 
-    def __init__(self, gif_file, fps=30, center_x=0.5, center_y=0.5):
+    def __init__(self, gif_file=None, fps=30, center_x=0.5, center_y=0.5):
         self.file = gif_file
         self.fps = fps
         self.center_x = center_x
@@ -1204,14 +1220,10 @@ class GIFPlayer(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "fps":
-                "The number of frames per second for GIF playback.",
-                "center_x":
-                "Moves the GIF left or right if the image is being cropped.",
-                "center_y":
-                "Moves the GIF up or down if the image is being cropped.",
-                "file":
-                "The GIF to show."
+                "fps": "The number of frames per second for GIF playback.",
+                "center_x": "Moves the GIF left or right if the image is being cropped.",
+                "center_y": "Moves the GIF up or down if the image is being cropped.",
+                "file": "The GIF to show."
             }
         }
         return help
@@ -1249,11 +1261,15 @@ class GIFPlayer(Effect):
                 self._gif.seek(self._gif.tell() + 1)
             except Exception:
                 self._openGif()
-            
+
             num_cols = int(self._num_pixels / self._num_rows)
             # Resize image
             if self._gif is not None:
-                self._cur_image = ImageOps.fit(self._gif.convert('RGB'), (num_cols, self._num_rows), Image.ANTIALIAS, centering=(self.center_x, self.center_y))
+                self._cur_image = ImageOps.fit(
+                    self._gif.convert('RGB'),
+                    (num_cols, self._num_rows),
+                    Image.ANTIALIAS,
+                    centering=(self.center_x, self.center_y))
             # update time
             self._last_t = self._t
 

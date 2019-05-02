@@ -1,6 +1,18 @@
 import inspect
 
 
+class PixelBuffer(object):
+    def __init__(self):
+        super().__init__()
+
+
+class AudioBuffer(object):
+    def __init__(self, sample_rate):
+        super().__init__()
+        self.audio = None
+        self.sample_rate = sample_rate
+
+
 class Effect(object):
     """
     Base class for effects
@@ -127,13 +139,17 @@ class Effect(object):
     def getEffectDescription():
         return ""
 
-    def _inputBufferValid(self, index):
+    def _inputBufferValid(self, index, buffer_type=PixelBuffer.__name__):
         if self._inputBuffer is None:
             return False
         if len(self._inputBuffer) <= index:
             return False
         if self._inputBuffer[index] is None:
             return False
+        if buffer_type is AudioBuffer.__name__:
+            if not isinstance(self._inputBuffer[index], AudioBuffer):
+                raise RuntimeError("Input {}: Audio input expected.".format(index))
+
         return True
 
     def setNumOutputPixels(self, num_pixels):

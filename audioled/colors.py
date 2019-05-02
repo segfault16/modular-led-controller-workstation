@@ -125,7 +125,8 @@ class StaticRGBColor(Effect):
             self._color = np.ones(self._num_pixels) * np.array([[self.r], [self.g], [self.b]])
 
     def process(self):
-        self._outputBuffer[0] = self._color
+        if self._outputBuffer is not None:
+            self._outputBuffer[0] = self._color
 
 
 class ColorWheel(Effect):
@@ -237,8 +238,7 @@ class InterpolateRGB(Effect):
         return \
             "RGB interpolation between two color inputs."
 
-    def __init__(self, num_pixels):
-        self.num_pixels = num_pixels
+    def __init__(self):
         self.__initstate__()
 
     def numInputChannels(self):

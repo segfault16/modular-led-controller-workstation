@@ -13,7 +13,6 @@ SHORT_NORMALIZE = 1.0 / 32768.0
 
 
 class Shift(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -79,7 +78,6 @@ class Shift(Effect):
 
 
 class Append(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -169,7 +167,6 @@ class Append(Effect):
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
-            self._outputBuffer[0] = None
             return
         if self._inputBuffer[0] is None:
             self._outputBuffer[0] = None
@@ -192,7 +189,6 @@ class Append(Effect):
 
 
 class Combine(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -247,7 +243,6 @@ class Combine(Effect):
 
 
 class AfterGlow(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -307,7 +302,6 @@ class AfterGlow(Effect):
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
-            self._outputBuffer[0] = None
             return
         y = self._inputBuffer[0]
         if y is None:
@@ -327,7 +321,6 @@ class AfterGlow(Effect):
 
 
 class Mirror(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -556,6 +549,8 @@ class SpringCombine(Effect):
 
     async def update(self, dt):
         await super().update(dt)
+        if self._num_pixels is None:
+            return
         if self._pos is None or len(self._pos) != self._num_pixels:
             self._pos = np.zeros(self._num_pixels)
         if self._vel is None or len(self._vel) != self._num_pixels:

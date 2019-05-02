@@ -5,7 +5,7 @@ import itertools
 import math
 
 import numpy as np
-from scipy.signal import butter, lfilter_zi
+from scipy.signal import butter, lfilter_zi, lfilter
 
 
 def rollwin(signal, n_overlaps):
@@ -220,3 +220,24 @@ def design_filter(lowcut, highcut, fs, order=3):
     high = highcut / nyq
     b, a = butter(order, [low, high], btype='band')
     return b, a, lfilter_zi(b, a)
+
+
+class Bandpass():
+    def __init__(self, lowcut, highcut, fs, order=3):
+        self._fs = fs
+        self._filter_a = None
+        self._filter_b = None
+        self._filter_zi = None
+        self._lowcut = lowcut
+        self._highcut = highcut
+        self._order = order
+        self._initFilter()
+         
+    def filter(self, audio, fs):
+        if fs != self._fs:
+            self._initFilter()
+        y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=audio, zi=self._filter_zi)
+        return y
+
+    def _initFilter(self):
+        self._filter_b, self._filter_a, self._filter_zi = design_filter(self._lowcut, self._highcut, self._fs, self._order)
