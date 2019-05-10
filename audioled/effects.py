@@ -269,7 +269,7 @@ class AfterGlow(Effect):
         definition = {
             "parameters": OrderedDict([
                 # default, min, max, stepsize
-                ("glow_time", [1.0, 0.0, 10.0, 0.01]),
+                ("glow_time", [1.0, 0.0, 5.0, 0.001]),
             ])
         }
         return definition
