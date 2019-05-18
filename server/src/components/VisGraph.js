@@ -460,6 +460,7 @@ class VisGraph extends React.Component {
   }
 
   deleteNode = (data, callback) => {
+    console.log("delete nodes", data)
     data.nodes.forEach(id => {
       var node = this.state.graph.nodes.find(node => node.id == id)
       if (node == null) {
@@ -469,6 +470,10 @@ class VisGraph extends React.Component {
         // update callback data to include all input and output nodes for this node
         var inputOutputNodes = this.state.graph.nodes.filter(item => item.nodeType == 'channel' && item.nodeUid == id);
         data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
+        // update callback data to include connections from the deleted nodes
+        var connectionsFromInputOutputNodes = this.state.graph.edges.filter(item => data.nodes.includes(item.from) || data.nodes.includes(item.to)) 
+        data.edges = data.edges.concat(connectionsFromInputOutputNodes.map(x => x.id))
+        // delete node via filtergraphservice
         FilterGraphService.deleteNode(this.state.slot, id).finally(() => {
           this.clearNodePopUp();
         })
