@@ -807,14 +807,19 @@ class Oscilloscope(Effect):
         return \
             "Displays audio as a wave signal over time."
 
-    def __init__(self, lowcut_hz=1.0, highcut_hz=22000.0):
+    def __init__(self, lowcut_hz=1.0, highcut_hz=22000.0, window_fq_hz=50, gain=1.0, speed_fps=30.0):
         self.lowcut_hz = lowcut_hz
         self.highcut_hz = highcut_hz
+        self.window_fq_hz = window_fq_hz
+        self.gain = gain
+        self.speed_fps = speed_fps
         self.__initstate__()
 
     def __initstate__(self):
         super().__initstate__()
         self._bandpass = None
+        self._audioBuffer = None
+        self._last_process_dt = 0.0
 
     @staticmethod
     def getParameterDefinition():
@@ -823,7 +828,10 @@ class Oscilloscope(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("lowcut_hz", [1.0, 1.0, 8000.0, 1.0]),
-                ("highcut_hz", [22000.0, 0.0, 22000.0, 1.0])
+                ("highcut_hz", [22000.0, 0.0, 22000.0, 1.0]),
+                ("window_fq_hz", [50, 10, 320, 1.0]),
+                ("gain", [1.0, 0.5, 1.8, 0.001]),
+                ("speed_fps", [30.0, 5.0, 60.0, 5.0])
             ])
         }
         return definition
@@ -833,7 +841,10 @@ class Oscilloscope(Effect):
         help = {
             "parameters": {
                 "lowcut_hz": "Lowcut frequency of the audio input.",
-                "highcut_hz": "Highcut frequency of the audio input."
+                "highcut_hz": "Highcut frequency of the audio input.",
+                "window_fq_hz": "Window size (frequency) to display",
+                "gain": "Gain for audio input (makeup db)",
+                "speed_fps": "Framerate of oscilloscope effect"
             }
         }
         return help
@@ -842,6 +853,10 @@ class Oscilloscope(Effect):
         definition = self.getParameterDefinition()
         definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
         definition['parameters']['highcut_hz'][0] = self.highcut_hz
+        definition['parameters']['window_fq_hz'][0] = self.window_fq_hz
+        definition['parameters']['gain'][0] = self.gain
+        definition['parameters']['speed_fps'][0] = self.speed_fps
+
         return definition
 
     def numInputChannels(self):
@@ -864,14 +879,29 @@ class Oscilloscope(Effect):
             return
         if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
             return
-        audio = self._inputBuffer[0].audio
+        
+        # Process every now and then (speed_fps)
+        dt = self._t - self._last_process_dt
+        # Prevent division by zero
+        if dt == 0.0:
+            return
+        cur_fps = 1.0 / dt
+        if cur_fps > self.speed_fps:
+            # Return to exit
+            # print("Met t= {}".format(self._t))
+            return
+
+        # print("Process")
+
+        # Init color input
         cols = int(self._num_pixels / self._num_rows)
         if self._inputBufferValid(1):
             color = self._inputBuffer[1]
         else:
             color = np.ones(cols) * np.array([[255], [255], [255]])
 
-        audio = self._inputBuffer[0].audio
+        # Init audio
+        audio = self._inputBuffer[0].audio * self.gain
         fs = self._inputBuffer[0].sample_rate
 
         # construct filter if needed
@@ -880,13 +910,46 @@ class Oscilloscope(Effect):
         # apply bandpass to audio
         y = self._bandpass.filter(np.array(audio), fs)
 
+        # adjust number of samples to respect window_fq_hz.
+        # if we have 440 samples @ 44000 Hz -> 440/44000 = 0.01 s of data -> 100 Hz
+        # if we have 880 samples @ 44000 Hz -> 880/44000 = 0.02 s of data -> 50 Hz
+        # if we want to display 100 Hz in the entire window:
+        # 1 / 100 Hz * 44000 -> 440 samples
+        
+        adjusted_window = int(1.0 / self.window_fq_hz * fs / 2.0)
+        # update audio buffer
+        if self._audioBuffer is None:
+            self._audioBuffer = y
+        elif self._audioBuffer is not None and (len(self._audioBuffer) + len(y)) > adjusted_window * 10:
+            # audio buffer contains more samples than we need
+            self._audioBuffer = self._audioBuffer[len(y):]
+            self._audioBuffer = np.append(self._audioBuffer, y)
+        else:
+            self._audioBuffer = np.append(self._audioBuffer, y)
+        
+        y = self._audioBuffer
+        adjusted_window = int(min(len(y), adjusted_window))
+
+        # Find zero crossings to stabilize output
+        zero_crossings = np.where(np.diff(np.sign(y)))[0]
+        start_idx = 0
+        if len(zero_crossings) > 1:
+            if y[zero_crossings[0]] < 0 and y[zero_crossings[0] + 1] > 0:
+                start_idx = zero_crossings[0]
+            else:
+                start_idx = zero_crossings[1]
+        
+        y = y[start_idx:start_idx + adjusted_window]
+
         output = np.zeros((3, self._num_rows, cols))
         # First downsample to half the cols
-        decimation_ratio = np.round(len(y) / cols * 2)
+        decimation_ratio = np.round(len(y) / (cols + 1))
         downsampled_audio = sp.signal.decimate(y, int(decimation_ratio), ftype='fir', zero_phase=True)
         # Then resample to the number of cols -> prevents jumping between positive and negative values
-        downsampled_audio = sp.signal.resample(downsampled_audio, cols)
+        #downsampled_audio = sp.signal.resample(downsampled_audio, cols)
         for i in range(0, cols):
+            if i >= len(downsampled_audio):
+                continue
             # determine index in audio array
             valIdx = i
             # get value
@@ -896,3 +959,5 @@ class Oscilloscope(Effect):
             # set value for this col
             output[:, rowIdx, i] = color[:, i]
         self._outputBuffer[0] = output.reshape((3, -1))
+        # Update timer
+        self._last_process_dt = self._t
