@@ -55,7 +55,7 @@ class Configurator extends Component {
         })
         return <React.Fragment>
 
-            <Grid item xs={7} >
+            <Grid item sm={7} xs={10}>
                 <InputLabel htmlFor={parameterName} />
                 <Select
                     value={values[parameterName]}
@@ -68,14 +68,14 @@ class Configurator extends Component {
                     {items}
                 </Select>
             </Grid>
-            <Grid item xs={2}>
+            <Grid item sm={2} xs={2}>
             </Grid>
         </React.Fragment>
     }
 
     domCreateParameterSlider = (parameters, values, parameterName) => {
         return <React.Fragment>
-            <Grid item xs={7}>
+            <Grid item sm={7} xs={10}>
                 <Slider 
                     id={parameterName} 
                     value={values[parameterName]} 
@@ -84,7 +84,7 @@ class Configurator extends Component {
                     step={parameters[parameterName][3]} 
                     onChange={(e, val) => this.handleParameterChange(val, parameterName)} />
             </Grid>
-            <Grid item xs={2}>
+            <Grid item sm={2} xs={2}>
             <Typography>
                 {values[parameterName] !== null ? values[parameterName].toFixed(Math.abs(Math.log10(parameters[parameterName][3]))) : null}
             </Typography>
@@ -94,7 +94,7 @@ class Configurator extends Component {
 
     domCreateParameterCheckbox = (parameters, values, parameterName) => {
         return <React.Fragment>
-            <Grid container xs={7} justify="flex-end">
+            <Grid container sm={7} xs={10} justify="flex-end">
                 <Checkbox
                     checked={values[parameterName]}
                     onChange={(e, val) => this.handleParameterChange(val, parameterName)}
@@ -102,7 +102,7 @@ class Configurator extends Component {
                     color="primary"
                 />
             </Grid>
-            <Grid item xs={2}>
+            <Grid item sm={2} xs={2}>
             <Typography>
                 {values[parameterName]}
             </Typography>
@@ -119,10 +119,10 @@ class Configurator extends Component {
 
     domCreateParameterGif = (parameters, values, parameterName) => {
         return <React.Fragment>
-            <Grid container xs={7} justify="flex-end">
+            <Grid container sm={7} xs={10} justify="flex-end">
                 <img src={"project/assets/" + values[parameterName]} role="presentation" style={{maxWidht: '100px', maxHeight: '100px'}} />
             </Grid>
-            <Grid item xs={2}>
+            <Grid item sm={2} xs={2}>
             <Typography>
             <input type="file" id="gif-input" onChange={(e) => this.handleGifUpload(e, parameterName)} style={{ display: 'none' }} />
                   <label htmlFor="gif-input">
@@ -166,7 +166,7 @@ class Configurator extends Component {
                     return (
                         <Tooltip title={helpText}>
                         <Grid key={index} container spacing={24}   alignItems="center" justify="center">
-                            <Grid item xs={3} >
+                            <Grid item sm={3} xs={12} >
                             <Typography>
                                 {data}:
                             </Typography>
@@ -195,9 +195,9 @@ class Configurator extends Component {
 
 Configurator.propTypes = {
     classes: PropTypes.object.isRequired,
-    parameters: PropTypes.object.isRequired,
-    parameterHelp: PropTypes.object,
-    values: PropTypes.object.isRequired,
+    // parameters: PropTypes.object,
+    // parameterHelp: PropTypes.object,
+    // values: PropTypes.object,
     onChange: PropTypes.func
 };
 

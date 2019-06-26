@@ -905,9 +905,7 @@ class VisGraph extends React.Component {
               </Paper>
               : null}
           </div>
-        <Modal open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp}>
-          <NodePopup mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
-        </Modal>
+          <NodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
       </div>
     );
   }

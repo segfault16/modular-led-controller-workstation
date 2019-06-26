@@ -11,6 +11,12 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Divider from '@material-ui/core/Divider';
 import FilterGraphService from "../services/FilterGraphService";
 import Typography from '@material-ui/core/Typography';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogContentText from '@material-ui/core/DialogContentText';
+import DialogTitle from '@material-ui/core/DialogTitle';
+import withMobileDialog, { WithMobileDialog } from '@material-ui/core/withMobileDialog';
 
 import './NodePopup.css'
 
@@ -45,21 +51,35 @@ class NodePopup extends React.Component {
             },
             effects: [],
             selectedEffect: null,
-            slot: props.slot
+            slot: props.slot,
+            open: props.open
         }
     }
 
     async componentDidMount() {
-        if (this.state.mode === "edit") {
-            await this.showEdit()
-        } else if (this.state.mode === "add") {
-            await this.showAdd()
-        }
+
     }
 
     componentWillUnmount() {
         // document.getElementById('node-popUp').style.display = 'none';
     }
+
+    async componentWillReceiveProps(nextProps) {
+        // You don't have to do this check first, but it can help prevent an unneeded render
+        if(nextProps.open === true) {
+            this.state.mode = nextProps.mode
+            this.state.nodeUid = nextProps.nodeUid
+            this.state.onSave = nextProps.onSave
+            this.state.onCancel = nextProps.onCancel
+            this.state.slot = nextProps.slot
+            this.state.open = nextProps.open
+            if (this.state.mode === "edit") {
+                await this.showEdit()
+            } else if (this.state.mode === "add") {
+                await this.showAdd()
+            }
+        }
+      }
 
     async showEdit() {
         const uid = this.state.nodeUid;
@@ -76,6 +96,7 @@ class NodePopup extends React.Component {
             var desc = result[3];
             this.setState(state => {
                 return {
+                    open: true,
                     config: {
                         parameters: parameterDefinition.parameters,
                         values: currentParameterValues,
@@ -117,6 +138,7 @@ class NodePopup extends React.Component {
             var desc = result[3];
             return this.setState(state => {
                 return {
+                    open: true,
                     config: {
                         parameters: parameters.parameters,
                         values: defaults,
@@ -131,10 +153,20 @@ class NodePopup extends React.Component {
     }
 
     handleNodeEditCancel = async (event) => {
+        this.setState(state => {
+            return {
+                open: false
+            }
+        })
         this.state.onCancel()
     }
 
     handleNodeEditSave = async (event) => {
+        this.setState(state => {
+            return {
+                open: false
+            }
+        })
         var selectedEffect = this.state.selectedEffect;
         var options = this.state.config.values;
         this.state.onSave(selectedEffect, options)
@@ -209,8 +241,17 @@ class NodePopup extends React.Component {
         let effectDescription = this.state.config.description;
         let effectDropdown = this.domCreateEffectDropdown();
         return (
-            <div className={classes.paper}>
-                <h2 id="node-operation">{this.state.mode === "edit" ? "Edit Node" : "Add Node"}</h2>
+            
+            <Dialog 
+                open={this.state.open} 
+                onClose={this.handleNodeEditCancel} 
+                aria-labelledby="form-dialog-title"
+                maxWidth="xl"
+                fullWidth={true}
+                fullScreen={this.props.fullScreen}
+            >
+                <DialogTitle id="form-dialog-title">{this.state.mode === "edit" ? "Edit Node" : "Add Node"}</DialogTitle>
+                <DialogContent>
                 <div id="effects">
                     {effectDropdown}
                 </div>
@@ -237,11 +278,14 @@ class NodePopup extends React.Component {
                 <h3></h3>
                 <Divider className={classes.divider} />
                 <h3></h3>
-                <Grid container spacing={24} justify="flex-end">
-                {this.state.mode === "add" ? <Grid item><Button variant="contained" id="node-saveButton" onClick={this.handleNodeEditSave}>save</Button></Grid> : null}
-                <Grid item><Button variant="contained" id="node-cancelButton" onClick={this.handleNodeEditCancel}>cancel</Button></Grid>
-                </Grid>                
-            </div>
+                </DialogContent>
+                <DialogActions>
+                <Button onClick={this.handleNodeEditCancel} color="primary">
+                    Cancel
+                </Button>
+                {this.state.mode === "add" ?<Button variant="contained" id="node-saveButton" onClick={this.handleNodeEditSave}>Save</Button> : null}
+                </DialogActions>
+            </Dialog>
         );
     }
 }
@@ -251,4 +295,4 @@ NodePopup.propTypes = {
     slot: PropTypes.number.isRequired
 };
 
-export default withStyles(styles)(NodePopup);
+export default withStyles(styles)(withMobileDialog()(NodePopup));
