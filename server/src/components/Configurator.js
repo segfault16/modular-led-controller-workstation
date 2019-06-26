@@ -85,7 +85,7 @@ class Configurator extends Component {
                     onChange={(e, val) => this.handleParameterChange(val, parameterName)} />
             </Grid>
             <Grid item sm={2} xs={2}>
-            <Typography>
+            <Typography align="right">
                 {values[parameterName] !== null ? values[parameterName].toFixed(Math.abs(Math.log10(parameters[parameterName][3]))) : null}
             </Typography>
             </Grid>
@@ -103,7 +103,7 @@ class Configurator extends Component {
                 />
             </Grid>
             <Grid item sm={2} xs={2}>
-            <Typography>
+            <Typography align="right">
                 {values[parameterName]}
             </Typography>
             </Grid>

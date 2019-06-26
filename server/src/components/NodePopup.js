@@ -65,6 +65,7 @@ class NodePopup extends React.Component {
     }
 
     async componentWillReceiveProps(nextProps) {
+        console.log("next props:", nextProps)
         // You don't have to do this check first, but it can help prevent an unneeded render
         if(nextProps.open === true) {
             this.state.mode = nextProps.mode
@@ -78,6 +79,12 @@ class NodePopup extends React.Component {
             } else if (this.state.mode === "add") {
                 await this.showAdd()
             }
+        } else {
+            this.setState(state => {
+                return {
+                    open: false
+                }
+            })
         }
       }
 
@@ -96,7 +103,6 @@ class NodePopup extends React.Component {
             var desc = result[3];
             this.setState(state => {
                 return {
-                    open: true,
                     config: {
                         parameters: parameterDefinition.parameters,
                         values: currentParameterValues,
@@ -138,7 +144,6 @@ class NodePopup extends React.Component {
             var desc = result[3];
             return this.setState(state => {
                 return {
-                    open: true,
                     config: {
                         parameters: parameters.parameters,
                         values: defaults,
@@ -153,20 +158,20 @@ class NodePopup extends React.Component {
     }
 
     handleNodeEditCancel = async (event) => {
-        this.setState(state => {
-            return {
-                open: false
-            }
-        })
+        // this.setState(state => {
+        //     return {
+        //         open: false
+        //     }
+        // })
         this.state.onCancel()
     }
 
     handleNodeEditSave = async (event) => {
-        this.setState(state => {
-            return {
-                open: false
-            }
-        })
+        // this.setState(state => {
+        //     return {
+        //         open: false
+        //     }
+        // })
         var selectedEffect = this.state.selectedEffect;
         var options = this.state.config.values;
         this.state.onSave(selectedEffect, options)
@@ -280,7 +285,7 @@ class NodePopup extends React.Component {
                 <h3></h3>
                 </DialogContent>
                 <DialogActions>
-                <Button onClick={this.handleNodeEditCancel} color="primary">
+                <Button onClick={this.handleNodeEditCancel} color="primary" variant="contained" >
                     Cancel
                 </Button>
                 {this.state.mode === "add" ?<Button variant="contained" id="node-saveButton" onClick={this.handleNodeEditSave}>Save</Button> : null}
