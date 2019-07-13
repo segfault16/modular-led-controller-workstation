@@ -34,7 +34,7 @@ class ServerConfiguration:
         return {
             CONFIG_NUM_PIXELS: [300, 1, 2000, 1],
             CONFIG_NUM_ROWS: [1, 1, 100, 1],
-            CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
+            CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi', 'DotStar'],
         }
 
     def setConfiguration(self, key, value):
@@ -171,6 +171,10 @@ class ServerConfiguration:
                 self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS))
         elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
             device = devices.FadeCandy(
+                self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS),
+                self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
+        elif self.getConfiguration(CONFIG_DEVICE) == devices.DotStar.__name__:
+            device = devices.DotStar(
                 self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS),
                 self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
         else:
