@@ -314,13 +314,13 @@ class DotStar(LEDController):
             Global brightness
         """
         try:
-            import apa102
+            from driver import apa102
         except ImportError as e:
             url = 'https://github.com/tinue/APA102_Pi'
             print('Could not import the apa102 library')
             print('For installation instructions, see {}'.format(url))
             raise e
-        self._strip = apa102.APA102(numLEDs=num_pixels, globalBrightness=brightness)  # Initialize the strip
+        self._strip = apa102.APA102(num_led=num_pixels)  # Initialize the strip
         led_data = np.array(self._strip.leds, dtype=np.uint8)
         # memoryview preserving the first 8 bits of LED frames (w/ global brightness)
         self._strip.leds = led_data.data
