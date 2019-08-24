@@ -42,7 +42,7 @@ Description=Audio-reactive LED Strip
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 server.py -D RaspberryPi
+ExecStart=/usr/bin/python3 server.py -D RaspberryPi --config_location /home/pi/
 WorkingDirectory=/home/pi/projects/audio-reactive-led-strip
 StandardOutput=inherit
 StandardError=inherit
@@ -54,3 +54,5 @@ WantedBy=multi-user.target
 ```
 
 and starting the service with `sudo systemctl start ledserver`.
+The service can be restarted with `sudo systemctl restart ledserver`.
+Adjust `--config_location` for a different configuration location.

@@ -33,20 +33,20 @@
     "webpack-dev-server": "^3.3.1"
   },
   "dependencies": {
-    "@material-ui/core": "^3.9.1",
-    "@material-ui/icons": "^3.0.1",
-    "@material-ui/lab": "^3.0.0-alpha.29",
+    "@material-ui/core": "^4.1.3",
+    "@material-ui/icons": "^4.2.1",
+    "@material-ui/lab": "^4.0.0-alpha.18",
     "@types/file-saver": "^2.0.0",
     "file-saver": "^2.0.0",
-    "notistack": "^0.4.2",
-    "npm": "^6.9.0",
-    "react": "^16.7.0",
-    "react-dom": "^16.7.0",
+    "notistack": "^0.8.7",
+    "npm": "^6.10.1",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
     "react-graph-vis": "^1.0.2",
     "react-measure": "^2.2.3",
     "react-piano": "^3.1.2",
-    "react-router-config": "^4.4.0-beta.6",
-    "react-router-dom": "^4.3.1",
+    "react-router-config": "^5.0.1",
+    "react-router-dom": "^5.0.1",
     "vis": "^4.21.0"
   }
 }

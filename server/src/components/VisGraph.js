@@ -844,7 +844,7 @@ class VisGraph extends React.Component {
           <div className={classes.toggleContainer}>
             <Grid container spacing={16} justify="flex-end" direction="row">
               <Grid item xs={12} sm={12}>
-                <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange}>
+                <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange} size="small">
                   <ToggleButton value={MODE_SELECT}>
                     <Tooltip title="Select mode">
                     <InfoIcon />
@@ -871,17 +871,13 @@ class VisGraph extends React.Component {
                     <SaveIcon />
                     </Tooltip>
                   </Button>
-                  
-                  
-                  <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
-                  <label htmlFor="file-input">
-                  
-                  <Button component="span" size="small">
+
+                  <Button component="label">
                   <Tooltip title="Upload configuration">
                       <CloudUploadIcon />
                       </Tooltip>
-                    </Button>                    
-                  </label>
+                      <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
+                  </Button>
                   
                 </ToggleButtonGroup>
               </Grid>
@@ -905,9 +901,7 @@ class VisGraph extends React.Component {
               </Paper>
               : null}
           </div>
-        <Modal open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp}>
-          <NodePopup mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
-        </Modal>
+          <NodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
       </div>
     );
   }

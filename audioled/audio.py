@@ -44,7 +44,10 @@ class GlobalAudio():
         GlobalAudio.device_index = device_index
         GlobalAudio.chunk_rate = chunk_rate
         self.num_channels = num_channels
-        self.global_stream, GlobalAudio.sample_rate = self.stream_audio(device_index, chunk_rate, num_channels)
+        try:
+            self.global_stream, GlobalAudio.sample_rate = self.stream_audio(device_index, chunk_rate, num_channels)
+        except:
+            print("!!! Fatal error in audio device !!!")
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
         chunk = np.fromstring(in_data, np.float32).astype(np.float)

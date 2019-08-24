@@ -3,9 +3,6 @@ import PropTypes from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
 
 import CssBaseline from '@material-ui/core/CssBaseline';
-import AppBar from '@material-ui/core/AppBar';
-import Toolbar from '@material-ui/core/Toolbar';
-import Typography from '@material-ui/core/Typography';
 import './App.css';
 import SideBar from './components/SideBar'
 import Routes from './routes/Routes'
@@ -18,9 +15,6 @@ const styles = theme => ({
   root: {
     display: 'flex',
     minHeight: '100vh',
-  },
-  appBar: {
-    zIndex: theme.zIndex.drawer + 1,
   },
   toolbar: theme.mixins.toolbar,
   content: {
@@ -40,13 +34,6 @@ class App extends Component {
 
       <div className={classes.root}>
         <CssBaseline />
-        <AppBar position="fixed" className={classes.appBar}>
-          <Toolbar>
-            <Typography variant="h6" color="inherit" noWrap>
-              MOLECOLE - A Modular LED Controller Workstation
-          </Typography>
-          </Toolbar>
-        </AppBar>
         <SideBar />
         
         <div id="content">
