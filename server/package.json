@@ -39,7 +39,7 @@
     "@types/file-saver": "^2.0.0",
     "file-saver": "^2.0.0",
     "notistack": "^0.8.7",
-    "npm": "^6.10.1",
+    "npm": "^6.12.1",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-graph-vis": "^1.0.2",
