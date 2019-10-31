@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 import matplotlib as mpl
 import numpy as np
+from PIL import Image
 
 from audioled.effect import Effect
 
@@ -295,3 +296,59 @@ class InterpolateHSV(Effect):
                 rgb = mpl.colors.hsv_to_rgb(hsv)
 
                 self._outputBuffer[0] = rgb.T * 255.0
+
+class RGBToHSV(Effect):
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Switches encoding from RGB to HSV encoding"
+    
+    def __init__(self):
+        self.__initstate__()
+    
+    def numInputChannels(self):
+        return 1
+    
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        a = self._inputBuffer[0]
+        if a is None:
+            return
+        a = np.expand_dims(a, axis=1).T.astype(np.uint8)
+        pImg = Image.fromarray(a, mode='RGB')
+        pImg = pImg.convert('HSV')
+        out = np.asarray(pImg, dtype=np.uint8)
+        out = out.reshape(-1, out.shape[-1]).T
+        self._outputBuffer[0] = out
+
+class HSVToRGB(Effect):
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Switches encoding from HSV to RGB encoding"
+    
+    def __init__(self):
+        self.__initstate__()
+    
+    def numInputChannels(self):
+        return 1
+    
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        a = self._inputBuffer[0]
+        if a is None:
+            return
+        a = np.expand_dims(a, axis=1).T.astype(np.uint8)
+        pImg = Image.fromarray(a, mode='HSV')
+        pImg = pImg.convert('RGB')
+        out = np.asarray(pImg, dtype=np.uint8)
+        out = out.reshape(-1, out.shape[-1]).T
+        self._outputBuffer[0] = out
