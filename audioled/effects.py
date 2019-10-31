@@ -178,6 +178,14 @@ class Append(Effect):
                     state = np.concatenate((state, self._inputBuffer[i][:, ::-1]), axis=1)
                 else:
                     state = np.concatenate((state, self._inputBuffer[i]), axis=1)
+        # Make sure the size of the output state matches num_pixels
+        remainingPixels = self._num_pixels - np.size(state, axis=1)
+        if remainingPixels > 0:
+            remainder = np.zeros((3, remainingPixels))
+            remainder[0, :] = state[0, -1]
+            remainder[1, :] = state[1, -1]
+            remainder[2, :] = state[2, -1]
+            state = np.concatenate((state, remainder), axis=1)
         self._outputBuffer[0] = state
 
     def getNumInputPixels(self, channel):
