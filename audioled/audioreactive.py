@@ -411,7 +411,8 @@ class MovingLight(Effect):
                  highcut_hz=300.0,
                  peak_scale=4.0,
                  peak_filter=2.6,
-                 highlight=0.6):
+                 highlight=0.6,
+                 smoothing=0):
         self.speed = speed
         self.dim_time = dim_time
         self.lowcut_hz = lowcut_hz
@@ -419,15 +420,21 @@ class MovingLight(Effect):
         self.peak_scale = peak_scale
         self.peak_filter = peak_filter
         self.highlight = highlight
+        self.smoothing = smoothing
         self.__initstate__()
 
     def __initstate__(self):
+        super(MovingLight, self).__initstate__()
         # state
         self._pixel_state = None
         self._bandpass = None
         self._last_t = 0.0
         self._last_move_t = 0.0
-        super(MovingLight, self).__initstate__()
+        try:
+            self._hold_values
+        except AttributeError:
+            self._hold_values = []
+        
 
     def numInputChannels(self):
         return 2
@@ -447,7 +454,8 @@ class MovingLight(Effect):
                 ("highcut_hz", [100.0, 0.0, 8000.0, 1.0]),
                 ("peak_filter", [1.0, 0.0, 10.0, .01]),
                 ("peak_scale", [1.0, 0.0, 5.0, .01]),
-                ("highlight", [0.0, 0.0, 1.0, 0.01])
+                ("highlight", [0.0, 0.0, 1.0, 0.01]),
+                ("smoothing", [0, 0, 1, 0.01]),
             ])
         }
         return definition
@@ -470,6 +478,7 @@ class MovingLight(Effect):
                 "Scales the visual peak after the filter.",
                 "highlight":
                 "Amount of white light added to the audio peak.",
+                "smoothing": "Smoothing of the moving peak.",
             }
         }
         return help
@@ -483,6 +492,7 @@ class MovingLight(Effect):
         definition['parameters']['peak_scale'][0] = self.peak_scale
         definition['parameters']['peak_filter'][0] = self.peak_filter
         definition['parameters']['highlight'][0] = self.highlight
+        definition['parameters']['smoothing'][0] = self.smoothing
         return definition
 
     async def update(self, dt):
@@ -509,9 +519,10 @@ class MovingLight(Effect):
         y = self._bandpass.filter(np.array(audio), fs)
         # move in speed
         dt_move = self._t - self._last_move_t
+        # calculate number of pixels to shift
+        shift_pixels = int(dt_move * self.speed)
+        shift_pixels = np.clip(shift_pixels, 1, self._num_pixels - 1)
         if dt_move * self.speed > 1:
-            shift_pixels = int(dt_move * self.speed)
-            shift_pixels = np.clip(shift_pixels, 1, self._num_pixels - 1)
             self._pixel_state[:, shift_pixels:] = self._pixel_state[:, :-shift_pixels]
             self._pixel_state[:, 0:shift_pixels] = self._pixel_state[:, shift_pixels:shift_pixels + 1]
             # convolve to smooth edges
@@ -524,17 +535,23 @@ class MovingLight(Effect):
         self._pixel_state *= (1.0 - dt / self.dim_time)
         self._pixel_state = gaussian_filter1d(self._pixel_state, sigma=0.5, axis=1)
         self._pixel_state = gaussian_filter1d(self._pixel_state, sigma=0.5, axis=1)
-        # new color at origin
+        # calculate current peak
         peak = np.max(y) * 1.0
+        while len(self._hold_values) > 20 * self.smoothing:
+            self._hold_values.pop()
+        self._hold_values.insert(0, peak)
+        peak = np.max(self._hold_values)
+        # apply peak filter and scale
         try:
             peak = peak**self.peak_filter
         except Exception:
             peak = peak
         peak = peak * self.peak_scale
+        # new pixel at origin with peak
         r, g, b = color[0, 0], color[1, 0], color[2, 0]
-        self._pixel_state[0][0] = r * peak + self.highlight * peak * 255.0
-        self._pixel_state[1][0] = g * peak + self.highlight * peak * 255.0
-        self._pixel_state[2][0] = b * peak + self.highlight * peak * 255.0
+        self._pixel_state[0][0:shift_pixels] = r * peak + self.highlight * peak * 255.0
+        self._pixel_state[1][0:shift_pixels] = g * peak + self.highlight * peak * 255.0
+        self._pixel_state[2][0:shift_pixels] = b * peak + self.highlight * peak * 255.0
         self._pixel_state = np.nan_to_num(self._pixel_state).clip(0.0, 255.0)
         self._outputBuffer[0] = self._pixel_state
 
@@ -879,7 +896,7 @@ class Oscilloscope(Effect):
             return
         if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
             return
-        
+
         # Process every now and then (speed_fps)
         dt = self._t - self._last_process_dt
         # Prevent division by zero
@@ -915,7 +932,7 @@ class Oscilloscope(Effect):
         # if we have 880 samples @ 44000 Hz -> 880/44000 = 0.02 s of data -> 50 Hz
         # if we want to display 100 Hz in the entire window:
         # 1 / 100 Hz * 44000 -> 440 samples
-        
+
         adjusted_window = int(1.0 / self.window_fq_hz * fs / 2.0)
         # update audio buffer
         if self._audioBuffer is None:
@@ -926,7 +943,7 @@ class Oscilloscope(Effect):
             self._audioBuffer = np.append(self._audioBuffer, y)
         else:
             self._audioBuffer = np.append(self._audioBuffer, y)
-        
+
         y = self._audioBuffer
         adjusted_window = int(min(len(y), adjusted_window))
 
@@ -938,7 +955,7 @@ class Oscilloscope(Effect):
                 start_idx = zero_crossings[0]
             else:
                 start_idx = zero_crossings[1]
-        
+
         y = y[start_idx:start_idx + adjusted_window]
 
         output = np.zeros((3, self._num_rows, cols))
@@ -946,7 +963,6 @@ class Oscilloscope(Effect):
         decimation_ratio = np.round(len(y) / (cols + 1))
         downsampled_audio = sp.signal.decimate(y, int(decimation_ratio), ftype='fir', zero_phase=True)
         # Then resample to the number of cols -> prevents jumping between positive and negative values
-        #downsampled_audio = sp.signal.resample(downsampled_audio, cols)
         for i in range(0, cols):
             if i >= len(downsampled_audio):
                 continue
@@ -962,18 +978,19 @@ class Oscilloscope(Effect):
         # Update timer
         self._last_process_dt = self._t
 
+
 class Blink(Effect):
     @staticmethod
     def getEffectDescription():
         return \
             "Makes pixels blink with audio"
-    
+
     def __init__(self, db_range=60.0, smoothing=0, amount=1.0):
         self.db_range = db_range
         self.smoothing = smoothing
         self.amount = amount
         self.__initstate__()
-    
+
     def __initstate__(self):
         super().__initstate__()
         try:
@@ -1033,4 +1050,140 @@ class Blink(Effect):
         rms = dsp.rms(self._hold_values)
         db = 20 * math.log10(max(rms, 1e-16))
         scal_value = (self.db_range + db) / self.db_range
-        self._outputBuffer[0] = self._inputBuffer[1] * (1 - self.amount) + self._inputBuffer[1] * scal_value * self.amount
+        self._outputBuffer[0] = self._inputBuffer[1] * (
+            1 - self.amount) + self._inputBuffer[1] * scal_value * self.amount
+
+
+class Shift(Effect):
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Makes pixels shift with audio"
+
+    def __init__(
+            self,
+            db_range=60.0,
+            smoothing=0,
+            speed=100.0,
+            lowcut_hz=1.0,
+            highcut_hz=22000.0,
+            peak_filter=2.6,
+            peak_scale=4.0,
+    ):
+        self.db_range = db_range
+        self.smoothing = smoothing
+        self.speed = speed
+        self.lowcut_hz = lowcut_hz
+        self.highcut_hz = highcut_hz
+        self.peak_filter = peak_filter
+        self.peak_scale = peak_scale
+        self.__initstate__()
+
+    def __initstate__(self):
+        super().__initstate__()
+        self._bandpass = None
+        try:
+            self._hold_values
+        except AttributeError:
+            self._hold_values = []
+        try:
+            self._shift_pixels
+        except AttributeError:
+            self._shift_pixels = 0
+
+        self._last_t = self._t
+
+    def numInputChannels(self):
+        return 2
+
+    def numOutputChannels(self):
+        return 1
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("db_range", [60.0, 20.0, 100.0, 1.0]),
+                ("smoothing", [0, 0, 1, 0.01]),
+                ("speed", [100.0, -1000.0, 1000.0, 1.0]),
+                ("lowcut_hz", [1.0, 1.0, 8000.0, 1.0]),
+                ("highcut_hz", [22000.0, 0.0, 22000.0, 1.0]),
+                ("peak_filter", [1.0, 0.0, 10.0, .01]),
+                ("peak_scale", [1.0, 0.0, 5.0, .01]),
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "db_range":
+                "dB range of Shift to work in.",
+                "smoothing":
+                "Smoothing of the shift.",
+                "speed":
+                "Speed of the shifting effect.",
+                "lowcut_hz":
+                "Lowcut frequency of the audio input.",
+                "highcut_hz":
+                "Highcut frequency of the audio input.",
+                "peak_filter":
+                "Filters the audio peaks. Increase this value to transform only high audio peaks into visual peaks.",
+                "peak_scale":
+                "Scales the visual peak after the filter.",
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['db_range'][0] = self.db_range
+        definition['parameters']['smoothing'][0] = self.smoothing
+        definition['parameters']['speed'][0] = self.speed
+        definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
+        definition['parameters']['highcut_hz'][0] = self.highcut_hz
+        definition['parameters']['peak_filter'][0] = self.peak_filter
+        definition['parameters']['peak_scale'][0] = self.peak_scale
+        return definition
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
+            return
+
+        # Init audio
+        audio = self._inputBuffer[0].audio
+        fs = self._inputBuffer[0].sample_rate
+
+        # construct filter if needed
+        if self._bandpass is None:
+            self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
+        # apply bandpass to audio
+        y = self._bandpass.filter(np.array(audio), fs)
+
+        x = self._inputBuffer[1]
+        rms = dsp.rms(y)
+        # calculate rms over hold_time
+        while len(self._hold_values) > 20 * self.smoothing:
+            self._hold_values.pop()
+        self._hold_values.insert(0, rms)
+        rms = dsp.rms(self._hold_values)
+        db = 20 * math.log10(max(rms, 1e-16))
+        db = max(db, -self.db_range)
+
+        scal_value = (self.db_range + db) / self.db_range
+        try:
+            scal_value = scal_value**self.peak_filter
+        except Exception:
+            scal_value = scal_value
+        scal_value = scal_value * self.peak_scale
+
+        dt_move = self._t - self._last_t
+        shift = dt_move * self.speed * 0.1 * scal_value
+        self._shift_pixels = math.fmod((self._shift_pixels + shift), np.size(x, axis=1))
+        self._last_t = self._t
+        self._outputBuffer[0] = sp.ndimage.interpolation.shift(x, [0, self._shift_pixels], mode='wrap', prefilter=True)
