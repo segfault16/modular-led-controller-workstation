@@ -961,3 +961,76 @@ class Oscilloscope(Effect):
         self._outputBuffer[0] = output.reshape((3, -1))
         # Update timer
         self._last_process_dt = self._t
+
+class Blink(Effect):
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Makes pixels blink with audio"
+    
+    def __init__(self, db_range=60.0, smoothing=0, amount=1.0):
+        self.db_range = db_range
+        self.smoothing = smoothing
+        self.amount = amount
+        self.__initstate__()
+    
+    def __initstate__(self):
+        super().__initstate__()
+        try:
+            self._hold_values
+        except AttributeError:
+            self._hold_values = []
+        self._default_color = None
+
+    def numInputChannels(self):
+        return 2
+
+    def numOutputChannels(self):
+        return 1
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("db_range", [60.0, 20.0, 100.0, 1.0]),
+                ("smoothing", [0, 0, 1, 0.01]),
+                ("amount", [1, 0, 1, 0.01])
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "db_range": "dB range of Blink to work in.",
+                "smoothing": "Smoothing of the blinking.",
+                "amount": "Amount of blinking."
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['db_range'][0] = self.db_range
+        definition['parameters']['smoothing'][0] = self.smoothing
+        definition['parameters']['amount'][0] = self.amount
+        return definition
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
+            return
+        y = self._inputBuffer[0].audio
+        rms = dsp.rms(y)
+        # calculate rms over hold_time
+        while len(self._hold_values) > 20 * self.smoothing:
+            self._hold_values.pop()
+        self._hold_values.insert(0, rms)
+        rms = dsp.rms(self._hold_values)
+        db = 20 * math.log10(max(rms, 1e-16))
+        scal_value = (self.db_range + db) / self.db_range
+        self._outputBuffer[0] = self._inputBuffer[1] * (1 - self.amount) + self._inputBuffer[1] * scal_value * self.amount
