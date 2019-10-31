@@ -2,7 +2,7 @@ import React from "react";
 import PropTypes, { bool } from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
-import Slider from '@material-ui/lab/Slider';
+import Slider from '@material-ui/core/Slider';
 import Grid from '@material-ui/core/Grid';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
@@ -27,10 +27,10 @@ const styles = theme => ({
         
         position: 'absolute', left: '50%', top: '50%',
         transform: 'translate(-50%, -50%)',
-        width: theme.spacing.unit * 80,
+        width: theme.spacing(80),
         backgroundColor: theme.palette.background.paper,
         boxShadow: theme.shadows[5],
-        padding: theme.spacing.unit * 4,
+        padding: theme.spacing(4),
         outline: 'none',
     },
 });
@@ -64,7 +64,7 @@ class NodePopup extends React.Component {
         // document.getElementById('node-popUp').style.display = 'none';
     }
 
-    async componentWillReceiveProps(nextProps) {
+    async UNSAFE_componentWillReceiveProps(nextProps) {
         console.log("next props:", nextProps)
         // You don't have to do this check first, but it can help prevent an unneeded render
         if(nextProps.open === true) {

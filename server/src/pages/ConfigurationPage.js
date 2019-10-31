@@ -12,7 +12,7 @@ const styles = theme => ({
         height: '100%',
     },
     pageContent: {
-        margin: theme.spacing.unit,
+        margin: theme.spacing(1),
         background: theme.palette.background.default,
         width: '100%',
         maxWidth: '100%'

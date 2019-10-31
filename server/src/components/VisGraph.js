@@ -95,7 +95,7 @@ var icons = {
 const styles = theme => ({
   toggleContainer: {
     height: 56,
-    padding: `${theme.spacing.unit}px ${theme.spacing.unit * 2}px`,
+    padding: `${theme.spacing(1)}px ${theme.spacing(2)}px`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
@@ -104,8 +104,8 @@ const styles = theme => ({
   },
   helptext: {
     ...theme.mixins.gutters(),
-    paddingTop: theme.spacing.unit,
-    paddingBottom: theme.spacing.unit,
+    paddingTop: theme.spacing(1),
+    paddingBottom: theme.spacing(1),
   },
 });
 
@@ -256,7 +256,7 @@ class VisGraph extends React.Component {
           navigationButtons: false,
           hover: true,
           hoverConnectedEdges: false,
-          selectedConnectedEdges: false
+          selectConnectedEdges: false
         },
         manipulation: {
           enabled: false,
@@ -377,7 +377,7 @@ class VisGraph extends React.Component {
     clearInterval(this.intervalID);
   }
 
-  async componentWillReceiveProps(nextProps) {
+  async UNSAFE_componentWillReceiveProps(nextProps) {
     if (nextProps.slot != this.state.slot) {
       console.log("new props", nextProps)
       this.state.slot = nextProps.slot
@@ -765,15 +765,15 @@ class VisGraph extends React.Component {
 
   updateDimensions = (event) => {
 
-    let content = document.getElementById('vis-content');
-    let visDiv = content.getElementsByTagName('div')[0]
-    visDiv.style.position = "absolute";
-    visDiv.style.height = (content.clientHeight) + "px";
-    visDiv.style.width = (content.clientWidth) + "px";
-
-    if (this.state.network) {
-      this.state.network.redraw();
-    }
+    // let content = document.getElementById('vis-content');
+    // let visDiv = content.getElementsByTagName('div')[0]
+    // visDiv.style.position = "absolute";
+    // visDiv.style.height = (content.clientHeight) + "px";
+    // visDiv.style.width = (content.clientWidth) + "px";
+    
+    // if (this.state.network) {
+    //   this.state.network.redraw();
+    // }
   }
 
   ensureMode = (mode) => {

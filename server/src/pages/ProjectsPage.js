@@ -26,16 +26,16 @@ import { withSnackbar } from 'notistack';
 const styles = theme => ({
     toggleContainer: {
         height: 32,
-        padding: `${theme.spacing.unit}px ${theme.spacing.unit * 2}px`,
+        padding: `${theme.spacing(1)}px ${theme.spacing(2)}px`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-start',
-        margin: `${theme.spacing.unit}px`,
+        margin: `${theme.spacing(1)}px`,
         background: theme.palette.background.default,
     },
     gridList: {
         width: '100%',
-        padding: theme.spacing.unit
+        padding: theme.spacing(1)
     },
 
     tile: {
