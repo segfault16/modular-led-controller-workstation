@@ -434,7 +434,6 @@ class MovingLight(Effect):
             self._hold_values
         except AttributeError:
             self._hold_values = []
-        
 
     def numInputChannels(self):
         return 2
@@ -478,7 +477,8 @@ class MovingLight(Effect):
                 "Scales the visual peak after the filter.",
                 "highlight":
                 "Amount of white light added to the audio peak.",
-                "smoothing": "Smoothing of the moving peak.",
+                "smoothing":
+                "Smoothing of the moving peak.",
             }
         }
         return help
@@ -1153,6 +1153,9 @@ class Shift(Effect):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
         if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
+            return
+        if not self._inputBufferValid(1):
+            self._outputBuffer[0] = None
             return
 
         # Init audio
