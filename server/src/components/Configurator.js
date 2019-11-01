@@ -23,22 +23,21 @@ const styles = theme => ({
 
 
 class Configurator extends Component {
-    constructor(props) {
-        super(props)
-        this.state = {
-            parameters: props.parameters,
-            values: props.values,
-            parameterHelp: props.parameterHelp
-        }
+    state = {
+        parameters: this.props.parameters,
+        values: this.props.values,
+        parameterHelp: this.props.parameterHelp
     }
 
-    UNSAFE_componentWillReceiveProps(nextProps) {
-        this.setState({
-            parameters: nextProps.parameters,
-            values: nextProps.values,
-            parameterHelp: nextProps.parameterHelp
-        })
-    }
+    static getDerivedStateFromProps(props, state) {
+        console.log("props changed")
+        // TODO: Rework
+        // return {
+        //     parameters: props.parameters,
+        //     values: props.values,
+        //     parameterHelp: props.parameterHelp
+        // }
+      }
 
     handleParameterChange = (value, parameter) => {
         let newState = Object.assign({}, this.state);    //creating copy of object
@@ -139,36 +138,36 @@ class Configurator extends Component {
 
     domCreateConfigList = (parameters, values, parameterHelp) => {
         if (parameters) {
-            return Object.keys(parameters).map((data, index) => {
+            return Object.keys(parameters).map((parameterName, index) => {
                 let control;
                 try {
-                    if (parameters[data] instanceof Array) {
-                        if (parameters[data].length >= 2 && parameters[data][0] == 'gif') {
-                            control = this.domCreateParameterGif(parameters, values, data);
+                    if (parameters[parameterName] instanceof Array) {
+                        if (parameters[parameterName].length >= 2 && parameters[parameterName][0] == 'gif') {
+                            control = this.domCreateParameterGif(parameters, values, parameterName);
                         }
-                        else if (parameters[data].length == 4 && !parameters[data].some(isNaN)) {
+                        else if (parameters[parameterName].length == 4 && !parameters[parameterName].some(isNaN)) {
                             // Array of numbers -> Slider
-                            control = this.domCreateParameterSlider(parameters, values, data);
+                            control = this.domCreateParameterSlider(parameters, values, parameterName);
                         }
-                        else if (parameters[data].some(isNaN)) {
+                        else if (parameters[parameterName].some(isNaN)) {
                             // Array of non-numbers -> DropDown
-                            control = this.domCreateParameterDropdown(parameters, values, data);
+                            control = this.domCreateParameterDropdown(parameters, values, parameterName);
                         } 
-                    } else if (typeof (parameters[data]) === "boolean") {
+                    } else if (typeof (parameters[parameterName]) === "boolean") {
                         // Simple boolean -> Checkbox
-                        control = this.domCreateParameterCheckbox(parameters, values, data);
+                        control = this.domCreateParameterCheckbox(parameters, values, parameterName);
                     }
                 } catch (error) {
-                    console.error("Cannot create configurator entry for "+data, error)
+                    console.error("Cannot create configurator entry for "+parameterName, error)
                 }
                 if (control) {
-                    var helpText = (parameterHelp != null && data in parameterHelp) ? parameterHelp[data] : "";
+                    var helpText = (parameterHelp != null && parameterName in parameterHelp) ? parameterHelp[parameterName] : "";
                     return (
-                        <Tooltip title={helpText}>
-                        <Grid key={index} container spacing={24}   alignItems="center" justify="center">
+                        <Tooltip key={parameterName} title={helpText}>
+                        <Grid key={parameterName} container spacing={2}   alignItems="center" justify="center">
                             <Grid item sm={3} xs={12} >
                             <Typography>
-                                {data}:
+                                {parameterName}:
                             </Typography>
                             </Grid>
                             {control}
@@ -176,7 +175,7 @@ class Configurator extends Component {
                         </Tooltip>
                     )
                 } else {
-                    console.error("undefined control for data", parameters[data])
+                    console.error("undefined control for data", parameters[parameterName])
                     return null
                 }
             });
@@ -187,7 +186,7 @@ class Configurator extends Component {
         const { classes } = this.props;
         return (
             <div>
-                {this.domCreateConfigList(this.state.parameters, this.state.values, this.state.parameterHelp)}
+                {this.domCreateConfigList(this.props.parameters, this.props.values, this.props.parameterHelp)}
             </div>
         )
     }
@@ -195,6 +194,7 @@ class Configurator extends Component {
 
 Configurator.propTypes = {
     classes: PropTypes.object.isRequired,
+    // TODO: Validate property types
     // parameters: PropTypes.object,
     // parameterHelp: PropTypes.object,
     // values: PropTypes.object,

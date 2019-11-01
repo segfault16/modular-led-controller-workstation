@@ -297,7 +297,7 @@ class NodePopup extends React.Component {
 
 NodePopup.propTypes = {
     classes: PropTypes.object.isRequired,
-    slot: PropTypes.number.isRequired
+    slot: PropTypes.number
 };
 
 export default withStyles(styles)(withMobileDialog()(NodePopup));

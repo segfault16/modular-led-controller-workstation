@@ -25,6 +25,7 @@ class Node(object):
         self.__initstate__()
         self.numInputChannels = self.effect.numInputChannels()
         self.numOutputChannels = self.effect.numOutputChannels()
+        self.level = None
 
     def __initstate__(self):
         
@@ -303,35 +304,43 @@ class FilterGraph(Updateable):
 
     def _updateProcessOrder(self):
         processOrder = []
+        level = 0
         if self._outputNode is None:
             print("No output node")
             return
 
         #print("Updating process order")
-
+        self._outputNode.level = level
+        level = level + 1
         unprocessedNodes = self._filterNodes.copy()
         processOrder.append(self._outputNode)
         unprocessedNodes.remove(self._outputNode)
 
         fatalError = False
+        
         while not fatalError and len(unprocessedNodes) > 0:
             sizeBefore = len(unprocessedNodes)
+            curProcessOrder = processOrder.copy()
+
             for node in unprocessedNodes.copy():
                 # find connections
                 cons = [con for con in self._filterConnections if con.fromNode == node]
                 # check all nodes after this node have been processed
                 satisfied = True
                 for con in cons:
-                    if con.toNode not in processOrder:
+                    if con.toNode not in curProcessOrder:
                         satisfied = False
                         continue
 
                 if satisfied:
                     #print("Appending {}".format(node.effect))
+                    node.level = level
                     processOrder.append(node)
                     unprocessedNodes.remove(node)
+                    
             sizeAfter = len(unprocessedNodes)
             fatalError = sizeAfter == sizeBefore
+            level = level + 1
 
         #print("{} nodes total, {} nodes have not been processed".format(len(processOrder), len(unprocessedNodes)))
 
@@ -343,6 +352,10 @@ class FilterGraph(Updateable):
         #             raise RuntimeError("Circular connection detected")
 
         processOrder.reverse()
+        for node in processOrder:
+            node.level = level + 1 - node.level
+        for node in unprocessedNodes:
+            node.level = None
 
         # Reset number of pixels
         for node in self._filterNodes:

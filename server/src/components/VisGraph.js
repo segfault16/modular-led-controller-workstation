@@ -21,7 +21,6 @@ import { withSnackbar } from 'notistack';
 import IconButton from '@material-ui/core/IconButton';
 
 import Graph from "react-graph-vis";
-import 'vis/dist/vis-network.min.css';
 
 import audioInputIcon from '../../img/audioled.audio.AudioInput.png';
 import movingIcon from '../../img/audioled.audioreactive.MovingLight.png';
@@ -129,10 +128,6 @@ class VisGraph extends React.Component {
         nodes: [],
         edges: []
       },
-      style: {
-        // flex: "1",
-        display: "absolute"
-      },
       editNodePopup: {
         isShown: false,
         nodeUid: 0,
@@ -216,8 +211,9 @@ class VisGraph extends React.Component {
             enabled: true,
             levelSeparation: 100,
             direction: "LR",
-            nodeSpacing: 100,
+            nodeSpacing: 200,
             sortMethod: 'directed',
+            shakeTowards: 'leaves'
 
           },
         },
@@ -377,7 +373,7 @@ class VisGraph extends React.Component {
     clearInterval(this.intervalID);
   }
 
-  async UNSAFE_componentWillReceiveProps(nextProps) {
+  async componentWillReceiveProps(nextProps) {
     if (nextProps.slot != this.state.slot) {
       console.log("new props", nextProps)
       this.state.slot = nextProps.slot
@@ -621,6 +617,7 @@ class VisGraph extends React.Component {
       outNode.nodeType = 'channel';
       outNode.nodeUid = visNode.id;
       outNode.nodeChannel = i;
+      outNode.level = visNode.level + 1;
       nodes.push(outNode);
       edges.push({ id: outNode.id, from: visNode.id, to: outNode.id, width: 4, arrows: {to: { enabled: false } } });
     }
@@ -634,6 +631,7 @@ class VisGraph extends React.Component {
       inNode.nodeType = 'channel';
       inNode.nodeUid = visNode.id;
       inNode.nodeChannel = i;
+      inNode.level = visNode.level - 1;
       nodes.push(inNode);
       edges.push({ id: inNode.id, from: inNode.id, to: visNode.id, width: 4, arrows: {to: { enabled: false } } });
     }
@@ -643,8 +641,10 @@ class VisGraph extends React.Component {
   updateVisNode(visNode, json) {
     console.debug('Update Vis Node:', json["py/state"]);
     var uid = json["py/state"]["uid"];
+    var level = json["py/state"]["level"];
     var name = json["py/state"]["effect"]["py/object"];
     visNode.id = uid;
+    visNode.level = 3 * level + 1;
     visNode.label = name;
     visNode.shape = 'circularImage';
     visNode.group = 'ok';
@@ -764,16 +764,16 @@ class VisGraph extends React.Component {
   }
 
   updateDimensions = (event) => {
-
-    // let content = document.getElementById('vis-content');
-    // let visDiv = content.getElementsByTagName('div')[0]
-    // visDiv.style.position = "absolute";
-    // visDiv.style.height = (content.clientHeight) + "px";
-    // visDiv.style.width = (content.clientWidth) + "px";
-    
-    // if (this.state.network) {
-    //   this.state.network.redraw();
-    // }
+    console.log("update dimensions")
+    let content = document.getElementById('vis-content');
+    this.setState(state => {
+      return {
+        options: {
+          height: content.clientHeight + "px",
+          width: content.clientWidth + "px"
+        }
+      }
+    })
   }
 
   ensureMode = (mode) => {
@@ -842,7 +842,7 @@ class VisGraph extends React.Component {
       <div id="vis-container">
         <div id="vis-other">
           <div className={classes.toggleContainer}>
-            <Grid container spacing={16} justify="flex-end" direction="row">
+            <Grid container spacing={2} justify="flex-end" direction="row">
               <Grid item xs={12} sm={12}>
                 <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange} size="small">
                   <ToggleButton value={MODE_SELECT}>
