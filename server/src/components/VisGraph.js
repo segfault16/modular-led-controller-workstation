@@ -138,7 +138,6 @@ class VisGraph extends React.Component {
       events: {
         select: ({ nodes, edges }) => {
           if (this.state.mode === MODE_SELECT || this.state.mode === MODE_CREATE) {
-            this.clearNodePopUp()
             if (nodes.length == 1) {
               this.editNode(nodes[0])
             }
@@ -512,12 +511,82 @@ class VisGraph extends React.Component {
     }
   }
 
+  updateNodeLevels(nodes, edges) {
+    console.log(nodes.length, " nodes")
+    const effectNodes = nodes.filter(n => n.nodeType === 'node');
+    console.log(effectNodes.length, " effect nodes")
+    const outNodes = nodes.filter(n => n.nodeType === 'channel' && n.group === 'out' )
+    console.log(outNodes.length, " out nodes")
+    const inNodes = nodes.filter(n => n.nodeType === 'channel' && n.group === 'in')
+    console.log(inNodes.length, " in nodes")
+
+    // Find effect nodes without output
+    const startWith = effectNodes.filter( n => outNodes.filter(o => o.nodeUid == n.id).length == 0)
+    console.log(startWith.length, " start nodes to layout")
+    var processed = []
+    var unprocessed = [...effectNodes]
+
+    nodes.forEach( n=> {
+      n.level = 0
+    })
+    
+    startWith.forEach( sN => {
+      var level = 0;
+      sN.level = level;
+      level++;
+      var idx = unprocessed.indexOf(sN)
+      if(idx > -1) {
+        unprocessed.splice(idx, 1)
+      }
+      processed.push(sN)
+      var go_ahead = unprocessed.length > 0
+      while(go_ahead) {
+        var before = unprocessed.length
+        var curUnprocessed = [...unprocessed]
+        var curPocessed = [...processed]
+        curUnprocessed.forEach( n => {
+          // find connections from this node
+          var cons = edges.filter(e => e.from_node === n.id);
+          // check all nodes after this node have been processed (or find one that isn't)
+          if(cons.find( c => (curPocessed.find(t => t.id === c.to_node) == null)) == null) {
+            n.level = level
+            processed.push(n)
+            var idx = unprocessed.indexOf(n)
+            if(idx > -1) {
+              unprocessed.splice(idx, 1)
+            }
+          }
+        })
+        // increase level
+        level++;
+        go_ahead = before != unprocessed.length
+      }
+    })
+    // invert levels, scale to 3
+    effectNodes.forEach(n => {
+      n.level =  - 3 * n.level + 1
+      console.log(n)
+    })
+
+    // process input and output nodes
+    inNodes.forEach(n => {
+      n.level = nodes.find(t => t.id === n.nodeUid).level - 1
+    })
+    outNodes.forEach(n => {
+      n.level = nodes.find(t => t.id === n.nodeUid).level + 1
+    })
+  }
+
   addStateNodesAndEdges(nodes, edges) {
     this.setState(state => {
+      var newNodes = [...state.graph.nodes, ...nodes]
+      var newEdges = [...state.graph.edges, ...edges]
+      this.updateNodeLevels(newNodes, newEdges)
+    
       return {
         graph: {
-          nodes: [...state.graph.nodes, ...nodes],
-          edges: [...state.graph.edges, ...edges]
+          nodes: newNodes,
+          edges: newEdges
         }
       }
     })
@@ -667,9 +736,11 @@ class VisGraph extends React.Component {
     //edge.from = state["from_node_uid"];
     edge.from = this.conUid('out', state['from_node_channel'], state['from_node_uid'])
     edge.from_channel = state["from_node_channel"];
+    edge.from_node = state['from_node_uid']
     //edge.to = state["to_node_uid"];
     edge.to = this.conUid('in', state['to_node_channel'], state['to_node_uid'])
     edge.to_channel = state["to_node_channel"];
+    edge.to_node = state['to_node_uid']
     edge.arrows = 'middle'
     edge.group = "connection"
     //edge.color = {color: '#666666'}
