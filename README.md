@@ -25,32 +25,10 @@ The works in this project is based on [https://github.com/scottlawsonbc/audio-re
 # Getting started (local machine)
 
 ## Python Dependencies
-MOLECOLE requires at least Python 3.5.
+MOLECOLE requires at least Python 3.7 and uses [pipenv](https://github.com/pypa/pipenv) to manage dependencies.
 
-A few Python dependencies must also be installed, e.g.
-- Numpy
-- Scipy (for digital signal processing)
-- PyAudio (for recording audio with microphone)
-
-On Windows machines, the use of [Anaconda](https://www.continuum.io/downloads) is **highly recommended**. Anaconda simplifies the installation of Python dependencies, which is sometimes difficult on Windows.
-
-### Installing dependencies with Anaconda
-Create a [conda virtual environment](http://conda.pydata.org/docs/using/envs.html) (this step is optional but recommended)
-```bash
-conda create --name visualization-env python=3.5
-source activate visualization-env
-```
-On Mac, you need to install portaudio
-```bash
-brew install portaudio
-```
-
-Install dependencies using pip and the conda package manager
-```bash
-conda install numpy scipy
-
-pip install pyaudio matplotlib jsonpickle flask mido python-rtmidi apscheduler Pillow
-```
+- Get pipenv
+- Run `pipenv install`
 
 ## OpenPixelControl Visualization Server
 
@@ -71,12 +49,14 @@ For this you can use [openpixelcontrol](https://github.com/zestyping/openpixelco
 ## Running MOLECOLE
 
 ```bash
+# Run with clean config and without storing
+pipenv python server.py --no_conf --no_store
 # Run with LED Strip configuration
-python server.py -N 300
+pipenv python server.py -N 300
 # Run with LED Panel configuration
-python server.py -N 968 -R 22
+pipenv python server.py -N 968 -R 22
 # For more information:
-python server.py -h
+pipenv python server.py -h
 ```
 
 You should now see some RGB data in OpenPixelControl and should be able to access the MOLECOLE UI on https://localhost:5000.
