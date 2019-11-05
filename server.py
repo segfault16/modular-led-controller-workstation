@@ -51,7 +51,7 @@ def multiprocessing_func(sc):
 
 
 def create_app():
-    app = Flask(__name__, static_url_path='/')
+    app = Flask(__name__)
 
     def store_configuration():
         global serverconfig
