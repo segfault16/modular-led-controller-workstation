@@ -81,7 +81,6 @@ class EditNodePopup extends React.Component {
         if (this.props.onCancel != null) {
             this.props.onCancel()
         }
-
     }
 
     sortSelect(selElem) {

@@ -54,7 +54,7 @@ import gifIcon from '../../img/audioled.generative.GIFPlayer.png'
 import FilterGraphConfigurationService from "../services/FilterGraphConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
 
-import NodePopup from './NodePopup';
+import AddNodePopup from './AddNodePopup';
 import EditNodePopup from './EditNodePopup';
 import './VisGraph.css';
 import Measure from 'react-measure'
@@ -1008,7 +1008,7 @@ class VisGraph extends React.Component {
             : null}
         </div>
         {this.state.editNodePopup.mode == "edit" ? <EditNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
-        {this.state.editNodePopup.mode == "add" ? <NodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
+        {this.state.editNodePopup.mode == "add" ? <AddNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
       </div>
     );
   }
