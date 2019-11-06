@@ -29,16 +29,6 @@ class Configurator extends Component {
         parameterHelp: this.props.parameterHelp
     }
 
-    static getDerivedStateFromProps(props, state) {
-        console.log("props changed")
-        // TODO: Rework
-        // return {
-        //     parameters: props.parameters,
-        //     values: props.values,
-        //     parameterHelp: props.parameterHelp
-        // }
-      }
-
     handleParameterChange = (value, parameter) => {
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.values[parameter] = value;
@@ -93,18 +83,14 @@ class Configurator extends Component {
 
     domCreateParameterCheckbox = (parameters, values, parameterName) => {
         return <React.Fragment>
-            <Grid container sm={7} xs={10} justify="flex-end">
+            <Grid item sm={7} xs={10}></Grid>
+            <Grid item sm={2} xs={2}>
                 <Checkbox
                     checked={values[parameterName]}
                     onChange={(e, val) => this.handleParameterChange(val, parameterName)}
                     value={parameterName}
                     color="primary"
                 />
-            </Grid>
-            <Grid item sm={2} xs={2}>
-            <Typography align="right">
-                {values[parameterName]}
-            </Typography>
             </Grid>
         </React.Fragment>
     }
@@ -118,7 +104,7 @@ class Configurator extends Component {
 
     domCreateParameterGif = (parameters, values, parameterName) => {
         return <React.Fragment>
-            <Grid container sm={7} xs={10} justify="flex-end">
+            <Grid container justify="flex-end">
                 <img src={"project/assets/" + values[parameterName]} role="presentation" style={{maxWidht: '100px', maxHeight: '100px'}} />
             </Grid>
             <Grid item sm={2} xs={2}>

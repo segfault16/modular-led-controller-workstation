@@ -180,8 +180,8 @@ class AddNodePopup extends React.Component {
             {effectDescription.length > 0 ? 
             <React.Fragment>
             <br/>
-            {effectDescription.split("\n").map(line => {
-                return <Typography>
+            {effectDescription.split("\n").map((line, idx) => {
+                return <Typography key={"line"+idx}>
                     {line}
                 </Typography>
             })}

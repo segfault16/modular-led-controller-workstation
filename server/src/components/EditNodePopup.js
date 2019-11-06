@@ -104,7 +104,7 @@ class EditNodePopup extends React.Component {
     handleParameterChange = (value, parameter) => {
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.config.values[parameter] = value;
-        FilterGraphService.updateNode(this.state.slot, this.state.nodeUid, { [parameter]: value })
+        FilterGraphService.updateNode(this.props.slot, this.props.nodeUid, { [parameter]: value })
         this.setState(newState);
     };
 
@@ -114,8 +114,8 @@ class EditNodePopup extends React.Component {
             {effectDescription.length > 0 ? 
             <React.Fragment>
             <br/>
-            {effectDescription.split("\n").map(line => {
-                return <Typography>
+            {effectDescription.split("\n").map((line, idx) => {
+                return <Typography key={"line"+idx}>
                     {line}
                 </Typography>
             })}
