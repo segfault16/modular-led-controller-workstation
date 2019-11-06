@@ -55,6 +55,7 @@ import FilterGraphConfigurationService from "../services/FilterGraphConfiguratio
 import FilterGraphService from "../services/FilterGraphService";
 
 import NodePopup from './NodePopup';
+import EditNodePopup from './EditNodePopup';
 import './VisGraph.css';
 import Measure from 'react-measure'
 
@@ -130,6 +131,7 @@ class VisGraph extends React.Component {
       },
       editNodePopup: {
         isShown: false,
+        mode: "add", // add or edit
         nodeUid: 0,
       },
       errorMessage: {
@@ -1005,7 +1007,8 @@ class VisGraph extends React.Component {
             </Paper>
             : null}
         </div>
-        <NodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
+        {this.state.editNodePopup.mode == "edit" ? <EditNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
+        {this.state.editNodePopup.mode == "add" ? <NodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
       </div>
     );
   }
