@@ -4,6 +4,7 @@ import { withStyles } from '@material-ui/core/styles';
 
 import Configurator from '../components/Configurator'
 import ConfigurationService from '../services/ConfigurationService';
+import {makeCancelable} from '../util/MakeCancelable';
 
 const styles = theme => ({
     page: {
@@ -15,21 +16,16 @@ const styles = theme => ({
     }
 });
 
+
+
 class ConfigurationPage extends Component {
     state = {
         parameters: null,
         values: null
     }
-    constructor(props) {
-        super(props)
-        this.state = {
-            parameters: {},
-            values: {}
-        }
-    }
 
     componentDidMount() {
-        this._loadAsyncData()
+        this._loadAsyncData();
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -45,17 +41,28 @@ class ConfigurationPage extends Component {
     }
 
     _loadAsyncData() {
-        this._asyncRequest = ConfigurationService.getConfiguration().then(res => {
+        this._asyncRequest = makeCancelable(ConfigurationService.getConfiguration())
+        
+        this._asyncRequest.promise.then(res => {
             this._asyncRequest = null;
             this.setState({
                 parameters: res.parameters,
                 values: res.values
             })
-        })
+        }).catch((reason) => console.log('isCanceled', reason.isCanceled));
     }
 
+    
+
     handleParameterChange = (parameter, value) => {
-        ConfigurationService.updateConfiguration(parameter, value)
+        if(this._asyncUpdateRequest) {
+            this._asyncUpdateRequest.cancel()
+            this._asyncUpdateRequest = null
+        }
+        this._asyncUpdateRequest = makeCancelable(ConfigurationService.updateConfiguration(parameter, value))
+        this._asyncUpdateRequest.promise.then(res => {
+            this._asyncUpdateRequest = null;
+        }).catch((reason) => console.log('isCanceled', reason.isCanceled));
     }
 
     render() {
