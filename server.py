@@ -76,6 +76,8 @@ def create_app():
             pass
 
         print('LED thread cancelled')
+        sched.shutdown()
+        print('Background scheduler shutdown')
 
     @app.after_request
     def add_header(response):

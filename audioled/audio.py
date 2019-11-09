@@ -165,7 +165,7 @@ class AudioInput(Effect):
                 # default, min, max, stepsize
                 ("num_channels", [2, 1, 100, 1]),
                 ("autogain", False),
-                ("autogain_max", [1.0, 0.0, 50.0, 0.01]),
+                ("autogain_max", [1.0, 0.01, 50.0, 0.01]),
                 ("autogain_time", [30.0, 1.0, 100.0, 0.1]),
             ])
         }
@@ -202,7 +202,11 @@ class AudioInput(Effect):
         if self._autogain_perc is None and GlobalAudio.chunk_rate is not None:
             # increase cur_gain by percentage
             # we want to get to self.autogain_max in approx. self.autogain_time seconds
-            min_value = 1. / self.autogain_max  # the minimum input value we want to bring to 1.0
+            min_value = 1.0
+            if self.autogain_max > 0:
+                min_value = 1. / self.autogain_max  # the minimum input value we want to bring to 1.0
+            else:
+                min_value = 1. / 0.01
             N = GlobalAudio.chunk_rate * self.autogain_time  # N = chunks_per_second * autogain_time
             # min_value * (perc)^N = 1.0?
             # perc = root(1.0 / min_value, N) = (1./min_value)**(1/N)

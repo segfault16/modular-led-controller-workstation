@@ -504,11 +504,12 @@ class FallingStars(Effect):
         return \
             "Effect for creating random stars that fade over time."
 
-    def __init__(self, dim_speed=100, thickness=1, spawntime=0.1, max_brightness=1):
+    def __init__(self, dim_speed=100, thickness=1, spawntime=0.1, max_brightness=1, probability=0.1, max_spawns=1):
         self.dim_speed = dim_speed
-        self.thickness = thickness  # getting down with it
-        self.spawntime = spawntime
+        self.thickness = thickness
         self.max_brightness = max_brightness
+        self.probability = probability
+        self.max_spawns = max_spawns
         self.__initstate__()
 
     def __initstate__(self):
@@ -517,6 +518,7 @@ class FallingStars(Effect):
         self._spawnArray = []
         self._starCounter = 0
         self._spawnflag = True
+        self._lastSpawn = 0
         super(FallingStars, self).__initstate__()
 
     @staticmethod
@@ -527,7 +529,8 @@ class FallingStars(Effect):
                 # default, min, max, stepsize
                 ("dim_speed", [100, 1, 1000, 1]),
                 ("thickness", [1, 1, 300, 1]),
-                ("spawntime", [1, 0.01, 10, 0.01]),
+                ("probability", [0.1, 0.0, 1.0, 0.01]),
+                ("max_spawns", [10, 1, 10, 1]),
                 ("max_brightness", [1, 0, 1, 0.01]),
             ])
         }
@@ -539,8 +542,9 @@ class FallingStars(Effect):
             "parameters": {
                 "dim_speed": "Time to fade out one star.",
                 "thickness": "Thickness of one star in pixels.",
-                "spawntime": "Time until a new star is spawned.",
-                "max_brightness": "Maximum brightness of the stars."
+                "max_brightness": "Maximum brightness of the stars.",
+                "probability": "Probability of spawning a new star even if there's no audio peak.",
+                "max_spawns": "Maximum number of spawning stars per frame."
             }
         }
         return help
@@ -549,8 +553,9 @@ class FallingStars(Effect):
         definition = self.getParameterDefinition()
         definition['parameters']['dim_speed'][0] = self.dim_speed
         definition['parameters']['thickness'][0] = self.thickness
-        definition['parameters']['spawntime'][0] = self.spawntime
         definition['parameters']['max_brightness'][0] = self.max_brightness
+        definition['parameters']['max_spawns'][0] = self.max_spawns
+        definition['parameters']['probability'][0] = self.probability
         return definition
 
     def numInputChannels(self):
@@ -567,7 +572,6 @@ class FallingStars(Effect):
             self._starCounter -= 1
             self._t0Array.pop(0)
             self._spawnArray.pop(0)
-        threading.Timer(self.spawntime, self.spawnStar).start()  # executes itself every *spawnTime* seconds
 
     def allStars(self, t, dim_speed, thickness, t0, spawnSpot):
         controlArray = []
@@ -581,10 +585,10 @@ class FallingStars(Effect):
             controlArray.append(oneStarArray)
         return controlArray
 
-    def starControl(self, spawnTime):
-        if self._spawnflag is True:
-            self.spawnStar()
-            self._spawnflag = False
+    def starControl(self, prob):
+        for i in range(int(self.max_spawns)):
+            if random.random() <= prob:
+                self.spawnStar()
         outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray)
         return np.sum(outputArray, axis=0)
 
@@ -598,10 +602,12 @@ class FallingStars(Effect):
         if color is None:
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self._outputBuffer is not None:
+            
             self._output = np.multiply(
                 color,
-                self.starControl(self.spawntime) * np.array([[self.max_brightness * 1.0], [self.max_brightness * 1.0],
+                self.starControl(self.probability) * np.array([[self.max_brightness * 1.0], [self.max_brightness * 1.0],
                                                              [self.max_brightness * 1.0]]))
+        
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
