@@ -497,17 +497,12 @@ class VisGraph extends React.Component {
   }
 
   updateNodeLevels(nodes, edges) {
-    console.log(nodes.length, " nodes")
     const effectNodes = nodes.filter(n => n.nodeType === 'node');
-    console.log(effectNodes.length, " effect nodes")
     const outNodes = nodes.filter(n => n.nodeType === 'channel' && n.group === 'out')
-    console.log(outNodes.length, " out nodes")
     const inNodes = nodes.filter(n => n.nodeType === 'channel' && n.group === 'in')
-    console.log(inNodes.length, " in nodes")
 
     // Find effect nodes without output
     const startWith = effectNodes.filter(n => outNodes.filter(o => o.nodeUid == n.id).length == 0)
-    console.log(startWith.length, " start nodes to layout")
     var processed = []
     var unprocessed = [...effectNodes]
 
@@ -550,7 +545,6 @@ class VisGraph extends React.Component {
     // invert levels, scale to 3
     effectNodes.forEach(n => {
       n.level = - 3 * n.level + 1
-      console.log(n)
     })
 
     // process input and output nodes
@@ -566,7 +560,6 @@ class VisGraph extends React.Component {
         n.level = effectNode.level + 1
       }
     })
-    nodes.forEach( n => console.log(n))
   }
 
   // recalculate levels and add nodes, use this instead of this.setState(...)
