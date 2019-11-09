@@ -13,6 +13,7 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import withMobileDialog, { WithMobileDialog } from '@material-ui/core/withMobileDialog';
+import {makeCancelable} from '../util/MakeCancelable';
 
 import './NodePopup.css'
 
@@ -50,13 +51,15 @@ class AddNodePopup extends React.Component {
 
     componentWillUnmount() {
         if (this._asyncRequest) {
-            this._asyncRequest.cancel();
+            this._asyncRequest.cancel()
         }
     }
 
 
     _loadAsyncData() {
-        this._asyncRequest = FilterGraphService.getAllEffects().then(values => {
+        this._asyncRequest = makeCancelable(FilterGraphService.getAllEffects())
+        
+        this._asyncRequest.promise.then(values => {
             let effects = values.map(element => element["py/type"]).sort()
             this._asyncRequest = null
             this.setState(state => {

@@ -10,6 +10,7 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import withMobileDialog, { WithMobileDialog } from '@material-ui/core/withMobileDialog';
+import {makeCancelable} from '../util/MakeCancelable';
 
 import './NodePopup.css'
 
@@ -50,7 +51,9 @@ class EditNodePopup extends React.Component {
     }
 
     _loadAsyncData(slot, uid) {
-        this._asyncRequest = FilterGraphService.getNodeEffect(slot, uid).then(effectName => {
+        this._asyncRequest = makeCancelable(FilterGraphService.getNodeEffect(slot, uid))
+        
+        this._asyncRequest.promise.then(effectName => {
             const nodeJson = FilterGraphService.getNode(slot, uid);
             const parameterDefinitionJson = FilterGraphService.getNodeParameter(slot, uid);
             const helpJson = FilterGraphService.getEffectParameterHelp(effectName);

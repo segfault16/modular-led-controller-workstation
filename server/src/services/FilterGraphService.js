@@ -55,13 +55,14 @@ const FilterGraphService = {
             }
           }).then(res => res.json())
     },
-    updateNode: function(slotId, data, options) {
+    updateNode: function(slotId, data, options, abortSignal = null) {
         return fetch('./slot/' + slotId + '/node/' + data, {
-            method: 'UPDATE', // or 'PUT'
+            method: 'PUT', 
             body: JSON.stringify(options), // data can be `string` or {object}!
             headers: {
               'Content-Type': 'application/json'
-            }
+            },
+            signal: abortSignal
           }).then(res => res.json())
     },
     deleteNode: function (slotId, id) {
@@ -73,8 +74,8 @@ const FilterGraphService = {
             console.error('Error on deleting node:', error)
         })
     },
-    getAllEffects: function() {
-        return fetch('./effects').then(res => res.json());
+    getAllEffects: function(abortSignal = null) {
+        return fetch('./effects', {signal: abortSignal}).then(res => res.json());
     },
     getEffectDescription: function(selectedEffect) {
         return fetch('./effect/' + selectedEffect + '/description').then(res => res.text());

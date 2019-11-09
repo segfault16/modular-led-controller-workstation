@@ -23,6 +23,7 @@ class ConfigurationPage extends Component {
         parameters: null,
         values: null
     }
+    _paramChangeAbortController = null
 
     componentDidMount() {
         this._loadAsyncData();
@@ -35,34 +36,37 @@ class ConfigurationPage extends Component {
       }
 
     componentWillUnmount() {
-        if (this._asyncRequest) {
-            this._asyncRequest.cancel();
+        if (this._asyncGetConfigurationRequest) {
+            this._asyncGetConfigurationRequest.cancel()
         }
     }
 
     _loadAsyncData() {
-        this._asyncRequest = makeCancelable(ConfigurationService.getConfiguration())
+        this._asyncGetConfigurationRequest = makeCancelable(ConfigurationService.getConfiguration())
         
-        this._asyncRequest.promise.then(res => {
-            this._asyncRequest = null;
+        this._asyncGetConfigurationRequest.promise.then(res => {
+            this._asyncGetConfigurationRequest = null;
             this.setState({
                 parameters: res.parameters,
                 values: res.values
             })
-        }).catch((reason) => console.log('isCanceled', reason.isCanceled));
+        })
     }
 
     
 
     handleParameterChange = (parameter, value) => {
-        if(this._asyncUpdateRequest) {
-            this._asyncUpdateRequest.cancel()
-            this._asyncUpdateRequest = null
+        if(this._asyncParamChangeRequest && this._paramChangeAbortController) {
+            // Abort previous request
+            this._paramChangeAbortController.abort()
+            this._asyncParamChangeRequest = null
         }
-        this._asyncUpdateRequest = makeCancelable(ConfigurationService.updateConfiguration(parameter, value))
-        this._asyncUpdateRequest.promise.then(res => {
-            this._asyncUpdateRequest = null;
-        }).catch((reason) => console.log('isCanceled', reason.isCanceled));
+        // New request with new AbortController
+        this._paramChangeAbortController = new AbortController()
+        this._asyncParamChangeRequest = ConfigurationService.updateConfiguration(parameter, value, this._paramChangeAbortController.signal)
+        this._asyncParamChangeRequest.then(res => {
+            this._asyncParamChangeRequest = null;
+        }).catch((reason) => reason.name == "AbortError" ? null : console.error(reason));
     }
 
     render() {
