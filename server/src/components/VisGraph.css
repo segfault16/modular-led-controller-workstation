@@ -5,19 +5,29 @@
   background-color: #333333;
 }
 
-#vis-other {
-  flex: 0;
-  display: block;
+#vis-tools {
+  top: 0px;
+  left: 0px;
+  position: absolute;
 }
 
 #vis-content {
-  flex: 1;
+  flex: 1 1 20em;
   display: block;
+  position: absolute;
+}
+
+#vis-help {
+  bottom: 0px;
+  right: 0px;
+  position: absolute;
 }
 
 .vis-network {
   /* border: 0.5px solid lightgray; */
   background-color: #333333;
+  overflow:hidden;
+  position:absolute;
 }
 
 

@@ -99,6 +99,7 @@ const styles = theme => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
+    position: 'absolute',
     // margin: `${theme.spacing.unit}px 0`,
     // background: theme.palette.background.default,
   },
@@ -193,6 +194,7 @@ class VisGraph extends React.Component {
         }
       },
       options: {
+        // autoResize: true,
         layout: {
           hierarchical: {
             enabled: true,
@@ -861,12 +863,14 @@ class VisGraph extends React.Component {
 
   updateDimensions = (event) => {
     console.log("update dimensions")
-    let content = document.getElementById('vis-content');
+    let content = document.getElementById('vis-container');
     this.setState(state => {
       return {
         options: {
           height: content.clientHeight + "px",
+          // height: "100%",
           width: content.clientWidth + "px"
+          // width: "100%",
         }
       }
     })
@@ -939,67 +943,70 @@ class VisGraph extends React.Component {
     const style = this.state.style;
     return (
       <div id="vis-container">
-        <div id="vis-other">
-          <div className={classes.toggleContainer}>
-            <Grid container spacing={2} justify="flex-end" direction="row">
-              <Grid item xs={12} sm={12}>
-                <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange} size="small">
-                  <ToggleButton value={MODE_SELECT}>
-                    <Tooltip title="Select mode">
-                      <InfoIcon />
-                    </Tooltip>
-                  </ToggleButton>
-
-
-                  <ToggleButton value={MODE_CREATE}>
-                    <Tooltip title="Create mode">
-                      <CreateIcon />
-                    </Tooltip>
-                  </ToggleButton>
-
-
-                  <ToggleButton value={MODE_DELETE}>
-                    <Tooltip title="Delete mode">
-                      <ClearIcon />
-                    </Tooltip>
-                  </ToggleButton>
-
-
-                  <Button onClick={this.handleSaveConfig} size="small">
-                    <Tooltip title="Download configuration">
-                      <SaveIcon />
-                    </Tooltip>
-                  </Button>
-
-                  <Button component="label">
-                    <Tooltip title="Upload configuration">
-                      <CloudUploadIcon />
-                    </Tooltip>
-                    <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
-                  </Button>
-
-                </ToggleButtonGroup>
-              </Grid>
-            </Grid>
-          </div>
-
-        </div>
+        
         <Measure onResize={() => this.updateDimensions()}>
           {({ measureRef }) => (
             <div id="vis-content" ref={measureRef}>
+              
               <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
+              <div id="vis-tools">
+                <div className={classes.toggleContainer}>
+                  <Grid container spacing={2} justify="flex-end" direction="row">
+                    <Grid item xs={12} sm={12}>
+                      <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange} size="small">
+                        <ToggleButton value={MODE_SELECT}>
+                          <Tooltip title="Select mode">
+                            <InfoIcon />
+                          </Tooltip>
+                        </ToggleButton>
+
+
+                        <ToggleButton value={MODE_CREATE}>
+                          <Tooltip title="Create mode">
+                            <CreateIcon />
+                          </Tooltip>
+                        </ToggleButton>
+
+
+                        <ToggleButton value={MODE_DELETE}>
+                          <Tooltip title="Delete mode">
+                            <ClearIcon />
+                          </Tooltip>
+                        </ToggleButton>
+
+
+                        <Button onClick={this.handleSaveConfig} size="small">
+                          <Tooltip title="Download configuration">
+                            <SaveIcon />
+                          </Tooltip>
+                        </Button>
+
+                        <Button component="label">
+                          <Tooltip title="Upload configuration">
+                            <CloudUploadIcon />
+                          </Tooltip>
+                          <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
+                        </Button>
+
+                      </ToggleButtonGroup>
+                    </Grid>
+                  </Grid>
+                </div>
+
+              </div>
+              <div id="vis-help" className={classes.toggleContainer}>
+                  {this.state.helptext ?
+                    <Paper className={classes.helptext} >
+                      <Typography>
+                        Usage: {this.state.helptext}
+                      </Typography>
+                    </Paper>
+                    : null}
+                </div>
             </div>
           )}
         </Measure>
-        <div className={classes.toggleContainer}>
-          {this.state.helptext ?
-            <Paper className={classes.helptext} >
-              <Typography>
-                Usage: {this.state.helptext}
-              </Typography>
-            </Paper>
-            : null}
-        </div>
+
         {this.state.editNodePopup.mode == "edit" && this.state.editNodePopup.isShown ? <EditNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
         {this.state.editNodePopup.mode == "add" && this.state.editNodePopup.isShown ? <AddNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
       </div>
