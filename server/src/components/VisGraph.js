@@ -942,74 +942,76 @@ class VisGraph extends React.Component {
     const events = this.state.events;
     const style = this.state.style;
     return (
-      <div id="vis-container">
+      
         
         <Measure onResize={() => this.updateDimensions()}>
           {({ measureRef }) => (
-            <div id="vis-content" ref={measureRef}>
-              
-              <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
-              <div id="vis-tools">
-                <div className={classes.toggleContainer}>
-                  <Grid container spacing={2} justify="flex-end" direction="row">
-                    <Grid item xs={12} sm={12}>
-                      <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange} size="small">
-                        <ToggleButton value={MODE_SELECT}>
-                          <Tooltip title="Select mode">
-                            <InfoIcon />
-                          </Tooltip>
-                        </ToggleButton>
+            <div id="vis-container" ref={measureRef}>
+              <div id="vis-content" >
+                
+                <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
+                <div id="vis-tools">
+                  <div className={classes.toggleContainer}>
+                    <Grid container spacing={2} justify="flex-end" direction="row">
+                      <Grid item xs={12} sm={12}>
+                        <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange} size="small">
+                          <ToggleButton value={MODE_SELECT}>
+                            <Tooltip title="Select mode">
+                              <InfoIcon />
+                            </Tooltip>
+                          </ToggleButton>
 
 
-                        <ToggleButton value={MODE_CREATE}>
-                          <Tooltip title="Create mode">
-                            <CreateIcon />
-                          </Tooltip>
-                        </ToggleButton>
+                          <ToggleButton value={MODE_CREATE}>
+                            <Tooltip title="Create mode">
+                              <CreateIcon />
+                            </Tooltip>
+                          </ToggleButton>
 
 
-                        <ToggleButton value={MODE_DELETE}>
-                          <Tooltip title="Delete mode">
-                            <ClearIcon />
-                          </Tooltip>
-                        </ToggleButton>
+                          <ToggleButton value={MODE_DELETE}>
+                            <Tooltip title="Delete mode">
+                              <ClearIcon />
+                            </Tooltip>
+                          </ToggleButton>
 
 
-                        <Button onClick={this.handleSaveConfig} size="small">
-                          <Tooltip title="Download configuration">
-                            <SaveIcon />
-                          </Tooltip>
-                        </Button>
+                          <Button onClick={this.handleSaveConfig} size="small">
+                            <Tooltip title="Download configuration">
+                              <SaveIcon />
+                            </Tooltip>
+                          </Button>
 
-                        <Button component="label">
-                          <Tooltip title="Upload configuration">
-                            <CloudUploadIcon />
-                          </Tooltip>
-                          <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
-                        </Button>
+                          <Button component="label">
+                            <Tooltip title="Upload configuration">
+                              <CloudUploadIcon />
+                            </Tooltip>
+                            <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
+                          </Button>
 
-                      </ToggleButtonGroup>
+                        </ToggleButtonGroup>
+                      </Grid>
                     </Grid>
-                  </Grid>
-                </div>
+                  </div>
 
-              </div>
-              <div id="vis-help" className={classes.toggleContainer}>
-                  {this.state.helptext ?
-                    <Paper className={classes.helptext} >
-                      <Typography>
-                        Usage: {this.state.helptext}
-                      </Typography>
-                    </Paper>
-                    : null}
                 </div>
+                <div id="vis-help" className={classes.toggleContainer}>
+                    {this.state.helptext ?
+                      <Paper className={classes.helptext} >
+                        <Typography>
+                          Usage: {this.state.helptext}
+                        </Typography>
+                      </Paper>
+                      : null}
+                  </div>
+              </div>
+              {this.state.editNodePopup.mode == "edit" && this.state.editNodePopup.isShown ? <EditNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
+              {this.state.editNodePopup.mode == "add" && this.state.editNodePopup.isShown ? <AddNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
             </div>
           )}
         </Measure>
 
-        {this.state.editNodePopup.mode == "edit" && this.state.editNodePopup.isShown ? <EditNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
-        {this.state.editNodePopup.mode == "add" && this.state.editNodePopup.isShown ? <AddNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
-      </div>
+
     );
   }
 }
