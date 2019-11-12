@@ -5,7 +5,6 @@ import math
 import random
 from collections import OrderedDict
 
-import matplotlib as mpl
 import numpy as np
 import scipy as sp
 from scipy.ndimage.filters import gaussian_filter1d
@@ -240,7 +239,7 @@ class VUMeterRMS(Effect):
             interp_h = np.linspace(h_a, h_b, np)
             hsv = np.array([interp_h, interp_s, interp_v]).T
 
-            rgb = mpl.colors.hsv_to_rgb(hsv)
+            rgb = colors.hsv_to_rgb(hsv)
             green = np.array([[0, 255.0, 0] for i in range(index)]).T
             self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
 
@@ -347,7 +346,7 @@ class VUMeterPeak(Effect):
             interp_h = np.linspace(h_a, h_b, num_pix)
             hsv = np.array([interp_h, interp_s, interp_v]).T
 
-            rgb = mpl.colors.hsv_to_rgb(hsv)
+            rgb = colors.hsv_to_rgb(hsv)
             if (index > 0):
                 green = np.array([[0, 255.0, 0] for i in range(index)]).T
                 self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
