@@ -20,6 +20,6 @@ mido = "*"
 python-rtmidi = "*"
 apscheduler = "*"
 pillow = "*"
-
 #[requires]
 #python_version = "3.5"
+rpi-ws281x = "*"

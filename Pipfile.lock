@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "d4d750c537610569c37dc4c9a0555b79db75ea038efad5b630da3b953d01dc24"
+            "sha256": "9b6f0d496b9dcc211cbcb8a5ce36c4d732bf844e9f23eff22d5b46679b7ca1e6"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -212,6 +212,17 @@
                 "sha256:b02c06db6cf09c12dd25137e563b31700d3b80fcc4ad23abb7a315f2789819be"
             ],
             "version": "==2019.3"
+        },
+        "rpi-ws281x": {
+            "hashes": [
+                "sha256:262ad65562333c20ccb1f10850f2413521dd300a2af16de32cbfa27b5b8353ac",
+                "sha256:bad191da9945d7ba9fe0f88ab70d04e6af1b554f520eaa50415f7bff1fa31150",
+                "sha256:d06cd31217dec40d715a3a07ccb2b4b0b0719527c5aa020cbdd77d0c0b31d113",
+                "sha256:dbbb04947b3166d96ba48a82702be9e9e762eb78922434e491d0de958f8fe8c7",
+                "sha256:eb2365f513b333fb1574131a1a719b66ffd252624c192ac0e954a5970cfea84f"
+            ],
+            "index": "piwheels",
+            "version": "==4.2.2"
         },
         "scipy": {
             "hashes": [
