@@ -114,6 +114,10 @@ const MODE_SELECT = 'select';
 const MODE_CREATE = 'create';
 const MODE_DELETE = 'delete';
 
+const NODETYPE_EFFECT_NODE = "effect_node";
+const NODETYPE_EFFECT_INOUT = "effect_channel";
+const NODETYPE_MODULATOR = "modulator";
+
 var is_dragging = false;
 
 class VisGraph extends React.Component {
@@ -259,7 +263,7 @@ class VisGraph extends React.Component {
             var fromNode = this.state.graph.nodes.find(item => item.id === fromId);
             var toNode = this.state.graph.nodes.find(item => item.id === toId);
             // Revert fromNode and toNode if the connection was made from input to output
-            if (fromNode.nodeType == 'channel' && fromNode.group == 'in' && toNode.nodeType == 'channel' && toNode.group == 'out') {
+            if (fromNode.nodeType == NODETYPE_EFFECT_INOUT && fromNode.group == 'in' && toNode.nodeType == NODETYPE_EFFECT_INOUT && toNode.group == 'out') {
               var temp = fromNode
               fromNode = toNode
               toNode = temp
@@ -267,7 +271,7 @@ class VisGraph extends React.Component {
               fromId = toId
               toId = tempId
             }
-            if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in') {
+            if (fromNode.nodeType == NODETYPE_EFFECT_INOUT && fromNode.group == 'out' && toNode.nodeType == NODETYPE_EFFECT_INOUT && toNode.group == 'in') {
               console.log("could add edge")
               // See if we have already a connection to this node. This connection has to be removed
               var foundConnection = this.state.graph.edges.find(item => item.to === toId)
@@ -278,7 +282,7 @@ class VisGraph extends React.Component {
                 })
               }
               this.props.enqueueSnackbar("Connection replaced", { variant: 'info' })
-              FilterGraphService.addConnection(this.state.slot, fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback).then(connection => {
+              FilterGraphService.addConnection(this.state.slot, fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data).then(connection => {
                 this.updateVisConnection(data, connection)
                 this.addStateNodesAndEdges([], [data])
                 // manual drag end
@@ -290,6 +294,13 @@ class VisGraph extends React.Component {
                 console.error(err)
                 this.props.enqueueSnackbar("Error creating connection", { variant: 'error' })
               });
+            } else if (fromNode.nodeType == NODETYPE_MODULATOR && toNode.nodeType == NODETYPE_EFFECT_NODE) {
+              console.log("could add edge")
+              FilterGraphService.addModulation(this.state.slot, fromNode.id, toNode.id).then(connection => {
+                this.updateModulationConnection(data, connection)
+                this.addStateNodesAndEdges([], [data])
+              })
+              
             } else {
               console.log("could not add edge")
               this.props.enqueueSnackbar("Connections can only be added from output to input", { variant: 'error' })
@@ -393,7 +404,7 @@ class VisGraph extends React.Component {
     }
     if (mode == MODE_SELECT) {
       if (hoverNode) {
-        if (node != null && node.nodeType == "node") {
+        if (node != null && node.nodeType == NODETYPE_EFFECT_NODE) {
           this.setState({ helptext: "Click to edit node" })
         } else {
           this.setState({ helptext: "" })
@@ -407,7 +418,7 @@ class VisGraph extends React.Component {
       if (hoverNode) {
         if (node != null && node.group == "out") {
           this.setState({ helptext: "Click and drag to input node to add connection" })
-        } else if (node != null && node.nodeType == "node") {
+        } else if (node != null && node.nodeType == NODETYPE_EFFECT_NODE) {
           this.setState({ helptext: "Click to edit node" })
         } else {
           this.setState({ helptext: "" })
@@ -419,7 +430,7 @@ class VisGraph extends React.Component {
       }
     } else if (mode == MODE_DELETE) {
       if (hoverNode) {
-        if (node != null && node.nodeType == "node") {
+        if (node != null && node.nodeType == NODETYPE_EFFECT_NODE) {
           this.setState({ helptext: "Click to delete node" })
         } else {
           this.setState({ helptext: "" })
@@ -448,15 +459,19 @@ class VisGraph extends React.Component {
         console.error("Cannot find node " + id)
       }
       // node is effect
-      if (node.nodeType == 'node') {
+      if (node.nodeType == NODETYPE_EFFECT_NODE) {
         // update callback data to include all input and output nodes for this node
-        var inputOutputNodes = this.state.graph.nodes.filter(item => item.nodeType == 'channel' && item.nodeUid == id);
+        var inputOutputNodes = this.state.graph.nodes.filter(item => item.nodeType == NODETYPE_EFFECT_INOUT && item.nodeUid == id);
         data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
         // update callback data to include connections from the deleted nodes
         var connectionsFromInputOutputNodes = this.state.graph.edges.filter(item => data.nodes.includes(item.from) || data.nodes.includes(item.to))
         data.edges = data.edges.concat(connectionsFromInputOutputNodes.map(x => x.id))
         // delete node via filtergraphservice
         FilterGraphService.deleteNode(this.state.slot, id).finally(() => {
+          this.clearNodePopUp();
+        })
+      } if (node.nodeType == NODETYPE_MODULATOR) {
+        FilterGraphService.deleteModulationSource(this.state.slot, id).finally(() => {
           this.clearNodePopUp();
         })
       } else {
@@ -478,7 +493,7 @@ class VisGraph extends React.Component {
       var edge = this.state.graph.edges.find(item => item.id === edgeUid);
       var fromNode = this.state.graph.nodes.find(item => item.id === edge.from);
       var toNode = this.state.graph.nodes.find(item => item.id === edge.to);
-      if (fromNode.nodeType == 'channel' && fromNode.group == 'out' && toNode.nodeType == 'channel' && toNode.group == 'in') {
+      if (fromNode.nodeType == NODETYPE_EFFECT_INOUT && fromNode.group == 'out' && toNode.nodeType == NODETYPE_EFFECT_INOUT && toNode.group == 'in') {
         var edge = this.state.graph.edges.find(item => item.id === edgeUid);
         var id = edge.id;
         FilterGraphService.deleteConnection(this.state.slot, id);
@@ -499,9 +514,9 @@ class VisGraph extends React.Component {
   }
 
   updateNodeLevels(nodes, edges) {
-    const effectNodes = nodes.filter(n => n.nodeType === 'node');
-    const outNodes = nodes.filter(n => n.nodeType === 'channel' && n.group === 'out')
-    const inNodes = nodes.filter(n => n.nodeType === 'channel' && n.group === 'in')
+    const effectNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_NODE);
+    const outNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'out')
+    const inNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'in')
 
     // Find effect nodes without output
     const startWith = effectNodes.filter(n => outNodes.filter(o => o.nodeUid == n.id).length == 0)
@@ -566,6 +581,7 @@ class VisGraph extends React.Component {
 
   // recalculate levels and add nodes, use this instead of this.setState(...)
   addStateNodesAndEdges(nodes, edges) {
+    console.debug("Adding nodes", nodes);
     this.setState(state => {
       // Create copy of current nodes and edges
       var newNodes = [];
@@ -579,8 +595,12 @@ class VisGraph extends React.Component {
         newEdges.push(newEdge);
       })
       // add nodes from arguments
-      newNodes = [...newNodes, ...nodes]
-      newEdges = [...newEdges, ...edges]
+      if(nodes != null) {
+        newNodes = [...newNodes, ...nodes]
+      }
+      if(edges != null) {
+        newEdges = [...newEdges, ...edges]
+      }
       // calculate node levels
       this.updateNodeLevels(newNodes, newEdges)
 
@@ -607,8 +627,12 @@ class VisGraph extends React.Component {
         var newEdge = Object.assign({}, edge);
         newEdges.push(newEdge);
       })
-      newNodes = newNodes.filter((el) => !nodes.includes(el.id))
-      newEdges = newEdges.filter((el) => !edges.includes(el.id))
+      if (nodes != null) {
+        newNodes = newNodes.filter((el) => !nodes.includes(el.id))
+      }
+      if (edges != null) {
+        newEdges = newEdges.filter((el) => !edges.includes(el.id))
+      }
       // calculate node levels
       this.updateNodeLevels(newNodes, newEdges)
       return {
@@ -633,23 +657,29 @@ class VisGraph extends React.Component {
 
   async createFromBackend() {
 
-    const nodeCreate = await this.createNodesFromBackend();
-    const edgeCreate = await this.createEdgesFromBackend();
-    return this.resetNetwork().then(Promise.all([nodeCreate, edgeCreate]).then(result => {
+    const nodeCreate = await this.createEffectNodesFromBackend();
+    const edgeCreate = await this.createEffectEdgesFromBackend();
+    const modulatorNodeCreate = await this.createModulatorNodesFromBackend();
+    const modulationsCreate = await this.createModulatorEdgesFromBackend();
+    return this.resetNetwork().then(Promise.all([nodeCreate, edgeCreate, modulatorNodeCreate, modulationsCreate]).then(result => {
       console.log(result)
       var nodes = [];
       var edges = [];
       var { allNodes, allEdges } = result[0];
       var additionalEdges = result[1];
+      var modulatorNodes = result[2];
+      var modulationEdges = result[3];
       nodes = nodes.concat(allNodes);
       edges = edges.concat(allEdges);
       edges = edges.concat(additionalEdges);
+      nodes = nodes.concat(modulatorNodes);
+      edges = edges.concat(modulationEdges);
       this.addStateNodesAndEdges(nodes, edges);
       this.state.network.fit();
     }))
   }
 
-  async createNodesFromBackend() {
+  async createEffectNodesFromBackend() {
     return FilterGraphService.getAllNodes(this.state.slot)
       .then(values => {
         // gather all nodes to add
@@ -665,7 +695,7 @@ class VisGraph extends React.Component {
       })
   }
 
-  async createEdgesFromBackend() {
+  async createEffectEdgesFromBackend() {
     return FilterGraphService.getAllConnections(this.state.slot)
       .then(values => {
         var allEdges = [];
@@ -677,6 +707,30 @@ class VisGraph extends React.Component {
       })
   }
 
+  async createModulatorNodesFromBackend() {
+    return FilterGraphService.getAllModulationSources(this.state.slot)
+    .then(values => {
+      var allNodes = [];
+      values.forEach(element => {
+        var node = this.createModulatorNode(element);
+        allNodes.push(node);
+      })
+      return allNodes;
+    })
+  }
+
+  async createModulatorEdgesFromBackend() {
+    return FilterGraphService.getAllModulations(this.state.slot)
+    .then(values => {
+      var allEdges = [];
+      values.forEach(element => {
+        var edge = this.createModulatorConnection(element);
+        allEdges.push(edge);
+      })
+      return allEdges;
+    })
+  }
+
   conUid(inout, index, uid) {
     return inout + '_' + index + '_' + uid;
   }
@@ -684,6 +738,12 @@ class VisGraph extends React.Component {
   createEffectNode(json) {
     var visNode = {};
     this.updateEffectNode(visNode, json);
+    return visNode;
+  }
+
+  createModulatorNode(json) {
+    var visNode = {};
+    this.updateModulatorNode(visNode, json);
     return visNode;
   }
 
@@ -711,7 +771,7 @@ class VisGraph extends React.Component {
       outNode.id = uid;
       outNode.label = `${i}`;
       outNode.shape = 'circle';
-      outNode.nodeType = 'channel';
+      outNode.nodeType = NODETYPE_EFFECT_INOUT;
       outNode.nodeUid = visNode.id;
       outNode.nodeChannel = i;
       outNode.level = visNode.level != null ? (visNode.level + 1) : 0;
@@ -725,7 +785,7 @@ class VisGraph extends React.Component {
       inNode.id = uid;
       inNode.label = `${i}`;
       inNode.shape = 'circle';
-      inNode.nodeType = 'channel';
+      inNode.nodeType = NODETYPE_EFFECT_INOUT;
       inNode.nodeUid = visNode.id;
       inNode.nodeChannel = i;
       inNode.level = visNode.level != null ? (visNode.level - 1) : 0;
@@ -736,7 +796,7 @@ class VisGraph extends React.Component {
   }
 
   updateEffectNode(visNode, json) {
-    console.debug('Update Vis Node:', json["py/state"]);
+    console.debug('Update Effect Node:', json["py/state"]);
     var uid = json["py/state"]["uid"];
     var name = json["py/state"]["effect"]["py/object"];
     visNode.id = uid;
@@ -744,10 +804,21 @@ class VisGraph extends React.Component {
     visNode.label = name;
     visNode.shape = 'circularImage';
     visNode.group = 'ok';
-    visNode.nodeType = 'node';
+    visNode.nodeType = NODETYPE_EFFECT_NODE;
     var icon = icons[name];
     visNode.image = icon ? icon : '';
 
+  }
+
+  updateModulatorNode(visNode, json) {
+    console.debug('Update Modulator Node:', json);
+    var uid = json["uid"];
+    visNode.id = uid;
+    visNode.level = 0;
+    visNode.label = "modulator"
+    visNode.shape = 'circle';
+    visNode.group = 'ok';
+    visNode.nodeType = NODETYPE_MODULATOR;
   }
 
   createVisConnection(con) {
@@ -756,23 +827,36 @@ class VisGraph extends React.Component {
     return edge;
   }
 
+  createModulatorConnection(con) {
+    var edge = {};
+    this.updateModulationConnection(edge, con);
+    return edge;
+  }
+
   updateVisConnection(edge, json) {
     console.debug('Update Vis Connection:', json["py/state"]);
     var state = json["py/state"];
     edge.id = state["uid"];
-    //edge.from = state["from_node_uid"];
+    
     edge.from = this.conUid('out', state['from_node_channel'], state['from_node_uid'])
     edge.from_channel = state["from_node_channel"];
     edge.from_node = state['from_node_uid']
-    //edge.to = state["to_node_uid"];
+    
     edge.to = this.conUid('in', state['to_node_channel'], state['to_node_uid'])
     edge.to_channel = state["to_node_channel"];
     edge.to_node = state['to_node_uid']
     edge.arrows = 'middle'
     edge.group = "connection"
-    //edge.color = {color: '#666666'}
+    
     edge.width = 4
     edge.physics = false
+  }
+
+  updateModulationConnection(edge, json) {
+    console.debug('Update Mod Connection:', json);
+    var state = json["py/state"];
+    edge.from = state['modulation_source_uid'];
+    edge.to = state['target_node_uid'];
   }
 
 
@@ -793,7 +877,7 @@ class VisGraph extends React.Component {
       console.error("Cannot find node " + node);
       return
     }
-    if (node.nodeType != 'node') {
+    if (node.nodeType != NODETYPE_EFFECT_NODE) {
       return
     }
     this.setState(state => {
@@ -821,6 +905,10 @@ class VisGraph extends React.Component {
         } else if (node["py/object"] === "audioled.filtergraph.ModulationSourceNode") {
           // Created node is a modulation source
           console.log("TODO: Implement adding modulation source nodes")
+          var nodes = []
+          var node = this.createModulatorNode(node);
+          nodes.push(node);
+          this.addStateNodesAndEdges(nodes, []);
         }
       })
       .catch(error => {

@@ -242,8 +242,19 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)
         mods = [mod for mod in fg._modulations]
-        return jsonpickle(mods)
+        return jsonpickle.encode(mods)
     
+    @app.route('/slot/<int:slotId>/modulation', methods=['POST'])
+    def slot_slotId_modulation_post(slotId):
+        global proj
+        fg = proj.getSlot(slotId)
+        if not request.json:
+            abort(400)
+        json = request.json
+        newMod = fg.addModulation(json['modulationsource_uid'], json['target_uid'])
+        return jsonpickle.encode(newMod)
+
+
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['DELETE'])
     def slot_slotId_modulationUid_delete(slotId, modulationUid):
         global proj

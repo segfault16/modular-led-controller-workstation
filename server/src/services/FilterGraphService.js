@@ -4,7 +4,7 @@ const FilterGraphService = {
     getAllConnections: function(slotId) {
         return fetch('./slot/' + slotId + '/connections').then(res => res.json())
     },
-    addConnection: function (slotId, from_node_uid, from_node_channel, to_node_uid, to_node_channel, data, callback) {
+    addConnection: function (slotId, from_node_uid, from_node_channel, to_node_uid, to_node_channel, data) {
         var postData = { from_node_uid: from_node_uid, from_node_channel: from_node_channel, to_node_uid: to_node_uid, to_node_channel: to_node_channel };
 
         // Save node in backend
@@ -77,8 +77,36 @@ const FilterGraphService = {
     getAllModulationSources: function(slotId) {
         return fetch('./slot/' + slotId + '/modulationSources').then(res => res.json());
     },
+    deleteModulationSource: function(slotId, id) {
+        return fetch('./slot/' + slotId + '/modulationSource/' + id, {
+            method: 'DELETE'
+        }).then(res => {
+            console.debug('Delete modulation source successful:', id);
+        }).catch(error => {
+            console.error('Error on deleting modulation source:', error)
+        })
+    },
     getAllModulations: function(slotId) {
         return fetch('./slot/' + slotId + '/modulations').then(res => res.json());
+    },
+    addModulation: function(slotId, modulationSourceUid, targetNodeUid) {
+        var postData = {modulationsource_uid: modulationSourceUid, target_uid: targetNodeUid};
+        return fetch('/slot/' + slotId + '/modulation', {
+            method: 'POST',
+            body: JSON.stringify(postData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).catch(error => {
+            throw error
+        }).then(res => res.json()
+        ).then(connection => {
+            console.debug('Create connection successful:', connection);
+            return connection
+        }).catch(error => {
+            console.error('Error on creating connection:', error);
+            throw error
+        });
     },
     getAllEffects: function(abortSignal = null) {
         return fetch('./effects', {signal: abortSignal}).then(res => res.json());

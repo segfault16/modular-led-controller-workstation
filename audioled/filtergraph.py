@@ -379,12 +379,12 @@ class FilterGraph(Updateable):
         # delete modSourceNode
         self._modulationSources.remove(modSourceNode)    
     
-    def addModulation(self, modSourceUid, targetNodeUid, targetParam, amount, inverted):
+    def addModulation(self, modSourceUid, targetNodeUid, targetParam=None, amount=0, inverted=False):
         """Adds a modulation driven by a modulationSource
         """
         modSource = next(modSource for modSource in self._modulationSources if modSource.uid == modSourceUid)
         targetNode = next(node for node in self._filterNodes if node.uid == targetNodeUid)
-        newMod = Modulation(modSource, amount, inverted, targetNode.effect, targetParam)
+        newMod = Modulation(modSource, amount, inverted, targetNode, targetParam)
         newMod.uid = uuid.uuid4().hex
         self._modulations.append(newMod)
         return newMod
