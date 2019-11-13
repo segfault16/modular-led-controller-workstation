@@ -74,6 +74,12 @@ const FilterGraphService = {
             console.error('Error on deleting node:', error)
         })
     },
+    getAllModulationSources: function(slotId) {
+        return fetch('./slot/' + slotId + '/modulationSources').then(res => res.json());
+    },
+    getAllModulations: function(slotId) {
+        return fetch('./slot/' + slotId + '/modulations').then(res => res.json());
+    },
     getAllEffects: function(abortSignal = null) {
         return fetch('./effects', {signal: abortSignal}).then(res => res.json());
     },

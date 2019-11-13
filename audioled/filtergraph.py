@@ -120,6 +120,7 @@ class Modulation(object):
         self.targetNode = targetNode
         self.targetEffect = targetNode.effect
         self.targetParameter = targetParameter
+        self.uid = None
         self._lastValue = None
 
     def __getstate__(self):
@@ -355,10 +356,28 @@ class FilterGraph(Updateable):
         return self._outputNode
 
     def addModulationSource(self, modulationSource):
+        """Adds a modulation source
+        """
         modSourceNode = ModulationSourceNode(modulationSource)
         modSourceNode.uid = uuid.uuid4().hex
         self._modulationSources.append(modSourceNode)
         return modSourceNode
+    
+    def removeModulationSource(self, modSourceUid):
+        """Removes a modulation source with the given uid
+        """
+        modSourceNode = next(modSource for modSource in self._modulationSources if modSource.uid == modSourceUid)
+
+        if modSourceNode is None:
+            return
+
+        mods = [mod for mod in self._modulations if mod.modulationSource == modSourceNode]
+        # delete mods
+        for mod in mods:
+            self.removeModulation(mod.uid)
+
+        # delete modSourceNode
+        self._modulationSources.remove(modSourceNode)    
     
     def addModulation(self, modSourceUid, targetNodeUid, targetParam, amount, inverted):
         """Adds a modulation driven by a modulationSource
@@ -366,8 +385,16 @@ class FilterGraph(Updateable):
         modSource = next(modSource for modSource in self._modulationSources if modSource.uid == modSourceUid)
         targetNode = next(node for node in self._filterNodes if node.uid == targetNodeUid)
         newMod = Modulation(modSource, amount, inverted, targetNode.effect, targetParam)
+        newMod.uid = uuid.uuid4().hex
         self._modulations.append(newMod)
         return newMod
+
+    def removeModulation(self, modUid):
+        """Removes a modulation driven by a modulationSource
+        """
+        mod = next(mod for mod in self._modulations if mod.uid == modUid)
+        if mod is not None:
+            self._modulations.remove(mod)
 
     def _updateProcessOrder(self):
         processOrder = []

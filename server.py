@@ -18,7 +18,7 @@ from flask import Flask, abort, jsonify, request, send_from_directory, redirect,
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, devices, effects, filtergraph, serverconfiguration, runtimeconfiguration
+from audioled import audio, devices, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation
 
 proj = None
 default_values = {}
@@ -171,7 +171,13 @@ def create_app():
             abort(403)
         class_ = getattr(importlib.import_module(module_name), class_name)
         instance = class_(**parameters)
-        node = fg.addEffectNode(instance)
+        node = None
+        if module_name == 'audioled.modulation':
+            print("Adding modulation source")
+            node = fg.addModulationSource(instance)
+        else:
+            print("Adding effect node")
+            node = fg.addEffectNode(instance)
         return jsonpickle.encode(node)
 
     @app.route('/slot/<int:slotId>/connections', methods=['GET'])
@@ -213,6 +219,37 @@ def create_app():
         except StopIteration:
             abort(404, "Node not found")
 
+    @app.route('/slot/<int:slotId>/modulationSources', methods=['GET'])
+    def slot_slotId_modulationSources_get(slotId):
+        global proj
+        fg = proj.getSlot(slotId)
+        mods = [mod for mod in fg._modulationSources]
+        return jsonpickle.encode(mods)
+
+    @app.route('/slot/<int:slotId>/modulationSource/<modulationSourceUid>', methods=['DELETE'])
+    def slot_slotId_modulationSourceUid_delete(slotId, modulationSourceUid):
+        global proj
+        fg = proj.getSlot(slotId)
+        try:
+            mod = next(mod for mod in fg._modulationSources if mod.uid == modulationSourceUid)
+            fg.removeModulationSource(mod.uid)
+            return "OK"
+        except StopIteration:
+            abort(404, "Modulation Source not found")
+    
+    @app.route('/slot/<int:slotId>/modulations', methods=['GET'])
+    def slot_slotId_modulations_get(slotId):
+        global proj
+        fg = proj.getSlot(slotId)
+        mods = [mod for mod in fg._modulations]
+        return jsonpickle(mods)
+    
+    @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['DELETE'])
+    def slot_slotId_modulationUid_delete(slotId, modulationUid):
+        global proj
+        fg = proj.getSlot(slotId)
+        fg.removeModulation(modulationUid)
+
     @app.route('/slot/<int:slotId>/configuration', methods=['GET'])
     def slot_slotId_configuration_get(slotId):
         global proj
@@ -234,7 +271,11 @@ def create_app():
 
     @app.route('/effects', methods=['GET'])
     def effects_get():
-        childclasses = inheritors(effects.Effect)
+        """Returns all effects and modulators
+        """
+        childclasses = []
+        childclasses.extend(inheritors(effects.Effect))
+        childclasses.extend(inheritors(modulation.ModulationSource))
         return jsonpickle.encode([child for child in childclasses])
 
     @app.route('/effect/<full_class_name>/description', methods=['GET'])
@@ -294,7 +335,7 @@ def create_app():
         if (module_name != "audioled.audio" and module_name != "audioled.effects" and module_name != "audioled.devices"
                 and module_name != "audioled.colors" and module_name != "audioled.audioreactive"
                 and module_name != "audioled.generative" and module_name != "audioled.input"
-                and module_name != "audioled.panelize"):
+                and module_name != "audioled.panelize" and module_name != "audioled.modulation"):
             raise RuntimeError("Not allowed")
         return module_name, class_name
 

@@ -656,7 +656,7 @@ class VisGraph extends React.Component {
         var allNodes = [];
         var allEdges = [];
         values.forEach(element => {
-          var { nodes, edges } = this.createVisNodesAndEdges(element);
+          var { nodes, edges } = this.createEffectNodesAndEdges(element);
           allNodes = allNodes.concat(nodes);
           allEdges = allEdges.concat(edges);
         })
@@ -681,16 +681,16 @@ class VisGraph extends React.Component {
     return inout + '_' + index + '_' + uid;
   }
 
-  createVisNode(json) {
+  createEffectNode(json) {
     var visNode = {};
-    this.updateVisNode(visNode, json);
+    this.updateEffectNode(visNode, json);
     return visNode;
   }
 
-  createVisNodesAndEdges(json) {
+  createEffectNodesAndEdges(json) {
     var allNodes = [];
     var allEdges = [];
-    var visNode = this.createVisNode(json);
+    var visNode = this.createEffectNode(json);
     allNodes.push(visNode);
     var { nodes, edges } = this.createInputOutputNodesAndEdges(json, visNode);
     allNodes = allNodes.concat(nodes);
@@ -735,7 +735,7 @@ class VisGraph extends React.Component {
     return { nodes, edges };
   }
 
-  updateVisNode(visNode, json) {
+  updateEffectNode(visNode, json) {
     console.debug('Update Vis Node:', json["py/state"]);
     var uid = json["py/state"]["uid"];
     var name = json["py/state"]["effect"]["py/object"];
@@ -813,9 +813,15 @@ class VisGraph extends React.Component {
     await FilterGraphService.addNode(this.state.slot, selectedEffect, option)
       .then(node => {
         console.debug('Create node successful:', JSON.stringify(node));
-        //updateVisNode(data, node);
-        var { nodes, edges } = this.createVisNodesAndEdges(node);
-        this.addStateNodesAndEdges(nodes, edges);
+        if (node["py/object"] === "audioled.filtergraph.Node") {
+          // Created node is part of the filtergraph
+          //updateVisNode(data, node);
+          var { nodes, edges } = this.createEffectNodesAndEdges(node);
+          this.addStateNodesAndEdges(nodes, edges);
+        } else if (node["py/object"] === "audioled.filtergraph.ModulationSourceNode") {
+          // Created node is a modulation source
+          console.log("TODO: Implement adding modulation source nodes")
+        }
       })
       .catch(error => {
         console.error('Error on creating node:', error);
