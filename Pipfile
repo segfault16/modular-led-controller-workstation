@@ -20,6 +20,4 @@ mido = "*"
 python-rtmidi = "*"
 apscheduler = "*"
 pillow = "*"
-#[requires]
-#python_version = "3.5"
-rpi-ws281x = "*"
+rpi-ws281x = {version = "*", sys_platform = "== 'linux'"}
