@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "9b6f0d496b9dcc211cbcb8a5ce36c4d732bf844e9f23eff22d5b46679b7ca1e6"
+            "sha256": "6c79e1d010268bc629491dad16f5af478fcfc6eda5db18192197b4d3f478113e"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -222,6 +222,7 @@
                 "sha256:eb2365f513b333fb1574131a1a719b66ffd252624c192ac0e954a5970cfea84f"
             ],
             "index": "piwheels",
+            "markers": "sys_platform == 'linux'",
             "version": "==4.2.2"
         },
         "scipy": {
