@@ -296,7 +296,7 @@ class VisGraph extends React.Component {
               }
               this.props.enqueueSnackbar("Connection replaced", { variant: 'info' })
               FilterGraphService.addConnection(this.state.slot, fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data).then(connection => {
-                this.updateVisConnection(data, connection)
+                this.updateEffectConnection(data, connection)
                 this.addStateNodesAndEdges([], [data])
                 // manual drag end
                 is_dragging = false
@@ -840,7 +840,7 @@ class VisGraph extends React.Component {
 
   createVisConnection(con) {
     var edge = {};
-    this.updateVisConnection(edge, con);
+    this.updateEffectConnection(edge, con);
     return edge;
   }
 
@@ -850,7 +850,7 @@ class VisGraph extends React.Component {
     return edge;
   }
 
-  updateVisConnection(edge, json) {
+  updateEffectConnection(edge, json) {
     console.debug('Update Vis Connection:', json["py/state"]);
     var state = json["py/state"];
     edge.id = state["uid"];
@@ -964,6 +964,16 @@ class VisGraph extends React.Component {
     this.setState(state => {
       return {
         editNodePopup: {
+          isShown: false
+        }
+      }
+    })
+  }
+
+  clearModulationPopUp = () => {
+    this.setState(state => {
+      return {
+        editModulationPopup: {
           isShown: false
         }
       }
@@ -1141,7 +1151,7 @@ class VisGraph extends React.Component {
               </div>
               {this.state.editNodePopup.mode == "edit" && this.state.editNodePopup.isShown ? <EditNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
               {this.state.editNodePopup.mode == "add" && this.state.editNodePopup.isShown ? <AddNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
-              {this.state.editModulationPopup.isShown ? <EditModulationPopup open={this.state.editModulationPopup.isShown} slot={this.state.slot} modulationUid={this.state.editModulationPopup.modulationUid}/> : null}
+              {this.state.editModulationPopup.isShown ? <EditModulationPopup open={this.state.editModulationPopup.isShown} slot={this.state.slot} modulationUid={this.state.editModulationPopup.modulationUid} onCancel={this.clearModulationPopUp}/> : null}
             </div>
           )}
         </Measure>

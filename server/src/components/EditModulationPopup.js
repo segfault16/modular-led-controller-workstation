@@ -5,6 +5,9 @@ import Button from '@material-ui/core/Button';
 import Divider from '@material-ui/core/Divider';
 import FilterGraphService from "../services/FilterGraphService";
 import Typography from '@material-ui/core/Typography';
+import Select from '@material-ui/core/Select';
+import InputLabel from '@material-ui/core/InputLabel';
+import MenuItem from '@material-ui/core/MenuItem';
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
@@ -31,7 +34,9 @@ const styles = theme => ({
 class EditModulationPopup extends React.Component {
 
     state = {
-        config: null
+        config: null,
+        selectedParameter: null,
+        parameters: []
     }
 
     componentDidMount() {
@@ -55,13 +60,36 @@ class EditModulationPopup extends React.Component {
         
         this._asyncRequest.promise.then(modulation => {
             console.log("Loaded", modulation)
-            return modulation
+            let nodeUid = modulation['py/state']['target_node_uid']
+            let modSourceUid = modulation['py/state']['modulation_source_uid']
+            const nodeJson = FilterGraphService.getNode(slot, nodeUid)
+            const parameterDefinitionJson = FilterGraphService.getNodeParameter(slot, nodeUid)
+            return Promise.all([modulation, nodeJson, parameterDefinitionJson])
+            
             // const nodeJson = FilterGraphService.getNode(slot, uid);
             // const parameterDefinitionJson = FilterGraphService.getNodeParameter(slot, uid);
             // const helpJson = FilterGraphService.getEffectParameterHelp(effectName);
             // const description = FilterGraphService.getEffectDescription(effectName);
             // return Promise.all([nodeJson, parameterDefinitionJson, helpJson, description])
         }).then(result => {
+            console.log(result)
+            var modulation = result[0]
+            var node = result[1]
+            var parameterDefinition = result[2]
+            console.log(parameterDefinition['parameters'])
+
+            this._asyncRequest = null;
+            this.setState(state => {
+                return {
+                    config: {
+                        parameters: { amount: [0, 0, 1, 0.01], inverted: false },
+                        values: {amount: modulation['py/state']['amount'], inverted: modulation['py/state']['inverted']},
+                        parameterHelp: {},
+                        description: ""
+                    },
+                    parameters: Object.keys(parameterDefinition['parameters'])
+                }
+            })
             // var currentParameterValues = result[0]["py/state"]["effect"]["py/state"];
             // var parameterDefinition = result[1];
             // var helpText = result[2];
@@ -85,6 +113,8 @@ class EditModulationPopup extends React.Component {
     handleNodeEditCancel = async (event) => {
         if (this.props.onCancel != null) {
             this.props.onCancel()
+        } else {
+            this.props.open = false
         }
     }
 
@@ -109,12 +139,48 @@ class EditModulationPopup extends React.Component {
     handleParameterChange = (value, parameter) => {
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.config.values[parameter] = value;
-        FilterGraphService.updateNode(this.props.slot, this.props.nodeUid, { [parameter]: value })
+        FilterGraphService.updateModulation(this.props.slot, this.props.modulationUid, { [parameter]: value })
         this.setState(newState);
     };
 
+    handleSelectedParameterChange = (value) => {
+        console.log("Selected parameter:", value)
+        let newState = Object.assign({}, this.state); // create copy of state
+        newState.selectedParameter = value;
+        FilterGraphService.updateModulation(this.props.slot, this.props.modulationUid, { 'target_param': value})
+        this.setState(newState);
+    }
+
+    domCreateSelectParameterDropdown = () => {
+        if (this.state.parameters.length > 0) {
+            let items = this.state.parameters.map((param, id) => {
+                return (
+                    <MenuItem key={id} value={param}>{param}</MenuItem>
+                )
+            })
+            return <React.Fragment>
+                <h3>Select Parameter:</h3>
+                <InputLabel htmlFor="effect-dropdown" />
+                <Select
+                    value={this.state.selectedParameter}
+                    onChange={(e, val) => this.handleSelectedParameterChange(val.props.value)}
+                    fullWidth={true}
+                    inputProps={{
+                        name: "effect-dropdown",
+                        id: "effect-dropdown",
+                    }}>
+                    {items}
+                </Select>
+            </React.Fragment>
+        }
+        return null
+    }
+
     domCreateDialogContent = (classes, effectDescription, parameters, values, parameterHelp) => {
         return <DialogContent>
+        <div id="parameters">
+            {this.domCreateSelectParameterDropdown()}
+        </div>
         <div>
             {effectDescription.length > 0 ? 
             <React.Fragment>

@@ -264,6 +264,21 @@ def create_app():
         except StopIteration:
             abort(404, "Modulation not found")
 
+    @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['PUT'])
+    def slot_slotId_modulationUid_update(slotId, modulationUid):
+        global proj
+        fg = proj.getSlot(slotId)
+        if not request.json:
+            abort(400)
+        try:
+            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid)
+            # data =  json.loads(request.json)
+            print(request.json)
+            mod.updateParameter(request.json)
+            return jsonpickle.encode(mod)
+        except StopIteration:
+            abort(404, "Modulation not found")
+
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['DELETE'])
     def slot_slotId_modulationUid_delete(slotId, modulationUid):
         global proj

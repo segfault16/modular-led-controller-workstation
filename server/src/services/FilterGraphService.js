@@ -111,6 +111,16 @@ const FilterGraphService = {
             throw error
         });
     },
+    updateModulation: function(slotId, data, options, abortSignal = null) {
+        return fetch('./slot/' + slotId + '/modulation/' + data, {
+            method: 'PUT', 
+            body: JSON.stringify(options), // data can be `string` or {object}!
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            signal: abortSignal
+          }).then(res => res.json())
+    },
     deleteModulation: function(slotId, id) {
       return fetch('./slot/' + slotId + '/modulation/' + id, {
           method: 'DELETE'

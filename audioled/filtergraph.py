@@ -133,6 +133,12 @@ class Modulation(object):
         state['uid'] = self.uid
         return state
     
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+    def updateParameter(self, stateDict):
+        self.__setstate__(stateDict)
+    
     def propagate(self):
         if self.modulationSource is None or self.targetEffect is None or self.targetParameter is None:
             return
