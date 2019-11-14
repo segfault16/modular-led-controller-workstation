@@ -56,6 +56,8 @@ import FilterGraphService from "../services/FilterGraphService";
 
 import AddNodePopup from './AddNodePopup';
 import EditNodePopup from './EditNodePopup';
+import EditModulationPopup from './EditModulationPopup';
+
 import './VisGraph.css';
 import Measure from 'react-measure'
 
@@ -118,6 +120,10 @@ const NODETYPE_EFFECT_NODE = "effect_node";
 const NODETYPE_EFFECT_INOUT = "effect_channel";
 const NODETYPE_MODULATOR = "modulator";
 
+const EDGETYPE_MODULATION = "modulation";
+const EDGETYPE_EFFECT_INOUT = "effect_inout";
+const EDGETYPE_EFFECT_CONNECTION = "effect_connection";
+
 var is_dragging = false;
 
 class VisGraph extends React.Component {
@@ -139,14 +145,21 @@ class VisGraph extends React.Component {
         mode: "add", // add or edit
         nodeUid: 0,
       },
+      editModulationPopup: {
+        isShown: false,
+      },
       errorMessage: {
         isShown: true
       },
       events: {
         select: ({ nodes, edges }) => {
+          console.debug("selected nodes", nodes)
+          console.debug("selected edges:", edges)
           if (this.state.mode === MODE_SELECT || this.state.mode === MODE_CREATE) {
             if (nodes.length == 1) {
               this.editNode(nodes[0])
+            } else if (edges.length == 1) {
+              this.editModulation(edges[0])
             }
           } else if (this.state.mode === MODE_DELETE) {
             if (nodes.length == 1) {
@@ -162,7 +175,7 @@ class VisGraph extends React.Component {
         },
         click: ({ nodes, edges }) => {
           if (this.state.mode === MODE_CREATE) {
-            if (nodes.length == 0) {
+            if (nodes.length == 0 && edges.length == 0) {
               this.addGraphNode();
             }
           }
@@ -499,6 +512,10 @@ class VisGraph extends React.Component {
         FilterGraphService.deleteConnection(this.state.slot, id);
 
         console.debug("Deleted edge", edge);
+      } else if (fromNode.nodeType == NODETYPE_MODULATOR && toNode.nodeType == NODETYPE_EFFECT_NODE) {
+        var edge = this.state.graph.edges.find(item => item.id === edgeUid);
+        var id = edge.id;
+        FilterGraphService.deleteModulation(this.state.slot,id);
       } else {
         console.log("could not delete edge")
         // Remove edge from callback data
@@ -776,7 +793,7 @@ class VisGraph extends React.Component {
       outNode.nodeChannel = i;
       outNode.level = visNode.level != null ? (visNode.level + 1) : 0;
       nodes.push(outNode);
-      edges.push({ id: outNode.id, from: visNode.id, to: outNode.id, width: 4, arrows: { to: { enabled: false } } });
+      edges.push({ id: outNode.id, from: visNode.id, to: outNode.id, width: 4, arrows: { to: { enabled: false } }, edgeType: EDGETYPE_EFFECT_INOUT });
     }
     for (var i = 0; i < numInputChannels; i++) {
       var uid = this.conUid('in', i, visNode.id);
@@ -790,7 +807,7 @@ class VisGraph extends React.Component {
       inNode.nodeChannel = i;
       inNode.level = visNode.level != null ? (visNode.level - 1) : 0;
       nodes.push(inNode);
-      edges.push({ id: inNode.id, from: inNode.id, to: visNode.id, width: 4, arrows: { to: { enabled: false } } });
+      edges.push({ id: inNode.id, from: inNode.id, to: visNode.id, width: 4, arrows: { to: { enabled: false } }, edgeType: EDGETYPE_EFFECT_INOUT });
     }
     return { nodes, edges };
   }
@@ -850,6 +867,7 @@ class VisGraph extends React.Component {
     
     edge.width = 4
     edge.physics = false
+    edge.edgeType = EDGETYPE_EFFECT_CONNECTION;
   }
 
   updateModulationConnection(edge, json) {
@@ -857,6 +875,8 @@ class VisGraph extends React.Component {
     var state = json["py/state"];
     edge.from = state['modulation_source_uid'];
     edge.to = state['target_node_uid'];
+    edge.id = state['uid'];
+    edge.edgeType = EDGETYPE_MODULATION;
   }
 
 
@@ -874,7 +894,7 @@ class VisGraph extends React.Component {
   editNode(uid) {
     var node = this.state.graph.nodes.find(node => node.id === uid);
     if (node == null) {
-      console.error("Cannot find node " + node);
+      console.error("Cannot find node " + uid);
       return
     }
     if (node.nodeType != NODETYPE_EFFECT_NODE) {
@@ -889,6 +909,26 @@ class VisGraph extends React.Component {
         }
       }
     })
+  }
+
+  editModulation(uid) {
+    console.log("Edit modulation", uid)
+    var edge = this.state.graph.edges.find(edge => edge.id === uid);
+    if(edge == null) {
+      console.error("Cannot find edge " + uid);
+    }
+    if (edge.edgeType != EDGETYPE_MODULATION) {
+      return
+    }
+    this.setState(state => {
+      return {
+        editModulationPopup: {
+          isShown: true,
+          modulationUid: uid
+        }
+      }
+    })
+
   }
 
   saveNodeCallback = async (selectedEffect, option) => {
@@ -1101,6 +1141,7 @@ class VisGraph extends React.Component {
               </div>
               {this.state.editNodePopup.mode == "edit" && this.state.editNodePopup.isShown ? <EditNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
               {this.state.editNodePopup.mode == "add" && this.state.editNodePopup.isShown ? <AddNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
+              {this.state.editModulationPopup.isShown ? <EditModulationPopup open={this.state.editModulationPopup.isShown} slot={this.state.slot} modulationUid={this.state.editModulationPopup.modulationUid}/> : null}
             </div>
           )}
         </Measure>

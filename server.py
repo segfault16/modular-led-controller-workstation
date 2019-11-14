@@ -254,12 +254,26 @@ def create_app():
         newMod = fg.addModulation(json['modulationsource_uid'], json['target_uid'])
         return jsonpickle.encode(newMod)
 
+    @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['GET'])
+    def slot_slotId_modulationUid_get(slotId, modulationUid):
+        global proj
+        fg = proj.getSlot(slotId)
+        try: 
+            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid)
+            return jsonpickle.encode(mod)
+        except StopIteration:
+            abort(404, "Modulation not found")
 
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['DELETE'])
     def slot_slotId_modulationUid_delete(slotId, modulationUid):
         global proj
         fg = proj.getSlot(slotId)
-        fg.removeModulation(modulationUid)
+        try: 
+            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid)
+            fg.removeModulation(modulationUid)
+            return "OK"
+        except StopIteration:
+            abort(404, "Modulation not found")
 
     @app.route('/slot/<int:slotId>/configuration', methods=['GET'])
     def slot_slotId_configuration_get(slotId):

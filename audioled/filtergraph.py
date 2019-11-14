@@ -130,6 +130,7 @@ class Modulation(object):
         state['target_param'] = self.targetParameter
         state['amount'] = self.amount
         state['inverted'] = self.inverted
+        state['uid'] = self.uid
         return state
     
     def propagate(self):

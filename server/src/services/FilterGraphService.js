@@ -89,6 +89,9 @@ const FilterGraphService = {
     getAllModulations: function(slotId) {
         return fetch('./slot/' + slotId + '/modulations').then(res => res.json());
     },
+    getModulation: function(slotId, modulationUid) {
+        return fetch('./slot/' + slotId + '/modulation/' + modulationUid).then(res => res.json());
+    },
     addModulation: function(slotId, modulationSourceUid, targetNodeUid) {
         var postData = {modulationsource_uid: modulationSourceUid, target_uid: targetNodeUid};
         return fetch('/slot/' + slotId + '/modulation', {
@@ -107,6 +110,15 @@ const FilterGraphService = {
             console.error('Error on creating connection:', error);
             throw error
         });
+    },
+    deleteModulation: function(slotId, id) {
+      return fetch('./slot/' + slotId + '/modulation/' + id, {
+          method: 'DELETE'
+      }).then(res => {
+        console.debug('Delete modulation successful:', id);
+    }).catch(error => {
+        console.error('Error on deleting modulation:', error)
+    })
     },
     getAllEffects: function(abortSignal = null) {
         return fetch('./effects', {signal: abortSignal}).then(res => res.json());
