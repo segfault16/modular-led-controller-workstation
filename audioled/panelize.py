@@ -67,12 +67,6 @@ class MakeSquare(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['displacement'][0] = self.displacement
-        definition['parameters']['input_displacement'][0] = self.input_displacement
-        return definition
-
     async def update(self, dt):
         await super().update(dt)
         if self._num_pixels is None:
@@ -416,12 +410,6 @@ class FlipRows(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['flip_odd_rows'] = self.flip_odd_rows
-        definition['parameters']['flip_even_rows'] = self.flip_even_rows
-        return definition
 
     async def update(self, dt):
         await super().update(dt)

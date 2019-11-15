@@ -40,8 +40,8 @@ const FilterGraphService = {
     getNode: function(slotId, id) {
         return fetch('./slot/' + slotId + '/node/' + id).then(res => res.json())
     },
-    getNodeParameter: function(slotId, id) {
-        return fetch('./slot/' + slotId + '/node/' + id + '/parameter').then(res => res.json());
+    getNodeParameterDefinition: function(slotId, id) {
+        return fetch('./slot/' + slotId + '/node/' + id + '/parameterDefinition').then(res => res.json());
     },
     getNodeEffect: function(slotId, id) {
         return fetch('./slot/' + slotId + '/node/' + id + '/effect').then(res => res.json());

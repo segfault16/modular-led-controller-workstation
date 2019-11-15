@@ -57,11 +57,6 @@ class Shift(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['speed'][0] = self.speed
-        return definition
-
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
@@ -153,16 +148,8 @@ class Append(Effect):
         return help
 
     def getParameter(self):
-        definition = self.getParameterDefinition()
+        definition = super().getParameter()
         del definition['parameters']['num_channels']  # not editable at runtime
-        definition['parameters']['flip0'] = self.flip0
-        definition['parameters']['flip1'] = self.flip1
-        definition['parameters']['flip2'] = self.flip2
-        definition['parameters']['flip3'] = self.flip3
-        definition['parameters']['flip4'] = self.flip4
-        definition['parameters']['flip5'] = self.flip5
-        definition['parameters']['flip6'] = self.flip6
-        definition['parameters']['flip7'] = self.flip7
         return definition
 
     def process(self):
@@ -227,7 +214,7 @@ class Combine(Effect):
         return help
 
     def getParameter(self):
-        definition = self.getParameterDefinition()
+        definition = super().getParameter()
         definition['parameters']['mode'] = [self.mode] + [x for x in colors.blend_modes if x != self.mode]
         return definition
 
@@ -293,11 +280,6 @@ class AfterGlow(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['glow_time'][0] = self.glow_time
-        return definition
 
     async def update(self, dt):
         await super().update(dt)
@@ -376,12 +358,6 @@ class Mirror(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['mirror_lower'] = self.mirror_lower
-        definition['parameters']['recursion'][0] = self.recursion
-        return definition
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -546,18 +522,6 @@ class SpringCombine(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['dampening'][0] = self.dampening
-        definition['parameters']['tension'][0] = self.tension
-        definition['parameters']['spread'][0] = self.spread
-        definition['parameters']['scale_low'][0] = self.scale_low
-        definition['parameters']['scale_mid'][0] = self.scale_mid
-        definition['parameters']['scale_high'][0] = self.scale_high
-        definition['parameters']['speed'][0] = self.speed
-        definition['parameters']['trigger_threshold'][0] = self.trigger_threshold
-        return definition
-
     async def update(self, dt):
         await super().update(dt)
         if self._num_pixels is None:
@@ -657,12 +621,6 @@ class Swing(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['displacement'][0] = self.displacement
-        definition['parameters']['swingspeed'][0] = self.swingspeed
-        return definition
 
     def numInputChannels(self):
         return 1

@@ -55,7 +55,7 @@ class EditNodePopup extends React.Component {
         
         this._asyncRequest.promise.then(effectName => {
             const nodeJson = FilterGraphService.getNode(slot, uid);
-            const parameterDefinitionJson = FilterGraphService.getNodeParameter(slot, uid);
+            const parameterDefinitionJson = FilterGraphService.getNodeParameterDefinition(slot, uid);
             const helpJson = FilterGraphService.getEffectParameterHelp(effectName);
             const description = FilterGraphService.getEffectDescription(effectName);
             return Promise.all([nodeJson, parameterDefinitionJson, helpJson, description])

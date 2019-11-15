@@ -366,11 +366,6 @@ class LEDOutput(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['brightness'][0] = self.brightness
-        return definition
-
     def numInputChannels(self):
         return 1
 

@@ -135,13 +135,13 @@ def create_app():
         except StopIteration:
             abort(404, "Node not found")
 
-    @app.route('/slot/<int:slotId>/node/<nodeUid>/parameter', methods=['GET'])
+    @app.route('/slot/<int:slotId>/node/<nodeUid>/parameterDefinition', methods=['GET'])
     def slot_slotId_node_uid_parameter_get(slotId, nodeUid):
         global proj
         fg = proj.getSlot(slotId) # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg._filterNodes if node.uid == nodeUid)
-            return json.dumps(node.effect.getParameter())
+            return json.dumps(node.effect.getParameterDefinition())
         except StopIteration:
             abort(404, "Node not found")
 

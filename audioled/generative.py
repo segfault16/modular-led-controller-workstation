@@ -88,15 +88,6 @@ class SwimmingPool(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['num_waves'][0] = self.num_waves
-        definition['parameters']['scale'][0] = self.scale
-        definition['parameters']['wavespread_low'][0] = self.wavespread_low
-        definition['parameters']['wavespread_high'][0] = self.wavespread_high
-        definition['parameters']['max_speed'][0] = self.max_speed
-        return definition
-
     def _SinArray(self, _spread, _wavehight):
         # Create array for a single wave
         _CArray = []
@@ -303,13 +294,9 @@ class MidiKeyboard(Effect):
         return help
 
     def getParameter(self):
-        definition = self.getParameterDefinition()
+        definition = super().getParameter()
         definition['parameters']['midiPort'] = [self.midiPort
                                                 ] + [x for x in MidiKeyboard.getMidiPorts() if x != self.midiPort]
-        definition['parameters']['attack'][0] = self.attack
-        definition['parameters']['decay'][0] = self.decay
-        definition['parameters']['sustain'][0] = self.sustain
-        definition['parameters']['release'][0] = self.release
         return definition
 
     async def update(self, dt):
@@ -410,11 +397,6 @@ class Breathing(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['cycle'][0] = self.cycle
-        return definition
-
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
@@ -474,11 +456,6 @@ class Heartbeat(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['speed'][0] = self.speed
-        return definition
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -548,15 +525,6 @@ class FallingStars(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['dim_speed'][0] = self.dim_speed
-        definition['parameters']['thickness'][0] = self.thickness
-        definition['parameters']['max_brightness'][0] = self.max_brightness
-        definition['parameters']['max_spawns'][0] = self.max_spawns
-        definition['parameters']['probability'][0] = self.probability
-        return definition
 
     def numInputChannels(self):
         return 1
@@ -671,15 +639,6 @@ class Pendulum(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['location'][0] = self.location
-        definition['parameters']['displacement'][0] = self.displacement
-        definition['parameters']['heightactivator'] = self.heightactivator
-        definition['parameters']['lightflip'] = self.lightflip
-        definition['parameters']['swingspeed'][0] = self.swingspeed
-        return definition
-
     def createBlob(self, spread_rel, location_rel):
         blobArray = np.zeros(self._num_pixels)
         spread = max(int(spread_rel * self._num_pixels), 1)
@@ -770,12 +729,6 @@ class RandomPendulums(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['num_pendulums'][0] = self.num_pendulums
-        definition['parameters']['dim'][0] = self.dim
-        return definition
 
     def createBlob(self, spread_rel, location_rel):
         blobArray = np.zeros(self._num_pixels)
@@ -892,12 +845,6 @@ class StaticBlob(Effect):
         help = {"parameters": {"location": "Location where the blob is created.", "spread": "Spreading of the blob."}}
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['location'][0] = self.location
-        definition['parameters']['spread'][0] = self.spread
-        return definition
-
     def createBlob(self, spread_rel, location_rel):
         blobArray = np.zeros(self._num_pixels)
 
@@ -981,9 +928,7 @@ class GenerateWaves(Effect):
         return help
 
     def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['period'][0] = self.period
-        definition['parameters']['scale'][0] = self.scale
+        definition = super().getParameter()
         definition['parameters']['wavemode'] = [self.wavemode] + [x for x in wave_modes if x != self.wavemode]
         return definition
 
@@ -1092,13 +1037,6 @@ class Sorting(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['sortby'] = [self.sortby] + [x for x in sortby if x != self.sortby]
-        definition['parameters']['reversed'] = self.reversed
-        definition['parameters']['looping'] = self.looping
-        return definition
 
     def disorder(self):
         self._output = np.ones(self._num_pixels) * np.array([[1.0], [1.0], [1.0]])
@@ -1233,14 +1171,6 @@ class GIFPlayer(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['fps'][0] = self.fps
-        definition['parameters']['center_x'][0] = self.center_x
-        definition['parameters']['center_y'][0] = self.center_y
-        definition['parameters']['file'][1] = self.file
-        return definition
 
     def numInputChannels(self):
         return 0

@@ -187,13 +187,6 @@ class AudioInput(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['autogain_max'][0] = self.autogain_max
-        definition['parameters']['autogain_time'][0] = self.autogain_time
-        definition['parameters']['autogain'] = self.autogain
-        return definition
-
     def getSampleRate(self):
         return GlobalAudio.sample_rate
 

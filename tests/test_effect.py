@@ -20,3 +20,9 @@ class Test_Effect(unittest.TestCase):
         state = testEffect.__getstate__()
         
         self.assertEqual(state['r'], 100)
+
+    def test_getParameterRespectsOriginalValue(self):
+        testEffect = colors.StaticRGBColor(r=100)
+        testEffect.setParameterOffset('r', testEffect.getParameterDefinition(), 1)
+        paramDict = testEffect.getParameter()
+        self.assertEqual(paramDict['parameters']['r'][0], 100)

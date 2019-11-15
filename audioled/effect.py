@@ -176,7 +176,23 @@ class Effect(object):
         
 
     def getParameter(self):
+        """Get parameter values and range definition
+        
+        Returns:
+            {
+                "parameters": {
+                    "param1": [curValue, minValue, maxValue, step]
+                }
+            }
+
+        TODO: Can this be deprecated?
+        """
+        
         definition = self.getParameterDefinition()
+        state = self.__getstate__() # cleaned state
+        for k in state.keys():
+            val = state[k]
+            definition['parameters'][k][0] = val
         print(definition)
         return definition
 
