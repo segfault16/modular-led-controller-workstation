@@ -4,13 +4,13 @@ const FilterGraphService = {
     getAllConnections: function(slotId) {
         return fetch('./slot/' + slotId + '/connections').then(res => res.json())
     },
-    addConnection: function (slotId, from_node_uid, from_node_channel, to_node_uid, to_node_channel, data) {
+    addConnection: function (slotId, from_node_uid, from_node_channel, to_node_uid, to_node_channel, modulationUid) {
         var postData = { from_node_uid: from_node_uid, from_node_channel: from_node_channel, to_node_uid: to_node_uid, to_node_channel: to_node_channel };
 
         // Save node in backend
         return fetch('./slot/' + slotId + '/connection', {
             method: 'POST', // or 'PUT'
-            body: JSON.stringify(postData), // data can be `string` or {object}!
+            body: JSON.stringify(postData), // modulationUid can be `string` or {object}!
             headers: {
                 'Content-Type': 'application/json'
             }
@@ -18,7 +18,7 @@ const FilterGraphService = {
             throw error
         }).then(res => res.json()
         ).then(connection => {
-            console.debug('Create connection successful:', data);
+            console.debug('Create connection successful:', modulationUid);
             return connection
         }).catch(error => {
             console.error('Error on creating connection:', error);
@@ -49,16 +49,16 @@ const FilterGraphService = {
     addNode: function(slotId, selectedEffect, options) {
         return fetch('./slot/' + slotId + '/node', {
             method: 'POST', // or 'PUT'
-            body: JSON.stringify([selectedEffect, options]), // data can be `string` or {object}!
+            body: JSON.stringify([selectedEffect, options]), // modulationUid can be `string` or {object}!
             headers: {
               'Content-Type': 'application/json'
             }
           }).then(res => res.json())
     },
-    updateNode: function(slotId, data, options, abortSignal = null) {
-        return fetch('./slot/' + slotId + '/node/' + data, {
+    updateNode: function(slotId, modulationUid, options, abortSignal = null) {
+        return fetch('./slot/' + slotId + '/node/' + modulationUid, {
             method: 'PUT', 
-            body: JSON.stringify(options), // data can be `string` or {object}!
+            body: JSON.stringify(options), // modulationUid can be `string` or {object}!
             headers: {
               'Content-Type': 'application/json'
             },
@@ -76,6 +76,19 @@ const FilterGraphService = {
     },
     getAllModulationSources: function(slotId) {
         return fetch('./slot/' + slotId + '/modulationSources').then(res => res.json());
+    },
+    getModulationSource: function(slotId, modulationUid) {
+        return fetch('./slot/' + slotId + '/modulationSource/' + modulationUid).then(res => res.json());
+    },
+    updateModulationSource: function(slotId, modulationUid, options, abortSignal = null) {
+        return fetch('./slot/' + slotId + '/modulationSource/' + modulationUid, {
+            method: 'PUT', 
+            body: JSON.stringify(options), // modulationUid can be `string` or {object}!
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            signal: abortSignal
+          }).then(res => res.json())
     },
     deleteModulationSource: function(slotId, id) {
         return fetch('./slot/' + slotId + '/modulationSource/' + id, {
@@ -111,10 +124,10 @@ const FilterGraphService = {
             throw error
         });
     },
-    updateModulation: function(slotId, data, options, abortSignal = null) {
-        return fetch('./slot/' + slotId + '/modulation/' + data, {
+    updateModulation: function(slotId, modulationUid, options, abortSignal = null) {
+        return fetch('./slot/' + slotId + '/modulation/' + modulationUid, {
             method: 'PUT', 
-            body: JSON.stringify(options), // data can be `string` or {object}!
+            body: JSON.stringify(options), // modulationUid can be `string` or {object}!
             headers: {
               'Content-Type': 'application/json'
             },

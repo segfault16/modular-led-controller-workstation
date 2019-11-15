@@ -89,7 +89,7 @@
                 "modulator": {
                     "py/object": "audioled.modulation.ExternalLinearController",
                     "py/state": {
-                        "amount": 1
+                        "amount": 0.125
                     }
                 },
                 "py/object": "audioled.filtergraph.ModulationSourceNode",

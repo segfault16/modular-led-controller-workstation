@@ -57,6 +57,7 @@ import FilterGraphService from "../services/FilterGraphService";
 import AddNodePopup from './AddNodePopup';
 import EditNodePopup from './EditNodePopup';
 import EditModulationPopup from './EditModulationPopup';
+import EditModulationSourcePopup from './EditModulationSourcePopup';
 
 import './VisGraph.css';
 import Measure from 'react-measure'
@@ -146,6 +147,9 @@ class VisGraph extends React.Component {
         nodeUid: 0,
       },
       editModulationPopup: {
+        isShown: false,
+      },
+      editModulationSourcePopup: {
         isShown: false,
       },
       errorMessage: {
@@ -910,18 +914,28 @@ class VisGraph extends React.Component {
       console.error("Cannot find node " + uid);
       return
     }
-    if (node.nodeType != NODETYPE_EFFECT_NODE) {
-      return
-    }
-    this.setState(state => {
-      return {
-        editNodePopup: {
-          isShown: true,
-          mode: "edit",
-          nodeUid: uid
+    if (node.nodeType == NODETYPE_EFFECT_NODE) {
+      console.log("Edit Effect Node")
+      this.setState(state => {
+        return {
+          editNodePopup: {
+            isShown: true,
+            mode: "edit",
+            nodeUid: uid
+          }
         }
-      }
-    })
+      })
+    } else if (node.nodeType == NODETYPE_MODULATOR) {
+      console.log("Edit Modulator Node", uid)
+      this.setState(state => {
+        return {
+          editModulationSourcePopup: {
+            isShown: true,
+            modulationUid: uid
+          }
+        }
+      })
+    }
   }
 
   editModulation(uid) {
@@ -987,6 +1001,16 @@ class VisGraph extends React.Component {
     this.setState(state => {
       return {
         editModulationPopup: {
+          isShown: false
+        }
+      }
+    })
+  }
+
+  clearModulationSourcePopUp = () => {
+    this.setState(state => {
+      return {
+        editModulationSourcePopup: {
           isShown: false
         }
       }
@@ -1162,6 +1186,7 @@ class VisGraph extends React.Component {
               {this.state.editNodePopup.mode == "edit" && this.state.editNodePopup.isShown ? <EditNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
               {this.state.editNodePopup.mode == "add" && this.state.editNodePopup.isShown ? <AddNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
               {this.state.editModulationPopup.isShown ? <EditModulationPopup open={this.state.editModulationPopup.isShown} slot={this.state.slot} modulationUid={this.state.editModulationPopup.modulationUid} onCancel={this.clearModulationPopUp}/> : null}
+              {this.state.editModulationSourcePopup.isShown ? <EditModulationSourcePopup open={this.state.editModulationSourcePopup.isShown} slot={this.state.slot} modulationUid={this.state.editModulationSourcePopup.modulationUid} onCancel={this.clearModulationSourcePopUp}/> : null}
             </div>
           )}
         </Measure>
