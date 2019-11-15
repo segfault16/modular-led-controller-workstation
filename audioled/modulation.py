@@ -1,4 +1,10 @@
+from __future__ import (absolute_import, division, print_function, unicode_literals)
+
 from collections import OrderedDict
+
+import numpy as np
+import scipy as sp
+import math
 import inspect
 
 
@@ -56,6 +62,11 @@ class ModulationSource(object):
         except AttributeError:
             self._t = 0
 
+        try:
+            self._last_t = self._t - dt
+        except AttributeError:
+            self._last_t = 0
+
     def getValue(self):
         pass
 
@@ -63,6 +74,10 @@ class ModulationSource(object):
         self.__setstate__(stateDict)
 
     def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['depth'][0] = self.depth
+        definition['parameters']['depth'][0] = self.depth
+        return definition
         return {}
 
     @staticmethod
@@ -80,15 +95,15 @@ class ModulationSource(object):
 
 class ExternalLinearController(ModulationSource):
 
-    def __init__(self, offset=.0):
-        self.offset = offset
+    def __init__(self, amount=.0):
+        self.amount = amount
 
     @staticmethod
     def getParameterDefinition():
         definition = {
             "parameters": OrderedDict([
                 # default, min, max, stepsize
-                ("offset", [.0, .0, 1.0, .001]),
+                ("amount", [1.0, .0, 1.0, .001]),
             ])
         }
         return definition
@@ -97,15 +112,52 @@ class ExternalLinearController(ModulationSource):
     def getParameterHelp():
         help = {
             "parameters": {
-                "offset": "Static offset.",
+                "amount": "Global scale of the controller.",
             }
         }
         return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        definition['parameters']['offset'][0] = self.offset
+        definition['parameters']['amount'][0] = self.amount
         return definition
     
     def getValue(self):
-        return self.offset
+        return self.amount
+
+
+class SineLFO(ModulationSource):
+
+    def __init__(self, freqHz=.0, depth=1.0):
+        self.depth = depth
+        self.freqHz = freqHz
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": OrderedDict([
+                # default, min, max, stepsize
+                ("depth", [1.0, .0, 1.0, .001]),
+                ("freqHz", [0.01, .0, 60.0, .01]),
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "depth": "Depth of the LFO target.",
+                "freqHz": "LFO Freq in Hz.",
+            }
+        }
+        return help
+
+    def update(self, dt):
+        """
+        Update timing, can be used to precalculate stuff that doesn't depend on input values
+        """
+        super().update(dt)
+    
+    def getValue(self):
+        return self.depth * math.sin(self._t * self.freqHz)
