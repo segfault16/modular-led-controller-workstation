@@ -56,6 +56,9 @@ class ModulationSource(object):
         except AttributeError:
             self._t = 0
 
+    def getValue(self):
+        pass
+
     def updateParameter(self, stateDict):
         self.__setstate__(stateDict)
 
@@ -103,3 +106,6 @@ class ExternalLinearController(ModulationSource):
         definition = self.getParameterDefinition()
         definition['parameters']['offset'][0] = self.offset
         return definition
+    
+    def getValue(self):
+        return self.offset

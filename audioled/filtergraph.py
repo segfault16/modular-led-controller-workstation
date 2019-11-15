@@ -2,9 +2,11 @@ import asyncio
 import uuid
 import traceback
 from timeit import default_timer as timer
+from typing import List
 
 from audioled import devices
 from audioled import generative
+from audioled import effect
 
 
 class NodeException(Exception):
@@ -17,7 +19,7 @@ class NodeException(Exception):
 
 class Node(object):
     def __init__(self, effect):
-        self.effect = effect
+        self.effect = effect # type: effect.Effect
         self.uid = None
         # TODO: Improve consistency with numInputChannels and numOutputChannels
         self.numInputChannels = 0
@@ -102,7 +104,7 @@ class ModulationSourceNode(object):
     """Wraps a source of modulation
     """
     def __init__(self, modulator):
-        self.modulator = modulator
+        self.modulator = modulator # type: modulation.ModulationSource
         self.uid = None
 
     def update(self, dt):
@@ -113,15 +115,16 @@ class ModulationSourceNode(object):
 class Modulation(object):
     """Defines a parameter modulation based on a ModulationSourceNode
     """
-    def __init__(self, modulationSource, amount, inverted, targetNode, targetParameter):
-        self.modulationSource = modulationSource
+    def __init__(self, modulationSourceNode, amount, inverted, targetNode, targetParameter):
+        assert isinstance(modulationSourceNode, ModulationSourceNode)
+        assert isinstance(targetNode, Node)
+        self.modulationSource = modulationSourceNode # type: ModulationSourceNode
         self.amount = amount
         self.inverted = inverted
-        self.targetNode = targetNode
-        self.targetEffect = targetNode.effect
+        self.targetNode = targetNode # type: Node
+        self.targetEffect = targetNode.effect # type: effect.Effect
         self.targetParameter = targetParameter
         self.uid = None
-        self._lastValue = None
 
     def __getstate__(self):
         state = {}
@@ -134,6 +137,9 @@ class Modulation(object):
         return state
     
     def __setstate__(self, state):
+        targetParam = state.get('target_param', None)
+        if targetParam is not None:
+            state['targetParameter'] = targetParam
         self.__dict__.update(state)
 
     def updateParameter(self, stateDict):
@@ -145,9 +151,16 @@ class Modulation(object):
         # Get current value
         curValue = self.modulationSource.modulator.getValue()
         # Propagate change
-        if self._lastValue is None or curValue != self._lastValue:
-            # TODO: calculate and propagate
-            self._lastValue = curValue
+        # calculate and propagate new offset for this parameter
+        curOffset = self.targetEffect.getParameterOffset(self.targetParameter)
+        if curOffset is None:
+            curOffset = 0
+        newOffset = curValue * self.amount
+        if self.inverted:
+            newOffset = -1 * newOffset
+        newOffset = curOffset + newOffset
+        self.targetEffect.setParameterOffset(self.targetParameter, self.targetEffect.getParameterDefinition(), newOffset)
+        self._lastValue = curValue
     
 
 class Timing(object):
@@ -183,15 +196,15 @@ class FilterGraph(Updateable):
     def __init__(self, recordTimings=False, asyncUpdate=True):
         self.recordTimings = recordTimings
         self.asyncUpdate = asyncUpdate
-        self._filterConnections = []
-        self._filterNodes = []
-        self._processOrder = []
+        self._filterConnections = [] # type: List[Connection]
+        self._filterNodes = [] # type: List[Node]
+        self._processOrder = [] # type: List[Node]
         self._updateTimings = {}
         self._processTimings = {}
         self._outputNode = None
         self._project = None
-        self._modulationSources = []
-        self._modulations = []
+        self._modulationSources = [] # type: List[ModulationSourceNode]
+        self._modulations = [] # type: List[Modulation]
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         if self._outputNode is None:
@@ -200,6 +213,9 @@ class FilterGraph(Updateable):
         # Update modulation sources
         for modSource in self._modulationSources:
             modSource.update(dt)
+        # Reset parameter offsets
+        for modCon in self._modulations:
+            modCon.targetEffect.resetParameterOffsets()
         # Propagate modulated parameters to effects
         for modCon in self._modulations:
             modCon.propagate()
@@ -318,9 +334,9 @@ class FilterGraph(Updateable):
         """Adds a connection between two filters
         """
         # find fromNode
-        fromNode = next(node for node in self._filterNodes if node.effect == fromEffect)
+        fromNode = next(node for node in self._filterNodes if node.effect == fromEffect) # type: Node
         # find toNode
-        toNode = next(node for node in self._filterNodes if node.effect == toEffect)
+        toNode = next(node for node in self._filterNodes if node.effect == toEffect) # type: Node
         # construct connection
         newConnection = Connection(fromNode, fromEffectChannel, toNode, toEffectChannel)
         newConnection.uid = uuid.uuid4().hex
@@ -399,9 +415,14 @@ class FilterGraph(Updateable):
     def removeModulation(self, modUid):
         """Removes a modulation driven by a modulationSource
         """
-        mod = next(mod for mod in self._modulations if mod.uid == modUid)
+        mod = next(mod for mod in self._modulations if mod.uid == modUid) # type: Modulation
         if mod is not None:
-            self._modulations.remove(mod)
+            # Reset parameter offset
+            if mod.targetParameter is not None:
+                mod.targetEffect.setParameterOffset(mod.targetParameter, mod.targetEffect.getParameterDefinition(), 0)
+            
+            # Remove modulation
+            self._modulations.remove(mod)        
 
     def _updateProcessOrder(self):
         processOrder = []
@@ -514,7 +535,8 @@ class FilterGraph(Updateable):
         if 'modulations' in state:
             mods = state['modulations']
             for mod in mods:
-                self.addModulation(mod['modulation_source_uid'], mod['target_node_uid'], mod['target_param'], mod['amount'], mod['inverted'])
+                newMod = self.addModulation(mod['modulation_source_uid'], mod['target_node_uid'], mod['target_param'], mod['amount'], mod['inverted'])
+                newMod.uid = mod['uid']
             
     def propagateNumPixels(self, num_pixels, num_rows=1):
         if self.getLEDOutput() is not None:

@@ -65,12 +65,6 @@ class EditModulationPopup extends React.Component {
             const nodeJson = FilterGraphService.getNode(slot, nodeUid)
             const parameterDefinitionJson = FilterGraphService.getNodeParameter(slot, nodeUid)
             return Promise.all([modulation, nodeJson, parameterDefinitionJson])
-            
-            // const nodeJson = FilterGraphService.getNode(slot, uid);
-            // const parameterDefinitionJson = FilterGraphService.getNodeParameter(slot, uid);
-            // const helpJson = FilterGraphService.getEffectParameterHelp(effectName);
-            // const description = FilterGraphService.getEffectDescription(effectName);
-            // return Promise.all([nodeJson, parameterDefinitionJson, helpJson, description])
         }).then(result => {
             console.log(result)
             var modulation = result[0]
@@ -87,24 +81,10 @@ class EditModulationPopup extends React.Component {
                         parameterHelp: {},
                         description: ""
                     },
-                    parameters: Object.keys(parameterDefinition['parameters'])
+                    parameters: Object.keys(parameterDefinition['parameters']),
+                    selectedParameter: modulation['py/state']['target_param']
                 }
             })
-            // var currentParameterValues = result[0]["py/state"]["effect"]["py/state"];
-            // var parameterDefinition = result[1];
-            // var helpText = result[2];
-            // var desc = result[3];
-            // this._asyncRequest = null;
-            // this.setState(state => {
-            //     return {
-            //         config: {
-            //             parameters: parameterDefinition.parameters,
-            //             values: currentParameterValues,
-            //             parameterHelp: (helpText !== null && helpText.parameters !== null) ? helpText.parameters : {},
-            //             description: desc
-            //         }
-            //     }
-            // })
         })
     }
 

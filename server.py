@@ -271,7 +271,7 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid)
+            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid) # type: filtergraph.Modulation
             # data =  json.loads(request.json)
             print(request.json)
             mod.updateParameter(request.json)
