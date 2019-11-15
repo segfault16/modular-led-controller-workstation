@@ -6,7 +6,7 @@ import unittest
 import jsonpickle
 from audioled import colors
 
-class Test_Modulation(unittest.TestCase):
+class Test_Effect(unittest.TestCase):
     def test_parameterOffsetWorks(self):
         testEffect = colors.StaticRGBColor(r=100, g=100)
         testEffect.setParameterOffset('r', testEffect.getParameterDefinition(), 1)
