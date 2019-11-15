@@ -37,6 +37,10 @@ class Effect(object):
         except AttributeError:
             self._t = 0
         try:
+            self._last_t
+        except AttributeError:
+            self._last_t = 0
+        try:
             self._num_pixels
         except AttributeError:
             self._num_pixels = None
@@ -98,7 +102,10 @@ class Effect(object):
         """
         Update timing, can be used to precalculate stuff that doesn't depend on input values
         """
+        if self._t:
+            self._last_t = self._t
         self._t += dt
+        
 
     def __cleanState__(self, stateDict):
         """

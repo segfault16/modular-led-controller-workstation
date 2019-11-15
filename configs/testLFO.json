@@ -84,6 +84,16 @@
                 },
                 "py/object": "audioled.filtergraph.ModulationSourceNode",
                 "uid": "0a67c2988c8345bc83ce8bd07487e208"
+            },
+            {
+                "modulator": {
+                    "py/object": "audioled.modulation.ExternalLinearController",
+                    "py/state": {
+                        "amount": 1
+                    }
+                },
+                "py/object": "audioled.filtergraph.ModulationSourceNode",
+                "uid": "2dff65473e794064bb206190c9a66c52"
             }
         ],
         "modulations": [
@@ -94,6 +104,22 @@
                 "target_node_uid": "af73c0ddc6dc42948bd333b7dd049fb1",
                 "target_param": "brightness",
                 "uid": "9a5c9d2716d54b239f23b6c2a7a985ab"
+            },
+            {
+                "amount": 0.48,
+                "inverted": false,
+                "modulation_source_uid": "2dff65473e794064bb206190c9a66c52",
+                "target_node_uid": "70afa53f1a224f9dbf0b015ad6bde9b7",
+                "target_param": "swingspeed",
+                "uid": "1418fc204aa84adc9dae54c792c744d6"
+            },
+            {
+                "amount": 0.71,
+                "inverted": true,
+                "modulation_source_uid": "2dff65473e794064bb206190c9a66c52",
+                "target_node_uid": "7fae9095695e4eaeb25e55053b5fb659",
+                "target_param": "glow_time",
+                "uid": "2e3b14affb9240339fd186bb9d31fa03"
             }
         ],
         "nodes": [

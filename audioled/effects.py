@@ -262,8 +262,11 @@ class AfterGlow(Effect):
 
     def __initstate__(self):
         # state
-        self._pixel_state = None
-        self._last_t = 0.0
+        try:
+            self._pixel_state
+        except AttributeError:
+            self._pixel_state = None
+        # self._last_t = 0.0
         super(AfterGlow, self).__initstate__()
 
     def numInputChannels(self):
