@@ -1,0 +1,490 @@
+
+    {
+        "description":"Panel mapping that corresponds to the openpixelcontrol layout ../layouts/wall_44x22.json",
+        "num_rows" : 32,
+        "num_cols" : 48,
+        "substrips": [
+    
+
+            {
+            "start_index": 0,
+            "row": 31,
+            "col": 47,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 32,
+            "row": 0,
+            "col": 46,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 64,
+            "row": 31,
+            "col": 45,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 96,
+            "row": 0,
+            "col": 44,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 128,
+            "row": 31,
+            "col": 43,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 160,
+            "row": 0,
+            "col": 42,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 192,
+            "row": 31,
+            "col": 41,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 224,
+            "row": 0,
+            "col": 40,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 256,
+            "row": 31,
+            "col": 39,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 288,
+            "row": 0,
+            "col": 38,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 320,
+            "row": 31,
+            "col": 37,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 352,
+            "row": 0,
+            "col": 36,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 384,
+            "row": 31,
+            "col": 35,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 416,
+            "row": 0,
+            "col": 34,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 448,
+            "row": 31,
+            "col": 33,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 480,
+            "row": 0,
+            "col": 32,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 512,
+            "row": 31,
+            "col": 31,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 544,
+            "row": 0,
+            "col": 30,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 576,
+            "row": 31,
+            "col": 29,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 608,
+            "row": 0,
+            "col": 28,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 640,
+            "row": 31,
+            "col": 27,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 672,
+            "row": 0,
+            "col": 26,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 704,
+            "row": 31,
+            "col": 25,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 736,
+            "row": 0,
+            "col": 24,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 768,
+            "row": 31,
+            "col": 23,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 800,
+            "row": 0,
+            "col": 22,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 832,
+            "row": 31,
+            "col": 21,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 864,
+            "row": 0,
+            "col": 20,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 896,
+            "row": 31,
+            "col": 19,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 928,
+            "row": 0,
+            "col": 18,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 960,
+            "row": 31,
+            "col": 17,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 992,
+            "row": 0,
+            "col": 16,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1024,
+            "row": 31,
+            "col": 15,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1056,
+            "row": 0,
+            "col": 14,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1088,
+            "row": 31,
+            "col": 13,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1120,
+            "row": 0,
+            "col": 12,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1152,
+            "row": 31,
+            "col": 11,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1184,
+            "row": 0,
+            "col": 10,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1216,
+            "row": 31,
+            "col": 9,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1248,
+            "row": 0,
+            "col": 8,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1280,
+            "row": 31,
+            "col": 7,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1312,
+            "row": 0,
+            "col": 6,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1344,
+            "row": 31,
+            "col": 5,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1376,
+            "row": 0,
+            "col": 4,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1408,
+            "row": 31,
+            "col": 3,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1440,
+            "row": 0,
+            "col": 2,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1472,
+            "row": 31,
+            "col": 1,
+            "dir": "U",
+            "num_pixels": 32
+        }
+    
+,
+
+            {
+            "start_index": 1504,
+            "row": 0,
+            "col": 0,
+            "dir": "D",
+            "num_pixels": 32
+        }
+    
+
+        ]
+    }
+    
