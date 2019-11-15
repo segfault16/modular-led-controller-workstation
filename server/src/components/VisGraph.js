@@ -534,6 +534,7 @@ class VisGraph extends React.Component {
     const effectNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_NODE);
     const outNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'out')
     const inNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'in')
+    const modNodes = nodes.filter(n => n.nodeType == NODETYPE_MODULATOR);
 
     // Find effect nodes without output
     const startWith = effectNodes.filter(n => outNodes.filter(o => o.nodeUid == n.id).length == 0)
@@ -592,6 +593,18 @@ class VisGraph extends React.Component {
       var effectNode = nodes.find(t => t.id === n.nodeUid)
       if (effectNode != null) {
         n.level = effectNode.level + 1
+      }
+    })
+
+    // process modulator nodes
+    modNodes.forEach(n => {
+      // get edges for this node
+      var firstEdge = edges.find(e => e.from === n.id);
+      if(firstEdge != null) {
+        var toNode = nodes.find(t => t.id === firstEdge.to)
+        if(toNode != null) {
+          n.level = toNode.level
+        }
       }
     })
   }
@@ -833,7 +846,7 @@ class VisGraph extends React.Component {
     visNode.id = uid;
     visNode.level = 0;
     visNode.label = "modulator"
-    visNode.shape = 'circle';
+    visNode.shape = 'ellipse';
     visNode.group = 'ok';
     visNode.nodeType = NODETYPE_MODULATOR;
   }
