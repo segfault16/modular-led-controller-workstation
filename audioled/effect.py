@@ -176,7 +176,9 @@ class Effect(object):
         
 
     def getParameter(self):
-        return {}
+        definition = self.getParameterDefinition()
+        print(definition)
+        return definition
 
     @staticmethod
     def getParameterDefinition():
