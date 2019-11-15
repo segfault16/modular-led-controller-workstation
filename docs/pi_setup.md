@@ -1,22 +1,32 @@
 # Raspberry Pi Setup
 
+## Install system
 
-## Install dependencies
-```
-sudo apt-get remove python2.7
-sudo apt-get autoremove
-sudo apt-get update
-sudo apt-get install python3-numpy python3-scipy python3-pyaudio python3-matplotlib python3-jsonpickle libasound-dev libjack-dev
-sudo pip3 install mido python-rtmidi apscheduler Pillow
-```
+* Head over to https://www.raspberrypi.org/documentation/installation/installing-images/ and install. `Raspbian Buster Lite` is sufficient if you don't need a UI.
+* Place an empty file called `ssh` into root directory to enable SSH
+* Put SD card into Raspberry Pi, let it boot
+* `ssh pi@raspberrypi.local` and enter default password (raspberry)
+* change password ;)
+* `sudo apt-get install git` to install git
+* Clone this repository via git `git clone https://github.com/segfault16/modular-led-controller-workstation.git`
+* `cd modular-led-controller-workstation`
 
-## Install rpi_ws281x
+blacklist the Broadcom audio kernel module by creating a file `/etc/modprobe.d/snd-blacklist.conf` with
+````
+blacklist snd_bcm2835
+````
+
+See https://github.com/jgarff/rpi_ws281x
+
+## Install dependencies 
+
 ```
-git clone https://github.com/rpi-ws281x/rpi-ws281x-python
-cd rpi-ws281x-python
-git submodule update --init --recursive
-cd library
-sudo python3.5 setup.py install
+sudo apt-get install python3-pip # to install pip3 on Raspbian Lite
+sudo pip3 install pipenv # install pipenv
+sudo apt-get install libjpeg8-dev # For pillow
+sudo apt-get install portaudio19-dev # For pyaudio
+sudo apt-get install libatlas-base-dev # For numpy
+sudo pipenv install --python 3.7
 ```
 
 ## Audio configuration
@@ -28,8 +38,8 @@ See [Audio setup on RaspberryPi](./audio_setup_pi.md).
 On RaspberryPi, `sudo` privileges are required for accessing the GPIO of RaspberryPi.
 
 ```
-# Run on Raspberry Pi 
-sudo python3 server.py -D RaspberryPi
+# Run on Raspberry Pi with 300 pixels and strand test at startup:
+sudo python3 server.py -D RaspberryPi -N 300 --strand
 ```
 
 ## Run as service
@@ -42,8 +52,8 @@ Description=Audio-reactive LED Strip
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 server.py -D RaspberryPi --config_location /home/pi/
-WorkingDirectory=/home/pi/projects/audio-reactive-led-strip
+ExecStart=/usr/local/bin/pipenv run python server.py -D RaspberryPi --config_location /home/pi/
+WorkingDirectory=/home/pi/modular-led-controller-workstation
 StandardOutput=inherit
 StandardError=inherit
 Restart=always

@@ -206,7 +206,7 @@ class BlinkStick(LEDController):
 
 
 class RaspberryPi(LEDController):
-    def __init__(self, num_pixels, num_rows=1, pin=18, invert_logic=False, freq=800000, dma=5):
+    def __init__(self, num_pixels, num_rows=1, pin=18, invert_logic=False, freq=800000, dma=10):
         super().__init__(num_pixels, num_rows)
         """Creates a Raspberry Pi output device
 

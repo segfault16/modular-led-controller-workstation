@@ -5,7 +5,6 @@ import colorsys
 import math
 from collections import OrderedDict
 
-import matplotlib as mpl
 import numpy as np
 from PIL import Image
 
@@ -54,6 +53,24 @@ def blend(pixel_a, pixel_b, blend_mode):
         return 255.0 * blended
 
     return pixel_a
+
+
+def hsv_to_rgb(hsv):
+    a = np.expand_dims(hsv, axis=1).T.astype(np.uint8)
+    pImg = Image.fromarray(a, mode='HSV')
+    pImg = pImg.convert('RGB')
+    out = np.asarray(pImg, dtype=np.uint8)
+    out = out.reshape(-1, out.shape[-1]).T
+    return out
+
+
+def rgb_to_hsv(rgb):
+    a = np.expand_dims(rgb, axis=1).T.astype(np.uint8)
+    pImg = Image.fromarray(a, mode='RGB')
+    pImg = pImg.convert('HSV')
+    out = np.asarray(pImg, dtype=np.uint8)
+    out = out.reshape(-1, out.shape[-1]).T
+    return out
 
 
 # New Filtergraph Style effects
@@ -293,9 +310,10 @@ class InterpolateHSV(Effect):
                 interp_h = np.linspace(h_a, h_b, self._num_pixels)
                 hsv = np.array([interp_h, interp_s, interp_v]).T
 
-                rgb = mpl.colors.hsv_to_rgb(hsv)
+                rgb = hsv_to_rgb(hsv)
 
                 self._outputBuffer[0] = rgb.T * 255.0
+
 
 class RGBToHSV(Effect):
     @staticmethod
@@ -324,6 +342,7 @@ class RGBToHSV(Effect):
         out = np.asarray(pImg, dtype=np.uint8)
         out = out.reshape(-1, out.shape[-1]).T
         self._outputBuffer[0] = out
+
 
 class HSVToRGB(Effect):
     @staticmethod
