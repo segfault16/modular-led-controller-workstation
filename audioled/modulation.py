@@ -75,10 +75,8 @@ class ModulationSource(object):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        definition['parameters']['depth'][0] = self.depth
-        definition['parameters']['depth'][0] = self.depth
+        print(definition)
         return definition
-        return {}
 
     @staticmethod
     def getParameterDefinition():
@@ -116,11 +114,6 @@ class ExternalLinearController(ModulationSource):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['amount'][0] = self.amount
-        return definition
     
     def getValue(self):
         return self.amount
