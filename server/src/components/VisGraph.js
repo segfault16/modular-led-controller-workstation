@@ -1021,13 +1021,10 @@ class VisGraph extends React.Component {
   }
 
   ensureMode = (mode) => {
-    if (mode === MODE_SELECT) {
-      this.state.network.disableEditMode()
-    }
     if (mode === MODE_CREATE) {
       this.state.network.addEdgeMode()
     } else {
-      this.state.network.editEdgeMode()
+      this.state.network.disableEditMode()
     }
   }
 

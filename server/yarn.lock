@@ -7938,10 +7938,10 @@ verror@1.10.0:
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
 
-vis-network@6.3.1, vis-network@^5.1.1:
-  version "6.3.1"
-  resolved "https://registry.yarnpkg.com/vis-network/-/vis-network-6.3.1.tgz#e4195e897df366573621dccddb5897ac49bee261"
-  integrity sha512-i8QT5i0vfJGI3S7W/kKTcPzxYhDu/EtXgyv1ew5eb1H5VBoxB3QldRsrvZpzNYgCaYoto9/LAhAKIHZJins9Hg==
+vis-network@6.4.0, vis-network@^5.1.1:
+  version "6.4.0"
+  resolved "https://registry.yarnpkg.com/vis-network/-/vis-network-6.4.0.tgz#1463b215f6b26329bdd07d4f560baf6a7179b97d"
+  integrity sha512-cCZpSt7RiMyLUffdSBcKOAhv2cckemx8oArO0tmLLLgdkPAGDVBi3AgsGhNWhej/ZtmR3B7eR8c6l9l0nqflmA==
 
 vm-browserify@^1.0.1:
   version "1.1.0"
