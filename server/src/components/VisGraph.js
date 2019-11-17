@@ -316,6 +316,7 @@ class VisGraph extends React.Component {
               FilterGraphService.addModulation(this.state.slot, fromNode.id, toNode.id).then(connection => {
                 this.updateModulationConnection(data, connection)
                 this.addStateNodesAndEdges([], [data])
+                this.editModulation(connection['py/state']['uid']);
               })
               
             } else {
@@ -423,11 +424,17 @@ class VisGraph extends React.Component {
       if (hoverNode) {
         if (node != null && node.nodeType == NODETYPE_EFFECT_NODE) {
           this.setState({ helptext: "Click to edit node" })
+        } else if (node.nodeType == NODETYPE_MODULATOR) {
+          this.setState({ helptext: "Click to edit modulation source" })
         } else {
           this.setState({ helptext: "" })
         }
       } else if (hoverEdge) {
-        this.setState({ helptext: "" })
+        if (edge.edgeType === EDGETYPE_MODULATION) {
+          this.setState({helptext: "Click to edit modulation"})
+        } else {
+          this.setState({ helptext: "" })
+        }
       } else {
         this.setState({ helptext: "Click and drag to pan" })
       }
@@ -437,11 +444,17 @@ class VisGraph extends React.Component {
           this.setState({ helptext: "Click and drag to input node to add connection" })
         } else if (node != null && node.nodeType == NODETYPE_EFFECT_NODE) {
           this.setState({ helptext: "Click to edit node" })
+        } else if (node.nodeType === NODETYPE_MODULATOR) {
+          this.setState({ helptext: "Click and drag to effect to create modulation"})
         } else {
           this.setState({ helptext: "" })
         }
       } else if (hoverEdge) {
-        this.setState({ helptext: "" })
+        if (edge.edgeType === EDGETYPE_MODULATION) {
+          this.setState({helptext: "Click to edit modulation"})
+        } else {
+          this.setState({ helptext: "" })
+        }
       } else {
         this.setState({ helptext: "Click to add node" })
       }
