@@ -217,23 +217,25 @@ class VUMeterRMS(Effect):
         await super().update(dt)
         if self._num_pixels is None:
             return
-        if self._default_color is None:
+        if self._default_color is None or np.size(self._default_color, 1) != self._num_pixels:
             # default color: VU Meter style
             # green from -inf to -24
             # green to red from -24 to 0
             h_a, s_a, v_a = colorsys.rgb_to_hsv(0, 1, 0)
             h_b, s_b, v_b = colorsys.rgb_to_hsv(1, 0, 0)
-            scal_value = (self.db_range + (-24)) / self.db_range
+            scal_value = max((self.db_range + (-24)) / self.db_range, 0) # clip to positive if db_range < 24
             index = int(self._num_pixels * scal_value)
-            np = self._num_pixels - index
-            interp_v = np.linspace(v_a, v_b, np)
-            interp_s = np.linspace(s_a, s_b, np)
-            interp_h = np.linspace(h_a, h_b, np)
-            hsv = np.array([interp_h, interp_s, interp_v]).T
-
-            rgb = colors.hsv_to_rgb(hsv)
-            green = np.array([[0, 255.0, 0] for i in range(index)]).T
-            self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
+            num_pix = self._num_pixels - index
+            interp_v = np.linspace(v_a, v_b, num_pix)
+            interp_s = np.linspace(s_a, s_b, num_pix)
+            interp_h = np.linspace(h_a, h_b, num_pix)
+            hsv = np.array([interp_h, interp_s, interp_v]) * 255
+            rgb = colors.hsv_to_rgb(hsv).T
+            if (index > 0):
+                green = np.array([[0, 255.0, 0] for i in range(index)]).T
+                self._default_color = np.concatenate((green, rgb.T), axis=1)
+            else:
+                self._default_color = rgb.T
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -316,6 +318,7 @@ class VUMeterPeak(Effect):
         return help
 
     async def update(self, dt):
+        await super().update(dt)
         if self._num_pixels is None:
             return
         if self._default_color is None or np.size(self._default_color, 1) != self._num_pixels:
@@ -324,20 +327,19 @@ class VUMeterPeak(Effect):
             # green to red from -24 to 0
             h_a, s_a, v_a = colorsys.rgb_to_hsv(0, 1, 0)
             h_b, s_b, v_b = colorsys.rgb_to_hsv(1, 0, 0)
-            scal_value = (self.db_range + (-24)) / self.db_range
+            scal_value = max((self.db_range + (-24)) / self.db_range, 0) # clip to positive if db_range < 24
             index = int(self._num_pixels * scal_value)
             num_pix = self._num_pixels - index
             interp_v = np.linspace(v_a, v_b, num_pix)
             interp_s = np.linspace(s_a, s_b, num_pix)
             interp_h = np.linspace(h_a, h_b, num_pix)
-            hsv = np.array([interp_h, interp_s, interp_v]).T
-
-            rgb = colors.hsv_to_rgb(hsv)
+            hsv = np.array([interp_h, interp_s, interp_v]) * 255
+            rgb = colors.hsv_to_rgb(hsv).T
             if (index > 0):
                 green = np.array([[0, 255.0, 0] for i in range(index)]).T
-                self._default_color = np.concatenate((green, rgb.T * 255.0), axis=1)
+                self._default_color = np.concatenate((green, rgb.T), axis=1)
             else:
-                self._default_color = rgb.T * 255.0
+                self._default_color = rgb.T
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -347,13 +349,6 @@ class VUMeterPeak(Effect):
             return
         color = self._inputBuffer[1]
         if color is None:
-            try:
-                color = self._default_color
-            except Exception:
-                self.__initstate__()
-                color = self._default_color
-        if self._num_pixels != np.size(color, axis=1):
-            self.__initstate__()
             color = self._default_color
 
         y = self._inputBuffer[0].audio
