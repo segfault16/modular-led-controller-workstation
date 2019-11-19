@@ -79,7 +79,7 @@ class Test_OPC_Server(unittest.TestCase):
         _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         _socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         _socket.bind(('127.0.0.1', 7890))
-        thread = opc_server.ServerThread(_socket, None, verbose=True)
+        thread = opc_server.ServerThread('127.0.0.1', 7890, _socket, None, verbose=True)
         thread.start()
         self.assertTrue(thread.isAlive)
         time.sleep(1)
@@ -119,6 +119,45 @@ class Test_OPC_Server(unittest.TestCase):
                                    random.randint(0, 255)] for i in range(10)]).T.clip(0, 255)
             for j in range(5):
                 client.put_pixels(pixels_in.T.clip(0, 255).astype(int).tolist())
+                time.sleep(0.1)
+
+            pixels_out = serverB.get_pixels(block=False)
+            print("Checking output serverB")
+            np.testing.assert_array_equal(pixels_in, pixels_out)
+
+    def test_multipleServerDifferentPorts(self):
+        # create servers
+        serverA = opc_server.Server('127.0.0.1', 7891, verbose=True)
+        serverB = opc_server.Server('127.0.0.1', 7892, verbose=True)
+
+        # create client
+        client1 = opc.Client('127.0.0.1:7891', long_connection=True, verbose=False)
+        client2 = opc.Client('127.0.0.1:7892', long_connection=True, verbose=False)
+        # Run for some time...
+        for i in range(10):
+            # init serverA thread
+            print("Activating serverA")
+            serverA.get_pixels(block=False)
+            pixels_in = np.array([[random.randint(0, 255),
+                                   random.randint(0, 255),
+                                   random.randint(0, 255)] for i in range(10)]).T.clip(0, 255)
+            for j in range(5):
+                client1.put_pixels(pixels_in.T.clip(0, 255).astype(int).tolist())
+                time.sleep(0.1)
+
+            pixels_out = serverA.get_pixels(block=False)
+            print("Checking output serverA")
+            np.testing.assert_array_equal(pixels_in, pixels_out)
+
+            time.sleep(0.1)
+            # init serverB thread
+            print("Activating serverB")
+            serverB.get_pixels(block=False)
+            pixels_in = np.array([[random.randint(0, 255),
+                                   random.randint(0, 255),
+                                   random.randint(0, 255)] for i in range(10)]).T.clip(0, 255)
+            for j in range(5):
+                client2.put_pixels(pixels_in.T.clip(0, 255).astype(int).tolist())
                 time.sleep(0.1)
 
             pixels_out = serverB.get_pixels(block=False)
