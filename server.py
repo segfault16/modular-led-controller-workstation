@@ -266,7 +266,14 @@ def create_app():
     def slot_slotId_modulations_get(slotId):
         global proj
         fg = proj.getSlot(slotId) # type: filtergraph.FilterGraph
-        mods = [mod for mod in fg._modulations]
+        modSourceId = request.args.get('modulationSourceUid', None)
+        mods = []
+        if modSourceId is None:
+            # all modulations
+            mods = [mod for mod in fg._modulations]
+        else:
+            # for specific modulation source
+            mods = [mod for mod in fg._modulations if mod.modulationSource.uid == modSourceId]
         return jsonpickle.encode(mods)
     
     @app.route('/slot/<int:slotId>/modulation', methods=['POST'])

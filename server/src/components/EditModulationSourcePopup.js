@@ -31,7 +31,8 @@ const styles = theme => ({
 class EditModulationSourcePopup extends React.Component {
 
     state = {
-        config: null
+        config: null,
+        modulations: null
     }
 
     componentDidMount() {
@@ -56,13 +57,16 @@ class EditModulationSourcePopup extends React.Component {
         this._asyncRequest.promise.then(json => {
             var effectName = json['modulator']['py/object']
             var parameterDefinitionJson = FilterGraphService.getEffectParameters(effectName)
-            return Promise.all([json, parameterDefinitionJson])
+            var modulations = FilterGraphService.getAllModulations(slot, uid)
+            return Promise.all([json, parameterDefinitionJson, modulations])
         }).then(result => {
             var modSource = result[0]
             console.log(modSource)
             var currentParameterValues = modSource['modulator']['py/state']
             var parameterDefinition = result[1]
             console.log(parameterDefinition)
+            var modulations = result[2]
+            console.log(modulations)
             this._asyncRequest = null;
             this.setState(state => {
                 return {
