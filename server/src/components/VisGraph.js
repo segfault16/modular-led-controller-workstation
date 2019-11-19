@@ -500,7 +500,7 @@ class VisGraph extends React.Component {
         FilterGraphService.deleteNode(this.state.slot, id).finally(() => {
           this.clearNodePopUp();
         })
-      } if (node.nodeType == NODETYPE_MODULATOR) {
+      } else if (node.nodeType == NODETYPE_MODULATOR) {
         FilterGraphService.deleteModulationSource(this.state.slot, id).finally(() => {
           this.clearNodePopUp();
         })
