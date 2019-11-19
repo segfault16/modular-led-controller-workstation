@@ -120,7 +120,7 @@ def create_app():
         except StopIteration:
             abort(404, "Node not found")
 
-    @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['UPDATE'])
+    @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['PUT'])
     def slot_slotId_node_uid_update(slotId, nodeUid):
         global proj
         fg = proj.getSlot(slotId)
@@ -428,7 +428,7 @@ def create_app():
             'values': serverconfig.getFullConfiguration()
         })
 
-    @app.route('/configuration', methods=['UPDATE'])
+    @app.route('/configuration', methods=['PUT'])
     def configuration_put():
         global serverconfig
         if not request.json:

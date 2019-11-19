@@ -1,15 +1,16 @@
 const ConfigurationService = {
-    getConfiguration: function() {
-        return fetch('./configuration').then(res => res.json())
+    getConfiguration: function(abortSignal = null) {
+        return fetch('./configuration', {signal: abortSignal}).then(res => res.json())
     },
-    updateConfiguration: function(parameter, value) {
+    updateConfiguration: function(parameter, value, abortSignal = null) {
         var postData = {[parameter]: value}
         return fetch('./configuration', {
-            method: 'UPDATE', // or 'PUT'
+            method: 'PUT', // or 'PUT'
             body: JSON.stringify(postData),
             headers: {
                 'Content-Type': 'application/json'
-            }
+            },
+            signal: abortSignal
         })
     }
 }

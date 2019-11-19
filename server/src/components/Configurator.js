@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
-import Slider from '@material-ui/lab/Slider';
+import Slider from '@material-ui/core/Slider';
 import Grid from '@material-ui/core/Grid';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
@@ -23,21 +23,10 @@ const styles = theme => ({
 
 
 class Configurator extends Component {
-    constructor(props) {
-        super(props)
-        this.state = {
-            parameters: props.parameters,
-            values: props.values,
-            parameterHelp: props.parameterHelp
-        }
-    }
-
-    componentWillReceiveProps(nextProps) {
-        this.setState({
-            parameters: nextProps.parameters,
-            values: nextProps.values,
-            parameterHelp: nextProps.parameterHelp
-        })
+    state = {
+        parameters: this.props.parameters,
+        values: this.props.values,
+        parameterHelp: this.props.parameterHelp
     }
 
     handleParameterChange = (value, parameter) => {
@@ -94,18 +83,14 @@ class Configurator extends Component {
 
     domCreateParameterCheckbox = (parameters, values, parameterName) => {
         return <React.Fragment>
-            <Grid container sm={7} xs={10} justify="flex-end">
+            <Grid item sm={7} xs={10}></Grid>
+            <Grid item sm={2} xs={2}>
                 <Checkbox
                     checked={values[parameterName]}
                     onChange={(e, val) => this.handleParameterChange(val, parameterName)}
                     value={parameterName}
                     color="primary"
                 />
-            </Grid>
-            <Grid item sm={2} xs={2}>
-            <Typography align="right">
-                {values[parameterName]}
-            </Typography>
             </Grid>
         </React.Fragment>
     }
@@ -119,7 +104,7 @@ class Configurator extends Component {
 
     domCreateParameterGif = (parameters, values, parameterName) => {
         return <React.Fragment>
-            <Grid container sm={7} xs={10} justify="flex-end">
+            <Grid container justify="flex-end">
                 <img src={"project/assets/" + values[parameterName]} role="presentation" style={{maxWidht: '100px', maxHeight: '100px'}} />
             </Grid>
             <Grid item sm={2} xs={2}>
@@ -139,36 +124,36 @@ class Configurator extends Component {
 
     domCreateConfigList = (parameters, values, parameterHelp) => {
         if (parameters) {
-            return Object.keys(parameters).map((data, index) => {
+            return Object.keys(parameters).map((parameterName, index) => {
                 let control;
                 try {
-                    if (parameters[data] instanceof Array) {
-                        if (parameters[data].length >= 2 && parameters[data][0] == 'gif') {
-                            control = this.domCreateParameterGif(parameters, values, data);
+                    if (parameters[parameterName] instanceof Array) {
+                        if (parameters[parameterName].length >= 2 && parameters[parameterName][0] == 'gif') {
+                            control = this.domCreateParameterGif(parameters, values, parameterName);
                         }
-                        else if (parameters[data].length == 4 && !parameters[data].some(isNaN)) {
+                        else if (parameters[parameterName].length == 4 && !parameters[parameterName].some(isNaN)) {
                             // Array of numbers -> Slider
-                            control = this.domCreateParameterSlider(parameters, values, data);
+                            control = this.domCreateParameterSlider(parameters, values, parameterName);
                         }
-                        else if (parameters[data].some(isNaN)) {
+                        else if (parameters[parameterName].some(isNaN)) {
                             // Array of non-numbers -> DropDown
-                            control = this.domCreateParameterDropdown(parameters, values, data);
+                            control = this.domCreateParameterDropdown(parameters, values, parameterName);
                         } 
-                    } else if (typeof (parameters[data]) === "boolean") {
+                    } else if (typeof (parameters[parameterName]) === "boolean") {
                         // Simple boolean -> Checkbox
-                        control = this.domCreateParameterCheckbox(parameters, values, data);
+                        control = this.domCreateParameterCheckbox(parameters, values, parameterName);
                     }
                 } catch (error) {
-                    console.error("Cannot create configurator entry for "+data, error)
+                    console.error("Cannot create configurator entry for "+parameterName, error)
                 }
                 if (control) {
-                    var helpText = (parameterHelp != null && data in parameterHelp) ? parameterHelp[data] : "";
+                    var helpText = (parameterHelp != null && parameterName in parameterHelp) ? parameterHelp[parameterName] : "";
                     return (
-                        <Tooltip title={helpText}>
-                        <Grid key={index} container spacing={24}   alignItems="center" justify="center">
+                        <Tooltip key={parameterName} title={helpText}>
+                        <Grid key={parameterName} container spacing={2}   alignItems="center" justify="center">
                             <Grid item sm={3} xs={12} >
                             <Typography>
-                                {data}:
+                                {parameterName}:
                             </Typography>
                             </Grid>
                             {control}
@@ -176,7 +161,7 @@ class Configurator extends Component {
                         </Tooltip>
                     )
                 } else {
-                    console.error("undefined control for data", parameters[data])
+                    console.error("undefined control for data", parameters[parameterName])
                     return null
                 }
             });
@@ -187,7 +172,7 @@ class Configurator extends Component {
         const { classes } = this.props;
         return (
             <div>
-                {this.domCreateConfigList(this.state.parameters, this.state.values, this.state.parameterHelp)}
+                {this.domCreateConfigList(this.props.parameters, this.props.values, this.props.parameterHelp)}
             </div>
         )
     }
@@ -195,6 +180,7 @@ class Configurator extends Component {
 
 Configurator.propTypes = {
     classes: PropTypes.object.isRequired,
+    // TODO: Validate property types
     // parameters: PropTypes.object,
     // parameterHelp: PropTypes.object,
     // values: PropTypes.object,

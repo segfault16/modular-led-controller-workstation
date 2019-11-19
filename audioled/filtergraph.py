@@ -308,21 +308,23 @@ class FilterGraph(Updateable):
             return
 
         #print("Updating process order")
-
         unprocessedNodes = self._filterNodes.copy()
         processOrder.append(self._outputNode)
         unprocessedNodes.remove(self._outputNode)
 
         fatalError = False
+        
         while not fatalError and len(unprocessedNodes) > 0:
             sizeBefore = len(unprocessedNodes)
+            curProcessOrder = processOrder.copy()
+
             for node in unprocessedNodes.copy():
                 # find connections
                 cons = [con for con in self._filterConnections if con.fromNode == node]
                 # check all nodes after this node have been processed
                 satisfied = True
                 for con in cons:
-                    if con.toNode not in processOrder:
+                    if con.toNode not in curProcessOrder:
                         satisfied = False
                         continue
 
@@ -330,6 +332,7 @@ class FilterGraph(Updateable):
                     #print("Appending {}".format(node.effect))
                     processOrder.append(node)
                     unprocessedNodes.remove(node)
+                    
             sizeAfter = len(unprocessedNodes)
             fatalError = sizeAfter == sizeBefore
 

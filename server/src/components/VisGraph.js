@@ -21,7 +21,6 @@ import { withSnackbar } from 'notistack';
 import IconButton from '@material-ui/core/IconButton';
 
 import Graph from "react-graph-vis";
-import 'vis/dist/vis-network.min.css';
 
 import audioInputIcon from '../../img/audioled.audio.AudioInput.png';
 import movingIcon from '../../img/audioled.audioreactive.MovingLight.png';
@@ -55,7 +54,8 @@ import gifIcon from '../../img/audioled.generative.GIFPlayer.png'
 import FilterGraphConfigurationService from "../services/FilterGraphConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
 
-import NodePopup from './NodePopup';
+import AddNodePopup from './AddNodePopup';
+import EditNodePopup from './EditNodePopup';
 import './VisGraph.css';
 import Measure from 'react-measure'
 
@@ -95,17 +95,18 @@ var icons = {
 const styles = theme => ({
   toggleContainer: {
     height: 56,
-    padding: `${theme.spacing.unit}px ${theme.spacing.unit * 2}px`,
+    padding: `${theme.spacing(1)}px ${theme.spacing(2)}px`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'flex-end',
+    position: 'absolute',
     // margin: `${theme.spacing.unit}px 0`,
     // background: theme.palette.background.default,
   },
   helptext: {
     ...theme.mixins.gutters(),
-    paddingTop: theme.spacing.unit,
-    paddingBottom: theme.spacing.unit,
+    paddingTop: theme.spacing(1),
+    paddingBottom: theme.spacing(1),
   },
 });
 
@@ -129,12 +130,9 @@ class VisGraph extends React.Component {
         nodes: [],
         edges: []
       },
-      style: {
-        // flex: "1",
-        display: "absolute"
-      },
       editNodePopup: {
         isShown: false,
+        mode: "add", // add or edit
         nodeUid: 0,
       },
       errorMessage: {
@@ -143,32 +141,17 @@ class VisGraph extends React.Component {
       events: {
         select: ({ nodes, edges }) => {
           if (this.state.mode === MODE_SELECT || this.state.mode === MODE_CREATE) {
-            this.clearNodePopUp()
             if (nodes.length == 1) {
               this.editNode(nodes[0])
             }
           } else if (this.state.mode === MODE_DELETE) {
             if (nodes.length == 1) {
               this.confirmDeleteNode({ nodes: nodes, edges: edges }, data => {
-                this.setState(oldState => {
-                  return {
-                    graph: {
-                      nodes: oldState.graph.nodes.filter((el) => !data.nodes.includes(el.id)),
-                      edges: oldState.graph.edges.filter((el) => !data.edges.includes(el.id))
-                    }
-                  }
-                })
+                this.removeStateNodesAndEdges(data.nodes, data.edges)
               })
             } else if (edges.length > 0) {
               this.deleteEdge({ nodes: nodes, edges: edges }, data => {
-                this.setState(oldState => {
-                  return {
-                    graph: {
-                      nodes: oldState.graph.nodes.filter((el) => !data.nodes.includes(el.id)),
-                      edges: oldState.graph.edges.filter((el) => !data.edges.includes(el.id))
-                    }
-                  }
-                })
+                this.removeStateNodesAndEdges(data.nodes, data.edges)
               })
             }
           }
@@ -185,16 +168,16 @@ class VisGraph extends React.Component {
         doubleClick: ({ pointer: { canvas } }) => {
           this.addGraphNode();
         },
-        hoverNode: ({node}) => {
+        hoverNode: ({ node }) => {
           this.updateHelpText(this.state.mode, node, null);
         },
-        blurNode: ({node}) => {
+        blurNode: ({ node }) => {
           this.updateHelpText(this.state.mode, null, null);
         },
-        hoverEdge: ({edge}) => {
+        hoverEdge: ({ edge }) => {
           this.updateHelpText(this.state.mode, null, edge);
         },
-        blurEdge: ({edge}) => {
+        blurEdge: ({ edge }) => {
           this.updateHelpText(this.state.mode, null, null);
         },
         dragStart: () => {
@@ -204,20 +187,22 @@ class VisGraph extends React.Component {
           is_dragging = false
         },
         afterDrawing: () => {
-          if(this.state.network.manipulation.temporaryIds.nodes.length == 0) {
+          if (this.state.network.manipulation.temporaryIds.nodes.length == 0) {
             // Hack for no DragEnd event fired when adding edges
             is_dragging = false
           }
         }
       },
       options: {
+        // autoResize: true,
         layout: {
           hierarchical: {
             enabled: true,
             levelSeparation: 100,
             direction: "LR",
-            nodeSpacing: 100,
+            nodeSpacing: 200,
             sortMethod: 'directed',
+            shakeTowards: 'leaves'
 
           },
         },
@@ -256,7 +241,7 @@ class VisGraph extends React.Component {
           navigationButtons: false,
           hover: true,
           hoverConnectedEdges: false,
-          selectedConnectedEdges: false
+          selectConnectedEdges: false
         },
         manipulation: {
           enabled: false,
@@ -288,24 +273,19 @@ class VisGraph extends React.Component {
               var foundConnection = this.state.graph.edges.find(item => item.to === toId)
               if (foundConnection) {
                 console.log("found connections: ", foundConnection)
-                this.deleteEdge({nodes: [], edges: [foundConnection.id]}, data => {
-                  this.setState(oldState => {
-                    return {
-                      graph: {
-                        nodes: oldState.graph.nodes.filter((el) => !data.nodes.includes(el.id)),
-                        edges: oldState.graph.edges.filter((el) => !data.edges.includes(el.id))
-                      }
-                    }
-                  })
+                this.deleteEdge({ nodes: [], edges: [foundConnection.id] }, data => {
+                  this.removeStateNodesAndEdges(data.nodes, data.edges)
                 })
               }
               this.props.enqueueSnackbar("Connection replaced", { variant: 'info' })
               FilterGraphService.addConnection(this.state.slot, fromNode.nodeUid, fromNode.nodeChannel, toNode.nodeUid, toNode.nodeChannel, data, callback).then(connection => {
                 this.updateVisConnection(data, connection)
-                this.addStateNodesAndEdges([],[data])
+                this.addStateNodesAndEdges([], [data])
                 // manual drag end
                 is_dragging = false
                 this.updateHelpText(null, null)
+                this.state.network.body.emitter.emit('_dataChanged')
+                this.state.network.redraw()
               }).catch(err => {
                 console.error(err)
                 this.props.enqueueSnackbar("Error creating connection", { variant: 'error' })
@@ -395,83 +375,85 @@ class VisGraph extends React.Component {
   }
 
   updateHelpText = (mode, nodeUid, edgeUid) => {
-    if(is_dragging || this.state.network.manipulation.temporaryIds.nodes.length > 0) {
+    if (is_dragging || this.state.network.manipulation.temporaryIds.nodes.length > 0) {
       // Fix for add connection issue in Safari -> don't update state while dragging
       return
     }
     var hoverNode = false
     var hoverEdge = false
-    var node = null 
+    var node = null
     var edge = null
-    if(nodeUid != null) {
+    if (nodeUid != null) {
       node = this.state.graph.nodes.find(item => item.id === nodeUid);
       hoverNode = true
     }
-    if(edgeUid != null) {
+    if (edgeUid != null) {
       edge = this.state.graph.edges.find(item => item.id === edgeUid);
       hoverEdge = true
     }
-    if(mode == MODE_SELECT) {
-      if(hoverNode) {
-        if(node != null && node.nodeType == "node") {
-          this.setState({helptext: "Click to edit node"})
+    if (mode == MODE_SELECT) {
+      if (hoverNode) {
+        if (node != null && node.nodeType == "node") {
+          this.setState({ helptext: "Click to edit node" })
         } else {
-          this.setState({helptext: ""})
+          this.setState({ helptext: "" })
         }
-      } else if(hoverEdge) {
-        this.setState({helptext: ""})
+      } else if (hoverEdge) {
+        this.setState({ helptext: "" })
       } else {
-        this.setState({helptext: "Click and drag to pan"})
+        this.setState({ helptext: "Click and drag to pan" })
       }
-    } else if(mode == MODE_CREATE) {
-      if(hoverNode) {
-        if(node != null && node.group == "out") {
-          this.setState({helptext: "Click and drag to input node to add connection"})
-        } else if(node != null && node.nodeType == "node") {
-          this.setState({helptext: "Click to edit node"})
+    } else if (mode == MODE_CREATE) {
+      if (hoverNode) {
+        if (node != null && node.group == "out") {
+          this.setState({ helptext: "Click and drag to input node to add connection" })
+        } else if (node != null && node.nodeType == "node") {
+          this.setState({ helptext: "Click to edit node" })
         } else {
-          this.setState({helptext: ""})
+          this.setState({ helptext: "" })
         }
-      } else if(hoverEdge) {
-        this.setState({helptext: ""})
+      } else if (hoverEdge) {
+        this.setState({ helptext: "" })
       } else {
-        this.setState({helptext: "Click to add node"})
+        this.setState({ helptext: "Click to add node" })
       }
-    } else if(mode == MODE_DELETE) {
-      if(hoverNode) {
-        if(node != null && node.nodeType == "node") {
-          this.setState({helptext: "Click to delete node"})
+    } else if (mode == MODE_DELETE) {
+      if (hoverNode) {
+        if (node != null && node.nodeType == "node") {
+          this.setState({ helptext: "Click to delete node" })
         } else {
-          this.setState({helptext: ""})
+          this.setState({ helptext: "" })
         }
-      } else if(hoverEdge) {
-        if(edge != null && edge.group === "connection")
-        this.setState({helptext: "Click to delete connection"})
+      } else if (hoverEdge) {
+        if (edge != null && edge.group === "connection")
+          this.setState({ helptext: "Click to delete connection" })
       } else {
-        this.setState({helptext: ""})
+        this.setState({ helptext: "" })
       }
     }
-    
+
   }
 
   confirmDeleteNode = (data, callback) => {
     window.confirm("Are you sure you want to delete the node?") &&
-          this.deleteNode(data, callback)
+      this.deleteNode(data, callback)
   }
 
   deleteNode = (data, callback) => {
     console.log("delete nodes", data)
     data.nodes.forEach(id => {
+      // find node
       var node = this.state.graph.nodes.find(node => node.id == id)
       if (node == null) {
         console.error("Cannot find node " + id)
       }
+      // node is effect
       if (node.nodeType == 'node') {
         // update callback data to include all input and output nodes for this node
         var inputOutputNodes = this.state.graph.nodes.filter(item => item.nodeType == 'channel' && item.nodeUid == id);
         data.nodes = data.nodes.concat(inputOutputNodes.map(x => x.id));
         // update callback data to include connections from the deleted nodes
-        var connectionsFromInputOutputNodes = this.state.graph.edges.filter(item => data.nodes.includes(item.from) || data.nodes.includes(item.to)) 
+        var connectionsFromInputOutputNodes = this.state.graph.edges.filter(item => data.nodes.includes(item.from) || data.nodes.includes(item.to))
         data.edges = data.edges.concat(connectionsFromInputOutputNodes.map(x => x.id))
         // delete node via filtergraphservice
         FilterGraphService.deleteNode(this.state.slot, id).finally(() => {
@@ -516,12 +498,123 @@ class VisGraph extends React.Component {
     }
   }
 
+  updateNodeLevels(nodes, edges) {
+    const effectNodes = nodes.filter(n => n.nodeType === 'node');
+    const outNodes = nodes.filter(n => n.nodeType === 'channel' && n.group === 'out')
+    const inNodes = nodes.filter(n => n.nodeType === 'channel' && n.group === 'in')
+
+    // Find effect nodes without output
+    const startWith = effectNodes.filter(n => outNodes.filter(o => o.nodeUid == n.id).length == 0)
+    var processed = []
+    var unprocessed = [...effectNodes]
+
+    nodes.forEach(n => {
+      n.level = 0
+    })
+
+    startWith.forEach(sN => {
+      var level = 0;
+      sN.level = level;
+      level++;
+      var idx = unprocessed.indexOf(sN)
+      if (idx > -1) {
+        unprocessed.splice(idx, 1)
+      }
+      processed.push(sN)
+      var go_ahead = unprocessed.length > 0
+      while (go_ahead) {
+        var before = unprocessed.length
+        var curUnprocessed = [...unprocessed]
+        var curPocessed = [...processed]
+        curUnprocessed.forEach(n => {
+          // find connections from this node
+          var cons = edges.filter(e => e.from_node === n.id);
+          // check all nodes after this node have been processed (or find one that isn't)
+          if (cons.find(c => (curPocessed.find(t => t.id === c.to_node) == null)) == null) {
+            n.level = level
+            processed.push(n)
+            var idx = unprocessed.indexOf(n)
+            if (idx > -1) {
+              unprocessed.splice(idx, 1)
+            }
+          }
+        })
+        // increase level
+        level++;
+        go_ahead = before != unprocessed.length
+      }
+    })
+    // invert levels, scale to 3
+    effectNodes.forEach(n => {
+      n.level = - 3 * n.level + 1
+    })
+
+    // process input and output nodes
+    inNodes.forEach(n => {
+      var effectNode = nodes.find(t => t.id === n.nodeUid)
+      if (effectNode != null) {
+        n.level = effectNode.level - 1
+      }
+    })
+    outNodes.forEach(n => {
+      var effectNode = nodes.find(t => t.id === n.nodeUid)
+      if (effectNode != null) {
+        n.level = effectNode.level + 1
+      }
+    })
+  }
+
+  // recalculate levels and add nodes, use this instead of this.setState(...)
   addStateNodesAndEdges(nodes, edges) {
     this.setState(state => {
+      // Create copy of current nodes and edges
+      var newNodes = [];
+      state.graph.nodes.map(node => {
+        var newNode = Object.assign({}, node);
+        newNodes.push(newNode);
+      })
+      var newEdges = [];
+      state.graph.edges.map(edge => {
+        var newEdge = Object.assign({}, edge);
+        newEdges.push(newEdge);
+      })
+      // add nodes from arguments
+      newNodes = [...newNodes, ...nodes]
+      newEdges = [...newEdges, ...edges]
+      // calculate node levels
+      this.updateNodeLevels(newNodes, newEdges)
+
       return {
         graph: {
-          nodes: [...state.graph.nodes, ...nodes],
-          edges: [...state.graph.edges, ...edges]
+          nodes: newNodes,
+          edges: newEdges
+        }
+      }
+    })
+  }
+
+  // recalculate levels and add nodes, use this instead of this.setState(...)
+  removeStateNodesAndEdges(nodes, edges) {
+    this.setState(state => {
+      // Create copy of current nodes and edges
+      var newNodes = [];
+      state.graph.nodes.map(node => {
+        var newNode = Object.assign({}, node);
+        newNodes.push(newNode);
+      })
+      var newEdges = [];
+      state.graph.edges.map(edge => {
+        var newEdge = Object.assign({}, edge);
+        newEdges.push(newEdge);
+      })
+      newNodes = newNodes.filter((el) => !nodes.includes(el.id))
+      newEdges = newEdges.filter((el) => !edges.includes(el.id))
+      // calculate node levels
+      this.updateNodeLevels(newNodes, newEdges)
+      return {
+        graph: {
+          nodes: newNodes,
+          edges: newEdges
         }
       }
     })
@@ -621,8 +714,9 @@ class VisGraph extends React.Component {
       outNode.nodeType = 'channel';
       outNode.nodeUid = visNode.id;
       outNode.nodeChannel = i;
+      outNode.level = visNode.level != null ? (visNode.level + 1) : 0;
       nodes.push(outNode);
-      edges.push({ id: outNode.id, from: visNode.id, to: outNode.id, width: 4, arrows: {to: { enabled: false } } });
+      edges.push({ id: outNode.id, from: visNode.id, to: outNode.id, width: 4, arrows: { to: { enabled: false } } });
     }
     for (var i = 0; i < numInputChannels; i++) {
       var uid = this.conUid('in', i, visNode.id);
@@ -634,8 +728,9 @@ class VisGraph extends React.Component {
       inNode.nodeType = 'channel';
       inNode.nodeUid = visNode.id;
       inNode.nodeChannel = i;
+      inNode.level = visNode.level != null ? (visNode.level - 1) : 0;
       nodes.push(inNode);
-      edges.push({ id: inNode.id, from: inNode.id, to: visNode.id, width: 4, arrows: {to: { enabled: false } } });
+      edges.push({ id: inNode.id, from: inNode.id, to: visNode.id, width: 4, arrows: { to: { enabled: false } } });
     }
     return { nodes, edges };
   }
@@ -645,6 +740,7 @@ class VisGraph extends React.Component {
     var uid = json["py/state"]["uid"];
     var name = json["py/state"]["effect"]["py/object"];
     visNode.id = uid;
+    visNode.level = 0;
     visNode.label = name;
     visNode.shape = 'circularImage';
     visNode.group = 'ok';
@@ -667,9 +763,11 @@ class VisGraph extends React.Component {
     //edge.from = state["from_node_uid"];
     edge.from = this.conUid('out', state['from_node_channel'], state['from_node_uid'])
     edge.from_channel = state["from_node_channel"];
+    edge.from_node = state['from_node_uid']
     //edge.to = state["to_node_uid"];
     edge.to = this.conUid('in', state['to_node_channel'], state['to_node_uid'])
     edge.to_channel = state["to_node_channel"];
+    edge.to_node = state['to_node_uid']
     edge.arrows = 'middle'
     edge.group = "connection"
     //edge.color = {color: '#666666'}
@@ -764,30 +862,31 @@ class VisGraph extends React.Component {
   }
 
   updateDimensions = (event) => {
-
-    let content = document.getElementById('vis-content');
-    let visDiv = content.getElementsByTagName('div')[0]
-    visDiv.style.position = "absolute";
-    visDiv.style.height = (content.clientHeight) + "px";
-    visDiv.style.width = (content.clientWidth) + "px";
-
-    if (this.state.network) {
-      this.state.network.redraw();
-    }
+    console.log("update dimensions")
+    let content = document.getElementById('vis-container');
+    this.setState(state => {
+      return {
+        options: {
+          height: content.clientHeight + "px",
+          // height: "100%",
+          width: content.clientWidth + "px"
+          // width: "100%",
+        }
+      }
+    })
   }
 
   ensureMode = (mode) => {
-    if (mode === MODE_SELECT) {
-      this.state.network.disableEditMode()
-    }
     if (mode === MODE_CREATE) {
       this.state.network.addEdgeMode()
+    } else {
+      this.state.network.disableEditMode()
     }
   }
 
   handleModeChange = (event, mode) => {
     console.log("mode change", mode)
-    if(mode != null) {
+    if (mode != null) {
       this.setState({ mode });
       this.updateHelpText(mode, null, null);
     } else {
@@ -796,13 +895,13 @@ class VisGraph extends React.Component {
     }
   };
 
-  fetchErrors = async() => fetch('./errors').then(response => response.json()).then(json => {
+  fetchErrors = async () => fetch('./errors').then(response => response.json()).then(json => {
     // Reset error on nodes
     var changed = false;
     var nodes = [];
-    this.state.graph.nodes.map( node => {
+    this.state.graph.nodes.map(node => {
       var newNode = Object.assign({}, node);
-      if(newNode.group == 'error') {
+      if (newNode.group == 'error') {
         newNode.group = 'ok';
         changed = true;
       }
@@ -819,18 +918,19 @@ class VisGraph extends React.Component {
         this.props.enqueueSnackbar(json[key], { variant: 'error' })
       }
     }
-    if(changed) {  
-    this.setState(oldState => {
-      return {
-        graph: {
-          nodes: nodes,
-          edges: oldState.graph.edges,
-        },
-      }
-    })
-  }
-    
-  }); 
+    if (changed) {
+      // TODO: Test
+      this.setState(oldState => {
+        return {
+          graph: {
+            nodes: nodes,
+            edges: oldState.graph.edges,
+          },
+        }
+      })
+    }
+
+  });
 
   render() {
     const { classes, theme } = this.props;
@@ -839,70 +939,76 @@ class VisGraph extends React.Component {
     const events = this.state.events;
     const style = this.state.style;
     return (
-      <div id="vis-container">
-        <div id="vis-other">
-          <div className={classes.toggleContainer}>
-            <Grid container spacing={16} justify="flex-end" direction="row">
-              <Grid item xs={12} sm={12}>
-                <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange} size="small">
-                  <ToggleButton value={MODE_SELECT}>
-                    <Tooltip title="Select mode">
-                    <InfoIcon />
-                    </Tooltip>
-                  </ToggleButton>
-                  
-                  
-                  <ToggleButton value={MODE_CREATE}>
-                  <Tooltip title="Create mode">
-                    <CreateIcon />
-                    </Tooltip>
-                  </ToggleButton>
-                  
-                  
-                  <ToggleButton value={MODE_DELETE}>
-                  <Tooltip title="Delete mode">
-                    <ClearIcon />
-                    </Tooltip>
-                  </ToggleButton>
-                  
-                  
-                  <Button onClick={this.handleSaveConfig} size="small">
-                  <Tooltip title="Download configuration">
-                    <SaveIcon />
-                    </Tooltip>
-                  </Button>
-
-                  <Button component="label">
-                  <Tooltip title="Upload configuration">
-                      <CloudUploadIcon />
-                      </Tooltip>
-                      <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
-                  </Button>
-                  
-                </ToggleButtonGroup>
-              </Grid>
-            </Grid>
-          </div>
-
-        </div>
+      
+        
         <Measure onResize={() => this.updateDimensions()}>
           {({ measureRef }) => (
-            <div id="vis-content" ref={measureRef}>
-              <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
+            <div id="vis-container" ref={measureRef}>
+              <div id="vis-content" >
+                
+                <Graph graph={graph} options={options} events={events} style={style} getNetwork={network => this.setState({ network })} />
+                <div id="vis-tools">
+                  <div className={classes.toggleContainer}>
+                    <Grid container spacing={2} justify="flex-end" direction="row">
+                      <Grid item xs={12} sm={12}>
+                        <ToggleButtonGroup value={this.state.mode} exclusive onChange={this.handleModeChange} size="small">
+                          <ToggleButton value={MODE_SELECT}>
+                            <Tooltip title="Select mode">
+                              <InfoIcon />
+                            </Tooltip>
+                          </ToggleButton>
+
+
+                          <ToggleButton value={MODE_CREATE}>
+                            <Tooltip title="Create mode">
+                              <CreateIcon />
+                            </Tooltip>
+                          </ToggleButton>
+
+
+                          <ToggleButton value={MODE_DELETE}>
+                            <Tooltip title="Delete mode">
+                              <ClearIcon />
+                            </Tooltip>
+                          </ToggleButton>
+
+
+                          <Button onClick={this.handleSaveConfig} size="small">
+                            <Tooltip title="Download configuration">
+                              <SaveIcon />
+                            </Tooltip>
+                          </Button>
+
+                          <Button component="label">
+                            <Tooltip title="Upload configuration">
+                              <CloudUploadIcon />
+                            </Tooltip>
+                            <input type="file" id="file-input" onChange={this.handleLoadConfig} style={{ display: 'none' }} />
+                          </Button>
+
+                        </ToggleButtonGroup>
+                      </Grid>
+                    </Grid>
+                  </div>
+
+                </div>
+                <div id="vis-help" className={classes.toggleContainer}>
+                    {this.state.helptext ?
+                      <Paper className={classes.helptext} >
+                        <Typography>
+                          Usage: {this.state.helptext}
+                        </Typography>
+                      </Paper>
+                      : null}
+                  </div>
+              </div>
+              {this.state.editNodePopup.mode == "edit" && this.state.editNodePopup.isShown ? <EditNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
+              {this.state.editNodePopup.mode == "add" && this.state.editNodePopup.isShown ? <AddNodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} /> : null }
             </div>
           )}
         </Measure>
-        <div className={classes.toggleContainer}>
-            {this.state.helptext ? 
-          <Paper className={classes.helptext} >
-              <Typography>
-                Usage: {this.state.helptext}
-              </Typography>
-              </Paper>
-              : null}
-          </div>
-          <NodePopup open={this.state.editNodePopup.isShown} onClose={this.clearNodePopUp} mode={this.state.editNodePopup.mode} slot={this.state.slot} nodeUid={this.state.editNodePopup.nodeUid} onCancel={this.clearNodePopUp} onSave={this.saveNodeCallback} />
-      </div>
+
+
     );
   }
 }
