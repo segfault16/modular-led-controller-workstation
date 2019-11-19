@@ -1,4 +1,9 @@
 [[source]]
+url = "https://www.piwheels.org/simple"
+verify_ssl = true
+name = "piwheels"
+
+[[source]]
 name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
@@ -9,13 +14,10 @@ verify_ssl = true
 numpy = "*"
 scipy = "*"
 pyaudio = "*"
-matplotlib = "*"
 jsonpickle = "*"
 flask = "*"
 mido = "*"
 python-rtmidi = "*"
 apscheduler = "*"
 pillow = "*"
-
-[requires]
-python_version = "3.7"
+rpi-ws281x = {version = "*", sys_platform = "== 'linux'"}
