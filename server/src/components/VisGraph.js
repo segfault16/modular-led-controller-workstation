@@ -664,7 +664,11 @@ class VisGraph extends React.Component {
       }
     })
     console.log("Nearest node", minKey)
-    var nearestLevel = this.state.graph.nodes.find(n => n.id === minKey).level
+    var nearestLevel = null
+    var nearestNode = this.state.graph.nodes.find(n => n.id === minKey)
+    if (nearestNode != null) {
+      nearestLevel = nearestNode.level
+    }
     console.log("Reserve level", nearestLevel)
 
     this.setState(state => {
