@@ -111,17 +111,19 @@ class VisGraph extends React.Component {
             }
           }
         },
-        click: ({ nodes, edges }) => {
+        click: ({ nodes, edges, event, pointer }) => {
           if (this.state.mode === MODE_CREATE) {
             if (nodes.length == 0 && edges.length == 0) {
-              this.addGraphNode();
+              let canvasX = pointer.canvas.x;
+
+              this.addGraphNode(canvasX);
             }
           }
         },
         release: () => {
         },
         doubleClick: ({ pointer: { canvas } }) => {
-          this.addGraphNode();
+          this.addGraphNode(canvas.x);
         },
         hoverNode: ({ node }) => {
           this.updateHelpText(this.state.mode, node, null);
@@ -482,8 +484,9 @@ class VisGraph extends React.Component {
   }
 
   // recalculate levels and add nodes, use this instead of this.setState(...)
-  addStateNodesAndEdges(nodes, edges) {
+  addStateNodesAndEdges(nodes, edges, fixedLevels = {}) {
     console.debug("Adding nodes", nodes);
+    console.debug("Fixed levels:", fixedLevels)
     this.setState(state => {
       // Create copy of current nodes and edges
       var newNodes = [];
@@ -504,8 +507,13 @@ class VisGraph extends React.Component {
         newEdges = [...newEdges, ...edges]
       }
       // calculate node levels
-      VisGraphLayout.updateNodeLevels(newNodes, newEdges)
-
+      VisGraphLayout.updateNodeLevels(newNodes, newEdges, this.state.insertLevel)
+      Object.keys(fixedLevels).map((key, id) => {
+        var node = newNodes.find(n => n.id === key)
+        if(node != null) {
+          node.level = fixedLevels[key]
+        }
+      })
       return {
         graph: {
           nodes: newNodes,
@@ -634,14 +642,39 @@ class VisGraph extends React.Component {
   }
 
 
-  addGraphNode() {
+  addGraphNode(canvasX) {
+    // Find level nearest to click
+    console.log("Finding nearest for", canvasX)
+    let effectNodeIds = this.state.graph.nodes.filter(n => n.nodeType === NODETYPE_EFFECT_NODE).map(n => n.id);
+    let positions = this.state.network.getPositions(effectNodeIds);
+    let dists = {}
+    Object.keys(positions).forEach((key, idx) => {
+      dists[key] = Math.pow(canvasX - positions[key].x, 2)
+    })
+    var minDist = -1;
+    var minKey = null;
+    console.log(dists)
+    Object.keys(dists).forEach((key, idx) => {
+      if (minKey == null) {
+        minKey = key;
+        minDist = dists[key]
+      } else if (dists[key] < minDist) {
+        minDist = dists[key]
+        minKey = key
+      }
+    })
+    console.log("Nearest node", minKey)
+    var nearestLevel = this.state.graph.nodes.find(n => n.id === minKey).level
+    console.log("Reserve level", nearestLevel)
+
     this.setState(state => {
       return {
         editNodePopup: {
           isShown: true,
           mode: "add",
+        },
+        insertLevel: nearestLevel
         }
-      }
     })
   }
 
@@ -705,7 +738,19 @@ class VisGraph extends React.Component {
           // Created node is part of the filtergraph
           //updateVisNode(data, node);
           var { nodes, edges } = VisGraphLayout.createEffectNodesAndEdges(node);
-          this.addStateNodesAndEdges(nodes, edges);
+          // set reserved level on new nodes
+          var fixedLevels = {}
+          nodes.filter(n => n.nodeType === NODETYPE_EFFECT_NODE).forEach(n => fixedLevels[n.id] = this.state.insertLevel)
+          nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'in').forEach(n => fixedLevels[n.id] = this.state.insertLevel - 1)
+          nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'out').forEach(n => fixedLevels[n.id] = this.state.insertLevel + 1)
+          this.addStateNodesAndEdges(nodes, edges, fixedLevels);
+          this.setState(state => {
+            return {
+              insertLevel: null
+            }
+          })
+          
+
         } else if (node["py/object"] === "audioled.filtergraph.ModulationSourceNode") {
           // Created node is a modulation source
           console.log("TODO: Implement adding modulation source nodes")
@@ -729,7 +774,8 @@ class VisGraph extends React.Component {
       return {
         editNodePopup: {
           isShown: false
-        }
+        },
+        insertLevel: null
       }
     })
   }

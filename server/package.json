@@ -50,6 +50,6 @@
     "react-router-dom": "^5.1.2"
   },
   "resolutions": {
-    "vis-network": "6.4.1"
+    "vis-network": "6.4.4"
   }
 }

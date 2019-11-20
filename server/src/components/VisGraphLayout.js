@@ -70,7 +70,7 @@ var icons = {
 }
 
 export const VisGraphLayout = {
-  updateNodeLevels: function (nodes, edges) {
+  updateNodeLevels: function (nodes, edges, reservedLevel = null) {
     const effectNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_NODE);
     const outNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'out')
     const inNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'in')
@@ -81,6 +81,14 @@ export const VisGraphLayout = {
     var processed = []
     var unprocessed = [...effectNodes]
 
+    // scale reservedLevel
+    
+    var reserved = null
+    if(reservedLevel != null) {
+      reserved = (reservedLevel -1) / -3
+      console.log("reserved:",reserved)  
+    }
+
     nodes.forEach(n => {
       n.level = 0
     })
@@ -89,6 +97,9 @@ export const VisGraphLayout = {
       var level = 0;
       sN.level = level;
       level++;
+      if (reserved != null && reserved == level) {
+        level++
+      }
       var idx = unprocessed.indexOf(sN)
       if (idx > -1) {
         unprocessed.splice(idx, 1)
@@ -114,6 +125,9 @@ export const VisGraphLayout = {
         })
         // increase level
         level++;
+        if (reserved != null && reserved == level) {
+          level++
+        }
         go_ahead = before != unprocessed.length
       }
     })
