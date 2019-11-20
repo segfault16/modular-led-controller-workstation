@@ -126,7 +126,7 @@ class EditProjectPage extends Component {
                     playNote={this.playNote}
                     stopNote={this.stopNote}
                     activeNotes={this.state.activeNotes}
-                    keyboardShortcuts={keyboardShortcuts}
+                    // keyboardShortcuts={keyboardShortcuts}
                   />
                 </div>
                 <FormGroup row>
