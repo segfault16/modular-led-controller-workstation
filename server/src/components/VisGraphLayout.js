@@ -86,7 +86,6 @@ export const VisGraphLayout = {
     var reserved = null
     if(reservedLevel != null) {
       reserved = (reservedLevel -1) / -3
-      console.log("reserved:",reserved)  
     }
 
     nodes.forEach(n => {

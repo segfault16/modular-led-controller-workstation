@@ -644,7 +644,6 @@ class VisGraph extends React.Component {
 
   addGraphNode(canvasX) {
     // Find level nearest to click
-    console.log("Finding nearest for", canvasX)
     let effectNodeIds = this.state.graph.nodes.filter(n => n.nodeType === NODETYPE_EFFECT_NODE).map(n => n.id);
     let positions = this.state.network.getPositions(effectNodeIds);
     let dists = {}
@@ -653,7 +652,6 @@ class VisGraph extends React.Component {
     })
     var minDist = -1;
     var minKey = null;
-    console.log(dists)
     Object.keys(dists).forEach((key, idx) => {
       if (minKey == null) {
         minKey = key;
@@ -663,13 +661,11 @@ class VisGraph extends React.Component {
         minKey = key
       }
     })
-    console.log("Nearest node", minKey)
     var nearestLevel = null
     var nearestNode = this.state.graph.nodes.find(n => n.id === minKey)
     if (nearestNode != null) {
       nearestLevel = nearestNode.level
     }
-    console.log("Reserve level", nearestLevel)
 
     this.setState(state => {
       return {
