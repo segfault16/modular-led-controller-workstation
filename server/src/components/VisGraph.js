@@ -159,32 +159,20 @@ class VisGraph extends React.Component {
             direction: "LR",
             nodeSpacing: 200,
             sortMethod: 'directed',
-            shakeTowards: 'leaves'
+            shakeTowards: 'leaves',
+            edgeMinimization: false
 
           },
         },
         physics: {
           enabled: true,
-          barnesHut: {
-            gravitationalConstant: -2000,
-            centralGravity: 0.3,
-            springLength: 25,
-            springConstant: 0.5,
-            damping: 0.88,
-            avoidOverlap: 1
-          },
           hierarchicalRepulsion: {
             centralGravity: .05,
             nodeDistance: 100,
             springLength: 10,
             springConstant: 0.5,
-            damping: 0.8,
-          },
-          forceAtlas2Based: {
-            gravitationalConstant: -26,
-            centralGravity: 0.005,
-            springLength: 100,
-            springConstant: 0.18
+            damping: 0.99,
+            avoidOverlap: 1
           },
           maxVelocity: 146,
           timestep: 0.35,
@@ -283,14 +271,14 @@ class VisGraph extends React.Component {
               background: '#666666'
             },
             physics: false,
-            mass: 10
+            mass: 2
           }, error: {
             color: {
               border: '#ee0000',
               background: '#666666'
             },
             physics: false,
-            mass: 10
+            mass: 2
           },
           in: {
             physics: true,
@@ -673,6 +661,10 @@ class VisGraph extends React.Component {
     var nearestNode = this.state.graph.nodes.find(n => n.id === minKey)
     if (nearestNode != null) {
       nearestLevel = nearestNode.level
+      // Make sure we insert between nodes
+      if(canvasX < positions[minKey].x) {
+        nearestLevel = nearestLevel - 3
+      }
     }
 
     this.setState(state => {
@@ -681,7 +673,7 @@ class VisGraph extends React.Component {
           isShown: true,
           mode: "add",
         },
-        insertLevel: nearestLevel + 3
+        insertLevel: nearestLevel
         }
     })
   }

@@ -81,26 +81,26 @@ export const VisGraphLayout = {
     var processed = []
     var unprocessed = [...effectNodes]
 
-    // scale reservedLevel
-    
-    var reserved = null
-    if(reservedLevel != null) {
-      console.log("Reserving level", reservedLevel)
-      reserved = -1 * reservedLevel + 3
-    }
-
     nodes.forEach(n => {
       n.level = 0
     })
 
     var maxLevel = 0
     startWith.forEach(sN => {
+      // start at level 0, go left
       var level = 0;
-      sN.level = level;
-      level = level - 3;
-      if (reserved != null && reserved == level) {
+      // respect reserved levels for startNode
+      if (reservedLevel != null && reservedLevel == level) {
         level = level - 3;
       }
+      // set level of startnode
+      sN.level = level;
+      // proceed, respect reserved leves
+      level = level - 3;
+      if (reservedLevel != null && reservedLevel == level) {
+        level = level - 3;
+      }
+      
       var idx = unprocessed.indexOf(sN)
       if (idx > -1) {
         unprocessed.splice(idx, 1)
@@ -126,7 +126,7 @@ export const VisGraphLayout = {
         })
         // increase level
         level = level - 3;
-        if (reserved != null && reserved == level) {
+        if (reservedLevel != null && reservedLevel == level) {
           level = level - 3;
         }
         go_ahead = before != unprocessed.length
@@ -134,10 +134,6 @@ export const VisGraphLayout = {
       maxLevel = Math.max(maxLevel, -level)
     })
     
-    // invert levels, scale to 3
-    effectNodes.forEach(n => {
-      n.level = maxLevel - 6 + n.level
-    })
 
     // process input and output nodes
     inNodes.forEach(n => {
