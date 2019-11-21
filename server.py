@@ -267,13 +267,15 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId) # type: filtergraph.FilterGraph
         modSourceId = request.args.get('modulationSourceUid', None)
-        mods = []
-        if modSourceId is None:
-            # all modulations
-            mods = [mod for mod in fg._modulations]
-        else:
+        modDestinationId = request.args.get('modulationDestinationUid', None)
+        mods = [mod for mod in fg._modulations]
+        if modSourceId is not None:
             # for specific modulation source
-            mods = [mod for mod in fg._modulations if mod.modulationSource.uid == modSourceId]
+            mods = [mod for mod in mods if mod.modulationSource.uid == modSourceId]
+        if modDestinationId is not None:
+            # for specific modulation destination".format(modDestinationId))
+            mods = [mod for mod in mods if mod.targetNode.uid == modDestinationId]
+            
         return jsonpickle.encode(mods)
     
     @app.route('/slot/<int:slotId>/modulation', methods=['POST'])

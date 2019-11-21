@@ -60,7 +60,7 @@ class EditModulationSourcePopup extends React.Component {
         this._asyncRequest.promise.then(json => {
             var effectName = json['modulator']['py/object']
             var parameterDefinitionJson = FilterGraphService.getEffectParameters(effectName)
-            var modulations = FilterGraphService.getAllModulations(slot, uid)
+            var modulations = FilterGraphService.getAllModulations(slot, uid, null)
             return Promise.all([json, parameterDefinitionJson, modulations])
         }).then(result => {
             var modSource = result[0]
@@ -69,21 +69,23 @@ class EditModulationSourcePopup extends React.Component {
             var modulations = result[2]
 
             var mods = {}
-            modulations.forEach(element => {
-                var state = element['py/state']
+            if(modulations != null) {
+                modulations.forEach(element => {
+                    var state = element['py/state']
 
-                var uid = state['uid']
-                var target = state['target_node_uid']
-                var targetParam = state['target_param']
-                var value = state['amount']
-                var inverted = state['inverted']
-                mods[uid] = {
-                    targetNode: target,
-                    targetParam: targetParam,
-                    value: value,
-                    inverted: inverted
-                }
-            });
+                    var uid = state['uid']
+                    var target = state['target_node_uid']
+                    var targetParam = state['target_param']
+                    var value = state['amount']
+                    var inverted = state['inverted']
+                    mods[uid] = {
+                        targetNode: target,
+                        targetParam: targetParam,
+                        value: value,
+                        inverted: inverted
+                    }
+                });
+            }
             this._asyncRequest = null;
             this.setState(state => {
                 return {

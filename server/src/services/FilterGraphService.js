@@ -99,14 +99,17 @@ const FilterGraphService = {
             console.error('Error on deleting modulation source:', error)
         })
     },
-    getAllModulations: function(slotId, modulationSourceId = null) {
+    getAllModulations: function(slotId, modulationSourceUid = null, modulationDestinationUid = null) {
         var url = './slot/' + slotId + '/modulations'
         var params = {}
-        if(modulationSourceId != null) {
-            params['modulationSourceId'] = modulationSourceId
+        if(modulationSourceUid != null) {
+            params['modulationSourceUid'] = modulationSourceUid
         }
-        if(params.size > 0) {
-            urlParams = new URLSearchParams(params)
+        if(modulationDestinationUid != null) {
+            params['modulationDestinationUid'] = modulationDestinationUid
+        }
+        if(Object.keys(params).length > 0) {
+            var urlParams = new URLSearchParams(params)
             return fetch(`${url}?${urlParams.toString()}`).then(res => res.json());
         } else {
             return fetch(url).then(res => res.json());

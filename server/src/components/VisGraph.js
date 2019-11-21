@@ -299,6 +299,14 @@ class VisGraph extends React.Component {
           out: {
             physics: true,
             mass: 1
+          },
+          modulation: {
+            color: {
+              border: '#222222',
+              background: '#666666'
+            },
+            physics: false,
+            mass: 100
           }
         }
       }
@@ -673,7 +681,7 @@ class VisGraph extends React.Component {
           isShown: true,
           mode: "add",
         },
-        insertLevel: nearestLevel
+        insertLevel: nearestLevel + 3
         }
     })
   }

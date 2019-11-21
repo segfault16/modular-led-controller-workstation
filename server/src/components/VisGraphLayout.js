@@ -85,19 +85,21 @@ export const VisGraphLayout = {
     
     var reserved = null
     if(reservedLevel != null) {
-      reserved = (reservedLevel -1) / -3
+      console.log("Reserving level", reservedLevel)
+      reserved = -1 * reservedLevel + 3
     }
 
     nodes.forEach(n => {
       n.level = 0
     })
 
+    var maxLevel = 0
     startWith.forEach(sN => {
       var level = 0;
       sN.level = level;
-      level++;
+      level = level - 3;
       if (reserved != null && reserved == level) {
-        level++
+        level = level - 3;
       }
       var idx = unprocessed.indexOf(sN)
       if (idx > -1) {
@@ -123,16 +125,18 @@ export const VisGraphLayout = {
           }
         })
         // increase level
-        level++;
+        level = level - 3;
         if (reserved != null && reserved == level) {
-          level++
+          level = level - 3;
         }
         go_ahead = before != unprocessed.length
       }
+      maxLevel = Math.max(maxLevel, -level)
     })
+    
     // invert levels, scale to 3
     effectNodes.forEach(n => {
-      n.level = - 3 * n.level + 1
+      n.level = maxLevel - 6 + n.level
     })
 
     // process input and output nodes
@@ -152,14 +156,46 @@ export const VisGraphLayout = {
     // process modulator nodes
     modNodes.forEach(n => {
       // get edges for this node
-      var firstEdge = edges.find(e => e.from === n.id);
-      if (firstEdge != null) {
-        var toNode = nodes.find(t => t.id === firstEdge.to)
-        if (toNode != null) {
-          n.level = toNode.level
-        }
+      var level = 0
+      var nodeLevels = []
+      edges.filter(e => e.from === n.id).forEach(e => {
+        var toNode = nodes.find(t => t.id === e.to)
+        nodeLevels.push(toNode.level)
+      })
+
+      var sum, avg = 0;
+      // dividing by 0 will return Infinity
+      // arr must contain at least 1 element to use reduce
+      if (nodeLevels.length)
+      {
+          sum = nodeLevels.reduce(function(a, b) { return a + b; });
+          level = sum / nodeLevels.length;
       }
+      console.log(level)
+      n.realLevel = level
+      level = Math.floor(level)
+      if(level % 3 != 0) {
+        level = level - (level % 3)
+      }
+      if(level == reservedLevel) {
+        level = level + 3
+      }
+      
+      n.level = level
     })
+    for(var i=0; i < 3 * maxLevel; i++) {
+      // make sure only one modNode per level
+      var nodesForLevel = modNodes.filter(n => n.level == i)
+      if(nodesForLevel && nodesForLevel.length > 1) {
+        nodesForLevel.sort(function(a, b){return a.realLevel - b.realLevel})
+        var level = i;
+        nodesForLevel.forEach(n => {
+          n.level = level;
+          n.realLevel = level;
+          level = level + 3;
+        })
+      }
+    }
   },
   conUid: function(inout, index, uid) {
     return inout + '_' + index + '_' + uid;
@@ -228,10 +264,11 @@ export const VisGraphLayout = {
   updateEffectNode: function(visNode, json) {
     console.debug('Update Effect Node:', json["py/state"]);
     var uid = json["py/state"]["uid"];
-    var name = json["py/state"]["effect"]["py/object"];
+    var name = json["py/state"]["effect"]["py/object"]
+    var shortName = name.replace('audioled.','').replace('.', ': ');
     visNode.id = uid;
     visNode.level = 0;
-    visNode.label = name;
+    visNode.label = shortName;
     visNode.shape = 'circularImage';
     visNode.group = 'ok';
     visNode.nodeType = NODETYPE_EFFECT_NODE;
@@ -245,9 +282,9 @@ export const VisGraphLayout = {
     var uid = json["uid"];
     visNode.id = uid;
     visNode.level = 0;
-    visNode.label = "modulator"
-    visNode.shape = 'ellipse';
-    visNode.group = 'ok';
+    visNode.label = json['modulator']['py/object'].replace('audioled.','').replace('.', ': ');
+    visNode.shape = 'box';
+    visNode.group = 'modulation';
     visNode.nodeType = NODETYPE_MODULATOR;
   },
 
@@ -290,6 +327,7 @@ export const VisGraphLayout = {
     edge.to = state['target_node_uid'];
     edge.id = state['uid'];
     edge.edgeType = EDGETYPE_MODULATION;
+    edge.physics = false
   }
 }
 
