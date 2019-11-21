@@ -157,28 +157,29 @@ class VisGraph extends React.Component {
             enabled: true,
             levelSeparation: 100,
             direction: "LR",
-            nodeSpacing: 200,
+            nodeSpacing: 180,
             sortMethod: 'directed',
             shakeTowards: 'leaves',
-            edgeMinimization: false
+            blockShifting: true,
+            edgeMinimization: true
 
           },
         },
         physics: {
           enabled: true,
           hierarchicalRepulsion: {
-            centralGravity: .05,
+            centralGravity: .5,
             nodeDistance: 100,
             springLength: 10,
             springConstant: 0.5,
-            damping: 0.99,
-            avoidOverlap: 1
+            damping: 0.999,
+            avoidOverlap: 1,
           },
           maxVelocity: 146,
           timestep: 0.35,
           solver: 'hierarchicalRepulsion',
           stabilization: {
-            enabled: false,
+            enabled: true,
             onlyDynamicEdges: true
           },
         },
@@ -271,14 +272,14 @@ class VisGraph extends React.Component {
               background: '#666666'
             },
             physics: false,
-            mass: 2
+            mass: 10
           }, error: {
             color: {
               border: '#ee0000',
               background: '#666666'
             },
             physics: false,
-            mass: 2
+            mass: 10
           },
           in: {
             physics: true,

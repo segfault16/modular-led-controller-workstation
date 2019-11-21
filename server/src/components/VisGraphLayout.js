@@ -133,7 +133,7 @@ export const VisGraphLayout = {
       }
       maxLevel = Math.max(maxLevel, -level)
     })
-    
+
 
     // process input and output nodes
     inNodes.forEach(n => {
@@ -312,7 +312,7 @@ export const VisGraphLayout = {
     edge.group = "connection"
     
     edge.width = 4
-    edge.physics = false
+    edge.physics = true
     edge.edgeType = EDGETYPE_EFFECT_CONNECTION;
   },
 
@@ -324,6 +324,7 @@ export const VisGraphLayout = {
     edge.id = state['uid'];
     edge.edgeType = EDGETYPE_MODULATION;
     edge.physics = false
+    edge.length = 100
   }
 }
 
