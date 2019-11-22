@@ -14,6 +14,7 @@ import { makeCancelable } from '../util/MakeCancelable';
 import Grid from '@material-ui/core/Grid';
 import Slider from '@material-ui/core/Slider';
 import Checkbox from '@material-ui/core/Checkbox';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 
 import './NodePopup.css'
 
@@ -222,12 +223,19 @@ class EditModulationSourcePopup extends React.Component {
                     onChange={(e, val) => this.handleModulationValueChange(val, modUid)} />
             </Grid>
             <Grid item sm={2} xs={2}>
-                <Checkbox
-                    checked={mod['inverted']}
-                    onChange={(e, val) => this.handleModulationInvertChange(val, modUid)}
-                    value={modUid}
-                    color="primary"
+            <FormControlLabel
+                    control={
+                        <Checkbox
+                        checked={mod['inverted']}
+                        onChange={(e, val) => this.handleModulationInvertChange(val, modUid)}
+                        value={modUid}
+                        color="primary"
+                    />
+                    }
+                    label="inverted:"
+                    labelPlacement="start"
                 />
+                
             </Grid>
         </React.Fragment>
     }
