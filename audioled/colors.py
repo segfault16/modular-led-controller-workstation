@@ -291,11 +291,11 @@ class InterpolateHSV(Effect):
                 interp_v = np.linspace(v_a, v_b, self._num_pixels)
                 interp_s = np.linspace(s_a, s_b, self._num_pixels)
                 interp_h = np.linspace(h_a, h_b, self._num_pixels)
-                hsv = np.array([interp_h, interp_s, interp_v]).T
+                hsv = np.array([interp_h, interp_s, interp_v]) * 255
 
                 rgb = hsv_to_rgb(hsv)
 
-                self._outputBuffer[0] = rgb.T * 255.0
+                self._outputBuffer[0] = rgb
 
 
 class RGBToHSV(Effect):
