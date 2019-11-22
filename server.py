@@ -54,13 +54,16 @@ def create_app():
     app = Flask(__name__)
 
     def store_configuration():
-        global serverconfig
-        p = multiprocessing.Process(target=multiprocessing_func, args=(serverconfig, ))
-        p.start()
-        p.join()
-        # Update MD5 hashes from file, since data was written in separate process
-        serverconfig.updateMd5HashFromFiles()
-        serverconfig.postStore()
+        try:
+            global serverconfig
+            p = multiprocessing.Process(target=multiprocessing_func, args=(serverconfig, ))
+            p.start()
+            p.join(5)
+            # Update MD5 hashes from file, since data was written in separate process
+            serverconfig.updateMd5HashFromFiles()
+            serverconfig.postStore()
+        except Exception:
+            print("ERROR on storing configuration")
 
     sched = BackgroundScheduler(daemon=True)
     sched.add_job(store_configuration, 'interval', seconds=5)
