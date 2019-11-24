@@ -168,16 +168,18 @@ class ServerThread(object):
     """Thread object to continuously read messages from socket
     """
 
-    def __init__(self, socket, callback, verbose=False):
+    def __init__(self, host, port, socket, callback, verbose=False):
         """Constructor for thread object
         
         Arguments:
             socket {[type]} -- Socket to connect (must be in listening state)
             callback {function} -- Callback to call when OPC messages have been fully read
         """
+        self._host = host
+        self._port = port
         self._socket = socket
         self._callback = callback
-        self._thread = None
+        self._thread = None # type: threading.Thread
         self._stopSignal = None
         self._verbose = verbose
         self.sel = selectors.DefaultSelector()
@@ -216,6 +218,22 @@ class ServerThread(object):
         if not self._thread.isAlive():
             return False
         return True
+
+    def isConnected(self):
+        """Check wether there is an active connection
+        """
+        try:
+            self._socket.getpeername()
+            return True
+        except Exception as e:
+            print("Error getting peername: {}".format(e))
+            return False
+
+    def getHost(self):
+        return self._host
+    
+    def getPort(self):
+        return self._port
 
     def _accept_wrapper(self, sock, callback):
         conn, addr = sock.accept()  # Should be ready to read
@@ -260,13 +278,13 @@ class ServerThread(object):
 class Server(object):
 
     # Using static methods here since sockets can be used only once
-    sockets = []
-    all_threads = []
+    sockets = [] # type: List[socket.socket]
+    all_threads = [] # type: List[ServerThread]
 
     def __init__(self, host, port, verbose=True):
         self._host = host
         self._port = port
-        self._socket = None
+        self._socket = None # type: socket.socket
         self._thread = None
         self._lastMessage = None
         self._verbose = verbose
@@ -289,35 +307,14 @@ class Server(object):
     def stop(self):
         self._stopThread()
 
-    def _clean_threads(self):
-        toCleanup = []
-        for thread in self.all_threads:
-            try:
-                thread._socket.getpeername()
-            except Exception as e:
-                print("Error getting peername: {}".format(e))
-                toCleanup.append(thread)
-
-        for thread in toCleanup:
-            # ToDo: Error handling
-            print("Cleaning up stale thread")
-            thread.stop()
-            self.all_threads.remove(thread)
-
     def _get_threads(self, host, port):
         """
         Returns sockets with same host and port.
         """
-        self._clean_threads()
         sameThreads = []
         for thread in self.all_threads:
-            try:
-                (host, port) = thread._socket.getpeername()
-                if host == host and port == port:
-                    sameThreads.append(thread)
-            except Exception:
-                pass
-
+            if thread.getPort() == port and thread.getHost() == host and thread is not self._thread:
+                sameThreads.append(thread)
         return sameThreads
 
     def _ensure_listening(self):
@@ -336,7 +333,7 @@ class Server(object):
             _socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _socket.bind((self._host, self._port))
             print("FadeCandy Server begin listening on {}:{}".format(self._host, self._port))
-            self._thread = ServerThread(_socket, self._pixelCallback, self._verbose)
+            self._thread = ServerThread(self._host, self._port, _socket, self._pixelCallback, self._verbose)
             self.all_threads.append(self._thread)
             self._thread.start()
             return True

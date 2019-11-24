@@ -26,7 +26,7 @@ sudo pip3 install pipenv # install pipenv
 sudo apt-get install libjpeg8-dev # For pillow
 sudo apt-get install portaudio19-dev # For pyaudio
 sudo apt-get install libatlas-base-dev # For numpy
-sudo pipenv install --python 3.7
+sudo pipenv install
 ```
 
 ## Audio configuration

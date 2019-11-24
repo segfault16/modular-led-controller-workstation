@@ -1,10 +1,12 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "7d58a75536aee4f5a46f9320a97bfe89e33035fa4f0aba8052a58f9428640120"
+            "sha256": "7ccbc857d757765ca31fe4f03cf290046262545aaa4b4283a2c426725c6184a6"
         },
         "pipfile-spec": 6,
-        "requires": {},
+        "requires": {
+            "python_version": "3.7"
+        },
         "sources": [
             {
                 "name": "piwheels",
