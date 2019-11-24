@@ -137,6 +137,9 @@ class Effect(object):
         self.__initstate__()
 
     def updateParameter(self, stateDict):
+        # Save updated parameter as original value
+        for k in list(stateDict.keys()):
+            stateDict['~'+k] = stateDict[k]
         self.__setstate__(stateDict)
     
     def setParameterOffset(self, paramId, paramDefinition, offset):
@@ -156,6 +159,7 @@ class Effect(object):
                 state['~'+paramId] = origVal
         
         adjustedValue = origVal + (maxP - minP) * offset
+        # print("orig: {}, adjusted: {}".format(origVal, adjustedValue))
         # ensure we stay inside max and min
         adjustedValue = min(maxP, adjustedValue)
         adjustedValue = max(minP, adjustedValue)
