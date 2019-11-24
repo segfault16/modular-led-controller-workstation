@@ -70,6 +70,10 @@ class EditModulationPopup extends React.Component {
             var modulation = result[0]
             var node = result[1]
             var parameterDefinition = result[2]
+            var parameters = null
+            if(parameterDefinition != null && parameterDefinition['parameters'] != null) {
+                parameters = Object.keys(parameterDefinition['parameters'])
+            }
             console.log(parameterDefinition['parameters'])
 
             this._asyncRequest = null;
@@ -81,7 +85,7 @@ class EditModulationPopup extends React.Component {
                         parameterHelp: {},
                         description: ""
                     },
-                    parameters: Object.keys(parameterDefinition['parameters']),
+                    parameters: parameters,
                     selectedParameter: modulation['py/state']['target_param']
                 }
             })
@@ -132,7 +136,7 @@ class EditModulationPopup extends React.Component {
     }
 
     domCreateSelectParameterDropdown = () => {
-        if (this.state.parameters.length > 0) {
+        if (this.state.parameters != null && this.state.parameters.length > 0) {
             let items = this.state.parameters.map((param, id) => {
                 return (
                     <MenuItem key={id} value={param}>{param}</MenuItem>
@@ -153,7 +157,7 @@ class EditModulationPopup extends React.Component {
                 </Select>
             </React.Fragment>
         }
-        return null
+        return <Typography>Target effect has no parameters, please delete this modulation.</Typography>
     }
 
     domCreateDialogContent = (classes, effectDescription, parameters, values, parameterHelp) => {
