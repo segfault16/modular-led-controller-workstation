@@ -586,7 +586,7 @@ class FallingStars(Effect):
         return controlArray
 
     def starControl(self, prob):
-        for i in range(int(self.max_spawns)):
+        for _ in range(int(self.max_spawns)):
             if random.random() <= prob:
                 self.spawnStar()
         outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray)
@@ -602,12 +602,12 @@ class FallingStars(Effect):
         if color is None:
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self._outputBuffer is not None:
-            
+
             self._output = np.multiply(
                 color,
                 self.starControl(self.probability) * np.array([[self.max_brightness * 1.0], [self.max_brightness * 1.0],
-                                                             [self.max_brightness * 1.0]]))
-        
+                                                               [self.max_brightness * 1.0]]))
+
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
@@ -813,7 +813,7 @@ class RandomPendulums(Effect):
             self._lightflip = []
             self._offset = []
             self._swingspeed = []
-            for i in range(self.num_pendulums):
+            for _ in range(self.num_pendulums):
                 rSpread = int(random.randint(2, 10) / 300 * self._num_pixels)
                 self._spread.append(rSpread / 300)
                 self._location.append(random.randint(0, self._num_pixels - rSpread - 1) / 300)
