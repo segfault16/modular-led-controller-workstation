@@ -72,6 +72,7 @@ var icons = {
 export const VisGraphLayout = {
   updateNodeLevels: function (nodes, edges, reservedLevel = null) {
     console.log("Layout", nodes)
+    console.log("Reserved",reservedLevel)
     const effectNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_NODE);
     const outNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'out')
     const inNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'in')

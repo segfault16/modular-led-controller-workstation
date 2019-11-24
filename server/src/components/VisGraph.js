@@ -481,7 +481,7 @@ class VisGraph extends React.Component {
   }
 
   // recalculate levels and add nodes, use this instead of this.setState(...)
-  addStateNodesAndEdges(nodes, edges, fixedLevels = {}) {
+  addStateNodesAndEdges(nodes, edges, fixedLevels = {}, reservedLevel = null) {
     console.debug("Adding nodes", nodes);
     console.debug("Fixed levels:", fixedLevels)
     this.setState(state => {
@@ -504,7 +504,7 @@ class VisGraph extends React.Component {
         newEdges = [...newEdges, ...edges]
       }
       // calculate node levels
-      VisGraphLayout.updateNodeLevels(newNodes, newEdges, this.state.insertLevel)
+      VisGraphLayout.updateNodeLevels(newNodes, newEdges, reservedLevel)
       Object.keys(fixedLevels).map((key, id) => {
         var node = newNodes.find(n => n.id === key)
         if(node != null) {
@@ -744,7 +744,7 @@ class VisGraph extends React.Component {
           nodes.filter(n => n.nodeType === NODETYPE_EFFECT_NODE).forEach(n => fixedLevels[n.id] = this.state.insertLevel)
           nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'in').forEach(n => fixedLevels[n.id] = this.state.insertLevel - 1)
           nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'out').forEach(n => fixedLevels[n.id] = this.state.insertLevel + 1)
-          this.addStateNodesAndEdges(nodes, edges, fixedLevels);
+          this.addStateNodesAndEdges(nodes, edges, fixedLevels, this.state.insertLevel);
           this.setState(state => {
             return {
               insertLevel: null
@@ -754,11 +754,18 @@ class VisGraph extends React.Component {
 
         } else if (node["py/object"] === "audioled.filtergraph.ModulationSourceNode") {
           // Created node is a modulation source
-          console.log("TODO: Implement adding modulation source nodes")
           var nodes = []
           var node = VisGraphLayout.createModulatorNode(node);
+          // use level on new node
           nodes.push(node);
-          this.addStateNodesAndEdges(nodes, []);
+          var fixedLevels = {}
+          fixedLevels[node.id] = this.state.insertLevel
+          this.addStateNodesAndEdges(nodes, [], fixedLevels);
+          this.setState(state => {
+            return {
+              insertLevel: null
+            }
+          })
         }
       })
       .catch(error => {
