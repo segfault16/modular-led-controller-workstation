@@ -929,6 +929,85 @@ class StaticBlob(Effect):
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
+class StaticWave(Effect):
+    """Generates a wave of light. Mostly for testing purposes."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Generates a wave of light. Mostly for testing purposes."
+
+    def __init__(self, spread=0.3, location=0.5):
+        self.spread = spread
+        self.location = location
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(StaticWave, self).__initstate__()
+
+    def __setstate__(self, state):
+        # Backwards compatibility from absolute -> relative sizes
+        if 'spread' in state and state['spread'] > 1:
+            state['spread'] = state['spread'] / 300 / 2
+        if 'location' in state and state['location'] > 1:
+            state['location'] = state['location'] / 300
+        return super().__setstate__(state)
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("location", [0.5, 0, 1, 0.01]),
+                ("spread", [1, 0.01, 1, 0.01]),
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {"parameters": {"location": "Location where the wave is created.", "spread": "Spreading of the wave."}}
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['location'][0] = self.location
+        definition['parameters']['spread'][0] = self.spread
+        return definition
+
+    def createBlob(self, spread_rel, location_rel):
+        waveArray = np.zeros(self._num_pixels)
+
+        # convert relative to absolute values
+        spread = max(int(spread_rel * self._num_pixels), 1)
+        location = int(location_rel * self._num_pixels)
+        for i in range(-spread, spread + 1):
+            # make sure we are in bounds of array
+            if (location + i) >= 0 and (location + i) < self._num_pixels:
+                waveArray[location + i] = (0.5 / spread) * i * math.exp(-(0.2 / spread) * i)
+        return waveArray.clip(0.0, 255.0)
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if self._inputBufferValid(0):
+            color = self._inputBuffer[0]
+        else:
+            # default: all white
+            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        self._output = np.multiply(color, self.createBlob(self.spread, self.location) * np.array([[1.0], [1.0], [1.0]]))
+
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+
+
 class GenerateWaves(Effect):
     """Effect for displaying different wave forms."""
 
