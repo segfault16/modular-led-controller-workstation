@@ -1252,7 +1252,8 @@ class GIFPlayer(Effect):
         adjustedFile = self.file
         if self.file is None:
             return
-        if self._filterGraph is not None and self._filterGraph._project is not None and self._filterGraph._project._contentRoot is not None:
+        if (self._filterGraph is not None and self._filterGraph._project is not None
+           and self._filterGraph._project._contentRoot is not None):    # This is the end of the multi line.
             adjustedFile = os.path.join(self._filterGraph._project._contentRoot, self.file)
         try:
             self._gif = Image.open(adjustedFile)
