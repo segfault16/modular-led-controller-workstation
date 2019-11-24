@@ -71,24 +71,33 @@ var icons = {
 
 export const VisGraphLayout = {
   updateNodeLevels: function (nodes, edges, reservedLevel = null) {
+    console.log("Layout", nodes)
     const effectNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_NODE);
     const outNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'out')
     const inNodes = nodes.filter(n => n.nodeType === NODETYPE_EFFECT_INOUT && n.group === 'in')
     const modNodes = nodes.filter(n => n.nodeType == NODETYPE_MODULATOR);
 
     // Find effect nodes without output
-    const startWith = effectNodes.filter(n => outNodes.filter(o => o.nodeUid == n.id).length == 0)
-    var processed = []
-    var unprocessed = [...effectNodes]
-
-    nodes.forEach(n => {
-      n.level = 0
+    var startWith = effectNodes.filter(n => outNodes.filter(o => o.nodeUid === n.id).length == 0)
+    var nodesWithOutCon = outNodes.filter(n => edges.filter(e => e.from == n.id).length != 0).map(o => o.nodeUid)
+    var temp = effectNodes.filter(n => !nodesWithOutCon.find(t => t === n.id))
+    temp.forEach( t => {
+      if (!startWith.find(k => k.id === t.id)) {
+        startWith.push(nodes.find(k => k.id === t.id))
+      }
     })
 
+    var processed = []
+    var unprocessed = [...effectNodes]
     var maxLevel = 0
     startWith.forEach(sN => {
       // start at level 0, go left
       var level = 0;
+      console.log("Processing startnode", sN)
+      if(sN.level != null) {
+        console.log("Using startnode level", sN.level)
+        level = sN.level;
+      }
       // respect reserved levels for startNode
       if (reservedLevel != null && reservedLevel == level) {
         level = level - 3;
@@ -112,6 +121,10 @@ export const VisGraphLayout = {
         var curUnprocessed = [...unprocessed]
         var curPocessed = [...processed]
         curUnprocessed.forEach(n => {
+          if(startWith.find(t => t.id === n.id)) {
+            // skip start nodes
+            return
+          }
           // find connections from this node
           var cons = edges.filter(e => e.from_node === n.id);
           // check all nodes after this node have been processed (or find one that isn't)
@@ -263,7 +276,7 @@ export const VisGraphLayout = {
     var name = json["py/state"]["effect"]["py/object"]
     var shortName = name.replace('audioled.','').replace('.', ': ');
     visNode.id = uid;
-    visNode.level = 0;
+    // visNode.level = 0;
     visNode.label = shortName;
     visNode.shape = 'circularImage';
     visNode.group = 'ok';
@@ -277,7 +290,7 @@ export const VisGraphLayout = {
     console.debug('Update Modulator Node:', json);
     var uid = json["uid"];
     visNode.id = uid;
-    visNode.level = 0;
+    // visNode.level = 0;
     visNode.label = json['modulator']['py/object'].replace('audioled.','').replace('.', ': ');
     visNode.shape = 'box';
     visNode.group = 'modulation';
