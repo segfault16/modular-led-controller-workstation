@@ -9,17 +9,19 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+flake8 = "*"
 
 [packages]
 numpy = "*"
 scipy = "*"
-pyaudio = "*"
 jsonpickle = "*"
 flask = "*"
 mido = "*"
 python-rtmidi = "*"
 apscheduler = "*"
 pillow = "*"
-#[requires]
-#python_version = "3.5"
-rpi-ws281x = "*"
+rpi-ws281x = {version = "*",sys_platform = "== 'linux'"}
+pyaudio = "*"
+
+[requires]
+python_version = "3.7"
