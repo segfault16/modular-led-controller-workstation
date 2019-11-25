@@ -172,6 +172,177 @@ class SwimmingPool(Effect):
         self._outputBuffer[0] = np.multiply(color, all_waves).clip(0, 255.0)
 
 
+class SwimmingPool2(Effect):
+    """Generates a wave effect to look like the reflection on the bottom of a swimming pool."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Generates a wave effect to look like the reflection on the bottom of a swimming pool."
+
+    def __init__(self,
+                 num_waves=30,
+                 scale=0.2,
+                 wavespread_low=30,
+                 wavespread_high=70,
+                 max_speed=30,
+                 directed=False,
+                 direction=False):
+        self.num_waves = num_waves
+        self.scale = scale
+        self.wavespread_low = wavespread_low
+        self.wavespread_high = wavespread_high
+        self.max_speed = max_speed
+        self.directed = directed
+        self.direction = direction
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        try:
+            self._pixel_state
+        except AttributeError:
+            self._pixel_state = None
+        try:
+            self._last_t
+        except AttributeError:
+            self._last_t = 0.0
+        try:
+            self._Wave
+        except AttributeError:
+            self._Wave = None
+        try:
+            self._WaveSpecSpeed
+        except AttributeError:
+            self._WaveSpecSpeed = None
+        try:
+            self._rotate_counter
+        except AttributeError:
+            self._rotate_counter = 0
+        super(SwimmingPool2, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("num_waves", [30, 1, 100, 1]),
+                ("scale", [0.2, 0.01, 1.0, 0.01]),
+                ("wavespread_low", [30, 1, 100, 1]),
+                ("wavespread_high", [70, 50, 150, 1]),
+                ("max_speed", [30, 1, 200, 1]),
+                ("directed", False),
+                ("direction", False)
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "num_waves": "Number of generated overlaying waves.",
+                "scale": "Scales the brightness of the waves.",
+                "wavespread_low": "Minimal spread of the randomly generated waves.",
+                "wavespread_high": "Maximum spread of the randomly generated waves.",
+                "max_speed": "Maximum movement speed of the waves.",
+                "directed": "Activate direction of waves.",
+                "direction": "Select left or right."
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['num_waves'][0] = self.num_waves
+        definition['parameters']['scale'][0] = self.scale
+        definition['parameters']['wavespread_low'][0] = self.wavespread_low
+        definition['parameters']['wavespread_high'][0] = self.wavespread_high
+        definition['parameters']['max_speed'][0] = self.max_speed
+        definition['parameters']['directed'] = self.directed
+        definition['parameters']['direction'] = self.direction
+        return definition
+
+    def _SinArray(self, _spread, _wavehight, _speed):
+        # Create array for a single wave
+        _CArray = []
+        _spread = min(int(self._num_pixels / 2) - 1, _spread)
+        for i in range(3, _spread + 1):
+            # differentiate left and right movement
+            if _speed <= 0:
+                _CArray.append((_spread / 20 / i) * _wavehight)
+            else:
+                _CArray.append(-(_spread / 20 / (i - _spread - 1)) * _wavehight)
+        _output = np.zeros(self._num_pixels)
+        _output[:len(_CArray)] = _CArray
+        # Move somewhere
+        _output = np.roll(_output, np.random.randint(0, self._num_pixels), axis=0)
+        return _output.clip(0.0, 255.0)
+
+    def _CreateWaves(self, num_waves, wavespread_low=50, wavespread_high=100, max_speed=30):
+        _WaveArray = []
+        _wavespread = np.random.randint(wavespread_low, wavespread_high, num_waves)
+        _WaveArraySpecSpeed = np.random.randint(-max_speed, max_speed, num_waves)
+        _WaveArraySpecHeight = np.random.rand(num_waves)
+        for i in range(0, num_waves):
+            _WaveArray.append(self._SinArray(_wavespread[i], _WaveArraySpecHeight[i], _WaveArraySpecSpeed[i]))
+        return _WaveArray, _WaveArraySpecSpeed
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    async def update(self, dt):
+        await super().update(dt)
+        if self._num_pixels is None:
+            return
+        if self._pixel_state is None or np.size(self._pixel_state, 1) != self._num_pixels:
+            self._pixel_state = np.zeros(self._num_pixels) * np.array([[0.0], [0.0], [0.0]])
+            self._Wave = None
+            self._WaveSpecSpeed = None
+
+        if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < self.num_waves:
+
+            self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low,
+                                                                self.wavespread_high, self.max_speed)
+        # Rotate waves
+        self._rotate_counter += 1
+        if self._rotate_counter > 30:
+            self._Wave = np.roll(self._Wave, 1, axis=0)
+            self._WaveSpecSpeed = np.roll(self._WaveSpecSpeed, 1)
+            speed = np.random.randint(-self.max_speed, self.max_speed)
+            spread = np.random.randint(self.wavespread_low, self.wavespread_high)
+            height = np.random.rand()
+            wave = self._SinArray(spread, height, speed)
+            self._Wave[0] = wave
+            self._WaveSpecSpeed[0] = speed
+            self._rotate_counter = 0
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            color = np.ones(self._num_pixels) * np.array([[255], [255], [255]])
+        else:
+            color = self._inputBuffer[0]
+
+        all_waves = np.zeros(self._num_pixels)
+        for i in range(0, self.num_waves):
+            fact = 1.0
+            if i == 0:
+                fact = (self._rotate_counter / 30)
+            if i == self.num_waves - 1:
+                fact = (1.0 - self._rotate_counter / 30)
+            if i < len(self._Wave) and i < len(self._WaveSpecSpeed):
+                step = np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=0) * self.scale * fact
+                all_waves += step
+
+        self._outputBuffer[0] = np.multiply(color, all_waves).clip(0, 255.0)
+
+
 class DefenceMode(Effect):
     """Generates a colorchanging strobe light effect.
     The mode to defend against all kinds of attackers.
@@ -986,7 +1157,7 @@ class StaticWave(Effect):
         for i in range(1, spread + 1):
             # make sure we are in bounds of array
             if (location + i) >= 0 and (location + i) < self._num_pixels:
-                waveArray[location + i] = spread / 20 / (i+1)  # (0.5 / spread) * i * math.exp(-(0.2 / spread) * i)
+                waveArray[location + i] = spread / 20 / (i + 1)  # (0.5 / spread) * i * math.exp(-(0.2 / spread) * i)
         return waveArray.clip(0.0, 255.0)
 
     def numInputChannels(self):
@@ -1332,7 +1503,7 @@ class GIFPlayer(Effect):
         if self.file is None:
             return
         if (self._filterGraph is not None and self._filterGraph._project is not None
-           and self._filterGraph._project._contentRoot is not None):    # This is the end of the multi line.
+                and self._filterGraph._project._contentRoot is not None):  # This is the end of the multi line.
             adjustedFile = os.path.join(self._filterGraph._project._contentRoot, self.file)
         try:
             self._gif = Image.open(adjustedFile)
