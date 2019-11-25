@@ -983,10 +983,10 @@ class StaticWave(Effect):
         # convert relative to absolute values
         spread = max(int(spread_rel * self._num_pixels), 1)
         location = int(location_rel * self._num_pixels)
-        for i in range(-spread, spread + 1):
+        for i in range(1, spread + 1):
             # make sure we are in bounds of array
             if (location + i) >= 0 and (location + i) < self._num_pixels:
-                waveArray[location + i] = (0.5 / spread) * i * math.exp(-(0.2 / spread) * i)
+                waveArray[location + i] = spread / 20 / (i+1)  # (0.5 / spread) * i * math.exp(-(0.2 / spread) * i)
         return waveArray.clip(0.0, 255.0)
 
     def numInputChannels(self):
