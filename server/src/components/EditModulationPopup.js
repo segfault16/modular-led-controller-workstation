@@ -63,19 +63,14 @@ class EditModulationPopup extends React.Component {
             let nodeUid = modulation['py/state']['target_node_uid']
             let modSourceUid = modulation['py/state']['modulation_source_uid']
             const nodeJson = FilterGraphService.getNode(slot, nodeUid)
-            const parameterDefinitionJson = FilterGraphService.getNodeParameterDefinition(slot, nodeUid)
+            const parameterDefinitionJson = FilterGraphService.getNodeModulateableParameters(slot, nodeUid)
             return Promise.all([modulation, nodeJson, parameterDefinitionJson])
         }).then(result => {
             console.log(result)
             var modulation = result[0]
             var node = result[1]
-            var parameterDefinition = result[2]
-            var parameters = null
-            if(parameterDefinition != null && parameterDefinition['parameters'] != null) {
-                parameters = Object.keys(parameterDefinition['parameters'])
-            }
-            console.log(parameterDefinition['parameters'])
-
+            var parameters = result[2]
+            
             this._asyncRequest = null;
             this.setState(state => {
                 return {

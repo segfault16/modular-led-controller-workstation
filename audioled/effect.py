@@ -140,7 +140,7 @@ class Effect(object):
         # Save updated parameter as original value
         for k in list(stateDict.keys()):
             stateDict['~'+k] = stateDict[k]
-        self.__setstate__(stateDict)
+        self.__dict__.update(stateDict)
     
     def setParameterOffset(self, paramId, paramDefinition, offset):
         state = self.__dict__.copy()
@@ -167,7 +167,7 @@ class Effect(object):
 
         # store offset for getParameterOffset
         state['@'+paramId] = offset
-        self.__setstate__(state)
+        self.__dict__.update(state)
         
         
     def getParameterOffset(self, paramId):
@@ -203,6 +203,9 @@ class Effect(object):
     @staticmethod
     def getParameterDefinition():
         return {}
+
+    def getModulateableParameters(self):
+        return [key for key in self.getParameterDefinition()['parameters'].keys()]
         
     @staticmethod
     def getParameterHelp():

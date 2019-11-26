@@ -25,11 +25,7 @@ class Shift(Effect):
     def __initstate__(self):
         # state
         super(Shift, self).__initstate__()
-        try:
-            self._shift_pixels
-        except AttributeError:
-            self._shift_pixels = 0
-
+        self._shift_pixels = 0
         self._last_t = self._t
 
     def numInputChannels(self):
@@ -130,6 +126,10 @@ class Append(Effect):
         }
         return definition
 
+    def getModulateableParameters(self):
+        # Disable all modulations
+        return []
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -204,6 +204,10 @@ class Combine(Effect):
         definition = {"parameters": OrderedDict([("mode", colors.blend_modes)])}
         return definition
 
+    def getModulateableParameters(self):
+        # Disable all modulations
+        return []
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -249,11 +253,7 @@ class AfterGlow(Effect):
 
     def __initstate__(self):
         # state
-        try:
-            self._pixel_state
-        except AttributeError:
-            self._pixel_state = None
-        # self._last_t = 0.0
+        self._pixel_state = None
         super(AfterGlow, self).__initstate__()
 
     def numInputChannels(self):
@@ -347,6 +347,11 @@ class Mirror(Effect):
             ])
         }
         return definition
+
+    def getModulateableParameters(self):
+        params = super().getModulateableParameters()
+        params.remove('mirror_lower') # disable modulation on bool param
+        return params
 
     @staticmethod
     def getParameterHelp():

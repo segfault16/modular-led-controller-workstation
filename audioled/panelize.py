@@ -400,6 +400,10 @@ class FlipRows(Effect):
             ])
         }
         return definition
+
+    def getModulateableParameters(self):
+        # Disable all modulations
+        return []
     
     @staticmethod
     def getParameterHelp():

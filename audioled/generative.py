@@ -38,26 +38,10 @@ class SwimmingPool(Effect):
 
     def __initstate__(self):
         # state
-        try:
-            self._pixel_state
-        except AttributeError:
-            self._pixel_state = None
-        try:
-            self._last_t
-        except AttributeError:
-            self._last_t = 0.0
-        try:
-            self._Wave
-        except AttributeError:
-            self._Wave = None
-        try:
-            self._WaveSpecSpeed
-        except AttributeError:
-            self._WaveSpecSpeed = None
-        try:
-            self._rotate_counter
-        except AttributeError:
-            self._rotate_counter = 0
+        self._pixel_state = None
+        self._Wave = None
+        self._WaveSpecSpeed = None
+        self._rotate_counter = 0
         super(SwimmingPool, self).__initstate__()
 
     @staticmethod
@@ -179,7 +163,6 @@ class DefenceMode(Effect):
 
     def __initstate__(self):
         # state
-        self._last_t = 0.0
         super(DefenceMode, self).__initstate__()
 
     def numInputChannels(self):
@@ -279,6 +262,11 @@ class MidiKeyboard(Effect):
             }
         }
         return definition
+
+    def getModulateableParameters(self):
+        params = super().getModulateableParameters()
+        params.remove('midiPort')
+        return params
 
     @staticmethod
     def getParameterHelp():
@@ -626,6 +614,12 @@ class Pendulum(Effect):
         }
         return definition
 
+    def getModulateableParameters(self):
+        params = super().getModulateableParameters()
+        params.remove('heightactivator')
+        params.remove('lightflip')
+        return params
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -916,6 +910,11 @@ class GenerateWaves(Effect):
         }
         return definition
 
+    def getModulateableParameters(self):
+        params = super().getModulateableParameters()
+        params.remove('wavemode')
+        return params
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -1022,6 +1021,10 @@ class Sorting(Effect):
             ])
         }
         return definition
+
+    def getModulateableParameters(self):
+        # Disable all modulations
+        return []
 
     @staticmethod
     def getParameterHelp():
@@ -1159,6 +1162,11 @@ class GIFPlayer(Effect):
             ])
         }
         return definition
+
+    def getModulateableParameters(self):
+        params = super().getModulateableParameters()
+        params.remove('file')
+        return params
 
     @staticmethod
     def getParameterHelp():

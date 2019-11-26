@@ -148,6 +148,16 @@ def create_app():
         except StopIteration:
             abort(404, "Node not found")
 
+    @app.route('/slot/<int:slotId>/node/<nodeUid>/modulateableParameters', methods=['GET'])
+    def slot_slotId_node_uid_parameterModulations_get(slotId, nodeUid):
+        global proj
+        fg = proj.getSlot(slotId) # type: filtergraph.FilterGraph
+        try:
+            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            return json.dumps(node.effect.getModulateableParameters())
+        except StopIteration:
+            abort(404, "Node not found")
+
     @app.route('/slot/<int:slotId>/node/<nodeUid>/effect', methods=['GET'])
     def node_uid_effectname_get(slotId, nodeUid):
         global proj

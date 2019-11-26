@@ -43,6 +43,9 @@ const FilterGraphService = {
     getNodeParameterDefinition: function(slotId, id) {
         return fetch('./slot/' + slotId + '/node/' + id + '/parameterDefinition').then(res => res.json());
     },
+    getNodeModulateableParameters: function(slotId, id) {
+        return fetch('./slot/' + slotId + '/node/' + id + '/modulateableParameters').then(res => res.json());
+    },
     getNodeEffect: function(slotId, id) {
         return fetch('./slot/' + slotId + '/node/' + id + '/effect').then(res => res.json());
     },

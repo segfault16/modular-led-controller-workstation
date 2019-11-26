@@ -91,6 +91,9 @@ class Spectrum(Effect):
         definition['parameters']['col_blend'] = [self.col_blend
                                                  ] + [x for x in colors.blend_modes if x != self.col_blend]
         return definition
+    
+    def getModulateableParameters(self):
+        return [] # Disable all modulations
 
     def _audio_gen(self, audio_gen):
         audio, self._fs_ds = dsp.preprocess(audio_gen, self._fs, self.fmax, self.n_overlaps)
@@ -179,10 +182,7 @@ class VUMeterRMS(Effect):
 
     def __initstate__(self):
         super().__initstate__()
-        try:
-            self._hold_values
-        except AttributeError:
-            self._hold_values = []
+        self._hold_values = []
         self._default_color = None
 
     def numInputChannels(self):
@@ -278,15 +278,11 @@ class VUMeterPeak(Effect):
     def __init__(self, db_range=60.0, n_overlaps=1):
         self.db_range = db_range
         self.n_overlaps = n_overlaps
-        self._default_color = None
         self.__initstate__()
 
     def __initstate__(self):
         super().__initstate__()
-        try:
-            self._hold_values
-        except AttributeError:
-            self._hold_values = []
+        self._hold_values = []
         self._default_color = None
 
     def numInputChannels(self):
@@ -410,10 +406,7 @@ class MovingLight(Effect):
         self._bandpass = None
         self._last_t = 0.0
         self._last_move_t = 0.0
-        try:
-            self._hold_values
-        except AttributeError:
-            self._hold_values = []
+        self._hold_values = []
 
     def numInputChannels(self):
         return 2
@@ -626,7 +619,7 @@ class FallingStars(Effect):
                  min_brightness=0.1,
                  max_spawns=10):
         self.dim_speed = dim_speed
-        self.thickness = thickness  # getting down with it
+        self.thickness = thickness
         self.probability = probability
         self.lowcut_hz = lowcut_hz
         self.highcut_hz = highcut_hz
@@ -931,10 +924,7 @@ class Blink(Effect):
 
     def __initstate__(self):
         super().__initstate__()
-        try:
-            self._hold_values
-        except AttributeError:
-            self._hold_values = []
+        self._hold_values = []
         self._default_color = None
 
     def numInputChannels(self):
@@ -1013,15 +1003,8 @@ class Shift(Effect):
     def __initstate__(self):
         super().__initstate__()
         self._bandpass = None
-        try:
-            self._hold_values
-        except AttributeError:
-            self._hold_values = []
-        try:
-            self._shift_pixels
-        except AttributeError:
-            self._shift_pixels = 0
-
+        self._hold_values = []
+        self._shift_pixels = 0
         self._last_t = self._t
 
     def numInputChannels(self):
