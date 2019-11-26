@@ -18,6 +18,8 @@ wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
 wave_mode_default = 'sin'
 sortby = ['red', 'green', 'blue', 'brightness']
 sortbydefault = 'red'
+wave_pool2 = ['sin(x)', '1/x', '1/(x^2)', '1/(x^3)', 'const(x)', 'x', 'x^2', 'x^3', 'x * e^(-x)', 'all']
+wave_pool2_default = '1/x'
 
 
 class SwimmingPool(Effect):
@@ -187,7 +189,8 @@ class SwimmingPool2(Effect):
                  wavespread_high=70,
                  max_speed=30,
                  directed=False,
-                 direction=False):
+                 direction=False,
+                 wave_pool2=wave_pool2_default):
         self.num_waves = num_waves
         self.scale = scale
         self.wavespread_low = wavespread_low
@@ -195,6 +198,7 @@ class SwimmingPool2(Effect):
         self.max_speed = max_speed
         self.directed = directed
         self.direction = direction
+        self.wave_pool2 = wave_pool2
         self.__initstate__()
 
     def __initstate__(self):
@@ -233,7 +237,8 @@ class SwimmingPool2(Effect):
                 ("wavespread_high", [70, 50, 150, 1]),
                 ("max_speed", [30, 1, 200, 1]),
                 ("directed", False),
-                ("direction", False)
+                ("direction", False),
+                ("wave_pool2", wave_pool2),
             ])
         }
         return definition
@@ -248,7 +253,8 @@ class SwimmingPool2(Effect):
                 "wavespread_high": "Maximum spread of the randomly generated waves.",
                 "max_speed": "Maximum movement speed of the waves.",
                 "directed": "Activate direction of waves.",
-                "direction": "Select left or right."
+                "direction": "Select left or right.",
+                "wave_pool2": "Select type of waves to spawn."
             }
         }
         return help
@@ -262,18 +268,44 @@ class SwimmingPool2(Effect):
         definition['parameters']['max_speed'][0] = self.max_speed
         definition['parameters']['directed'] = self.directed
         definition['parameters']['direction'] = self.direction
+        definition['parameters']['wave_pool2'] = [self.wave_pool2] + [x for x in wave_pool2 if x != self.wave_pool2]
         return definition
+
+    def createFunc(self, t, spread, wave_hight, speed, wave_form):
+        if wave_form == 'sin(x)':
+            func = math.sin(math.pi / spread * t) * wave_hight
+        elif wave_form == '1/x':
+            func = spread / 2 / t * wave_hight
+        elif wave_form == '1/(x^2)':
+            func = spread / 2 / t**2 * wave_hight
+        elif wave_form == '1/(x^3)':
+            func = spread / 2 / t**3 * wave_hight
+        elif wave_form == 'const(x)':
+            func = wave_hight
+        elif wave_form == 'x':
+            func = t * wave_hight / spread
+        elif wave_form == 'x^2':
+            func = t**2 * wave_hight / spread / 10
+        elif wave_form == 'x^3':
+            func = t**3 * wave_hight / spread / 100
+        elif wave_form == 'x * e^(-x)':
+            func = (0.5 / spread) * t * math.exp(-(0.2 / spread) * t) * wave_hight
+        return func
 
     def _SinArray(self, _spread, _wavehight, _speed):
         # Create array for a single wave
         _CArray = []
         _spread = min(int(self._num_pixels / 2) - 1, _spread)
-        for i in range(3, _spread + 1):
-            # differentiate left and right movement
-            if _speed <= 0:
-                _CArray.append((_spread / 20 / i) * _wavehight)
-            else:
-                _CArray.append(-(_spread / 20 / (i - _spread - 1)) * _wavehight)
+
+        # Select the type of waves
+        if self.wave_pool2 == 'all':
+            wave_selector = random.choice(wave_pool2[:-1])
+        else:
+            wave_selector = self.wave_pool2
+
+        for i in range(1, _spread + 1):
+            _CArray.append(self.createFunc(i, _spread, _wavehight, _speed, wave_selector))
+
         _output = np.zeros(self._num_pixels)
         _output[:len(_CArray)] = _CArray
         # Move somewhere
@@ -1157,7 +1189,7 @@ class StaticWave(Effect):
         for i in range(1, spread + 1):
             # make sure we are in bounds of array
             if (location + i) >= 0 and (location + i) < self._num_pixels:
-                waveArray[location + i] = spread / 20 / (i + 1)  # (0.5 / spread) * i * math.exp(-(0.2 / spread) * i)
+                waveArray[location + i] = spread / 20 / (i + 1)
         return waveArray.clip(0.0, 255.0)
 
     def numInputChannels(self):
