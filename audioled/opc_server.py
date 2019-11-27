@@ -1,6 +1,7 @@
 import selectors
 import socket
 import threading
+from typing import List
 from time import sleep
 
 import numpy as np
@@ -13,7 +14,6 @@ class OPCMessage:
     Suppports multiple connections by using selectors.
     Based on https://realpython.com/python-sockets/
     """
-
     def __init__(self, selector, sock, addr, callback, verbose=False):
         """Constructor
         
@@ -110,7 +110,6 @@ class OPCMessage:
         # Call the callback
         if self.callback is not None:
             self.callback(data)
-        
 
     def read(self):
         """Method to handle the read event"""
@@ -129,18 +128,18 @@ class OPCMessage:
             if self.opc_header:
                 if self.messageData is None:
                     self.processMessageData()
-            
+
             # message successfully read
             if self.opc_header and self.messageData:
                 needMoreData = False
                 self._resetData()
-            
+
             # disable callback
             self.callback = None
             if run > 0:
                 self._debug("Frame skipped")
             run += 1
-        
+
         # enable callback again
         self.callback = store_callback
 
@@ -167,7 +166,6 @@ class OPCMessage:
 class ServerThread(object):
     """Thread object to continuously read messages from socket
     """
-
     def __init__(self, host, port, socket, callback, verbose=False):
         """Constructor for thread object
         
@@ -179,7 +177,7 @@ class ServerThread(object):
         self._port = port
         self._socket = socket
         self._callback = callback
-        self._thread = None # type: threading.Thread
+        self._thread = None  # type: threading.Thread
         self._stopSignal = None
         self._verbose = verbose
         self.sel = selectors.DefaultSelector()
@@ -231,7 +229,7 @@ class ServerThread(object):
 
     def getHost(self):
         return self._host
-    
+
     def getPort(self):
         return self._port
 
@@ -278,13 +276,13 @@ class ServerThread(object):
 class Server(object):
 
     # Using static methods here since sockets can be used only once
-    sockets = [] # type: List[socket.socket]
-    all_threads = [] # type: List[ServerThread]
+    sockets = []  # type: List[socket.socket]
+    all_threads = []  # type: List[ServerThread]
 
     def __init__(self, host, port, verbose=True):
         self._host = host
         self._port = port
-        self._socket = None # type: socket.socket
+        self._socket = None  # type: socket.socket
         self._thread = None
         self._lastMessage = None
         self._verbose = verbose
@@ -347,14 +345,13 @@ class Server(object):
         # Transform byte array to pixel shape
         array = np.frombuffer(data, dtype=np.uint8)
         # make sure array can be reshaped
-        #size = int(int(len(array)/3)*3)
-        #array = array[:size]
+        # size = int(int(len(array)/3)*3)
+        # array = array[:size]
         try:
             pixels = array.reshape((-1, 3)).T
             self._lastMessage = pixels
         except Exception as e:
-            print("Error decoding to pixels. array length: {}, error: {}".format(len(array),e))
-        
+            print("Error decoding to pixels. array length: {}, error: {}".format(len(array), e))
 
     def get_pixels(self, block=False):
         isListening = self._ensure_listening()

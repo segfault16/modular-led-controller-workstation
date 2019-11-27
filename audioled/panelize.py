@@ -17,7 +17,6 @@ class MakeSquare(Effect):
     1 2 2 2 2 2 2 1
     1 1 1 1 1 1 1 1
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -78,8 +77,7 @@ class MakeSquare(Effect):
         if self._num_pixels is None:
             return
         if self._mapMask is None or np.size(self._mapMask, 1) != self._num_pixels:
-            self._mapMask = self._genMapMask(self._num_pixels, self._num_rows, self.displacement,
-                                             self.input_displacement)
+            self._mapMask = self._genMapMask(self._num_pixels, self._num_rows, self.displacement, self.input_displacement)
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -121,7 +119,6 @@ class MakeSquare(Effect):
 
 
 class MakeBatman(MakeSquare):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -146,7 +143,6 @@ class MakeBatman(MakeSquare):
 
 
 class MakeRuby(MakeSquare):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -184,7 +180,6 @@ class MakeDiamond(MakeSquare):
     1 1 1 2 2 2 1 1
     1 1 1 1 1 1 1 1
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -256,7 +251,6 @@ def next_dir(cur_dir, cur_row, cur_col, visited, pref_dir, allowed_row_range):
 
 
 class MakeLabyrinth(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -374,7 +368,6 @@ class MakeLabyrinth(Effect):
 
 
 class FlipRows(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -394,19 +387,18 @@ class FlipRows(Effect):
 
     def numInputChannels(self):
         return 1
-    
+
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters":
-            OrderedDict([
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
                 ("flip_odd_rows", False),
                 ("flip_even_rows", True),
             ])
         }
         return definition
-    
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -425,7 +417,7 @@ class FlipRows(Effect):
 
     async def update(self, dt):
         await super().update(dt)
-    
+
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
@@ -446,6 +438,5 @@ class FlipRows(Effect):
                     buffer[:, row * cols:(row + 1) * cols] = self._inputBuffer[0][:, row * cols:(row + 1) * cols][:, ::-1]
                 else:
                     buffer[:, row * cols:(row + 1) * cols] = self._inputBuffer[0][:, row * cols:(row + 1) * cols]
-        
-        self._outputBuffer[0] = buffer
 
+        self._outputBuffer[0] = buffer

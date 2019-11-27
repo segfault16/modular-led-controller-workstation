@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import colorsys
 import math
@@ -77,7 +76,6 @@ def rgb_to_hsv(rgb):
 
 
 class StaticRGBColor(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -150,19 +148,12 @@ class StaticRGBColor(Effect):
 class ColorWheel(Effect):
     """ Generates colors
     """
-
     @staticmethod
     def getEffectDescription():
         return \
             "The ColorWheel moves through the HSV color space and outputs the color."
 
-    def __init__(self,
-                 cycle_time=30.0,
-                 offset=0.0,
-                 luminocity=0.5,
-                 saturation=1.0,
-                 wiggle_amplitude=0.0,
-                 wiggle_time=0.0):
+    def __init__(self, cycle_time=30.0, offset=0.0, luminocity=0.5, saturation=1.0, wiggle_amplitude=0.0, wiggle_time=0.0):
         self.cycle_time = cycle_time
         self.offset = offset
         self.wiggle_amplitude = wiggle_amplitude
@@ -212,12 +203,18 @@ class ColorWheel(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "cycle_time": "Amount of time the Color Wheel needs to cycle through the hue values of the color space.",
-                "offset": "Offset of the Color Wheel.",
-                "luminocity": "Luminocity of the color space.",
-                "saturation": "Color saturation.",
-                "wiggle_time": "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. This parameter controls the frequency of the wiggle.",
-                "wiggle_amplitude": "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. This parameter controls the amplitude of the wiggle.",
+                "cycle_time":
+                "Amount of time the Color Wheel needs to cycle through the hue values of the color space.",
+                "offset":
+                "Offset of the Color Wheel.",
+                "luminocity":
+                "Luminocity of the color space.",
+                "saturation":
+                "Color saturation.",
+                "wiggle_time":
+                "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. This parameter controls the frequency of the wiggle.",
+                "wiggle_amplitude":
+                "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. This parameter controls the amplitude of the wiggle.",
             }
         }
         return help
@@ -250,7 +247,6 @@ class ColorWheel(Effect):
 
 
 class InterpolateRGB(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -279,7 +275,6 @@ class InterpolateRGB(Effect):
 
 
 class InterpolateHSV(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -320,13 +315,13 @@ class RGBToHSV(Effect):
     def getEffectDescription():
         return \
             "Switches encoding from RGB to HSV encoding"
-    
+
     def __init__(self):
         self.__initstate__()
-    
+
     def numInputChannels(self):
         return 1
-    
+
     def numOutputChannels(self):
         return 1
 
@@ -349,13 +344,13 @@ class HSVToRGB(Effect):
     def getEffectDescription():
         return \
             "Switches encoding from HSV to RGB encoding"
-    
+
     def __init__(self):
         self.__initstate__()
-    
+
     def numInputChannels(self):
         return 1
-    
+
     def numOutputChannels(self):
         return 1
 

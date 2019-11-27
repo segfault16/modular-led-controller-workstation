@@ -23,7 +23,6 @@ class Effect(object):
     Input values can be accessed by self._inputBuffer[channelNumber], output values
     are to be written into self_outputBuffer[channelNumber].
     """
-
     def __init__(self):
         self.__initstate__()
 
@@ -130,11 +129,11 @@ class Effect(object):
     @staticmethod
     def getParameterDefinition():
         return {}
-        
+
     @staticmethod
     def getParameterHelp():
         return {}
-    
+
     @staticmethod
     def getEffectDescription():
         return ""
@@ -168,7 +167,7 @@ class Effect(object):
         self._num_rows = num_rows
         if num_rows is not None:
             self._num_rows = int(num_rows)
-    
+
     def getNumOutputRows(self):
         return self._num_rows
 

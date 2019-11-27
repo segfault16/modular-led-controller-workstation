@@ -36,7 +36,6 @@ class Project(Updateable):
             if slot is not None:
                 slot._project = self
 
-
     def setDevice(self, device):
         self._device = device
 

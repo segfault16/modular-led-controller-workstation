@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import itertools
 import math
@@ -232,7 +231,7 @@ class Bandpass():
         self._highcut = highcut
         self._order = order
         self._initFilter()
-         
+
     def filter(self, audio, fs):
         if fs != self._fs:
             self._initFilter()

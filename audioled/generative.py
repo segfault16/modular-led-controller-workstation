@@ -2,7 +2,6 @@ from __future__ import (absolute_import, division, print_function, unicode_liter
 
 import math
 import random
-import threading
 from collections import OrderedDict
 import os.path
 
@@ -22,7 +21,6 @@ sortbydefault = 'red'
 
 class SwimmingPool(Effect):
     """Generates a wave effect to look like the reflection on the bottom of a swimming pool."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -135,8 +133,8 @@ class SwimmingPool(Effect):
 
         if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < self.num_waves:
 
-            self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low,
-                                                                self.wavespread_high, self.max_speed)
+            self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low, self.wavespread_high,
+                                                                self.max_speed)
         # Rotate waves
         self._rotate_counter += 1
         if self._rotate_counter > 30:
@@ -176,7 +174,6 @@ class DefenceMode(Effect):
     """Generates a colorchanging strobe light effect.
     The mode to defend against all kinds of attackers.
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -212,7 +209,6 @@ class DefenceMode(Effect):
 
 class MidiKeyboard(Effect):
     """Effect for handling midi inputs."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -304,8 +300,7 @@ class MidiKeyboard(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        definition['parameters']['midiPort'] = [self.midiPort
-                                                ] + [x for x in MidiKeyboard.getMidiPorts() if x != self.midiPort]
+        definition['parameters']['midiPort'] = [self.midiPort] + [x for x in MidiKeyboard.getMidiPorts() if x != self.midiPort]
         definition['parameters']['attack'][0] = self.attack
         definition['parameters']['decay'][0] = self.decay
         definition['parameters']['sustain'][0] = self.sustain
@@ -367,7 +362,6 @@ class MidiKeyboard(Effect):
 
 class Breathing(Effect):
     """Effect for simulating breathing behavior over brightness."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -423,16 +417,12 @@ class Breathing(Effect):
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self._outputBuffer is not None:
             brightness = self.oneStar(self._t, self.cycle)
-            self._output = np.multiply(color,
-                                       np.ones(self._num_pixels) * np.array([[brightness],
-                                                                             [brightness],
-                                                                             [brightness]]))
+            self._output = np.multiply(color, np.ones(self._num_pixels) * np.array([[brightness], [brightness], [brightness]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class Heartbeat(Effect):
     """Effect for simulating a beating heart over brightness."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -489,16 +479,12 @@ class Heartbeat(Effect):
             color = self._inputBuffer[0]
 
         brightness = self.oneStar(self._t, self.speed)
-        self._output = np.multiply(color,
-                                   np.ones(self._num_pixels) * np.array([[brightness],
-                                                                         [brightness],
-                                                                         [brightness]]))
+        self._output = np.multiply(color, np.ones(self._num_pixels) * np.array([[brightness], [brightness], [brightness]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class FallingStars(Effect):
     """Effect for creating random stars that fade over time."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -602,25 +588,23 @@ class FallingStars(Effect):
         if color is None:
             color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
         if self._outputBuffer is not None:
-            
+
             self._output = np.multiply(
                 color,
-                self.starControl(self.probability) * np.array([[self.max_brightness * 1.0], [self.max_brightness * 1.0],
-                                                             [self.max_brightness * 1.0]]))
-        
+                self.starControl(self.probability) *
+                np.array([[self.max_brightness * 1.0], [self.max_brightness * 1.0], [self.max_brightness * 1.0]]))
+
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
 class Pendulum(Effect):
     """Generates a blob of light to swing back and forth."""
-
     @staticmethod
     def getEffectDescription():
         return \
             "Generates a blob of light to swing back and forth."
 
-    def __init__(self, spread=0.03, location=0.5, displacement=0.15, heightactivator=True, lightflip=True,
-                 swingspeed=1):
+    def __init__(self, spread=0.03, location=0.5, displacement=0.15, heightactivator=True, lightflip=True, swingspeed=1):
 
         self.spread = spread
         self.location = location
@@ -691,8 +675,10 @@ class Pendulum(Effect):
 
     def moveBlob(self, blobArray, displacement_rel, swingspeed):
         displacement = displacement_rel * self._num_pixels
-        outputArray = sp.ndimage.interpolation.shift(
-            blobArray, displacement * math.sin(self._t * swingspeed), mode='wrap', prefilter=True)
+        outputArray = sp.ndimage.interpolation.shift(blobArray,
+                                                     displacement * math.sin(self._t * swingspeed),
+                                                     mode='wrap',
+                                                     prefilter=True)
         return outputArray
 
     def controlBlobs(self):
@@ -727,7 +713,6 @@ class Pendulum(Effect):
 
 class RandomPendulums(Effect):
     """Randomly generates a number of pendulums."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -839,8 +824,8 @@ class RandomPendulums(Effect):
                     lightconfig = -1.0
                 else:
                     lightconfig = 1.0
-                configArray = lightconfig * self.dim * math.cos(2 * self._t + self._offset[i]) * np.array([[1.0], [1.0],
-                                                                                                           [1.0]])
+                configArray = lightconfig * self.dim * math.cos(2 * self._t + self._offset[i]) * np.array([[1.0], [1.0], [1.0]
+                                                                                                           ])
             else:
                 configArray = np.array([[1.0 * self.dim], [1.0 * self.dim], [1.0 * self.dim]])
             self._output += np.multiply(
@@ -852,7 +837,6 @@ class RandomPendulums(Effect):
 
 class StaticBlob(Effect):
     """Generates a blob of light. Mostly for testing purposes."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -931,7 +915,6 @@ class StaticBlob(Effect):
 
 class GenerateWaves(Effect):
     """Effect for displaying different wave forms."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -1041,7 +1024,6 @@ class GenerateWaves(Effect):
 
 class Sorting(Effect):
     """Effect for sorting an input by color or brightness."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -1068,8 +1050,7 @@ class Sorting(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters":
-            OrderedDict([
+            "parameters": OrderedDict([
                 # default, min, max, stepsize
                 ("sortby", sortby),
                 ("reversed", False),
@@ -1271,11 +1252,9 @@ class GIFPlayer(Effect):
             num_cols = int(self._num_pixels / self._num_rows)
             # Resize image
             if self._gif is not None:
-                self._cur_image = ImageOps.fit(
-                    self._gif.convert('RGB'),
-                    (num_cols, self._num_rows),
-                    Image.ANTIALIAS,
-                    centering=(self.center_x, self.center_y))
+                self._cur_image = ImageOps.fit(self._gif.convert('RGB'), (num_cols, self._num_rows),
+                                               Image.ANTIALIAS,
+                                               centering=(self.center_x, self.center_y))
             # update time
             self._last_t = self._t
 
