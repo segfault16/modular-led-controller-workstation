@@ -15,7 +15,7 @@ jobs:
         python-version: 3.7
     - name: Install dependencies
       run: |
-        sudo apt-get install libasound-dev
+        sudo apt-get install portaudio19-dev
         python -m pip install --upgrade pip
         pip install pipenv
     - name: Create pipenv

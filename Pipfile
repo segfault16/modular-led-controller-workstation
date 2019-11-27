@@ -21,7 +21,7 @@ python-rtmidi = "*"
 apscheduler = "*"
 pillow = "*"
 rpi-ws281x = {version = "*",sys_platform = "== 'linux'"}
-pyaudio = "*"
+pyaudio = {editable = true,git = "https://github.com/segfault16/pyAudio.git"}
 
 [requires]
 python_version = "3.7"
