@@ -1,3 +1,4 @@
 [style]
-column_limit = 120
+based_on_style = pep8
+column_limit = 127
 SPLIT_ARGUMENTS_WHEN_COMMA_TERMINATED = true
