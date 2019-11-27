@@ -4,8 +4,10 @@ on: [push]
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
 
     steps:
     - uses: actions/checkout@v1
@@ -13,9 +15,16 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.7
-    - name: Install dependencies
+    - name: Install linux dependencies
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get install portaudio19-dev
+    - name: Install macOS dependencies
+      if: matrix.os == 'macOS-latest'
+      run: |
+        brew install portaudio
+    - name: Install pipenv
+      run: |
         python -m pip install --upgrade pip
         pip install pipenv
     - name: Create pipenv
