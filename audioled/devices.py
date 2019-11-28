@@ -8,16 +8,15 @@ import numpy as np
 from audioled.effect import Effect
 
 _GAMMA_TABLE = [
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6,
-    6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19,
-    20, 20, 21, 21, 22, 23, 23, 24, 24, 25, 26, 26, 27, 28, 28, 29, 30, 30, 31, 32, 32, 33, 34, 35, 35, 36, 37, 38, 38,
-    39, 40, 41, 42, 42, 43, 44, 45, 46, 47, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 56, 57, 58, 59, 60, 61, 62, 63, 64,
-    65, 66, 67, 68, 69, 70, 71, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 91, 92, 93, 94, 95, 97,
-    98, 99, 100, 102, 103, 104, 105, 107, 108, 109, 111, 112, 113, 115, 116, 117, 119, 120, 121, 123, 124, 126, 127,
-    128, 130, 131, 133, 134, 136, 137, 139, 140, 142, 143, 145, 146, 148, 149, 151, 152, 154, 155, 157, 158, 160, 162,
-    163, 165, 166, 168, 170, 171, 173, 175, 176, 178, 180, 181, 183, 185, 186, 188, 190, 192, 193, 195, 197, 199, 200,
-    202, 204, 206, 207, 209, 211, 213, 215, 217, 218, 220, 222, 224, 226, 228, 230, 232, 233, 235, 237, 239, 241, 243,
-    245, 247, 249, 251, 253, 255
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6,
+    7, 7, 7, 8, 8, 8, 9, 9, 9, 10, 10, 11, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21,
+    21, 22, 23, 23, 24, 24, 25, 26, 26, 27, 28, 28, 29, 30, 30, 31, 32, 32, 33, 34, 35, 35, 36, 37, 38, 38, 39, 40, 41, 42, 42,
+    43, 44, 45, 46, 47, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71,
+    73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 91, 92, 93, 94, 95, 97, 98, 99, 100, 102, 103, 104, 105,
+    107, 108, 109, 111, 112, 113, 115, 116, 117, 119, 120, 121, 123, 124, 126, 127, 128, 130, 131, 133, 134, 136, 137, 139,
+    140, 142, 143, 145, 146, 148, 149, 151, 152, 154, 155, 157, 158, 160, 162, 163, 165, 166, 168, 170, 171, 173, 175, 176,
+    178, 180, 181, 183, 185, 186, 188, 190, 192, 193, 195, 197, 199, 200, 202, 204, 206, 207, 209, 211, 213, 215, 217, 218,
+    220, 222, 224, 226, 228, 230, 232, 233, 235, 237, 239, 241, 243, 245, 247, 249, 251, 253, 255
 ]
 _GAMMA_TABLE = np.array(_GAMMA_TABLE)
 
@@ -35,7 +34,6 @@ class LEDController:
         device = LEDController()
         device.show(pixels)
     """
-
     def __init__(self, num_pixels, num_rows=1, brightness=1.0):
         self.num_pixels = num_pixels
         self.num_rows = num_rows
@@ -53,10 +51,10 @@ class LEDController:
 
     def getNumPixels(self):
         return self.num_pixels
-    
+
     def setNumPixels(self, num_pixels):
         self.num_pixels = num_pixels
-    
+
     def getNumRows(self):
         return self.num_rows
 
@@ -239,13 +237,12 @@ class RaspberryPi(LEDController):
         try:
             import rpi_ws281x
             print('init')
-            self._strip = rpi_ws281x.PixelStrip(
-                num=self.num_pixels,
-                pin=self.pin,
-                freq_hz=self.freq_hz,
-                dma=self.dma,
-                invert=self.invert,
-                brightness=self.brightness)
+            self._strip = rpi_ws281x.PixelStrip(num=self.num_pixels,
+                                                pin=self.pin,
+                                                freq_hz=self.freq_hz,
+                                                dma=self.dma,
+                                                invert=self.invert,
+                                                brightness=self.brightness)
             self._strip.begin()
         except ImportError:
             url = 'learn.adafruit.com/neopixels-on-raspberry-pi/software'
@@ -334,7 +331,6 @@ class DotStar(LEDController):
 
 
 class LEDOutput(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -359,11 +355,7 @@ class LEDOutput(Effect):
 
     @staticmethod
     def getParameterHelp():
-        help = {
-            "parameters": {
-                "brightness": "Adjust brightness of all pixels."
-            }
-        }
+        help = {"parameters": {"brightness": "Adjust brightness of all pixels."}}
         return help
 
     def numInputChannels(self):
@@ -387,7 +379,7 @@ class LEDOutput(Effect):
 
 class PanelWrapper(LEDController):
     """Device Wrapper for LED Panels
-    
+
     This class can be used as a wrapper for arbitrary devices and maps
     2d pixel information to the correct pixels on a LED panel.
     A LED panel is assumed to be a combination of short LED strips forming
@@ -416,7 +408,6 @@ class PanelWrapper(LEDController):
         ]
     }
     """
-
     def __init__(self, device, mappingJson):
         self.device = device
         self.num_pixels = device.num_pixels
@@ -424,19 +415,19 @@ class PanelWrapper(LEDController):
         self.pixel_mapping = None
         if mappingJson is not None:
             self.pixel_mapping = self._createPixelMapping(mappingJson)
-    
+
     def getBrightness(self):
         return self.device.getBrightness()
-    
+
     def setBrightness(self, value):
         self.device.setBrightness(value)
-    
+
     def getNumPixels(self):
         return self.device.getNumPixels()
 
     def setNumPixels(self, num_pixels):
         self.device.setNumPixels(num_pixels)
-    
+
     def getNumRows(self):
         return self.device.getNumRows()
 
@@ -448,10 +439,11 @@ class PanelWrapper(LEDController):
         if self.pixel_mapping is not None:
             mapped_pixels = pixels[self.pixel_mapping[:, :, 0], self.pixel_mapping[:, :, 1]]
         self.device.show(mapped_pixels)
-    
+
     def _createPixelMapping(self, mappingJson):
         def toIdx(row, col, num_cols):
             return row * num_cols + col
+
         num_rows = mappingJson['num_rows']
         num_cols = mappingJson['num_cols']
         mapping = np.zeros((3, num_rows * num_cols, 2), dtype=np.int64)
@@ -478,6 +470,7 @@ class PanelWrapper(LEDController):
                 else:
                     cur_row = cur_row + 1
         return mapping
+
 
 # # Execute this file to run a LED strand test
 # # If everything is working, you should see a red, green, and blue pixel scroll

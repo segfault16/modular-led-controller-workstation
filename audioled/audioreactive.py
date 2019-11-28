@@ -28,7 +28,6 @@ class Spectrum(Effect):
     - 0: Pixel array
 
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -88,12 +87,11 @@ class Spectrum(Effect):
 
     def getParameter(self):
         definition = super().getParameter()
-        definition['parameters']['col_blend'] = [self.col_blend
-                                                 ] + [x for x in colors.blend_modes if x != self.col_blend]
+        definition['parameters']['col_blend'] = [self.col_blend] + [x for x in colors.blend_modes if x != self.col_blend]
         return definition
-    
+
     def getModulateableParameters(self):
-        return [] # Disable all modulations
+        return []  # Disable all modulations
 
     def _audio_gen(self, audio_gen):
         audio, self._fs_ds = dsp.preprocess(audio_gen, self._fs, self.fmax, self.n_overlaps)
@@ -169,7 +167,6 @@ class VUMeterRMS(Effect):
     - 0: Audio
     - 1: Color
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -223,7 +220,7 @@ class VUMeterRMS(Effect):
             # green to red from -24 to 0
             h_a, s_a, v_a = colorsys.rgb_to_hsv(0, 1, 0)
             h_b, s_b, v_b = colorsys.rgb_to_hsv(1, 0, 0)
-            scal_value = max((self.db_range + (-24)) / self.db_range, 0) # clip to positive if db_range < 24
+            scal_value = max((self.db_range + (-24)) / self.db_range, 0)  # clip to positive if db_range < 24
             index = int(self._num_pixels * scal_value)
             num_pix = self._num_pixels - index
             interp_v = np.linspace(v_a, v_b, num_pix)
@@ -269,7 +266,6 @@ class VUMeterPeak(Effect):
     - 0: Audio
     - 1: Color
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -323,7 +319,7 @@ class VUMeterPeak(Effect):
             # green to red from -24 to 0
             h_a, s_a, v_a = colorsys.rgb_to_hsv(0, 1, 0)
             h_b, s_b, v_b = colorsys.rgb_to_hsv(1, 0, 0)
-            scal_value = max((self.db_range + (-24)) / self.db_range, 0) # clip to positive if db_range < 24
+            scal_value = max((self.db_range + (-24)) / self.db_range, 0)  # clip to positive if db_range < 24
             index = int(self._num_pixels * scal_value)
             num_pix = self._num_pixels - index
             interp_v = np.linspace(v_a, v_b, num_pix)
@@ -373,7 +369,6 @@ class MovingLight(Effect):
     - 0: Audio
     - 1: Color
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -436,22 +431,15 @@ class MovingLight(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "speed":
-                "Speed of the moving peak.",
-                "dim_time":
-                "Amount of time for the afterglow of the moving peak.",
-                "lowcut_hz":
-                "Lowcut frequency of the audio input.",
-                "highcut_hz":
-                "Highcut frequency of the audio input.",
+                "speed": "Speed of the moving peak.",
+                "dim_time": "Amount of time for the afterglow of the moving peak.",
+                "lowcut_hz": "Lowcut frequency of the audio input.",
+                "highcut_hz": "Highcut frequency of the audio input.",
                 "peak_filter":
                 "Filters the audio peaks. Increase this value to transform only high audio peaks into visual peaks.",
-                "peak_scale":
-                "Scales the visual peak after the filter.",
-                "highlight":
-                "Amount of white light added to the audio peak.",
-                "smoothing":
-                "Smoothing of the moving peak.",
+                "peak_scale": "Scales the visual peak after the filter.",
+                "highlight": "Amount of white light added to the audio peak.",
+                "smoothing": "Smoothing of the moving peak.",
             }
         }
         return help
@@ -487,8 +475,9 @@ class MovingLight(Effect):
             self._pixel_state[:, shift_pixels:] = self._pixel_state[:, :-shift_pixels]
             self._pixel_state[:, 0:shift_pixels] = self._pixel_state[:, shift_pixels:shift_pixels + 1]
             # convolve to smooth edges
-            self._pixel_state[:, 0:2 * shift_pixels] = gaussian_filter1d(
-                self._pixel_state[:, 0:2 * shift_pixels], sigma=0.5, axis=1)
+            self._pixel_state[:, 0:2 * shift_pixels] = gaussian_filter1d(self._pixel_state[:, 0:2 * shift_pixels],
+                                                                         sigma=0.5,
+                                                                         axis=1)
             self._last_move_t = self._t
         # dim with time
         dt = self._t - self._last_t
@@ -524,7 +513,6 @@ class Bonfire(Effect):
     - 0: Audio
     - 1: Pixels
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -594,15 +582,13 @@ class Bonfire(Effect):
         y = self._bandpass.filter(np.array(audio), fs)
         peak = np.max(y) * 1.0
 
-        pixelbuffer[0] = sp.ndimage.interpolation.shift(
-            pixelbuffer[0], -self.spread * peak, mode='wrap', prefilter=True)
+        pixelbuffer[0] = sp.ndimage.interpolation.shift(pixelbuffer[0], -self.spread * peak, mode='wrap', prefilter=True)
         pixelbuffer[2] = sp.ndimage.interpolation.shift(pixelbuffer[2], self.spread * peak, mode='wrap', prefilter=True)
         self._outputBuffer[0] = pixelbuffer
 
 
 class FallingStars(Effect):
     """Effect for creating random stars that fade over time."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -661,24 +647,16 @@ class FallingStars(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "lowcut_hz":
-                "Lowcut frequency of the audio input.",
-                "highcut_hz":
-                "Highcut frequency of the audio input.",
+                "lowcut_hz": "Lowcut frequency of the audio input.",
+                "highcut_hz": "Highcut frequency of the audio input.",
                 "peak_filter":
                 "Filters the audio peaks. Increase this value to transform only high audio peaks into visual peaks.",
-                "peak_scale":
-                "Scales the visual peak after the filter.",
-                "dim_speed":
-                "Time to fade out one star.",
-                "thickness":
-                "Thickness of one star in pixels.",
-                "probability":
-                "Probability of spawning a new star even if there's no audio peak.",
-                "max_spawns":
-                "Maximum number of spawning stars per frame.",
-                "min_brightness":
-                "Adjust minimum brightness of stars."
+                "peak_scale": "Scales the visual peak after the filter.",
+                "dim_speed": "Time to fade out one star.",
+                "thickness": "Thickness of one star in pixels.",
+                "probability": "Probability of spawning a new star even if there's no audio peak.",
+                "max_spawns": "Maximum number of spawning stars per frame.",
+                "min_brightness": "Adjust minimum brightness of stars."
             }
         }
         return help
@@ -708,8 +686,8 @@ class FallingStars(Effect):
                 if i < len(spawnSpot):
                     index = spawnSpot[i] + j
                     if index < self._num_pixels:
-                        oneStarArray[index] = math.exp(-(100 / dim_speed) * (self._t - t0[i])) * max(
-                            self.min_brightness, peak[i])
+                        tmp = math.exp(-(100 / dim_speed) * (self._t - t0[i])) * max(self.min_brightness, peak[i])
+                        oneStarArray[index] = tmp
             controlArray.append(oneStarArray)
         return controlArray
 
@@ -717,8 +695,7 @@ class FallingStars(Effect):
         for i in range(int(self.max_spawns)):
             if random.random() <= prob:
                 self.spawnStar(peak)
-        outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray,
-                                    self._peakArray)
+        outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray, self._peakArray)
         return np.sum(outputArray, axis=0)
 
     async def update(self, dt):
@@ -754,8 +731,8 @@ class FallingStars(Effect):
         if self._outputBuffer is not None:
             self._output = np.multiply(
                 color,
-                self.starControl(prob, peak) * np.array([[self.peak_scale * 1.0], [self.peak_scale * 1.0],
-                                                         [self.peak_scale * 1.0]]))
+                self.starControl(prob, peak)
+                * np.array([[self.peak_scale * 1.0], [self.peak_scale * 1.0], [self.peak_scale * 1.0]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
@@ -971,8 +948,7 @@ class Blink(Effect):
         rms = dsp.rms(self._hold_values)
         db = 20 * math.log10(max(rms, 1e-16))
         scal_value = (self.db_range + db) / self.db_range
-        self._outputBuffer[0] = self._inputBuffer[1] * (
-            1 - self.amount) + self._inputBuffer[1] * scal_value * self.amount
+        self._outputBuffer[0] = self._inputBuffer[1] * (1 - self.amount) + self._inputBuffer[1] * scal_value * self.amount
 
 
 class Shift(Effect):
@@ -1034,20 +1010,14 @@ class Shift(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "db_range":
-                "dB range of Shift to work in.",
-                "smoothing":
-                "Smoothing of the shift.",
-                "speed":
-                "Speed of the shifting effect.",
-                "lowcut_hz":
-                "Lowcut frequency of the audio input.",
-                "highcut_hz":
-                "Highcut frequency of the audio input.",
+                "db_range": "dB range of Shift to work in.",
+                "smoothing": "Smoothing of the shift.",
+                "speed": "Speed of the shifting effect.",
+                "lowcut_hz": "Lowcut frequency of the audio input.",
+                "highcut_hz": "Highcut frequency of the audio input.",
                 "peak_filter":
                 "Filters the audio peaks. Increase this value to transform only high audio peaks into visual peaks.",
-                "peak_scale":
-                "Scales the visual peak after the filter.",
+                "peak_scale": "Scales the visual peak after the filter.",
             }
         }
         return help

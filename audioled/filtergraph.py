@@ -4,8 +4,8 @@ import traceback
 from timeit import default_timer as timer
 from typing import List
 
+from audioled import modulation
 from audioled import devices
-from audioled import generative
 from audioled import effect
 
 
@@ -19,7 +19,7 @@ class NodeException(Exception):
 
 class Node(object):
     def __init__(self, effect):
-        self.effect = effect # type: effect.Effect
+        self.effect = effect  # type: effect.Effect
         self.uid = None
         # TODO: Improve consistency with numInputChannels and numOutputChannels
         self.numInputChannels = 0
@@ -29,9 +29,9 @@ class Node(object):
         self.numOutputChannels = self.effect.numOutputChannels()
 
     def __initstate__(self):
-        
+
         self.effect.numOutputChannels()
-        
+
         self._outputBuffer = [None for i in range(0, self.effect.numOutputChannels())]
         self._inputBuffer = [None for i in range(0, self.effect.numInputChannels())]
         self._incomingConnections = []
@@ -104,7 +104,7 @@ class ModulationSourceNode(object):
     """Wraps a source of modulation
     """
     def __init__(self, modulator):
-        self.modulator = modulator # type: modulation.ModulationSource
+        self.modulator = modulator  # type: modulation.ModulationSource
         self.uid = None
 
     def update(self, dt):
@@ -118,11 +118,11 @@ class Modulation(object):
     def __init__(self, modulationSourceNode, amount, inverted, targetNode, targetParameter):
         assert isinstance(modulationSourceNode, ModulationSourceNode)
         assert isinstance(targetNode, Node)
-        self.modulationSource = modulationSourceNode # type: ModulationSourceNode
+        self.modulationSource = modulationSourceNode  # type: ModulationSourceNode
         self.amount = amount
         self.inverted = inverted
-        self.targetNode = targetNode # type: Node
-        self.targetEffect = targetNode.effect # type: effect.Effect
+        self.targetNode = targetNode  # type: Node
+        self.targetEffect = targetNode.effect  # type: effect.Effect
         self.targetParameter = targetParameter
         self.uid = None
 
@@ -135,7 +135,7 @@ class Modulation(object):
         state['inverted'] = self.inverted
         state['uid'] = self.uid
         return state
-    
+
     def __setstate__(self, state):
         targetParam = state.get('target_param', None)
         if targetParam is not None:
@@ -144,7 +144,7 @@ class Modulation(object):
 
     def updateParameter(self, stateDict):
         self.__setstate__(stateDict)
-    
+
     def propagate(self):
         if self.modulationSource is None or self.targetEffect is None or self.targetParameter is None:
             return
@@ -161,7 +161,7 @@ class Modulation(object):
         newOffset = curOffset + newOffset
         self.targetEffect.setParameterOffset(self.targetParameter, self.targetEffect.getParameterDefinition(), newOffset)
         self._lastValue = curValue
-    
+
 
 class Timing(object):
     def __init__(self):
@@ -196,15 +196,15 @@ class FilterGraph(Updateable):
     def __init__(self, recordTimings=False, asyncUpdate=True):
         self.recordTimings = recordTimings
         self.asyncUpdate = asyncUpdate
-        self._filterConnections = [] # type: List[Connection]
-        self._filterNodes = [] # type: List[Node]
-        self._processOrder = [] # type: List[Node]
+        self._filterConnections = []  # type: List[Connection]
+        self._filterNodes = []  # type: List[Node]
+        self._processOrder = []  # type: List[Node]
         self._updateTimings = {}
         self._processTimings = {}
         self._outputNode = None
         self._project = None
-        self._modulationSources = [] # type: List[ModulationSourceNode]
-        self._modulations = [] # type: List[Modulation]
+        self._modulationSources = []  # type: List[ModulationSourceNode]
+        self._modulations = []  # type: List[Modulation]
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         if self._outputNode is None:
@@ -293,7 +293,6 @@ class FilterGraph(Updateable):
         ----------
         filterNode: node to add
         """
-        #print("add node {}".format(effect))
         effect._filterGraph = self
         node = Node(effect)
         node.uid = uuid.uuid4().hex
@@ -315,9 +314,7 @@ class FilterGraph(Updateable):
         filterNode: node to remove
         """
         # Remove connections
-        connections = [
-            con for con in self._filterConnections if con.fromNode.effect == effect or con.toNode.effect == effect
-        ]
+        connections = [con for con in self._filterConnections if con.fromNode.effect == effect or con.toNode.effect == effect]
         for con in connections:
             self._filterConnections.remove(con)
         # Remove Node
@@ -334,9 +331,9 @@ class FilterGraph(Updateable):
         """Adds a connection between two filters
         """
         # find fromNode
-        fromNode = next(node for node in self._filterNodes if node.effect == fromEffect) # type: Node
+        fromNode = next(node for node in self._filterNodes if node.effect == fromEffect)  # type: Node
         # find toNode
-        toNode = next(node for node in self._filterNodes if node.effect == toEffect) # type: Node
+        toNode = next(node for node in self._filterNodes if node.effect == toEffect)  # type: Node
         # construct connection
         newConnection = Connection(fromNode, fromEffectChannel, toNode, toEffectChannel)
         newConnection.uid = uuid.uuid4().hex
@@ -350,8 +347,6 @@ class FilterGraph(Updateable):
     def addNodeConnection(self, fromNodeUid, fromEffectChannel, toNodeUid, toEffectChannel):
         """Adds a connection between two filters based on node uid
         """
-        #print("add node connection from {} channel {} to {} channel {}".format(fromNodeUid, fromEffectChannel,
-        #                                                                       toNodeUid, toEffectChannel))
         fromNode = next(node for node in self._filterNodes if node.uid == fromNodeUid)
         toNode = next(node for node in self._filterNodes if node.uid == toNodeUid)
         newConnection = Connection(fromNode, fromEffectChannel, toNode, toEffectChannel)
@@ -385,7 +380,7 @@ class FilterGraph(Updateable):
         modSourceNode.uid = uuid.uuid4().hex
         self._modulationSources.append(modSourceNode)
         return modSourceNode
-    
+
     def removeModulationSource(self, modSourceUid):
         """Removes a modulation source with the given uid
         """
@@ -400,8 +395,8 @@ class FilterGraph(Updateable):
             self.removeModulation(mod.uid)
 
         # delete modSourceNode
-        self._modulationSources.remove(modSourceNode)    
-    
+        self._modulationSources.remove(modSourceNode)
+
     def addModulation(self, modSourceUid, targetNodeUid, targetParam=None, amount=0, inverted=False):
         """Adds a modulation driven by a modulationSource
         """
@@ -415,14 +410,14 @@ class FilterGraph(Updateable):
     def removeModulation(self, modUid):
         """Removes a modulation driven by a modulationSource
         """
-        mod = next(mod for mod in self._modulations if mod.uid == modUid) # type: Modulation
+        mod = next(mod for mod in self._modulations if mod.uid == modUid)  # type: Modulation
         if mod is not None:
             # Reset parameter offset
             if mod.targetParameter is not None:
                 mod.targetEffect.setParameterOffset(mod.targetParameter, mod.targetEffect.getParameterDefinition(), 0)
-            
+
             # Remove modulation
-            self._modulations.remove(mod)        
+            self._modulations.remove(mod)
 
     def _updateProcessOrder(self):
         processOrder = []
@@ -430,13 +425,12 @@ class FilterGraph(Updateable):
             print("No output node")
             return
 
-        #print("Updating process order")
         unprocessedNodes = self._filterNodes.copy()
         processOrder.append(self._outputNode)
         unprocessedNodes.remove(self._outputNode)
 
         fatalError = False
-        
+
         while not fatalError and len(unprocessedNodes) > 0:
             sizeBefore = len(unprocessedNodes)
             curProcessOrder = processOrder.copy()
@@ -452,14 +446,11 @@ class FilterGraph(Updateable):
                         continue
 
                 if satisfied:
-                    #print("Appending {}".format(node.effect))
                     processOrder.append(node)
                     unprocessedNodes.remove(node)
-                    
+
             sizeAfter = len(unprocessedNodes)
             fatalError = sizeAfter == sizeBefore
-
-        #print("{} nodes total, {} nodes have not been processed".format(len(processOrder), len(unprocessedNodes)))
 
         # Check remaining unprocessed nodes for circular connections
         # for node in unprocessedNodes:
@@ -486,13 +477,11 @@ class FilterGraph(Updateable):
                 iNode = con.fromNode
                 # propagate pixels
                 if iNode is not None:
-                    #print("setting {} pixels with {} rows for {}".format(num_pixels, num_rows, iNode.effect))
                     iNode.effect.setNumOutputRows(num_rows)
                     iNode.effect.setNumOutputPixels(num_pixels)
 
         # Debug output
         for node in processOrder.copy():
-            #print("{} with {} pixels".format(node.effect, node.effect._num_pixels))
             if node.effect._num_pixels is None:
                 processOrder.remove(node)
         # persist
@@ -535,9 +524,10 @@ class FilterGraph(Updateable):
         if 'modulations' in state:
             mods = state['modulations']
             for mod in mods:
-                newMod = self.addModulation(mod['modulation_source_uid'], mod['target_node_uid'], mod['target_param'], mod['amount'], mod['inverted'])
+                newMod = self.addModulation(mod['modulation_source_uid'], mod['target_node_uid'], mod['target_param'],
+                                            mod['amount'], mod['inverted'])
                 newMod.uid = mod['uid']
-            
+
     def propagateNumPixels(self, num_pixels, num_rows=1):
         if self.getLEDOutput() is not None:
             self.getLEDOutput().effect.setNumOutputPixels(num_pixels)
@@ -553,7 +543,6 @@ class FilterGraph(Updateable):
         return self._checkHasPredecessor(curNode, targetNode, [])
 
     def _checkHasPredecessor(self, curNode, targetNode, visitedNodes):
-        #print("Checking {} for {}".format(curNode, targetNode))
         if targetNode == curNode:
             return True
         predecessors = [con for con in self._filterConnections if con.toNode == curNode]

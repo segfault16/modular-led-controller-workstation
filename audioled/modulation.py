@@ -2,8 +2,6 @@ from __future__ import (absolute_import, division, print_function, unicode_liter
 
 from collections import OrderedDict
 
-import numpy as np
-import scipy as sp
 import math
 import inspect
 
@@ -14,7 +12,6 @@ class ModulationSource(object):
 
     ModulationSource have a number of parameters
     """
-
     def __init__(self):
         self.__initstate__()
 
@@ -81,18 +78,17 @@ class ModulationSource(object):
     @staticmethod
     def getParameterDefinition():
         return {}
-        
+
     @staticmethod
     def getParameterHelp():
         return {}
-    
+
     @staticmethod
     def getEffectDescription():
         return ""
 
 
 class ExternalLinearController(ModulationSource):
-
     def __init__(self, amount=.0):
         self.amount = amount
 
@@ -114,13 +110,12 @@ class ExternalLinearController(ModulationSource):
             }
         }
         return help
-    
+
     def getValue(self):
         return self.amount
 
 
 class SineLFO(ModulationSource):
-
     def __init__(self, freqHz=.0, depth=1.0):
         self.depth = depth
         self.freqHz = freqHz
@@ -128,7 +123,8 @@ class SineLFO(ModulationSource):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": OrderedDict([
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
                 ("depth", [1.0, .0, 1.0, .001]),
                 ("freqHz", [0.01, .0, 60.0, .01]),
@@ -151,6 +147,6 @@ class SineLFO(ModulationSource):
         Update timing, can be used to precalculate stuff that doesn't depend on input values
         """
         super().update(dt)
-    
+
     def getValue(self):
         return self.depth * math.sin(self._t * self.freqHz)
