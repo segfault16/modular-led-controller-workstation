@@ -41,7 +41,7 @@ class Project(Updateable):
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         """Update active FilterGraph
-        
+
         Arguments:
             dt {[float]} -- Time since last update
         """

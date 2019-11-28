@@ -34,11 +34,11 @@ class Test_Effects(unittest.TestCase):
                     effectsWithMissingParameterDescription.append("{} has no parameter help at all".format(_class))
 
         self.assertEqual([], effectsWithMissingParameterDescription)
-    
+
     def test_allEffectsUpdateAndProcessWithoutConnection(self):
         childclasses = inheritors(effects.Effect)
         for _class in childclasses:
-            if _class.__name__ != 'MidiKeyboard': # exclude midikeyboard
+            if _class.__name__ != 'MidiKeyboard':  # exclude midikeyboard
                 instance = None
                 try:
                     instance = _class()

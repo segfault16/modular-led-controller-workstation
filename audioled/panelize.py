@@ -239,14 +239,6 @@ def next_dir_possible(cur_dir, cur_row, cur_col, visited, pref_dir, allowed_row_
 
 
 def next_dir(cur_dir, cur_row, cur_col, visited, pref_dir, allowed_row_range):
-    # if cur_dir == pref_dir[2]:
-    #     # not the main direction, make others more appealing
-    #     return next_dir_possible(cur_dir, cur_row, cur_col, visited, [pref_dir[0], pref_dir[1], pref_dir[3], pref_dir[2]], allowed_row_range)
-    # elif cur_dir == pref_dir[1]:
-    #     # not the main direction, make others more appealing
-    #     return next_dir_possible(cur_dir, cur_row, cur_col, visited, [pref_dir[0], pref_dir[2], pref_dir[3], pref_dir[1]], allowed_row_range)
-    # else:
-    #     # immedate change of direction
     return next_dir_possible(cur_dir, cur_row, cur_col, visited, pref_dir, allowed_row_range)
 
 

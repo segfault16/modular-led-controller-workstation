@@ -591,8 +591,8 @@ class FallingStars(Effect):
 
             self._output = np.multiply(
                 color,
-                self.starControl(self.probability) *
-                np.array([[self.max_brightness * 1.0], [self.max_brightness * 1.0], [self.max_brightness * 1.0]]))
+                self.starControl(self.probability)
+                * np.array([[self.max_brightness * 1.0], [self.max_brightness * 1.0], [self.max_brightness * 1.0]]))
 
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
@@ -1233,8 +1233,9 @@ class GIFPlayer(Effect):
         adjustedFile = self.file
         if self.file is None:
             return
-        if self._filterGraph is not None and self._filterGraph._project is not None and self._filterGraph._project._contentRoot is not None:
-            adjustedFile = os.path.join(self._filterGraph._project._contentRoot, self.file)
+        if self._filterGraph is not None and self._filterGraph._project is not None:
+            if self._filterGraph._project._contentRoot is not None:
+                adjustedFile = os.path.join(self._filterGraph._project._contentRoot, self.file)
         try:
             self._gif = Image.open(adjustedFile)
         except Exception:

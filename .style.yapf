@@ -1,4 +1,5 @@
 [style]
-based_on_style = pep8
 column_limit = 127
-SPLIT_ARGUMENTS_WHEN_COMMA_TERMINATED = true
+split_arguments_when_comma_terminated = true
+split_before_arithmetic_operator = true
+split_before_logical_operator = true

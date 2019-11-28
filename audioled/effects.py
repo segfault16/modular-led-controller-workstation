@@ -365,8 +365,8 @@ class Mirror(Effect):
         help = {
             "parameters": {
                 "mirror_lower": "Switch between mirroring the lower or the upper part of input channel 0.",
-                "recursion": "Recursion depth of the mirroring effect. If recursion is set to 1, "\
-                    "the lower and upper half of the strip are mirrored again at their centers."
+                "recursion": "Recursion depth of the mirroring effect. If recursion is set to 1, "
+                             "the lower and upper half of the strip are mirrored again at their centers."
             }
         }
         return help

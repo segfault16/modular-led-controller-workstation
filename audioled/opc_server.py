@@ -16,7 +16,7 @@ class OPCMessage:
     """
     def __init__(self, selector, sock, addr, callback, verbose=False):
         """Constructor
-        
+
         Arguments:
             selector {[type]} -- Selector to use
             sock {[type]} -- A TCP Socket (from socket.accept())
@@ -168,7 +168,7 @@ class ServerThread(object):
     """
     def __init__(self, host, port, socket, callback, verbose=False):
         """Constructor for thread object
-        
+
         Arguments:
             socket {[type]} -- Socket to connect (must be in listening state)
             callback {function} -- Callback to call when OPC messages have been fully read

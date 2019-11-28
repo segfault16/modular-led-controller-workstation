@@ -212,9 +212,11 @@ class ColorWheel(Effect):
                 "saturation":
                 "Color saturation.",
                 "wiggle_time":
-                "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. This parameter controls the frequency of the wiggle.",
+                "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. "
+                    "This parameter controls the frequency of the wiggle.",
                 "wiggle_amplitude":
-                "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. This parameter controls the amplitude of the wiggle.",
+                "The Color Wheel can wiggle back and forth while moving through the hue values of the color space. "
+                    "This parameter controls the amplitude of the wiggle.",
             }
         }
         return help

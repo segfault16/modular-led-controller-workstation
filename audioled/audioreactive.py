@@ -739,8 +739,8 @@ class FallingStars(Effect):
                 if i < len(spawnSpot):
                     index = spawnSpot[i] + j
                     if index < self._num_pixels:
-                        oneStarArray[index] = math.exp(-(100 / dim_speed) *
-                                                       (self._t - t0[i])) * max(self.min_brightness, peak[i])
+                        tmp = math.exp(-(100 / dim_speed) * (self._t - t0[i])) * max(self.min_brightness, peak[i])
+                        oneStarArray[index] = tmp
             controlArray.append(oneStarArray)
         return controlArray
 
@@ -784,8 +784,8 @@ class FallingStars(Effect):
         if self._outputBuffer is not None:
             self._output = np.multiply(
                 color,
-                self.starControl(prob, peak) *
-                np.array([[self.peak_scale * 1.0], [self.peak_scale * 1.0], [self.peak_scale * 1.0]]))
+                self.starControl(prob, peak)
+                * np.array([[self.peak_scale * 1.0], [self.peak_scale * 1.0], [self.peak_scale * 1.0]]))
         self._outputBuffer[0] = self._output.clip(0.0, 255.0)
 
 
