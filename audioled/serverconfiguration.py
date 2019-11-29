@@ -13,6 +13,8 @@ CONFIG_DEVICE_CANDY_SERVER = 'device.candy.server'
 CONFIG_AUDIO_DEVICE_INDEX = 'audio.device_index'
 CONFIG_ACTIVE_PROJECT = 'active_project'
 CONFIG_DEVICE_PANEL_MAPPING = 'device.panel.mapping'
+CONFIG_ACTIVE_DEVICE_CONFIGURATION = 'active_device_config'
+CONFIG_DEVICE_CONFIGS = 'device_configs'
 
 
 class ServerConfiguration:
@@ -165,18 +167,44 @@ class ServerConfiguration:
         return device
 
     def createOutputDevice(self):
-        print("Creating device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
-        if self.getConfiguration(CONFIG_DEVICE) == devices.RaspberryPi.__name__:
-            device = devices.RaspberryPi(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS))
-        elif self.getConfiguration(CONFIG_DEVICE) == devices.FadeCandy.__name__:
-            device = devices.FadeCandy(self.getConfiguration(CONFIG_NUM_PIXELS), self.getConfiguration(CONFIG_NUM_ROWS),
-                                       self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER))
+        legacyImpl = False
+        if legacyImpl:
+            # Single device legacy implementation, TODO: Deprecate or adjust
+            return self.createSingleDevice(self.getConfiguration(CONFIG_DEVICE),
+                                           self.getConfiguration(CONFIG_NUM_PIXELS),
+                                           self.getConfiguration(CONFIG_NUM_ROWS),
+                                           candyServer=self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER),
+                                           panelMapping=self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING))
+
         else:
-            print("Unknown device: {}".format(self.getConfiguration(CONFIG_DEVICE)))
+            deviceConfigName = self.getConfiguration(CONFIG_ACTIVE_DEVICE_CONFIGURATION)
+            if deviceConfigName is None:
+                # TODO: Implement fallback
+                pass
+            print("Creating device config {}".format(deviceConfigName))
+            deviceConfigs = self.getConfiguration(CONFIG_DEVICE_CONFIGS)
+            if deviceConfigs is None:
+                # TODO: Error handling
+                pass
+            if deviceConfigName not in deviceConfigs:
+                # TODO: Error handling
+                pass
+            deviceConfig = deviceConfigs[deviceConfigName]
+            return self.createOutputDeviceFromConfig(deviceConfig)
+
+    def createSingleDevice(self, deviceName, numPixels, numRows, candyServer=None, panelMapping=None):
+        # Single device legacy implementation, TODO: Deprecate or adjust
+        print("Creating device: {}".format(deviceName))
+        if deviceName == devices.RaspberryPi.__name__:
+            device = devices.RaspberryPi(numPixels, numRows)
+        elif deviceName == devices.FadeCandy.__name__:
+            device = devices.FadeCandy(numPixels, numRows, candyServer)
+        else:
+            print("Unknown device: {}".format(deviceName))
             return None
 
-        if self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING) and self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING):
-            mappingFile = self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
+        if panelMapping and panelMapping:
+            mappingFile = panelMapping
             if os.path.exists(mappingFile):
                 with open(mappingFile, "r", encoding='utf-8') as f:
                     mapping = json.loads(f.read())
@@ -185,6 +213,45 @@ class ServerConfiguration:
             else:
                 raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
         return device
+
+    def createOutputDeviceFromConfig(self, config):
+        """Creates output device(s) from configuration
+
+        Example configuration:
+        [
+            {
+                "device": "FadeCandy",
+                "device.candy.server": "raspberrypi.local:7891",
+                "device.panel.mapping": "",
+                "device.num_pixels": 300,
+                "device.num_rows": 1
+            },
+            {
+                "device": "FadeCandy",
+                "device.candy.server": "raspberrypi.local:7894",
+                "device.panel.mapping": "",
+                "device.num_pixels": 200,
+                "device.num_rows": 1
+            }
+        ]
+        """
+        devices = []
+        for entry in config:
+            # Get parameters
+            deviceName = entry['device']
+            pixels = entry['device.num_pixels']
+            rows = 1
+            if 'device.num_rows' in entry:
+                rows = entry['device.num_rows']
+            candyServer = None
+            if 'device.candy.server' in entry:
+                candyServer = entry['device.candy.server']
+            panelMapping = None
+            if 'device.panel.mapping' in entry:
+                panelMapping = entry['device.panel.mapping']
+            device = self.createSingleDevice(deviceName, pixels, rows, candyServer=candyServer, panelMapping=panelMapping)
+            devices.append(device)
+        return devices.MultiOutputWrapper(devices)
 
     def _metadataForProject(self, project, projectUid):
         return {'name': project.name, 'description': project.description, 'id': projectUid}

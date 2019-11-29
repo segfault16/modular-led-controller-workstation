@@ -43,6 +43,7 @@ def commonRuntimeArgumentParser():
 
     return parser
 
+
 def addServerRuntimeArguments(parser: argparse.ArgumentParser):
     # Add server specific arguments
     parser.add_argument(
@@ -78,6 +79,11 @@ def addServerRuntimeArguments(parser: argparse.ArgumentParser):
                         default=None,
                         choices=deviceChoices,
                         help='device to send RGB to (default: FadeCandy)')
+    parser.add_argument('-DC',
+                        '--device_config',
+                        dest='device_config',
+                        default=None,
+                        help='Device config to use. Default: last active')
     parser.add_argument('-P',
                         '--process_timing',
                         dest='process_timing',

@@ -471,20 +471,6 @@ class PanelWrapper(LEDController):
                     cur_row = cur_row + 1
         return mapping
 
-
-# # Execute this file to run a LED strand test
-# # If everything is working, you should see a red, green, and blue pixel scroll
-# # across the LED strip continously
-# if __name__ == '__main__':
-#     import time
-#     # Turn all pixels off
-#     pixels = np.zeros((3, config.N_PIXELS))
-#     update(pixels)
-#     pixels[0, 0] = 255  # Set 1st pixel red
-#     pixels[1, 1] = 255  # Set 2nd pixel green
-#     pixels[2, 2] = 255  # Set 3rd pixel blue
-#     print('Starting LED strand test')
-#     while True:
-#         pixels = np.roll(pixels, 1, axis=1)
-#         update(pixels)
-#         time.sleep(1)
+class MultiOutputWrapper(object):
+    def __init__(self, devices):
+        self._devices = devices
