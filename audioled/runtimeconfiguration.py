@@ -1,4 +1,5 @@
 import argparse
+from audioled import serverconfiguration
 
 
 def commonRuntimeArgumentParser():
@@ -41,3 +42,52 @@ def commonRuntimeArgumentParser():
                         help='Audio device index to use')
 
     return parser
+
+def addServerRuntimeArguments(parser: argparse.ArgumentParser):
+    # Add server specific arguments
+    parser.add_argument(
+        '-p',
+        '--port',
+        dest='port',
+        default='5000',
+        help='Port to listen on',
+    )
+    parser.add_argument('-C',
+                        '--config_location',
+                        dest='config_location',
+                        default=None,
+                        help='Location of the server configuration to store. Defaults to $HOME/.ledserver.')
+    parser.add_argument(
+        '--no_conf',
+        dest='no_conf',
+        action='store_true',
+        default=False,
+        help="Don't load config from file",
+    )
+    parser.add_argument(
+        '--no_store',
+        dest='no_store',
+        action='store_true',
+        default=False,
+        help="Don't save anything to disk",
+    )
+    deviceChoices = serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')
+    parser.add_argument('-D',
+                        '--device',
+                        dest='device',
+                        default=None,
+                        choices=deviceChoices,
+                        help='device to send RGB to (default: FadeCandy)')
+    parser.add_argument('-P',
+                        '--process_timing',
+                        dest='process_timing',
+                        action='store_true',
+                        default=False,
+                        help='Print process timing')
+    parser.add_argument(
+        '--strand',
+        dest='strand',
+        action='store_true',
+        default=False,
+        help="Perform strand test at start of server.",
+    )
