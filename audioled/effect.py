@@ -23,7 +23,6 @@ class Effect(object):
     Input values can be accessed by self._inputBuffer[channelNumber], output values
     are to be written into self_outputBuffer[channelNumber].
     """
-
     def __init__(self):
         self.__initstate__()
 
@@ -105,7 +104,6 @@ class Effect(object):
         if self._t:
             self._last_t = self._t
         self._t += dt
-        
 
     def __cleanState__(self, stateDict):
         """
@@ -139,9 +137,9 @@ class Effect(object):
     def updateParameter(self, stateDict):
         # Save updated parameter as original value
         for k in list(stateDict.keys()):
-            stateDict['~'+k] = stateDict[k]
+            stateDict['~' + k] = stateDict[k]
         self.__dict__.update(stateDict)
-    
+
     def setParameterOffset(self, paramId, paramDefinition, offset):
         state = self.__dict__.copy()
         # Get min and max range of parameter from parameterDefinition
@@ -152,12 +150,12 @@ class Effect(object):
         maxP = paramDef[2]
 
         # Store original value if not already stored
-        origVal = state.get('~'+paramId, None)
+        origVal = state.get('~' + paramId, None)
         if origVal is None:
             origVal = state.get(paramId, None)
             if origVal is not None:
-                state['~'+paramId] = origVal
-        
+                state['~' + paramId] = origVal
+
         adjustedValue = origVal + (maxP - minP) * offset
         # print("orig: {}, adjusted: {}".format(origVal, adjustedValue))
         # ensure we stay inside max and min
@@ -166,22 +164,20 @@ class Effect(object):
         state[paramId] = adjustedValue
 
         # store offset for getParameterOffset
-        state['@'+paramId] = offset
+        state['@' + paramId] = offset
         self.__dict__.update(state)
-        
-        
+
     def getParameterOffset(self, paramId):
-        return self.__dict__.get('@'+paramId, None)
+        return self.__dict__.get('@' + paramId, None)
 
     def resetParameterOffsets(self):
         for k in list(self.__dict__.keys()):
             if k.startswith('@'):
                 self.__dict__.pop(k)
-        
 
     def getParameter(self):
         """Get parameter values and range definition
-        
+
         Returns:
             {
                 "parameters": {
@@ -191,9 +187,9 @@ class Effect(object):
 
         TODO: Can this be deprecated?
         """
-        
+
         definition = self.getParameterDefinition()
-        state = self.__getstate__() # cleaned state
+        state = self.__getstate__()  # cleaned state
         for k in state.keys():
             val = state[k]
             definition['parameters'][k][0] = val
@@ -206,11 +202,11 @@ class Effect(object):
 
     def getModulateableParameters(self):
         return [key for key in self.getParameterDefinition()['parameters'].keys()]
-        
+
     @staticmethod
     def getParameterHelp():
         return {}
-    
+
     @staticmethod
     def getEffectDescription():
         return ""
@@ -244,7 +240,7 @@ class Effect(object):
         self._num_rows = num_rows
         if num_rows is not None:
             self._num_rows = int(num_rows)
-    
+
     def getNumOutputRows(self):
         return self._num_rows
 

@@ -33,12 +33,11 @@ def commonRuntimeArgumentParser():
         default=None,
         help='Mapping file for panels',
     )
-    parser.add_argument(
-        '-A',
-        '--audio_device_index',
-        dest='audio_device_index',
-        type=int,
-        default=None,
-        help='Audio device index to use')
+    parser.add_argument('-A',
+                        '--audio_device_index',
+                        dest='audio_device_index',
+                        type=int,
+                        default=None,
+                        help='Audio device index to use')
 
     return parser

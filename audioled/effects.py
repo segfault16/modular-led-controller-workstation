@@ -97,9 +97,7 @@ class Append(Effect):
 
     def __initstate__(self):
         super().__initstate__()
-        self._flipMask = [
-            self.flip0, self.flip1, self.flip2, self.flip3, self.flip4, self.flip5, self.flip6, self.flip7
-        ]
+        self._flipMask = [self.flip0, self.flip1, self.flip2, self.flip3, self.flip4, self.flip5, self.flip6, self.flip7]
 
     def numInputChannels(self):
         return self.num_channels
@@ -339,8 +337,7 @@ class Mirror(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters":
-            OrderedDict([
+            "parameters": OrderedDict([
                 ("mirror_lower", True),
                 # default, min, max, stepsize
                 ("recursion", [0, 0, 8, 1]),
@@ -350,16 +347,18 @@ class Mirror(Effect):
 
     def getModulateableParameters(self):
         params = super().getModulateableParameters()
-        params.remove('mirror_lower') # disable modulation on bool param
+        params.remove('mirror_lower')  # disable modulation on bool param
         return params
 
     @staticmethod
     def getParameterHelp():
         help = {
             "parameters": {
-                "mirror_lower": "Switch between mirroring the lower or the upper part of input channel 0.",
-                "recursion": "Recursion depth of the mirroring effect. If recursion is set to 1, "\
-                    "the lower and upper half of the strip are mirrored again at their centers."
+                "mirror_lower":
+                "Switch between mirroring the lower or the upper part of input channel 0.",
+                "recursion":
+                "Recursion depth of the mirroring effect. If recursion is set to 1, "
+                "the lower and upper half of the strip are mirrored again at their centers."
             }
         }
         return help
@@ -384,9 +383,8 @@ class Mirror(Effect):
             self._outputBuffer[0] = buffer[self._mirrorUpper[:, :, 0], self._mirrorUpper[:, :, 1]]
 
     def _genMirrorLowerMap(self, n, recursion):
-        mapMask = np.array(
-            [[[0, i] for i in range(0, n)], [[1, i] for i in range(0, n)], [[2, i] for i in range(0, n)]],
-            dtype=np.int64)
+        mapMask = np.array([[[0, i] for i in range(0, n)], [[1, i] for i in range(0, n)], [[2, i] for i in range(0, n)]],
+                           dtype=np.int64)
         mapMask = self._genMirrorLower(mapMask, recursion)
         return mapMask
 
@@ -405,9 +403,8 @@ class Mirror(Effect):
         return mapMask
 
     def _genMirrorUpperMap(self, n, recursion):
-        mapMask = np.array(
-            [[[0, i] for i in range(0, n)], [[1, i] for i in range(0, n)], [[2, i] for i in range(0, n)]],
-            dtype=np.int64)
+        mapMask = np.array([[[0, i] for i in range(0, n)], [[1, i] for i in range(0, n)], [[2, i] for i in range(0, n)]],
+                           dtype=np.int64)
         mapMask = self._genMirrorUpper(mapMask, recursion)
         return mapMask
 
@@ -454,7 +451,6 @@ class SpringCombine(Effect):
         trigger_threshold   -- Above this threshold springs are actuated based on input 0
 
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -578,10 +574,8 @@ class SpringCombine(Effect):
 
         # Output: Interpolate between low and mid for self._pos < 0, interpolate between mid and high for self._pos > 0
         out = np.zeros(self._num_pixels) * np.array([[0], [0], [0]])
-        out[:, self._pos <= 0] = (
-            np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
-        out[:, self._pos >= 0] = (
-            np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
+        out[:, self._pos <= 0] = (np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
+        out[:, self._pos >= 0] = (np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
         self._outputBuffer[0] = out
 
 
@@ -590,7 +584,6 @@ class Swing(Effect):
     Inputs:
     - 0: Pixels
     """
-
     @staticmethod
     def getEffectDescription():
         return \
