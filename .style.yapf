@@ -1,3 +1,5 @@
 [style]
-column_limit = 120
-SPLIT_ARGUMENTS_WHEN_COMMA_TERMINATED = true
+column_limit = 127
+split_arguments_when_comma_terminated = true
+split_before_arithmetic_operator = true
+split_before_logical_operator = true

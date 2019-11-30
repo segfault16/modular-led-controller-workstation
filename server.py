@@ -18,7 +18,7 @@ from flask import Flask, abort, jsonify, request, send_from_directory, redirect,
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, devices, effects, filtergraph, serverconfiguration, runtimeconfiguration
+from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration
 
 proj = None
 default_values = {}
@@ -69,7 +69,7 @@ def create_app():
     def interrupt():
         print('cancelling LED thread')
         global ledThread
-        stop_signal = True
+        # stop_signal = True
         try:
             ledThread.join()
         except RuntimeError:
@@ -262,8 +262,7 @@ def create_app():
             argsWithDefaults = dict()
         result = argsWithDefaults.copy()
         if argspec.defaults is not None:
-            result.update({key: None
-                           for key in argspec.args[1:len(argspec.args) - len(argspec.defaults)]})  # 1 removes self
+            result.update({key: None for key in argspec.args[1:len(argspec.args) - len(argspec.defaults)]})  # 1 removes self
 
         result.update({key: default_values[key] for key in default_values if key in result})
         print(result)
@@ -562,12 +561,11 @@ if __name__ == '__main__':
         default='5000',
         help='Port to listen on',
     )
-    parser.add_argument(
-        '-C',
-        '--config_location',
-        dest='config_location',
-        default=None,
-        help='Location of the server configuration to store. Defaults to $HOME/.ledserver.')
+    parser.add_argument('-C',
+                        '--config_location',
+                        dest='config_location',
+                        default=None,
+                        help='Location of the server configuration to store. Defaults to $HOME/.ledserver.')
     parser.add_argument(
         '--no_conf',
         dest='no_conf',
@@ -583,20 +581,18 @@ if __name__ == '__main__':
         help="Don't save anything to disk",
     )
     deviceChoices = serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')
-    parser.add_argument(
-        '-D',
-        '--device',
-        dest='device',
-        default=None,
-        choices=deviceChoices,
-        help='device to send RGB to (default: FadeCandy)')
-    parser.add_argument(
-        '-P',
-        '--process_timing',
-        dest='process_timing',
-        action='store_true',
-        default=False,
-        help='Print process timing')
+    parser.add_argument('-D',
+                        '--device',
+                        dest='device',
+                        default=None,
+                        choices=deviceChoices,
+                        help='device to send RGB to (default: FadeCandy)')
+    parser.add_argument('-P',
+                        '--process_timing',
+                        dest='process_timing',
+                        action='store_true',
+                        default=False,
+                        help='Print process timing')
     parser.add_argument(
         '--strand',
         dest='strand',
@@ -658,8 +654,7 @@ if __name__ == '__main__':
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
         print("Overriding Audio device with device index {}".format(
             serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
-        audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(
-            serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
+        audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
         # Initialize global audio
         globalAudio = audio.GlobalAudio(serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX))
     else:
@@ -667,8 +662,7 @@ if __name__ == '__main__':
 
     # strand test
     if args.strand:
-        strandTest(serverconfig.createOutputDevice(),
-                   serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
+        strandTest(serverconfig.createOutputDevice(), serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # Initialize project
     proj = serverconfig.getActiveProjectOrDefault()
