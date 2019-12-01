@@ -16,7 +16,6 @@ class NodeException(Exception):
         self.message = message
         super(NodeException, self).__init__(message)
 
-
 class Node(object):
     def __init__(self, effect):
         self.effect = effect  # type: effect.Effect
