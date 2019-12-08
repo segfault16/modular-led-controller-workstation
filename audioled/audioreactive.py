@@ -86,11 +86,12 @@ class Spectrum(Effect):
         return help
 
     def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['n_overlaps'][0] = self.n_overlaps
-        definition['parameters']['fft_bins'][0] = self.fft_bins
+        definition = super().getParameter()
         definition['parameters']['col_blend'] = [self.col_blend] + [x for x in colors.blend_modes if x != self.col_blend]
         return definition
+
+    def getModulateableParameters(self):
+        return []  # Disable all modulations
 
     def _audio_gen(self, audio_gen):
         audio, self._fs_ds = dsp.preprocess(audio_gen, self._fs, self.fmax, self.n_overlaps)
@@ -178,10 +179,7 @@ class VUMeterRMS(Effect):
 
     def __initstate__(self):
         super().__initstate__()
-        try:
-            self._hold_values
-        except AttributeError:
-            self._hold_values = []
+        self._hold_values = []
         self._default_color = None
 
     def numInputChannels(self):
@@ -211,12 +209,6 @@ class VUMeterRMS(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['db_range'][0] = self.db_range
-        definition['parameters']['n_overlaps'][0] = self.n_overlaps
-        return definition
 
     async def update(self, dt):
         await super().update(dt)
@@ -282,15 +274,11 @@ class VUMeterPeak(Effect):
     def __init__(self, db_range=60.0, n_overlaps=1):
         self.db_range = db_range
         self.n_overlaps = n_overlaps
-        self._default_color = None
         self.__initstate__()
 
     def __initstate__(self):
         super().__initstate__()
-        try:
-            self._hold_values
-        except AttributeError:
-            self._hold_values = []
+        self._hold_values = []
         self._default_color = None
 
     def numInputChannels(self):
@@ -320,12 +308,6 @@ class VUMeterPeak(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['db_range'][0] = self.db_range
-        definition['parameters']['n_overlaps'][0] = self.n_overlaps
-        return definition
 
     async def update(self, dt):
         await super().update(dt)
@@ -419,10 +401,7 @@ class MovingLight(Effect):
         self._bandpass = None
         self._last_t = 0.0
         self._last_move_t = 0.0
-        try:
-            self._hold_values
-        except AttributeError:
-            self._hold_values = []
+        self._hold_values = []
 
     def numInputChannels(self):
         return 2
@@ -464,18 +443,6 @@ class MovingLight(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['speed'][0] = self.speed
-        definition['parameters']['dim_time'][0] = self.dim_time
-        definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
-        definition['parameters']['highcut_hz'][0] = self.highcut_hz
-        definition['parameters']['peak_scale'][0] = self.peak_scale
-        definition['parameters']['peak_filter'][0] = self.peak_filter
-        definition['parameters']['highlight'][0] = self.highlight
-        definition['parameters']['smoothing'][0] = self.smoothing
-        return definition
 
     async def update(self, dt):
         await super().update(dt)
@@ -593,13 +560,6 @@ class Bonfire(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['spread'][0] = self.spread
-        definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
-        definition['parameters']['highcut_hz'][0] = self.highcut_hz
-        return definition
-
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
             return
@@ -645,7 +605,7 @@ class FallingStars(Effect):
                  min_brightness=0.1,
                  max_spawns=10):
         self.dim_speed = dim_speed
-        self.thickness = thickness  # getting down with it
+        self.thickness = thickness
         self.probability = probability
         self.lowcut_hz = lowcut_hz
         self.highcut_hz = highcut_hz
@@ -700,19 +660,6 @@ class FallingStars(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
-        definition['parameters']['highcut_hz'][0] = self.highcut_hz
-        definition['parameters']['peak_filter'][0] = self.peak_filter
-        definition['parameters']['peak_scale'][0] = self.peak_scale
-        definition['parameters']['dim_speed'][0] = self.dim_speed
-        definition['parameters']['thickness'][0] = self.thickness
-        definition['parameters']['probability'][0] = self.probability
-        definition['parameters']['min_brightness'][0] = self.min_brightness
-        definition['parameters']['max_spawns'][0] = self.max_spawns
-        return definition
 
     def numInputChannels(self):
         return 2
@@ -837,16 +784,6 @@ class Oscilloscope(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
-        definition['parameters']['highcut_hz'][0] = self.highcut_hz
-        definition['parameters']['window_fq_hz'][0] = self.window_fq_hz
-        definition['parameters']['gain'][0] = self.gain
-        definition['parameters']['speed_fps'][0] = self.speed_fps
-
-        return definition
-
     def numInputChannels(self):
         return 2
 
@@ -964,10 +901,7 @@ class Blink(Effect):
 
     def __initstate__(self):
         super().__initstate__()
-        try:
-            self._hold_values
-        except AttributeError:
-            self._hold_values = []
+        self._hold_values = []
         self._default_color = None
 
     def numInputChannels(self):
@@ -999,13 +933,6 @@ class Blink(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['db_range'][0] = self.db_range
-        definition['parameters']['smoothing'][0] = self.smoothing
-        definition['parameters']['amount'][0] = self.amount
-        return definition
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -1052,15 +979,8 @@ class Shift(Effect):
     def __initstate__(self):
         super().__initstate__()
         self._bandpass = None
-        try:
-            self._hold_values
-        except AttributeError:
-            self._hold_values = []
-        try:
-            self._shift_pixels
-        except AttributeError:
-            self._shift_pixels = 0
-
+        self._hold_values = []
+        self._shift_pixels = 0
         self._last_t = self._t
 
     def numInputChannels(self):
@@ -1101,17 +1021,6 @@ class Shift(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['db_range'][0] = self.db_range
-        definition['parameters']['smoothing'][0] = self.smoothing
-        definition['parameters']['speed'][0] = self.speed
-        definition['parameters']['lowcut_hz'][0] = self.lowcut_hz
-        definition['parameters']['highcut_hz'][0] = self.highcut_hz
-        definition['parameters']['peak_filter'][0] = self.peak_filter
-        definition['parameters']['peak_scale'][0] = self.peak_scale
-        return definition
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:

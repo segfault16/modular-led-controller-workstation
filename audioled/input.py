@@ -32,12 +32,6 @@ class CandyServer(effect.Effect):
         }
         return definition
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['num_pixels'][0] = self.num_pixels
-        definition['parameters']['port'][0] = self.port
-        return definition
-
     def process(self):
         if self._outputBuffer is None:
             return

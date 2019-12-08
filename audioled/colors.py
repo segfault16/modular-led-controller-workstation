@@ -122,13 +122,6 @@ class StaticRGBColor(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['r'][0] = self.r
-        definition['parameters']['g'][0] = self.g
-        definition['parameters']['b'][0] = self.b
-        return definition
-
     def setInputBuffer(self, buffer):
         self._inputBuffer = buffer
 
@@ -187,16 +180,6 @@ class ColorWheel(Effect):
                 ("wiggle_amplitude", [0.0, 0, 1, 0.01]),
             ])
         }
-        return definition
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['cycle_time'][0] = self.cycle_time
-        definition['parameters']['offset'][0] = self.offset
-        definition['parameters']['luminocity'][0] = self.luminocity
-        definition['parameters']['saturation'][0] = self.saturation
-        definition['parameters']['wiggle_time'][0] = self.wiggle_time
-        definition['parameters']['wiggle_amplitude'][0] = self.wiggle_amplitude
         return definition
 
     @staticmethod
@@ -305,11 +288,11 @@ class InterpolateHSV(Effect):
                 interp_v = np.linspace(v_a, v_b, self._num_pixels)
                 interp_s = np.linspace(s_a, s_b, self._num_pixels)
                 interp_h = np.linspace(h_a, h_b, self._num_pixels)
-                hsv = np.array([interp_h, interp_s, interp_v]).T
+                hsv = np.array([interp_h, interp_s, interp_v]) * 255
 
                 rgb = hsv_to_rgb(hsv)
 
-                self._outputBuffer[0] = rgb.T * 255.0
+                self._outputBuffer[0] = rgb
 
 
 class RGBToHSV(Effect):
