@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
 from collections import OrderedDict
+from typing import List
 import time
 import numpy as np
 from audioled.effect import Effect
@@ -472,5 +473,5 @@ class PanelWrapper(LEDController):
         return mapping
 
 class MultiOutputWrapper(object):
-    def __init__(self, devices):
+    def __init__(self, devices: List[LEDController]):
         self._devices = devices

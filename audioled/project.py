@@ -1,6 +1,8 @@
 import asyncio
 
-from audioled.filtergraph import (FilterGraph, Updateable)
+from audioled.filtergraph import (FilterGraph, Updateable)0
+from typing import List
+import audioled.devices
 
 
 class Project(Updateable):
@@ -10,8 +12,12 @@ class Project(Updateable):
         self.name = name
         self.description = description
         self.id = None
-        self._device = device
+        self.outputSlotMatrix = None
+        self._previewDevice = device  # type: audioled.devices.LEDController
+        self._previewDeviceIndex = 0
         self._contentRoot = None
+        self._filterGraphForDeviceIndex = {}
+        self._outputThreads = []  # type: typing.List
 
     def __cleanState__(self, stateDict):
         """
@@ -36,8 +42,12 @@ class Project(Updateable):
             if slot is not None:
                 slot._project = self
 
-    def setDevice(self, device):
-        self._device = device
+    def setDevice(self, device: audioled.devices.MultiOutputWrapper):
+        if not isinstance(device, audioled.devices.MultiOutputWrapper):
+            raise RuntimeError("Device has to be MultiOutputWrapper")
+        else:
+            self._previewDevice = device._devices[self._previewDeviceIndex]
+            self._devices = device._devices
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         """Update active FilterGraph
@@ -45,25 +55,34 @@ class Project(Updateable):
         Arguments:
             dt {[float]} -- Time since last update
         """
+        self.sendUpdateCommand()
+
         activeFilterGraph = self.getSlot(self.activeSlotId)
         if activeFilterGraph is not None:
-            # Propagate num pixels from server configuration
-            if self._device is not None and activeFilterGraph.getLEDOutput() is not None:
-                if (self._device.getNumPixels() != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels()
-                        or self._device.getNumRows() != activeFilterGraph.getLEDOutput().effect.getNumOutputRows()):
-                    print("propagating {} pixels on {} rows".format(self._device.getNumPixels(), self._device.getNumRows()))
-                    activeFilterGraph.propagateNumPixels(self._device.getNumPixels(), self._device.getNumRows())
-                activeFilterGraph.update(dt, event_loop)
+            self.propagateNumPixelsFromConfig(activeFilterGraph)
+            activeFilterGraph.update(dt, event_loop)
+
+    def propagateNumPixelsFromConfig(self, activeFilterGraph: FilterGraph):
+        # Propagate num pixels from server configuration
+        if self._previewDevice is not None and activeFilterGraph.getLEDOutput() is not None:
+            if (self._previewDevice.getNumPixels() != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels()
+                    or self._previewDevice.getNumRows() != activeFilterGraph.getLEDOutput().effect.getNumOutputRows()):
+                print("propagating {} pixels on {} rows".format(self._previewDevice.getNumPixels(), self._previewDevice.getNumRows()))
+                activeFilterGraph.propagateNumPixels(self._previewDevice.getNumPixels(), self._previewDevice.getNumRows())
+
+    def sendUpdateCommand(self):
+        # TODO: Implement
+        pass
 
     def process(self):
         """Process active FilterGraph
         """
         activeFilterGraph = self.getSlot(self.activeSlotId)
         if activeFilterGraph is not None:
-            if self._device is not None and activeFilterGraph.getLEDOutput() is not None:
+            if self._previewDevice is not None and activeFilterGraph.getLEDOutput() is not None:
                 activeFilterGraph.process()
-                if activeFilterGraph.getLEDOutput()._outputBuffer[0] is not None and self._device is not None:
-                    self._device.show(activeFilterGraph.getLEDOutput()._outputBuffer[0])
+                if activeFilterGraph.getLEDOutput()._outputBuffer[0] is not None and self._previewDevice is not None:
+                    self._previewDevice.show(activeFilterGraph.getLEDOutput()._outputBuffer[0])
 
     def setFiltergraphForSlot(self, slotId, filterGraph):
         print("Set {} for slot {}".format(filterGraph, slotId))
@@ -71,7 +90,25 @@ class Project(Updateable):
             filterGraph._project = self
             self.slots[slotId] = filterGraph
 
-    def activateSlot(self, slotId):
+    def activateScene(self, sceneId):
+        """Activates a scene
+
+        Scene: Project Slot per Output Device
+        """
+        # Update _filterGraphForDeviceIndex
+        dIdx = 0
+        for device in self._devices:
+            # Get filterGraph for slot Id associated with this device
+            slotId = self.outputSlotMatrix[dIdx]
+            filterGraph = self.getSlot(slotId)
+            # Make copy of this filtergraph
+            # TODO: Revise?
+            
+            dIdx+=1
+
+
+    def previewSlot(self, slotId, deviceId):
+        # TODO: Separate preview slot and active slot
         self.activeSlotId = slotId
         print("Activate slot {} with {}".format(slotId, self.slots[slotId]))
         return self.getSlot(slotId)

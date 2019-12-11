@@ -18,9 +18,9 @@ from flask import Flask, abort, jsonify, request, send_from_directory, redirect,
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation
+from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project
 
-proj = None
+proj = None  # type: project.Project
 default_values = {}
 record_timings = False
 serverconfig = None
@@ -461,7 +461,7 @@ def create_app():
             abort(400)
         value = request.json['slot']
         # print("Activating slot {}".format(value))
-        proj.activateSlot(value)
+        proj.activateScene(value)
         return "OK"
 
     @app.route('/project/activeSlot', methods=['GET'])

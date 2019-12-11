@@ -89,7 +89,7 @@ class ServerConfiguration:
 
         proj.setFiltergraphForSlot(12, initial)
         proj.setFiltergraphForSlot(13, second)
-        proj.activateSlot(12)
+        proj.activeScene(12)
         projectUid = uuid.uuid4().hex
         proj.id = projectUid
         self._projects[projectUid] = proj
