@@ -98,6 +98,9 @@ class Connection(object):
         state['to_node_channel'] = self.toChannel
         state['uid'] = self.uid
         return state
+    
+    def __setstate__(self, dict):
+        print("Not pickable")
 
 
 class ModulationSourceNode(object):

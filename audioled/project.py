@@ -1,7 +1,7 @@
 import asyncio
 
 from audioled.filtergraph import (FilterGraph, Updateable)
-from typing import List
+from typing import List, Dict
 import audioled.devices
 import audioled.audio
 import audioled.filtergraph
@@ -29,7 +29,7 @@ def ensure_parent(func):
 
 class PublishQueue(object):
     def __init__(self):
-        self._queues = []  # type: List[multiprocessing.Queue]
+        self._queues = []  # type: List[multiprocessing.JoinableQueue]
         self._creator_pid = os.getpid()
 
     def __getstate__(self):
@@ -42,7 +42,7 @@ class PublishQueue(object):
 
     @ensure_parent
     def register(self):
-        q = multiprocessing.Queue()
+        q = multiprocessing.JoinableQueue()
         self._queues.append(q)
         return q
 
@@ -55,11 +55,16 @@ class PublishQueue(object):
     def close(self):
         for q in self._queues:
             q.close()
-    
+
     @ensure_parent
     def join_thread(self):
         for q in self._queues:
             q.join_thread()
+
+    @ensure_parent
+    def join(self):
+        for q in self._queues:
+            q.join()
 
 
 class UpdateMessage:
@@ -74,9 +79,10 @@ class NodeMessage:
         self.nodeUid = nodeUid
         self.operation = operation
         self.params = params
-    
+
     def __str__(self):
-        return json.dumps(self.__dict__)
+        return "NodeMessage - slotId: {}, uid: {}, operation: {}, params: {}".format(self.slotId, self.nodeUid, self.operation,
+                                                                                     self.params)
 
 
 class ModulationMessage:
@@ -87,7 +93,8 @@ class ModulationMessage:
         self.params = params
 
     def __str__(self):
-        return json.dumps(self.__dict__)
+        return "ModulationMessage - slotId: {}, uid: {}, operation: {}, params: {}".format(
+            self.slotId, self.modUid, self.operation, self.params)
 
 
 class ModulationSourceMessage:
@@ -98,7 +105,8 @@ class ModulationSourceMessage:
         self.params = params
 
     def __str__(self):
-        return json.dumps(self.__dict__)
+        return "ModulationSourceMessage - slotId: {}, uid: {}, operation: {}, params: {}".format(
+            self.slotId, self.modSourceUid, self.operation, self.params)
 
 
 class ConnectionMessage:
@@ -109,8 +117,8 @@ class ConnectionMessage:
         self.params = params
 
     def __str__(self):
-        return json.dumps(self.__dict__)
-
+        return "ConnectionMessage - slotId: {}, uid: {}, operation: {}, params: {}".format(
+            self.slotId, self.conUid, self.operation, self.params)
 
 
 def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId):
@@ -165,10 +173,10 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     if message.operation == 'add':
                         mod = message.params  # type: audioled.filtergraph.Modulation
                         newMod = filtergraph.addModulation(modSourceUid=mod.modulationSource.uid,
-                                                        targetNodeUid=mod.targetNode.uid,
-                                                        targetParam=mod.targetParameter,
-                                                        amount=mod.amount,
-                                                        inverted=mod.inverted)
+                                                           targetNodeUid=mod.targetNode.uid,
+                                                           targetParam=mod.targetParameter,
+                                                           amount=mod.amount,
+                                                           inverted=mod.inverted)
                         newMod.uid = mod.uid
                     elif message.operation == 'remove':
                         filtergraph.removeModulation(message.modUid)
@@ -193,15 +201,18 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                         continue
                     print("Process connection message: {}".format(message))
                     if message.operation == 'add':
-                        con = message.params  # type: audioled.filtergraph.Connection
-                        newCon = filtergraph.addNodeConnection(con.fromNode.uid, con.fromChannel, con.toNode.uid, con.toChannel)
-                        newCon.uid = con.uid
+                        con = message.params  # type: Dict[str, str]
+                        newCon = filtergraph.addNodeConnection(con['from_node_uid'], con['from_node_channel'],
+                                                               con['to_node_uid'], con['to_node_channel'])
+                        newCon.uid = con['uid']
                     elif message.operation == 'remove':
                         filtergraph.removeConnection(message.conUid)
                 else:
                     print("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
                 print("Continuing on NodeException")
+            finally:
+                q.task_done()
     except Exception as e:
         traceback.print_exc()
         print("process {} exited due to: {}".format(os.getpid(), e))
@@ -272,15 +283,20 @@ class Project(Updateable):
         """
         # print("project: update")
         if self._processingEnabled:
-            self._lock.acquire()
+            aquired = self._lock.acquire(0)
+            if not aquired:
+                print("Skipping update, couldn't acquire lock")
+                return
             try:
                 self._sendUpdateCommand(dt)
                 self._updatePreviewDevice(dt, event_loop)
+                if self._publishQueue is not None:
+                    self._publishQueue.join()
             finally:
                 self._lock.release()
         else:
             time.sleep(0.01)
-            print("Wait")
+            print("Waiting...")
 
     def process(self):
         """Process active FilterGraph
@@ -303,7 +319,7 @@ class Project(Updateable):
         self.stopProcessing()
 
         # TODO: Make configurable
-        self._previewDeviceIndex = 0
+        self._previewDeviceIndex = None
         self.activeSlotId = sceneId
 
         self._processingEnabled = False
@@ -330,7 +346,8 @@ class Project(Updateable):
                 filterGraph = self.getSlot(slotId)
 
                 if dIdx != self._previewDeviceIndex:
-                    p = multiprocessing.Process(target=worker, args=(self._publishQueue.register(), filterGraph, device, slotId))
+                    p = multiprocessing.Process(target=worker,
+                                                args=(self._publishQueue.register(), filterGraph, device, slotId))
                     p.start()
                     self._outputThreads[dIdx] = p
                     print('Started process for device {} with device {}'.format(dIdx, device))
@@ -344,14 +361,15 @@ class Project(Updateable):
         self._processingEnabled = False
         self._lock.acquire()
         try:
-            self._publishQueue.publish(None)
+            if self._publishQueue is not None:
+                self._publishQueue.publish(None)
+                self._publishQueue.close()
+                self._publishQueue.join_thread()
+                print('Queue ended')
+                self._publishQueue = None
             for p in self._outputThreads.values():
                 p.join()
             print('All processes joined')
-            self._publishQueue.close()
-            self._publishQueue.join_thread()
-            print('Queue ended')
-            self._publishQueue = None
             self._outputThreads = {}
         finally:
             self._lock.release()
@@ -400,7 +418,6 @@ class Project(Updateable):
             self._lock.release()
 
     def _handleNodeRemoved(self, node: audioled.filtergraph.Node):
-        print("node removed")
         self._lock.acquire()
         try:
             self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'remove'))
@@ -459,7 +476,7 @@ class Project(Updateable):
     def _handleConnectionAdded(self, con: audioled.filtergraph.Connection):
         self._lock.acquire()
         try:
-            self._publishQueue.publish(ConnectionMessage(self.activeSlotId, con.uid, 'add', con))
+            self._publishQueue.publish(ConnectionMessage(self.activeSlotId, con.uid, 'add', con.__getstate__()))
         finally:
             self._lock.release()
 
@@ -471,6 +488,9 @@ class Project(Updateable):
             self._lock.release()
 
     def _sendUpdateCommand(self, dt):
+        if self._publishQueue is None:
+            print("No publish queue. Possibly exiting")
+            return
         self._publishQueue.publish(UpdateMessage(dt, audioled.audio.GlobalAudio.buffer))
 
     def _updatePreviewDevice(self, dt, event_loop=asyncio.get_event_loop()):
