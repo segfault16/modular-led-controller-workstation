@@ -72,8 +72,10 @@ def create_app():
     def interrupt():
         print('cancelling LED thread')
         global ledThread
+        global proj
         # stop_signal = True
         try:
+            proj.stopProcessing()
             ledThread.join()
         except RuntimeError:
             pass
@@ -618,7 +620,10 @@ def create_app():
                 errors.clear()
 
         except filtergraph.NodeException as ne:
-            print("NodeError in {}: {}".format(ne.node.effect, ne))
+            if count == 100:
+                print("NodeError in {}: {}".format(ne.node.effect, ne))
+                print("Skipping next 100 errors...")
+                count = 0
             errors.clear()
             errors.append(ne)
         except Exception as e:
@@ -760,4 +765,5 @@ if __name__ == '__main__':
     app = create_app()
     app.run(debug=False, host="0.0.0.0", port=args.port)
     print("End of server main")
+    proj.stopProcessing()
     stop_signal = True

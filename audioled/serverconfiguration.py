@@ -6,6 +6,8 @@ import os.path
 import hashlib
 import io
 
+from audioled.devices import MultiOutputWrapper
+
 CONFIG_NUM_PIXELS = 'num_pixels'
 CONFIG_NUM_ROWS = 'num_rows'
 CONFIG_DEVICE = 'device'
@@ -251,7 +253,7 @@ class ServerConfiguration:
                 panelMapping = entry['device.panel.mapping']
             device = self.createSingleDevice(deviceName, pixels, rows, candyServer=candyServer, panelMapping=panelMapping)
             devices.append(device)
-        return devices.MultiOutputWrapper(devices)
+        return MultiOutputWrapper(devices)
 
     def _metadataForProject(self, project, projectUid):
         return {'name': project.name, 'description': project.description, 'id': projectUid}
