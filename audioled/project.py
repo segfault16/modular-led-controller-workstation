@@ -119,6 +119,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
             elif isinstance(message, NodeMessage):
                 if message.slotId != slotId:
                     # Message not meant for this slot
+                    print("Skipping node message for slot {}".format(message.slotId))
                     continue
                 print("Process node message: {}".format(message))
                 if message.operation == 'add':
@@ -130,6 +131,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     filtergraph.updateNodeParameter(message.nodeUid, message.params)
             elif isinstance(message, ModulationMessage):
                 if message.slotId != slotId:
+                    print("Skipping modulation message for slot {}".format(message.slotId))
                     continue
                 print("Process modulation message: {}".format(message))
                 if message.operation == 'add':
@@ -146,6 +148,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     filtergraph.updateModulationParameter(message.modUid, message.params)
             elif isinstance(message, ModulationSourceMessage):
                 if message.slotId != slotId:
+                    print("Skipping modulation source message for slot {}".format(message.slotId))
                     continue
                 print("Process modulation source message: {}".format(message))
                 if message.operation == 'add':
@@ -158,6 +161,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     filtergraph.updateModulationSourceParameter(message.modSourceUid, message.params)
             elif isinstance(message, ConnectionMessage):
                 if message.slotId != slotId:
+                    print("Skipping connection message for slot {}".format(message.slotId))
                     continue
                 print("Process connection message: {}".format(message))
                 if message.operation == 'add':
@@ -165,9 +169,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     newCon = filtergraph.addNodeConnection(con.fromNode.uid, con.fromChannel, con.toNode.uid, con.toChannel)
                     newCon.uid = con.uid
                 elif message.operation == 'remove':
-                    con = message.params  # type: audioled.filtergraph.Connection
-                    # TODO: Remove by uid?
-                    filtergraph.removeConnection(con.fromNode.uid, con.fromChannel, con.toNode.uid, con.toChannel)
+                    filtergraph.removeConnection(message.conUid)
             else:
                 print("Message not supported: {}".format(message))
     except Exception as e:
@@ -194,6 +196,7 @@ class Project(Updateable):
         self._previewDevice = None  # type: audioled.devices.LEDController
         self._previewDeviceIndex = 0
         self._contentRoot = None
+        self._devices = []
         self._filterGraphForDeviceIndex = {}
         self._outputThreads = {}
         self._publishQueue = PublishQueue()
@@ -296,7 +299,7 @@ class Project(Updateable):
                 p = multiprocessing.Process(target=worker, args=(self._publishQueue.register(), filterGraph, device, slotId))
                 p.start()
                 self._outputThreads[dIdx] = p
-                print('Started process for device {}'.format(dIdx))
+                print('Started process for device {} with device {}'.format(dIdx, device))
             dIdx += 1
         self._lock.release()
         self._processingEnabled = True
@@ -400,7 +403,7 @@ class Project(Updateable):
 
     def _handleConnectionRemoved(self, con: audioled.filtergraph.Connection):
         self._lock.acquire()
-        self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, con.uid, 'remove', con))
+        self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, con.uid, 'remove'))
         self._lock.release()
 
     def _sendUpdateCommand(self, dt):

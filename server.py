@@ -222,12 +222,7 @@ def create_app():
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             connection = next(connection for connection in fg.getConnections() if connection.uid == connectionUid)
-            fg.removeConnection(
-                connection.fromNode.effect,
-                connection.fromChannel,
-                connection.toNode.effect,
-                connection.toChannel,
-            )
+            fg.removeConnection(connection.uid)
             return "OK"
         except StopIteration:
             abort(404, "Node not found")

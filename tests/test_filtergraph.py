@@ -28,9 +28,9 @@ class Test_FilterGraph(unittest.TestCase):
 
         fg.addEffectNode(ef1)
         fg.addEffectNode(ef2)
-        fg.addConnection(ef1, 0, ef2, 0)
+        con1 = fg.addConnection(ef1, 0, ef2, 0)
         self.assertEqual(len(fg.getConnections()), 1)
-        fg.removeConnection(ef1, 0, ef2, 0)
+        fg.removeConnection(con1.uid)
         self.assertEqual(len(fg.getConnections()), 0)
 
     def test_connectionOrder_ok(self):
@@ -60,11 +60,11 @@ class Test_FilterGraph(unittest.TestCase):
         fg = filtergraph.FilterGraph()
         ef1 = MockEffect()
         ef2 = MockEffect()
-        fg.addEffectNode(ef1)
+        n1 = fg.addEffectNode(ef1)
         fg.addEffectNode(ef2)
         fg.addConnection(ef1, 0, ef2, 0)
         self.assertEqual(len(fg.getConnections()), 1)
-        fg.removeEffectNode(ef1)
+        fg.removeEffectNode(n1.uid)
         self.assertEqual(len(fg.getConnections()), 0)
 
     def test_circularConnections_raisesError(self):

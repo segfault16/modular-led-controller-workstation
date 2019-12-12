@@ -391,19 +391,15 @@ class FilterGraph(Updateable):
         self._updateProcessOrder()
         return newConnection
 
-    def removeConnection(self, fromEffect, fromEffectChannel, toEffect, toEffectChannel):
-        """Removes a connection between two filters
-        """
-        # find connection
-        con = next(con for con in self.__filterConnections
-                   if con.fromNode.effect == fromEffect and con.toNode.effect == toEffect
-                   and con.fromChannel == fromEffectChannel and con.toChannel == toEffectChannel)
+    def removeConnection(self, conUid):
+        con = next(con for con in self.__filterConnections if con.uid == conUid)
         if con is not None:
             self.__filterConnections.remove(con)
             if self._onConnectionRemoved is not None:
                 self._onConnectionRemoved(con)
             con.toNode._incomingConnections.remove(con)
-        None
+        else:
+            print("Could not remove connection {}".format(conUid))
 
     def getLEDOutput(self):
         return self._outputNode

@@ -91,7 +91,7 @@ class ServerConfiguration:
 
         proj.setFiltergraphForSlot(12, initial)
         proj.setFiltergraphForSlot(13, second)
-        proj.activeScene(12)
+        proj.activateScene(12)
         projectUid = uuid.uuid4().hex
         proj.id = projectUid
         self._projects[projectUid] = proj
@@ -181,8 +181,15 @@ class ServerConfiguration:
         else:
             deviceConfigName = self.getConfiguration(CONFIG_ACTIVE_DEVICE_CONFIGURATION)
             if deviceConfigName is None:
-                # TODO: Implement fallback
-                pass
+                deviceConfigName = "default"
+                self.setConfiguration(CONFIG_DEVICE_CONFIGS, {
+                    deviceConfigName: [{
+                        "device": self.getConfiguration(CONFIG_DEVICE),
+                        "device.candy.server": self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER),
+                        "device.num_pixels": self.getConfiguration(CONFIG_NUM_PIXELS),
+                        "device.num_rows": self.getConfiguration(CONFIG_NUM_ROWS)
+                    }]
+                })
             print("Creating device config {}".format(deviceConfigName))
             deviceConfigs = self.getConfiguration(CONFIG_DEVICE_CONFIGS)
             if deviceConfigs is None:
