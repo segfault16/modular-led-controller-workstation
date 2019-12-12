@@ -46,7 +46,7 @@ class PublishQueue(object):
     @ensure_parent
     def publish(self, val):
         for q in self._queues:
-            q.put(val)
+            q.put(val, True, 1)
 
 def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController):
     """Worker process for specific filtergraph for outputDevice
@@ -99,6 +99,8 @@ class Project(Updateable):
         self._filterGraphForDeviceIndex = {}
         self._outputThreads = {}
         self._publishQueue = PublishQueue()
+        self._lock = threading.Lock()
+        self._processingEnabled = True
 
     def __cleanState__(self, stateDict):
         """
@@ -136,37 +138,20 @@ class Project(Updateable):
         Arguments:
             dt {[float]} -- Time since last update
         """
-        self.sendUpdateCommand(dt)
-        
-        # Process preview in this process
-        if self._previewDeviceIndex is not None:
-            activeFilterGraph = self.getSlot(self.activeSlotId)
-            if activeFilterGraph is None:
-                return
-            previewDevice = self._devices[self._previewDeviceIndex]
-            if previewDevice is not None and activeFilterGraph.getLEDOutput() is not None:
-                if (previewDevice.getNumPixels() != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels()
-                    or previewDevice.getNumRows() != activeFilterGraph.getLEDOutput().effect.getNumOutputRows()):
-                    print("propagating {} pixels on {} rows".format(previewDevice.getNumPixels(),
-                                                                    previewDevice.getNumRows()))
-                    activeFilterGraph.propagateNumPixels(previewDevice.getNumPixels(), previewDevice.getNumRows())
-            activeFilterGraph.update(dt, event_loop)
+        # print("project: update")
+        if self._processingEnabled:
+            self._lock.acquire()
+            self._sendUpdateCommand(dt)
+            self._updatePreviewDevice(dt, event_loop)
+            self._lock.release()
+        else:
+            time.sleep(0.01)
+            print("Wait")
 
     def process(self):
         """Process active FilterGraph
         """
-        
-        # Process preview in this process
-        if self._previewDeviceIndex is not None:
-
-            activeFilterGraph = self.getSlot(self.activeSlotId)
-            if activeFilterGraph is None:
-                return
-            previewDevice = self._devices[self._previewDeviceIndex]
-            if previewDevice is not None and activeFilterGraph.getLEDOutput() is not None:
-                activeFilterGraph.process()
-                if activeFilterGraph.getLEDOutput()._outputBuffer[0] is not None:
-                    previewDevice.show(activeFilterGraph.getLEDOutput()._outputBuffer[0])
+        self._processPreviewDevice()
 
     def setFiltergraphForSlot(self, slotId, filterGraph):
         print("Set {} for slot {}".format(filterGraph, slotId))
@@ -179,13 +164,18 @@ class Project(Updateable):
 
         Scene: Project Slot per Output Device
         """
-        
+
         # Stop current scene
         self.stopProcessing()
 
         # TODO: Make configurable
-        self._previewDeviceIndex = 0
+        self._previewDeviceIndex = None
         self.activeSlotId = sceneId
+
+        self._processingEnabled = False
+        self._lock.acquire()
+        # Create new publish queue
+        self._publishQueue = PublishQueue()
         
         # Instanciate new scene
         dIdx = 0
@@ -210,17 +200,20 @@ class Project(Updateable):
                 self._outputThreads[dIdx] = p
                 print('Started process for device {}'.format(dIdx))
             dIdx += 1
+        self._lock.release()
+        self._processingEnabled = True
 
     def stopProcessing(self):
         print('Stop processing')
+        self._processingEnabled = False
+        self._lock.acquire()
         self._publishQueue.publish(None)
         for p in self._outputThreads.values():
             p.join()
         print('All processes joined')
         self._outputThreads = {}
-
-    def sendUpdateCommand(self, dt):
-        self._publishQueue.publish((dt, audioled.audio.GlobalAudio.buffer))
+        self._lock.release()
+        self._processingEnabled = True
 
     def previewSlot(self, slotId, deviceId):
         # TODO: Separate preview slot and active slot
@@ -232,3 +225,36 @@ class Project(Updateable):
         if self.slots[slotId] is None:
             self.slots[slotId] = FilterGraph()
         return self.slots[slotId]
+
+    def _sendUpdateCommand(self, dt):
+        self._publishQueue.publish((dt, audioled.audio.GlobalAudio.buffer))
+
+    def _updatePreviewDevice(self, dt, event_loop=asyncio.get_event_loop()):
+        # Process preview in this process
+        if self._previewDeviceIndex is not None:
+            activeFilterGraph = self.getSlot(self.activeSlotId)
+            if activeFilterGraph is None:
+                return
+            previewDevice = self._devices[self._previewDeviceIndex]
+            if previewDevice is not None and activeFilterGraph.getLEDOutput() is not None:
+                if (previewDevice.getNumPixels() != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels()
+                    or previewDevice.getNumRows() != activeFilterGraph.getLEDOutput().effect.getNumOutputRows()):
+                    print("propagating {} pixels on {} rows".format(previewDevice.getNumPixels(),
+                                                                    previewDevice.getNumRows()))
+                    activeFilterGraph.propagateNumPixels(previewDevice.getNumPixels(), previewDevice.getNumRows())
+            activeFilterGraph.update(dt, event_loop)
+
+    def _processPreviewDevice(self):
+        """Process active FilterGraph
+        """
+        # Process preview in this process
+        if self._previewDeviceIndex is not None:
+
+            activeFilterGraph = self.getSlot(self.activeSlotId)
+            if activeFilterGraph is None:
+                return
+            previewDevice = self._devices[self._previewDeviceIndex]
+            if previewDevice is not None and activeFilterGraph.getLEDOutput() is not None:
+                activeFilterGraph.process()
+                if activeFilterGraph.getLEDOutput()._outputBuffer[0] is not None:
+                    previewDevice.show(activeFilterGraph.getLEDOutput()._outputBuffer[0])
