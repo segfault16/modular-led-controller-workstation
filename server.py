@@ -120,7 +120,7 @@ def create_app():
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
-            fg.removeEffectNode(node.effect)
+            fg.removeEffectNode(node.uid)
             return "OK"
         except StopIteration:
             abort(404, "Node not found")
@@ -457,6 +457,7 @@ def create_app():
         value = request.json['slot']
         # print("Activating slot {}".format(value))
         proj.activateScene(value)
+        proj.previewSlot(value)
         return "OK"
 
     @app.route('/project/activeSlot', methods=['GET'])

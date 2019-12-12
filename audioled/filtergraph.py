@@ -184,7 +184,7 @@ class Timing(object):
 
 
 class Updateable(object):
-    def update(self, dt, event_loop):
+    def update(self, dt: float, event_loop):
         raise NotImplementedError("Update not implemented")
 
     def process(self):
@@ -204,8 +204,29 @@ class FilterGraph(Updateable):
         self._project = None
         self.__modulationsources = []  # type: List[ModulationSourceNode]
         self.__modulations = []  # type: List[Modulation]
+        # Events
+        self._onNodeAdded = None
+        self._onNodeRemoved = None
+        self._onNodeUpdate = None
+        self._onConnectionAdded = None
+        self._onConnectionRemoved = None
+        self._onModulationAdded = None
+        self._onModulationRemoved = None
+        self._onModulationUpdate = None
+        self._onModulationSourceAdded = None
+        self._onModulationSourceRemoved = None
+        self._onModulationSourceUpdate = None
 
-    def update(self, dt, event_loop=asyncio.get_event_loop()):
+    def update(self, dt: float, event_loop=asyncio.get_event_loop()):
+        """Update method from Updateable
+        
+        Arguments:
+            dt {float} -- Time since last update
+        
+        Keyword Arguments:
+            event_loop {[type]} -- Optional event loop to process (default: {asyncio.get_event_loop()})
+        """
+        
         if self._outputNode is None:
             # Pass the update, since no num_pixels can be provided to the effects
             return
@@ -231,7 +252,7 @@ class FilterGraph(Updateable):
                 *[asyncio.ensure_future(handle_async_exception(node, node.update, dt)) for node in self.__processOrder])
             # wait for completion
             event_loop.run_until_complete(all_tasks)
-            self.updateUpdateTiming("all_async", timer() - time)
+            self._updateUpdateTiming("all_async", timer() - time)
         else:
             for node in self.__processOrder:
 
@@ -239,9 +260,11 @@ class FilterGraph(Updateable):
                     time = timer()
                 event_loop.run_until_complete(node.update(dt))
                 if self.recordTimings:
-                    self.updateUpdateTiming(str(node.effect), timer() - time)
+                    self._updateUpdateTiming(str(node.effect), timer() - time)
 
     def process(self):
+        """Process method of Updateable
+        """
         time = None
 
         if self._outputNode is None:
@@ -249,20 +272,19 @@ class FilterGraph(Updateable):
             return
 
         for node in self.__processOrder:
-
             if self.recordTimings:
                 time = timer()
             node.process()
             if self.recordTimings:
-                self.updateProcessTiming(node, timer() - time)
+                self._updateProcessTiming(node, timer() - time)
 
-    def updateProcessTiming(self, node, timing):
+    def _updateProcessTiming(self, node, timing):
         if node not in self._processTimings:
             self._processTimings[node] = Timing()
 
         self._processTimings[node].update(timing)
 
-    def updateUpdateTiming(self, node, timing):
+    def _updateUpdateTiming(self, node, timing):
         if node not in self._updateTimings:
             self._updateTimings[node] = Timing()
 
@@ -285,41 +307,49 @@ class FilterGraph(Updateable):
             print("{0:30s}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(
                 str(key.effect)[0:30], val._min, val._max, val._avg))
 
-    def addEffectNode(self, effect):
+    def addEffectNode(self, effectToAdd: effect.Effect):
         """Adds a filter node to the graph
 
         Parameters
         ----------
         filterNode: node to add
         """
-        effect._filterGraph = self
-        node = Node(effect)
+        effectToAdd._filterGraph = self
+        node = Node(effectToAdd)
         node.uid = uuid.uuid4().hex
-        if isinstance(effect, devices.LEDOutput):
+        if isinstance(effectToAdd, devices.LEDOutput):
             if self._outputNode is None:
                 self._outputNode = node
             else:
                 raise RuntimeError("Filtergraph can only have one LED Output")
 
         self.__filterNodes.append(node)
+        if self._onNodeAdded is not None:
+            self._onNodeAdded(node)
         self._updateProcessOrder()
         return node
 
-    def removeEffectNode(self, effect):
-        """Removes a filter node from the graph
-
-        Parameters
-        ----------
-        filterNode: node to remove
+    def removeEffectNode(self, nodeUid):
+        """Removes effect node with given effect from FilterGraph
+        
+        Arguments:
+            effectToRemove {effect.Effect} -- Effect to remove
         """
+        node = next(node for node in self.__filterNodes if node.uid == nodeUid)
+        effectToRemove = node.effect
+        
         # Remove connections
-        connections = [con for con in self.__filterConnections if con.fromNode.effect == effect or con.toNode.effect == effect]
+        connections = [con for con in self.__filterConnections if con.fromNode.effect == effectToRemove
+                       or con.toNode.effect == effectToRemove]
         for con in connections:
             self.__filterConnections.remove(con)
+            if self._onConnectionRemoved is not None:
+                self._onConnectionRemoved(con)
         # Remove Node
-        node = next(node for node in self.__filterNodes if node.effect == effect)
         if node is not None:
             self.__filterNodes.remove(node)
+            if self._onNodeRemoved is not None:
+                self._onNodeRemoved(node)
             if node == self._outputNode:
                 self._outputNode = None
             if node in self.__processOrder:
@@ -339,6 +369,8 @@ class FilterGraph(Updateable):
         if self._connectionWillMakeGraphCyclic(newConnection):
             raise RuntimeError("Connection would make graph cyclic")
         self.__filterConnections.append(newConnection)
+        if self._onConnectionAdded is not None:
+            self._onConnectionAdded(newConnection)
         toNode._incomingConnections.append(newConnection)
         self._updateProcessOrder()
         return newConnection
@@ -353,6 +385,8 @@ class FilterGraph(Updateable):
         if self._connectionWillMakeGraphCyclic(newConnection):
             raise RuntimeError("Connection would make graph cyclic")
         self.__filterConnections.append(newConnection)
+        if self._onConnectionAdded is not None:
+            self._onConnectionAdded(newConnection)
         toNode._incomingConnections.append(newConnection)
         self._updateProcessOrder()
         return newConnection
@@ -366,6 +400,8 @@ class FilterGraph(Updateable):
                    and con.fromChannel == fromEffectChannel and con.toChannel == toEffectChannel)
         if con is not None:
             self.__filterConnections.remove(con)
+            if self._onConnectionRemoved is not None:
+                self._onConnectionRemoved(con)
             con.toNode._incomingConnections.remove(con)
         None
 
@@ -378,6 +414,8 @@ class FilterGraph(Updateable):
         modSourceNode = ModulationSourceNode(modulationSource)
         modSourceNode.uid = uuid.uuid4().hex
         self.__modulationsources.append(modSourceNode)
+        if self._onModulationSourceAdded is not None:
+            self._onModulationSourceAdded(modSourceNode)
         return modSourceNode
 
     def removeModulationSource(self, modSourceUid):
@@ -395,6 +433,8 @@ class FilterGraph(Updateable):
 
         # delete modSourceNode
         self.__modulationsources.remove(modSourceNode)
+        if self._onModulationSourceRemoved is not None:
+            self._onModulationSourceRemoved(modSourceNode)
 
     def addModulation(self, modSourceUid, targetNodeUid, targetParam=None, amount=0, inverted=False):
         """Adds a modulation driven by a modulationSource
@@ -404,6 +444,8 @@ class FilterGraph(Updateable):
         newMod = Modulation(modSource, amount, inverted, targetNode, targetParam)
         newMod.uid = uuid.uuid4().hex
         self.__modulations.append(newMod)
+        if self._onModulationAdded is not None:
+            self._onModulationAdded(newMod)
         return newMod
 
     def removeModulation(self, modUid):
@@ -417,6 +459,48 @@ class FilterGraph(Updateable):
 
             # Remove modulation
             self.__modulations.remove(mod)
+            if self._onModulationRemoved is not None:
+                self._onModulationRemoved(mod)
+
+    def propagateNumPixels(self, num_pixels, num_rows=1):
+        if self.getLEDOutput() is not None:
+            self.getLEDOutput().effect.setNumOutputPixels(num_pixels)
+            self.getLEDOutput().effect.setNumOutputRows(num_rows)
+            self._updateProcessOrder()
+
+    def getConnections(self):
+        return self.__filterConnections
+
+    def getNodes(self):
+        return self.__filterNodes
+
+    def getModulationSources(self):
+        return self.__modulationsources
+    
+    def getModulations(self):
+        return self.__modulations
+
+    def updateNodeParameter(self, nodeUid, updateParameters):
+        node = next(node for node in self.__filterNodes if node.uid == nodeUid)
+        node.effect.updateParameter(updateParameters)
+        if self._onNodeUpdate is not None:
+            self._onNodeUpdate(node, updateParameters)
+        return node
+
+    def updateModulationSourceParameter(self, modSourceUid, updateParameters):
+        mod = next(mod for mod in self.__modulationsources
+                   if mod.uid == modSourceUid)  # type: ModulationSourceNode
+        mod.modulator.updateParameter(updateParameters)
+        if self._onModulationSourceUpdate is not None:
+            self._onModulationSourceUpdate(mod, updateParameters)
+        return mod
+
+    def updateModulationParameter(self, modUid, updateParameters):
+        mod = next(mod for mod in self.__modulations if mod.uid == modUid)  # type: Modulation
+        mod.updateParameter(updateParameters)
+        if self._onModulationUpdate is not None:
+            self._onModulationUpdate(mod, updateParameters)
+        return mod
 
     def _updateProcessOrder(self):
         processOrder = []
@@ -486,6 +570,35 @@ class FilterGraph(Updateable):
         # persist
         self.__processOrder = processOrder
 
+    def _getNodesInOrder(self):
+        # For testing only
+        return self.__processOrder
+
+    def _connectionWillMakeGraphCyclic(self, connection):
+        targetNode = connection.toNode
+        curNode = connection.fromNode
+        if targetNode == curNode:
+            return True
+        # traverse predecessors and check if connection.toNode is one of them
+        return self._checkHasPredecessor(curNode, targetNode, [])
+
+    def _checkHasPredecessor(self, curNode, targetNode, visitedNodes):
+        if targetNode == curNode:
+            return True
+        predecessors = [con for con in self.__filterConnections if con.toNode == curNode]
+        furtherNodes = []
+        for con in predecessors:
+            node = con.fromNode
+            if node is targetNode:
+                return True
+            if node not in visitedNodes:
+                furtherNodes.append(node)
+        visitedNodes.append(curNode)
+        for node in furtherNodes:
+            if self._checkHasPredecessor(node, targetNode, visitedNodes):
+                return True
+        return False
+
     def __getstate__(self):
         state = {}
         nodes = [node for node in self.__filterNodes]
@@ -526,66 +639,3 @@ class FilterGraph(Updateable):
                 newMod = self.addModulation(mod['modulation_source_uid'], mod['target_node_uid'], mod['target_param'],
                                             mod['amount'], mod['inverted'])
                 newMod.uid = mod['uid']
-
-    def propagateNumPixels(self, num_pixels, num_rows=1):
-        if self.getLEDOutput() is not None:
-            self.getLEDOutput().effect.setNumOutputPixels(num_pixels)
-            self.getLEDOutput().effect.setNumOutputRows(num_rows)
-            self._updateProcessOrder()
-
-    def getConnections(self):
-        return self.__filterConnections
-
-    def getNodes(self):
-        return self.__filterNodes
-
-    def getModulationSources(self):
-        return self.__modulationsources
-    
-    def getModulations(self):
-        return self.__modulations
-
-    def updateNodeParameter(self, nodeUid, updateParameters):
-        node = next(node for node in self.__filterNodes if node.uid == nodeUid)
-        node.effect.updateParameter(updateParameters)
-        return node
-
-    def updateModulationSourceParameter(self, modSourceUid, updateParameters):
-        mod = next(mod for mod in self.__modulationsources
-                   if mod.uid == modSourceUid)  # type: ModulationSourceNode
-        mod = mod.modulator.updateParameter(updateParameters)
-        return mod
-
-    def updateModulationParameter(self, modUid, updateParameters):
-        mod = next(mod for mod in self.__modulations if mod.uid == modUid)  # type: Modulation
-        mod.updateParameter(updateParameters)
-        return mod
-
-    def _getNodesInOrder(self):
-        # For testing only
-        return self.__processOrder
-
-    def _connectionWillMakeGraphCyclic(self, connection):
-        targetNode = connection.toNode
-        curNode = connection.fromNode
-        if targetNode == curNode:
-            return True
-        # traverse predecessors and check if connection.toNode is one of them
-        return self._checkHasPredecessor(curNode, targetNode, [])
-
-    def _checkHasPredecessor(self, curNode, targetNode, visitedNodes):
-        if targetNode == curNode:
-            return True
-        predecessors = [con for con in self.__filterConnections if con.toNode == curNode]
-        furtherNodes = []
-        for con in predecessors:
-            node = con.fromNode
-            if node is targetNode:
-                return True
-            if node not in visitedNodes:
-                furtherNodes.append(node)
-        visitedNodes.append(curNode)
-        for node in furtherNodes:
-            if self._checkHasPredecessor(node, targetNode, visitedNodes):
-                return True
-        return False

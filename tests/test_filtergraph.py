@@ -12,13 +12,13 @@ class Test_FilterGraph(unittest.TestCase):
         ef1 = MockEffect()
         ef2 = MockEffect()
 
-        fg.addEffectNode(ef1)
+        n1 = fg.addEffectNode(ef1)
         self.assertEqual(len(fg.getNodes()), 1)
-        fg.addEffectNode(ef2)
+        n2 = fg.addEffectNode(ef2)
         self.assertEqual(len(fg.getNodes()), 2)
-        fg.removeEffectNode(ef1)
+        fg.removeEffectNode(n1.uid)
         self.assertEqual(len(fg.getNodes()), 1)
-        fg.removeEffectNode(ef2)
+        fg.removeEffectNode(n2.uid)
         self.assertEqual(len(fg.getNodes()), 0)
 
     def test_canAddRemoveNodeConnections(self):
