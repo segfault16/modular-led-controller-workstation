@@ -545,6 +545,22 @@ class FilterGraph(Updateable):
     def getModulations(self):
         return self.__modulations
 
+    def updateNodeParameter(self, nodeUid, updateParameters):
+        node = next(node for node in self.__filterNodes if node.uid == nodeUid)
+        node.effect.updateParameter(updateParameters)
+        return node
+
+    def updateModulationSourceParameter(self, modSourceUid, updateParameters):
+        mod = next(mod for mod in self.__modulationsources
+                   if mod.uid == modSourceUid)  # type: ModulationSourceNode
+        mod = mod.modulator.updateParameter(updateParameters)
+        return mod
+
+    def updateModulationParameter(self, modUid, updateParameters):
+        mod = next(mod for mod in self.__modulations if mod.uid == modUid)  # type: Modulation
+        mod.updateParameter(updateParameters)
+        return mod
+
     def _getNodesInOrder(self):
         # For testing only
         return self.__processOrder

@@ -132,10 +132,8 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
-            # data =  json.loads(request.json)
             print(request.json)
-            node.effect.updateParameter(request.json)
+            node = fg.updateNodeParameter(nodeUid, request.json)
             return jsonpickle.encode(node)
         except StopIteration:
             abort(404, "Node not found")
@@ -259,11 +257,8 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            mod = next(mod for mod in fg.getModulationSources()
-                       if mod.uid == modulationUid)  # type: filtergraph.ModulationSourceNode
-            # data =  json.loads(request.json)
             print(request.json)
-            mod = mod.modulator.updateParameter(request.json)
+            mod = fg.updateModulationSourceParameter(modulationUid, request.json)
             return jsonpickle.encode(mod)
         except StopIteration:
             abort(404, "Modulation not found")
@@ -321,10 +316,8 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            mod = next(mod for mod in fg.getModulations() if mod.uid == modulationUid)  # type: filtergraph.Modulation
-            # data =  json.loads(request.json)
             print(request.json)
-            mod.updateParameter(request.json)
+            mod = fg.updateModulationParameter(modulationUid, request.json)
             return jsonpickle.encode(mod)
         except StopIteration:
             abort(404, "Modulation not found")
