@@ -13,13 +13,13 @@ class Test_FilterGraph(unittest.TestCase):
         ef2 = MockEffect()
 
         fg.addEffectNode(ef1)
-        self.assertEqual(len(fg._filterNodes), 1)
+        self.assertEqual(len(fg.getNodes()), 1)
         fg.addEffectNode(ef2)
-        self.assertEqual(len(fg._filterNodes), 2)
+        self.assertEqual(len(fg.getNodes()), 2)
         fg.removeEffectNode(ef1)
-        self.assertEqual(len(fg._filterNodes), 1)
+        self.assertEqual(len(fg.getNodes()), 1)
         fg.removeEffectNode(ef2)
-        self.assertEqual(len(fg._filterNodes), 0)
+        self.assertEqual(len(fg.getNodes()), 0)
 
     def test_canAddRemoveNodeConnections(self):
         fg = filtergraph.FilterGraph()
@@ -29,9 +29,9 @@ class Test_FilterGraph(unittest.TestCase):
         fg.addEffectNode(ef1)
         fg.addEffectNode(ef2)
         fg.addConnection(ef1, 0, ef2, 0)
-        self.assertEqual(len(fg._filterConnections), 1)
+        self.assertEqual(len(fg.getConnections()), 1)
         fg.removeConnection(ef1, 0, ef2, 0)
-        self.assertEqual(len(fg._filterConnections), 0)
+        self.assertEqual(len(fg.getConnections()), 0)
 
     def test_connectionOrder_ok(self):
         fg = filtergraph.FilterGraph()
@@ -51,10 +51,10 @@ class Test_FilterGraph(unittest.TestCase):
         fg.addConnection(ef1, 0, ef2, 0)
         fg.addConnection(ef2, 0, ef3, 0)
         fg.addConnection(ef3, 0, led, 0)
-        print(fg._processOrder)
-        self.assertTrue(fg._processOrder.index(n1) < fg._processOrder.index(n2))
-        self.assertTrue(fg._processOrder.index(n1) < fg._processOrder.index(n3))
-        self.assertTrue(fg._processOrder.index(n2) < fg._processOrder.index(n3))
+        print(fg._getNodesInOrder())
+        self.assertTrue(fg._getNodesInOrder().index(n1) < fg._getNodesInOrder().index(n2))
+        self.assertTrue(fg._getNodesInOrder().index(n1) < fg._getNodesInOrder().index(n3))
+        self.assertTrue(fg._getNodesInOrder().index(n2) < fg._getNodesInOrder().index(n3))
 
     def test_removeNodes_connectionsAreRemove(self):
         fg = filtergraph.FilterGraph()
@@ -63,9 +63,9 @@ class Test_FilterGraph(unittest.TestCase):
         fg.addEffectNode(ef1)
         fg.addEffectNode(ef2)
         fg.addConnection(ef1, 0, ef2, 0)
-        self.assertEqual(len(fg._filterConnections), 1)
+        self.assertEqual(len(fg.getConnections()), 1)
         fg.removeEffectNode(ef1)
-        self.assertEqual(len(fg._filterConnections), 0)
+        self.assertEqual(len(fg.getConnections()), 0)
 
     def test_circularConnections_raisesError(self):
         fg = filtergraph.FilterGraph()
@@ -91,8 +91,8 @@ class Test_FilterGraph(unittest.TestCase):
         fg.addEffectNode(led)
         fg.addConnection(ef1, 0, led, 0)
         fg.process()
-        self.assertEqual(len(fg._filterNodes[0]._outputBuffer), 5)
-        self.assertEqual(fg._filterNodes[0]._outputBuffer[0], 0)
+        self.assertEqual(len(fg.getNodes()[0]._outputBuffer), 5)
+        self.assertEqual(fg.getNodes()[0]._outputBuffer[0], 0)
 
     def test_mockEffect_works(self):
         fg = filtergraph.FilterGraph()

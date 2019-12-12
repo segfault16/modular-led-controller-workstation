@@ -101,7 +101,7 @@ def create_app():
     def slot_slotId_nodes_get(slotId):
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
-        nodes = [node for node in fg._filterNodes]
+        nodes = [node for node in fg.getNodes()]
         return jsonpickle.encode(nodes)
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['GET'])
@@ -109,7 +109,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return jsonpickle.encode(node)
         except StopIteration:
             abort(404, "Node not found")
@@ -119,7 +119,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             fg.removeEffectNode(node.effect)
             return "OK"
         except StopIteration:
@@ -132,7 +132,7 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             # data =  json.loads(request.json)
             print(request.json)
             node.effect.updateParameter(request.json)
@@ -145,7 +145,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(node.effect.getParameterDefinition())
         except StopIteration:
             abort(404, "Node not found")
@@ -155,7 +155,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(node.effect.getModulateableParameters())
         except StopIteration:
             abort(404, "Node not found")
@@ -165,7 +165,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(getFullClassName(node.effect))
         except StopIteration:
             abort(404, "Node not found")
@@ -199,7 +199,7 @@ def create_app():
     def slot_slotId_connections_get(slotId):
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
-        connections = [con for con in fg._filterConnections]
+        connections = [con for con in fg.getConnections()]
         return jsonpickle.encode(connections)
 
     @app.route('/slot/<int:slotId>/connection', methods=['POST'])
@@ -223,7 +223,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            connection = next(connection for connection in fg._filterConnections if connection.uid == connectionUid)
+            connection = next(connection for connection in fg.getConnections() if connection.uid == connectionUid)
             fg.removeConnection(
                 connection.fromNode.effect,
                 connection.fromChannel,
@@ -238,7 +238,7 @@ def create_app():
     def slot_slotId_modulationSources_get(slotId):
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
-        mods = [mod for mod in fg._modulationSources]
+        mods = [mod for mod in fg.getModulationSources()]
         return jsonpickle.encode(mods)
 
     @app.route('/slot/<int:slotId>/modulationSource/<modulationSourceUid>', methods=['DELETE'])
@@ -246,7 +246,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            mod = next(mod for mod in fg._modulationSources if mod.uid == modulationSourceUid)
+            mod = next(mod for mod in fg.getModulationSources() if mod.uid == modulationSourceUid)
             fg.removeModulationSource(mod.uid)
             return "OK"
         except StopIteration:
@@ -259,7 +259,7 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            mod = next(mod for mod in fg._modulationSources
+            mod = next(mod for mod in fg.getModulationSources()
                        if mod.uid == modulationUid)  # type: filtergraph.ModulationSourceNode
             # data =  json.loads(request.json)
             print(request.json)
@@ -273,7 +273,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            mod = next(mod for mod in fg._modulationSources if mod.uid == modulationSourceUid)
+            mod = next(mod for mod in fg.getModulationSources() if mod.uid == modulationSourceUid)
             return jsonpickle.encode(mod)
         except StopIteration:
             abort(404, "Modulation Source not found")
@@ -284,7 +284,7 @@ def create_app():
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         modSourceId = request.args.get('modulationSourceUid', None)
         modDestinationId = request.args.get('modulationDestinationUid', None)
-        mods = [mod for mod in fg._modulations]
+        mods = [mod for mod in fg.getModulations()]
         if modSourceId is not None:
             # for specific modulation source
             mods = [mod for mod in mods if mod.modulationSource.uid == modSourceId]
@@ -309,7 +309,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid)
+            mod = next(mod for mod in fg.getModulations() if mod.uid == modulationUid)
             return jsonpickle.encode(mod)
         except StopIteration:
             abort(404, "Modulation not found")
@@ -321,7 +321,7 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid)  # type: filtergraph.Modulation
+            mod = next(mod for mod in fg.getModulations() if mod.uid == modulationUid)  # type: filtergraph.Modulation
             # data =  json.loads(request.json)
             print(request.json)
             mod.updateParameter(request.json)
@@ -334,7 +334,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid)
+            mod = next(mod for mod in fg.getModulations() if mod.uid == modulationUid)
             if mod is not None:
                 fg.removeModulation(modulationUid)
                 return "OK"
