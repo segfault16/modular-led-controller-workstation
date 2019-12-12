@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 import traceback
+import jsonpickle
 from timeit import default_timer as timer
 from typing import List
 
@@ -479,6 +480,7 @@ class FilterGraph(Updateable):
     def updateNodeParameter(self, nodeUid, updateParameters):
         node = next(node for node in self.__filterNodes if node.uid == nodeUid)
         node.effect.updateParameter(updateParameters)
+        print(jsonpickle.encode(node.effect))
         if self._onNodeUpdate is not None:
             self._onNodeUpdate(node, updateParameters)
         return node

@@ -9,6 +9,7 @@ import threading
 import time
 import multiprocessing
 import traceback
+import json
 from timeit import default_timer as timer
 
 import os
@@ -28,7 +29,7 @@ def ensure_parent(func):
 
 class PublishQueue(object):
     def __init__(self):
-        self._queues = []
+        self._queues = []  # type: List[multiprocessing.Queue]
         self._creator_pid = os.getpid()
 
     def __getstate__(self):
@@ -50,6 +51,16 @@ class PublishQueue(object):
         for q in self._queues:
             q.put(val, True, 1)
 
+    @ensure_parent
+    def close(self):
+        for q in self._queues:
+            q.close()
+    
+    @ensure_parent
+    def join_thread(self):
+        for q in self._queues:
+            q.join_thread()
+
 
 class UpdateMessage:
     def __init__(self, dt, audioBuffer):
@@ -63,6 +74,9 @@ class NodeMessage:
         self.nodeUid = nodeUid
         self.operation = operation
         self.params = params
+    
+    def __str__(self):
+        return json.dumps(self.__dict__)
 
 
 class ModulationMessage:
@@ -72,6 +86,9 @@ class ModulationMessage:
         self.operation = operation
         self.params = params
 
+    def __str__(self):
+        return json.dumps(self.__dict__)
+
 
 class ModulationSourceMessage:
     def __init__(self, slotId, modSourceUid, operation, params=None):
@@ -80,13 +97,20 @@ class ModulationSourceMessage:
         self.operation = operation
         self.params = params
 
+    def __str__(self):
+        return json.dumps(self.__dict__)
+
 
 class ConnectionMessage:
     def __init__(self, slotId, conUid, operation, params=None):
         self.slotId = slotId
         self.conUid = conUid
         self.operation = operation
-        self.params = params    
+        self.params = params
+
+    def __str__(self):
+        return json.dumps(self.__dict__)
+
 
 
 def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId):
@@ -102,77 +126,84 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
         asyncio.set_event_loop(event_loop)
         filtergraph.propagateNumPixels(outputDevice.getNumPixels(), outputDevice.getNumRows())
         for message in iter(q.get, None):
-            if isinstance(message, UpdateMessage):
-                dt = message.dt
-                audioBuffer = message.audioBuffer
-                # print("got item {} in process {}".format(dt, os.getpid()))
+            try:
+                if isinstance(message, UpdateMessage):
+                    dt = message.dt
+                    audioBuffer = message.audioBuffer
+                    # print("got item {} in process {}".format(dt, os.getpid()))
 
-                # TODO: Hack to propagate audio?
-                audioled.audio.GlobalAudio.buffer = audioBuffer
+                    # TODO: Hack to propagate audio?
+                    audioled.audio.GlobalAudio.buffer = audioBuffer
 
-                # Update Filtergraph
-                filtergraph.update(dt, event_loop)
-                filtergraph.process()
-                # Propagate to outDevice
-                buffer = filtergraph.getLEDOutput()._outputBuffer[0]
-                outputDevice.show(buffer)
-            elif isinstance(message, NodeMessage):
-                if message.slotId != slotId:
-                    # Message not meant for this slot
-                    print("Skipping node message for slot {}".format(message.slotId))
-                    continue
-                print("Process node message: {}".format(message))
-                if message.operation == 'add':
-                    node = filtergraph.addEffectNode(message.params)
-                    node.uid = message.nodeUid
-                elif message.operation == 'remove':
-                    filtergraph.removeEffectNode(message.nodeUid)
-                elif message.operation == 'update':
-                    filtergraph.updateNodeParameter(message.nodeUid, message.params)
-            elif isinstance(message, ModulationMessage):
-                if message.slotId != slotId:
-                    print("Skipping modulation message for slot {}".format(message.slotId))
-                    continue
-                print("Process modulation message: {}".format(message))
-                if message.operation == 'add':
-                    mod = message.params  # type: audioled.filtergraph.Modulation
-                    newMod = filtergraph.addModulation(modSourceUid=mod.modulationSource.uid,
-                                                       targetNodeUid=mod.targetNode.uid,
-                                                       targetParam=mod.targetParameter,
-                                                       amount=mod.amount,
-                                                       inverted=mod.inverted)
-                    newMod.uid = mod.uid
-                elif message.operation == 'remove':
-                    filtergraph.removeModulation(message.modUid)
-                elif message.operation == 'update':
-                    filtergraph.updateModulationParameter(message.modUid, message.params)
-            elif isinstance(message, ModulationSourceMessage):
-                if message.slotId != slotId:
-                    print("Skipping modulation source message for slot {}".format(message.slotId))
-                    continue
-                print("Process modulation source message: {}".format(message))
-                if message.operation == 'add':
-                    modSource = message.params
-                    newModSource = filtergraph.addModulationSource(modSource)
-                    newModSource.uid = modSource.uid
-                elif message.operation == 'remove':
-                    filtergraph.removeModulationSource(message.modSourceUid)
-                elif message.operation == 'update':
-                    filtergraph.updateModulationSourceParameter(message.modSourceUid, message.params)
-            elif isinstance(message, ConnectionMessage):
-                if message.slotId != slotId:
-                    print("Skipping connection message for slot {}".format(message.slotId))
-                    continue
-                print("Process connection message: {}".format(message))
-                if message.operation == 'add':
-                    con = message.params  # type: audioled.filtergraph.Connection
-                    newCon = filtergraph.addNodeConnection(con.fromNode.uid, con.fromChannel, con.toNode.uid, con.toChannel)
-                    newCon.uid = con.uid
-                elif message.operation == 'remove':
-                    filtergraph.removeConnection(message.conUid)
-            else:
-                print("Message not supported: {}".format(message))
+                    # Update Filtergraph
+                    filtergraph.update(dt, event_loop)
+                    filtergraph.process()
+                    # Propagate to outDevice
+                    try:
+                        buffer = filtergraph.getLEDOutput()._outputBuffer[0]
+                        outputDevice.show(buffer)
+                    except Exception as e:
+                        print("Error propagating to device: {}".format(e))
+                elif isinstance(message, NodeMessage):
+                    if message.slotId != slotId:
+                        # Message not meant for this slot
+                        print("Skipping node message for slot {}".format(message.slotId))
+                        continue
+                    print("Process node message: {}".format(message))
+                    if message.operation == 'add':
+                        node = filtergraph.addEffectNode(message.params)
+                        node.uid = message.nodeUid
+                    elif message.operation == 'remove':
+                        filtergraph.removeEffectNode(message.nodeUid)
+                    elif message.operation == 'update':
+                        filtergraph.updateNodeParameter(message.nodeUid, message.params)
+                elif isinstance(message, ModulationMessage):
+                    if message.slotId != slotId:
+                        print("Skipping modulation message for slot {}".format(message.slotId))
+                        continue
+                    print("Process modulation message: {}".format(message))
+                    if message.operation == 'add':
+                        mod = message.params  # type: audioled.filtergraph.Modulation
+                        newMod = filtergraph.addModulation(modSourceUid=mod.modulationSource.uid,
+                                                        targetNodeUid=mod.targetNode.uid,
+                                                        targetParam=mod.targetParameter,
+                                                        amount=mod.amount,
+                                                        inverted=mod.inverted)
+                        newMod.uid = mod.uid
+                    elif message.operation == 'remove':
+                        filtergraph.removeModulation(message.modUid)
+                    elif message.operation == 'update':
+                        filtergraph.updateModulationParameter(message.modUid, message.params)
+                elif isinstance(message, ModulationSourceMessage):
+                    if message.slotId != slotId:
+                        print("Skipping modulation source message for slot {}".format(message.slotId))
+                        continue
+                    print("Process modulation source message: {}".format(message))
+                    if message.operation == 'add':
+                        modSource = message.params
+                        newModSource = filtergraph.addModulationSource(modSource)
+                        newModSource.uid = modSource.uid
+                    elif message.operation == 'remove':
+                        filtergraph.removeModulationSource(message.modSourceUid)
+                    elif message.operation == 'update':
+                        filtergraph.updateModulationSourceParameter(message.modSourceUid, message.params)
+                elif isinstance(message, ConnectionMessage):
+                    if message.slotId != slotId:
+                        print("Skipping connection message for slot {}".format(message.slotId))
+                        continue
+                    print("Process connection message: {}".format(message))
+                    if message.operation == 'add':
+                        con = message.params  # type: audioled.filtergraph.Connection
+                        newCon = filtergraph.addNodeConnection(con.fromNode.uid, con.fromChannel, con.toNode.uid, con.toChannel)
+                        newCon.uid = con.uid
+                    elif message.operation == 'remove':
+                        filtergraph.removeConnection(message.conUid)
+                else:
+                    print("Message not supported: {}".format(message))
+            except audioled.filtergraph.NodeException:
+                print("Continuing on NodeException")
     except Exception as e:
+        traceback.print_exc()
         print("process {} exited due to: {}".format(os.getpid(), e))
     except:
         print("process interrupted")
@@ -242,9 +273,11 @@ class Project(Updateable):
         # print("project: update")
         if self._processingEnabled:
             self._lock.acquire()
-            self._sendUpdateCommand(dt)
-            self._updatePreviewDevice(dt, event_loop)
-            self._lock.release()
+            try:
+                self._sendUpdateCommand(dt)
+                self._updatePreviewDevice(dt, event_loop)
+            finally:
+                self._lock.release()
         else:
             time.sleep(0.01)
             print("Wait")
@@ -270,51 +303,59 @@ class Project(Updateable):
         self.stopProcessing()
 
         # TODO: Make configurable
-        self._previewDeviceIndex = None
+        self._previewDeviceIndex = 0
         self.activeSlotId = sceneId
 
         self._processingEnabled = False
         self._lock.acquire()
-        # Create new publish queue
-        self._publishQueue = PublishQueue()
+        try:
+            # Create new publish queue
+            self._publishQueue = PublishQueue()
 
-        # Instanciate new scene
-        dIdx = 0
-        for device in self._devices:
-            # Get slot Id associated with this device
-            try:
-                slotId = self.outputSlotMatrix[dIdx]
-            except Exception:
-                # Backwards compatibility: Init with slotId = sceneId
-                self.outputSlotMatrix[dIdx] = sceneId
+            # Instanciate new scene
+            dIdx = 0
+            for device in self._devices:
+                # Get slot Id associated with this device
+                try:
+                    slotId = self.outputSlotMatrix[dIdx]
+                except Exception:
+                    # Backwards compatibility: Init with slotId = sceneId
+                    self.outputSlotMatrix[dIdx] = sceneId
+                    slotId = sceneId
+
+                # TODO: For testing only, remove once outputSlotMatrix stable
                 slotId = sceneId
 
-            # TODO: For testing only, remove once outputSlotMatrix stable
-            slotId = sceneId
+                # Get filtergraph
+                filterGraph = self.getSlot(slotId)
 
-            # Get filtergraph
-            filterGraph = self.getSlot(slotId)
-
-            if dIdx != self._previewDeviceIndex:
-                p = multiprocessing.Process(target=worker, args=(self._publishQueue.register(), filterGraph, device, slotId))
-                p.start()
-                self._outputThreads[dIdx] = p
-                print('Started process for device {} with device {}'.format(dIdx, device))
-            dIdx += 1
-        self._lock.release()
-        self._processingEnabled = True
+                if dIdx != self._previewDeviceIndex:
+                    p = multiprocessing.Process(target=worker, args=(self._publishQueue.register(), filterGraph, device, slotId))
+                    p.start()
+                    self._outputThreads[dIdx] = p
+                    print('Started process for device {} with device {}'.format(dIdx, device))
+                dIdx += 1
+        finally:
+            self._lock.release()
+            self._processingEnabled = True
 
     def stopProcessing(self):
         print('Stop processing')
         self._processingEnabled = False
         self._lock.acquire()
-        self._publishQueue.publish(None)
-        for p in self._outputThreads.values():
-            p.join()
-        print('All processes joined')
-        self._outputThreads = {}
-        self._lock.release()
-        self._processingEnabled = True
+        try:
+            self._publishQueue.publish(None)
+            for p in self._outputThreads.values():
+                p.join()
+            print('All processes joined')
+            self._publishQueue.close()
+            self._publishQueue.join_thread()
+            print('Queue ended')
+            self._publishQueue = None
+            self._outputThreads = {}
+        finally:
+            self._lock.release()
+            self._processingEnabled = True
 
     def previewSlot(self, slotId):
         # Remove eventing from current previewSlot
@@ -353,58 +394,81 @@ class Project(Updateable):
 
     def _handleNodeAdded(self, node: audioled.filtergraph.Node):
         self._lock.acquire()
-        self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'add', node.effect))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'add', node.effect))
+        finally:
+            self._lock.release()
 
     def _handleNodeRemoved(self, node: audioled.filtergraph.Node):
+        print("node removed")
         self._lock.acquire()
-        self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'remove'))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'remove'))
+        finally:
+            self._lock.release()
 
     def _handleNodeUpdate(self, node: audioled.filtergraph.Node, updateParameters):
         self._lock.acquire()
-        self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'update', updateParameters))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'update', updateParameters))
+        finally:
+            self._lock.release()
 
     def _handleModulationAdded(self, mod: audioled.filtergraph.Modulation):
         self._lock.acquire()
-        self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'add', mod))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'add', mod))
+        finally:
+            self._lock.release()
 
     def _handleModulationRemoved(self, mod: audioled.filtergraph.Modulation):
         self._lock.acquire()
-        self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'remove'))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'remove'))
+        finally:
+            self._lock.release()
 
     def _handleModulationUpdate(self, mod: audioled.filtergraph.Modulation, updateParameters):
         self._lock.acquire()
-        self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'update', updateParameters))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'update', updateParameters))
+        finally:
+            self._lock.release()
 
     def _handleModulationSourceAdded(self, modSource: audioled.filtergraph.ModulationSourceNode):
         self._lock.acquire()
-        self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'add', modSource))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'add', modSource))
+        finally:
+            self._lock.release()
 
     def _handleModulationSourceRemoved(self, modSource: audioled.filtergraph.ModulationSourceNode):
         self._lock.acquire()
-        self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'remove'))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'remove'))
+        finally:
+            self._lock.release()
 
     def _handleModulationSourceUpdate(self, modSource: audioled.filtergraph.ModulationSourceNode, updateParameters):
         self._lock.acquire()
-        self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'update', updateParameters))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'update', updateParameters))
+        finally:
+            self._lock.release()
 
     def _handleConnectionAdded(self, con: audioled.filtergraph.Connection):
         self._lock.acquire()
-        self._publishQueue.publish(ConnectionMessage(self.activeSlotId, con.uid, 'add', con))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(ConnectionMessage(self.activeSlotId, con.uid, 'add', con))
+        finally:
+            self._lock.release()
 
     def _handleConnectionRemoved(self, con: audioled.filtergraph.Connection):
         self._lock.acquire()
-        self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, con.uid, 'remove'))
-        self._lock.release()
+        try:
+            self._publishQueue.publish(ConnectionMessage(self.activeSlotId, con.uid, 'remove'))
+        finally:
+            self._lock.release()
 
     def _sendUpdateCommand(self, dt):
         self._publishQueue.publish(UpdateMessage(dt, audioled.audio.GlobalAudio.buffer))
