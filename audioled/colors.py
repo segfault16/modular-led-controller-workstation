@@ -89,6 +89,7 @@ class StaticRGBColor(Effect):
 
     def __initstate__(self):
         # state
+        print("init state")
         self._color = None
         super(StaticRGBColor, self).__initstate__()
 
@@ -130,8 +131,7 @@ class StaticRGBColor(Effect):
 
     async def update(self, dt):
         await super(StaticRGBColor, self).update(dt)
-        if self._color is None or np.size(self._color, 1) != self._num_pixels:
-            self._color = np.ones(self._num_pixels) * np.array([[self.r], [self.g], [self.b]])
+        self._color = np.ones(self._num_pixels) * np.array([[self.r], [self.g], [self.b]])
 
     def process(self):
         if self._outputBuffer is not None:
