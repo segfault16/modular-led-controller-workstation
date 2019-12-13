@@ -184,11 +184,18 @@ def warped_psd(y, bins, fs, frange, scale):
     """Returns the power spectrum mapped to a perceptual scale"""
     N = len(y)
     # Transform to frequency domain
-    pow_spectrum = np.absolute(np.fft.rfft(y))**2 * (2 / N)
+    pow_spectrum = np.abs(np.fft.rfft(y))**2 * (2 / N)
     # Construct triangular filter bank
     output, f = filter_bank(bins, N, fs, frange[0], frange[1], scale)
     # Apply filter bank to power spectrum
-    output = np.dot(pow_spectrum, output.T)
+    # Remark: Numpy matrix multiplication uses all available CPU cores for a rather small matrix multiplication
+    # output_np = np.dot(pow_spectrum, output.T)
+
+    # Own MM:
+    pow_spectrum = pow_spectrum.reshape(1, -1)
+    output = np.sum(pow_spectrum[:, :, None]*output.T[None, :, :], axis=1)
+    output = output.reshape(-1)
+    # print(np.allclose(output, output_np))
     return output
 
 
