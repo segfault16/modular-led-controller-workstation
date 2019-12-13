@@ -121,13 +121,14 @@ class ConnectionMessage:
             self.slotId, self.conUid, self.operation, self.params)
 
 
-def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId):
+def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int):
     """Worker process for specific filtergraph for outputDevice
     
     Arguments:
         q {PublishQueue} -- [description]
         filtergraph {FilterGraph} -- [description]
         outputDevice {audioled.devices.LEDController} -- [description]
+        slotId {int} -- [description]
     """
     try:
         event_loop = asyncio.new_event_loop()
@@ -148,8 +149,12 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     filtergraph.process()
                     # Propagate to outDevice
                     try:
-                        buffer = filtergraph.getLEDOutput()._outputBuffer[0]
-                        outputDevice.show(buffer)
+                        if filtergraph.getLEDOutput() is None:
+                            continue
+                        fgBuffer = filtergraph.getLEDOutput()._outputBuffer
+                        if fgBuffer is None or len(fgBuffer) <= 0:
+                            continue
+                        outputDevice.show(fgBuffer[0])
                     except Exception as e:
                         print("Error propagating to device: {}".format(e))
                 elif isinstance(message, NodeMessage):

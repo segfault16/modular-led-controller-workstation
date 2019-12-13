@@ -140,6 +140,8 @@ class ESP8266(LEDController):
             g (0 to 255): Green value of LED
             b (0 to 255): Blue value of LED
         """
+        if pixels is None:
+            pixels = np.zeros((3, self.num_pixels))
         message = (pixels * self.getBrightness()).T.clip(0, 255).astype(np.uint8).ravel().tostring()
         self._sock.sendto(message, (self._ip, self._port))
 
@@ -163,6 +165,8 @@ class FadeCandy(LEDController):
             print('Ensure that fcserver is running and try again.')
 
     def show(self, pixels):
+        if pixels is None:
+            pixels = np.zeros((3, self.num_pixels))
         self.client.put_pixels((pixels * self.getBrightness()).T.clip(0, 255).astype(int).tolist())
 
 
@@ -183,6 +187,8 @@ class BlinkStick(LEDController):
 
         This function updates the LED strip with new values.
         """
+        if pixels is None:
+            pixels = np.zeros((3, self.num_pixels))
         # Truncate values and cast to integer
         n_pixels = pixels.shape[1]
         pixels = (pixels * self.getBrightness()).clip(0, 255).astype(int)
@@ -281,6 +287,8 @@ class RaspberryPi(LEDController):
         Raspberry Pi uses the rpi_ws281x to control the LED strip directly.
         This function updates the LED strip with new values.
         """
+        if pixels is None:
+            pixels = np.zeros((3, self.num_pixels))
 
         # Truncate values and cast to integer
         n_pixels = pixels.shape[1]
@@ -326,6 +334,8 @@ class DotStar(LEDController):
         self.led_data = led_data.reshape((num_pixels, 4))  # or (-1, 4)
 
     def show(self, pixels):
+        if pixels is None:
+            pixels = np.zeros((3, self.num_pixels))
         bgr = [2, 1, 0]
         self.led_data[0:, 1:4] = (pixels * self.getBrightness())[bgr].T.clip(0, 255)
         self._strip.show()
