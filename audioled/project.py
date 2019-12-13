@@ -121,6 +121,97 @@ class ConnectionMessage:
             self.slotId, self.conUid, self.operation, self.params)
 
 
+def worker_process_updateMessage(filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int,
+                                 event_loop, message: UpdateMessage):
+    dt = message.dt
+    audioBuffer = message.audioBuffer
+    # print("got item {} in process {}".format(dt, os.getpid()))
+
+    # TODO: Hack to propagate audio?
+    audioled.audio.GlobalAudio.buffer = audioBuffer
+
+    # Update Filtergraph
+    filtergraph.update(dt, event_loop)
+    filtergraph.process()
+    # Propagate to outDevice
+    try:
+        if filtergraph.getLEDOutput() is None:
+            return
+        fgBuffer = filtergraph.getLEDOutput()._outputBuffer
+        if fgBuffer is None or len(fgBuffer) <= 0:
+            return
+        outputDevice.show(fgBuffer[0])
+    except Exception as e:
+        print("Error propagating to device: {}".format(e))
+
+
+def worker_process_nodeMessage(filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int,
+                               message: NodeMessage):
+    if message.slotId != slotId:
+        # Message not meant for this slot
+        print("Skipping node message for slot {}".format(message.slotId))
+        return
+    print("Process node message: {}".format(message))
+    if message.operation == 'add':
+        node = filtergraph.addEffectNode(message.params)
+        node.uid = message.nodeUid
+    elif message.operation == 'remove':
+        filtergraph.removeEffectNode(message.nodeUid)
+    elif message.operation == 'update':
+        filtergraph.updateNodeParameter(message.nodeUid, message.params)
+
+
+def worker_process_modulationMessage(filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int,
+                                     message: ModulationMessage):
+    if message.slotId != slotId:
+        print("Skipping modulation message for slot {}".format(message.slotId))
+        return
+    print("Process modulation message: {}".format(message))
+    if message.operation == 'add':
+        mod = message.params  # type: audioled.filtergraph.Modulation
+        newMod = filtergraph.addModulation(modSourceUid=mod.modulationSource.uid,
+                                           targetNodeUid=mod.targetNode.uid,
+                                           targetParam=mod.targetParameter,
+                                           amount=mod.amount,
+                                           inverted=mod.inverted)
+        newMod.uid = mod.uid
+    elif message.operation == 'remove':
+        filtergraph.removeModulation(message.modUid)
+    elif message.operation == 'update':
+        filtergraph.updateModulationParameter(message.modUid, message.params)
+
+
+def worker_process_modulationSourceMessage(filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int,
+                                           message: ModulationSourceMessage):
+    if message.slotId != slotId:
+        print("Skipping modulation source message for slot {}".format(message.slotId))
+        return
+    print("Process modulation source message: {}".format(message))
+    if message.operation == 'add':
+        modSource = message.params
+        newModSource = filtergraph.addModulationSource(modSource)
+        newModSource.uid = modSource.uid
+    elif message.operation == 'remove':
+        filtergraph.removeModulationSource(message.modSourceUid)
+    elif message.operation == 'update':
+        filtergraph.updateModulationSourceParameter(message.modSourceUid, message.params)
+
+
+def worker_process_connectionMessage(filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int,
+                                     message: ConnectionMessage):
+    if message.slotId != slotId:
+        print("Skipping connection message for slot {}".format(message.slotId))
+        return
+    print("Process connection message: {}".format(message))
+    if message.operation == 'add':
+        con = message.params  # type: Dict[str, str]
+        newCon = filtergraph.addNodeConnection(con['from_node_uid'], con['from_node_channel'], con['to_node_uid'],
+                                               con['to_node_channel'])
+        newCon.uid = con['uid']
+    elif message.operation == 'remove':
+        filtergraph.removeConnection(message.conUid)
+
+
 def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int):
     """Worker process for specific filtergraph for outputDevice
     
@@ -137,81 +228,15 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
         for message in iter(q.get, None):
             try:
                 if isinstance(message, UpdateMessage):
-                    dt = message.dt
-                    audioBuffer = message.audioBuffer
-                    # print("got item {} in process {}".format(dt, os.getpid()))
-
-                    # TODO: Hack to propagate audio?
-                    audioled.audio.GlobalAudio.buffer = audioBuffer
-
-                    # Update Filtergraph
-                    filtergraph.update(dt, event_loop)
-                    filtergraph.process()
-                    # Propagate to outDevice
-                    try:
-                        if filtergraph.getLEDOutput() is None:
-                            continue
-                        fgBuffer = filtergraph.getLEDOutput()._outputBuffer
-                        if fgBuffer is None or len(fgBuffer) <= 0:
-                            continue
-                        outputDevice.show(fgBuffer[0])
-                    except Exception as e:
-                        print("Error propagating to device: {}".format(e))
+                    worker_process_updateMessage(filtergraph, outputDevice, slotId, event_loop, message)
                 elif isinstance(message, NodeMessage):
-                    if message.slotId != slotId:
-                        # Message not meant for this slot
-                        print("Skipping node message for slot {}".format(message.slotId))
-                        continue
-                    print("Process node message: {}".format(message))
-                    if message.operation == 'add':
-                        node = filtergraph.addEffectNode(message.params)
-                        node.uid = message.nodeUid
-                    elif message.operation == 'remove':
-                        filtergraph.removeEffectNode(message.nodeUid)
-                    elif message.operation == 'update':
-                        filtergraph.updateNodeParameter(message.nodeUid, message.params)
+                    worker_process_nodeMessage(filtergraph, outputDevice, slotId, message)
                 elif isinstance(message, ModulationMessage):
-                    if message.slotId != slotId:
-                        print("Skipping modulation message for slot {}".format(message.slotId))
-                        continue
-                    print("Process modulation message: {}".format(message))
-                    if message.operation == 'add':
-                        mod = message.params  # type: audioled.filtergraph.Modulation
-                        newMod = filtergraph.addModulation(modSourceUid=mod.modulationSource.uid,
-                                                           targetNodeUid=mod.targetNode.uid,
-                                                           targetParam=mod.targetParameter,
-                                                           amount=mod.amount,
-                                                           inverted=mod.inverted)
-                        newMod.uid = mod.uid
-                    elif message.operation == 'remove':
-                        filtergraph.removeModulation(message.modUid)
-                    elif message.operation == 'update':
-                        filtergraph.updateModulationParameter(message.modUid, message.params)
+                    worker_process_modulationMessage(filtergraph, outputDevice, slotId, message)
                 elif isinstance(message, ModulationSourceMessage):
-                    if message.slotId != slotId:
-                        print("Skipping modulation source message for slot {}".format(message.slotId))
-                        continue
-                    print("Process modulation source message: {}".format(message))
-                    if message.operation == 'add':
-                        modSource = message.params
-                        newModSource = filtergraph.addModulationSource(modSource)
-                        newModSource.uid = modSource.uid
-                    elif message.operation == 'remove':
-                        filtergraph.removeModulationSource(message.modSourceUid)
-                    elif message.operation == 'update':
-                        filtergraph.updateModulationSourceParameter(message.modSourceUid, message.params)
+                    worker_process_modulationSourceMessage(filtergraph, outputDevice, slotId, message)
                 elif isinstance(message, ConnectionMessage):
-                    if message.slotId != slotId:
-                        print("Skipping connection message for slot {}".format(message.slotId))
-                        continue
-                    print("Process connection message: {}".format(message))
-                    if message.operation == 'add':
-                        con = message.params  # type: Dict[str, str]
-                        newCon = filtergraph.addNodeConnection(con['from_node_uid'], con['from_node_channel'],
-                                                               con['to_node_uid'], con['to_node_channel'])
-                        newCon.uid = con['uid']
-                    elif message.operation == 'remove':
-                        filtergraph.removeConnection(message.conUid)
+                    worker_process_connectionMessage(filtergraph, outputDevice, slotId, message)
                 else:
                     print("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
