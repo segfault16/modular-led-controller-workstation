@@ -295,15 +295,27 @@ class Project(Updateable):
     def __setstate__(self, state):
         self.__initstate__()
         self.__dict__.update(state)
+        idx = -1
         for slot in self.slots:
+            idx += 1
+            # Initialize Project Callback
             if slot is not None:
                 slot._project = self
+            # Activate loaded scene
+            if idx == self.activeSlotId:
+                print("Active slot {}".format(self.activeSlotId))
+                self.activateScene(idx)
+                # TODO: Review
+                self.previewSlot(idx)
 
     def setDevice(self, device: audioled.devices.MultiOutputWrapper):
         if not isinstance(device, audioled.devices.MultiOutputWrapper):
             raise RuntimeError("Device has to be MultiOutputWrapper")
-        else:
-            self._devices = device._devices
+        self._devices = device._devices
+        print("Devices updated. Renewing active scene...")
+        if self.activeSlotId is not None:
+            self.activateScene(self.activeSlotId)
+            self.previewSlot(self.activeSlotId)
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         """Update active FilterGraph
@@ -437,6 +449,7 @@ class Project(Updateable):
 
     def getSlot(self, slotId):
         if self.slots[slotId] is None:
+            print("Initializing slot {}".format(slotId))
             self.slots[slotId] = FilterGraph()
         return self.slots[slotId]
 
