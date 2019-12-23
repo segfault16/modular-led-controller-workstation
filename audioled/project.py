@@ -305,8 +305,6 @@ class Project(Updateable):
             if idx == self.activeSlotId:
                 print("Active slot {}".format(self.activeSlotId))
                 self.activateScene(idx)
-                # TODO: Review
-                self.previewSlot(idx)
 
     def setDevice(self, device: audioled.devices.MultiOutputWrapper):
         if not isinstance(device, audioled.devices.MultiOutputWrapper):
@@ -315,7 +313,6 @@ class Project(Updateable):
         print("Devices updated. Renewing active scene...")
         if self.activeSlotId is not None:
             self.activateScene(self.activeSlotId)
-            self.previewSlot(self.activeSlotId)
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         """Update active FilterGraph

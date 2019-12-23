@@ -5,6 +5,8 @@ import json
 import os.path
 import hashlib
 import io
+import multiprocessing
+import ctypes
 
 from audioled.devices import MultiOutputWrapper
 
@@ -199,7 +201,7 @@ class ServerConfiguration:
                 # TODO: Error handling
                 pass
             deviceConfig = deviceConfigs[deviceConfigName]
-            return self.createOutputDeviceFromConfig(deviceConfig)
+            return self.createOutputDeviceFromConfig(deviceConfig, deviceConfigs)
 
     def createSingleDevice(self, deviceName, numPixels, numRows, candyServer=None, panelMapping=None):
         # Single device legacy implementation, TODO: Deprecate or adjust
@@ -223,7 +225,7 @@ class ServerConfiguration:
                 raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
         return device
 
-    def createOutputDeviceFromConfig(self, config):
+    def createOutputDeviceFromConfig(self, config, fullConfig):
         """Creates output device(s) from configuration
 
         Example configuration:
@@ -243,9 +245,33 @@ class ServerConfiguration:
                 "device.num_rows": 1
             }
         ]
+
+        Other example with sub-strips:
+        [
+            {
+                "device": "VirtualOutput",
+                "device.virtual.reference": "oneStrip",
+                "device.virtual.start_index": 0,
+                "device.panel.mapping": "",
+                "device.num_pixels": 300,
+                "device.num_rows": 1
+            },
+            {
+                "device": "VirtualOutput",
+                "device.virtual.reference": "oneStrip",
+                "device.virtual.start_index": 300,
+                "device.panel.mapping": "",
+                "device.num_pixels": 200,
+                "device.num_rows": 1
+            }
+        ]
+        where fullConfig must contain a device called 'oneStrip'
         """
-        devices = []
+        outputDevices = []
+        multiDevices = {}
+        multiDeviceArrays = {}
         for entry in config:
+            # TODO: Support multi output device
             # Get parameters
             deviceName = entry['device']
             pixels = entry['device.num_pixels']
@@ -258,9 +284,26 @@ class ServerConfiguration:
             panelMapping = None
             if 'device.panel.mapping' in entry:
                 panelMapping = entry['device.panel.mapping']
-            device = self.createSingleDevice(deviceName, pixels, rows, candyServer=candyServer, panelMapping=panelMapping)
-            devices.append(device)
-        return MultiOutputWrapper(devices)
+            if deviceName == 'VirtualOutput':
+                # Construct output device
+                referencedConf = entry['device.virtual.reference']
+                start_index = entry['device.virtual.start_index']
+                if referencedConf not in multiDevices:
+                    ref = fullConfig[referencedConf]
+                    deviceWrapper = self.createOutputDeviceFromConfig(ref, fullConfig)  # type: MultiOutputWrapper
+                    # TODO: Make sure only one device or support multi
+                    firstDevice = deviceWrapper._devices[0]
+                    multiDevices[referencedConf] = firstDevice
+                    multiDeviceArrays[referencedConf] = multiprocessing.Array(ctypes.c_uint8, 3*firstDevice.getNumPixels())
+                realDevice = multiDevices[referencedConf]
+                virtualArray = multiDeviceArrays[referencedConf]
+
+                # Add virtual devices
+                device = devices.VirtualOutput(num_pixels=pixels, num_rows=rows, device=realDevice, shared_array=virtualArray, start_index=start_index)
+            else:
+                device = self.createSingleDevice(deviceName, pixels, rows, candyServer=candyServer, panelMapping=panelMapping)
+            outputDevices.append(device)
+        return MultiOutputWrapper(outputDevices)
 
     def _metadataForProject(self, project, projectUid):
         return {'name': project.name, 'description': project.description, 'id': projectUid}

@@ -6,6 +6,7 @@ from collections import OrderedDict
 from typing import List
 import time
 import numpy as np
+import multiprocessing
 from audioled.effect import Effect
 
 _GAMMA_TABLE = [
@@ -387,6 +388,41 @@ class LEDOutput(Effect):
             else:
                 self._outputBuffer[0] = None
 
+
+class VirtualOutput(LEDController):
+    def __init__(self, device, num_pixels, shared_array: multiprocessing.Array, num_rows=1, start_index=0):
+        self.device = device
+        self.num_pixels = num_pixels
+        self.num_rows = num_rows
+        self.pixel_mapping = None
+        self.start_index = start_index
+        self._shared_array = shared_array
+
+    def getBrightness(self):
+        return self.device.getBrightness()
+
+    def setBrightness(self, value):
+        self.device.setBrightness(value)
+
+    def getNumPixels(self):
+        return self.num_pixels
+
+    def setNumPixels(self, num_pixels):
+        self.num_pixels = num_pixels
+
+    def getNumRows(self):
+        return self.num_rows
+
+    def setNumRows(self, num_rows):
+        self.num_rows = num_rows
+
+    def show(self, pixels):
+        # print("propagating virtual from {} to {}".format(self.start_index, (self.start_index+self.num_pixels)))
+        npArray = np.frombuffer(self._shared_array.get_obj(), dtype="uint8").reshape(3, -1)
+        npArray[:, self.start_index:self.start_index+self.num_pixels] = pixels
+        # Propagate
+        # TODO: pixels are propagated for every show() -> actually we only need to propagate once
+        self.device.show(npArray.reshape(3, -1, order='C'))
 
 class PanelWrapper(LEDController):
     """Device Wrapper for LED Panels
