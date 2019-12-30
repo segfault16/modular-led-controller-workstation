@@ -5,7 +5,6 @@ from typing import List, Dict
 import audioled.devices
 import audioled.audio
 import audioled.filtergraph
-import threading
 import time
 import multiprocessing
 import traceback
@@ -26,7 +25,6 @@ def ensure_parent(func):
 
     return inner
 
-
 class PublishQueue(object):
     def __init__(self):
         self._queues = []  # type: List[multiprocessing.JoinableQueue]
@@ -45,6 +43,10 @@ class PublishQueue(object):
         q = multiprocessing.JoinableQueue()
         self._queues.append(q)
         return q
+    
+    @ensure_parent
+    def unregister(self, q):
+        self._queues = [queue for queue in self._queues if queue is not q]
 
     @ensure_parent
     def publish(self, val):
@@ -222,6 +224,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
         slotId {int} -- [description]
     """
     try:
+        print("process {} start".format(os.getpid()))
         event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(event_loop)
         filtergraph.propagateNumPixels(outputDevice.getNumPixels(), outputDevice.getNumRows())
@@ -243,6 +246,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                 print("Continuing on NodeException")
             finally:
                 q.task_done()
+        print("process {} exit".format(os.getpid()))
     except Exception as e:
         traceback.print_exc()
         print("process {} exited due to: {}".format(os.getpid(), e))
@@ -272,7 +276,7 @@ class Project(Updateable):
         self._filterGraphForDeviceIndex = {}
         self._outputThreads = {}
         self._publishQueue = PublishQueue()
-        self._lock = threading.Lock()
+        self._lock = multiprocessing.Lock()
         self._processingEnabled = True
 
     def __cleanState__(self, stateDict):
@@ -322,7 +326,7 @@ class Project(Updateable):
         """
         # print("project: update")
         if self._processingEnabled:
-            aquired = self._lock.acquire(0)
+            aquired = self._lock.acquire(block=True, timeout=0)
             if not aquired:
                 print("Skipping update, couldn't acquire lock")
                 return
@@ -349,6 +353,7 @@ class Project(Updateable):
             self.slots[slotId] = filterGraph
 
     def activateScene(self, sceneId):
+        print("activate scene")
         """Activates a scene
 
         Scene: Project Slot per Output Device
@@ -385,32 +390,54 @@ class Project(Updateable):
                 filterGraph = self.getSlot(slotId)
 
                 if dIdx != self._previewDeviceIndex:
-                    p = multiprocessing.Process(target=worker,
-                                                args=(self._publishQueue.register(), filterGraph, device, slotId))
-                    p.start()
+                    successful = False
+                    while not successful:
+                        q = self._publishQueue.register()
+                        p = multiprocessing.Process(target=worker,
+                                                args=(q, filterGraph, device, slotId))
+                        p.start()
+                        # Process sometimes doesn't start...
+                        q.put(123)
+                        time.sleep(0.1)
+                        if not q._unfinished_tasks._semlock._is_zero():
+                            print("Process didn't respond in time!")
+                            self._publishQueue.unregister(q)
+                            p.join(0.1)
+                            if p.is_alive():
+                                p.terminate()
+                        else:
+                            successful = True
                     self._outputThreads[dIdx] = p
                     print('Started process for device {} with device {}'.format(dIdx, device))
                 dIdx += 1
         finally:
-            self._lock.release()
             self._processingEnabled = True
+            print("activate scene - releasing lock")
+            self._lock.release()
+            
 
     def stopProcessing(self):
         print('Stop processing')
         self._processingEnabled = False
-        self._lock.acquire()
+        aquire = self._lock.acquire(block=True, timeout=1)
+        if not aquire:
+            print("Couldn't get lock")
+            self._lock.acquire()
         try:
+            print("Ending queue")
             if self._publishQueue is not None:
                 self._publishQueue.publish(None)
                 self._publishQueue.close()
                 self._publishQueue.join_thread()
                 print('Queue ended')
                 self._publishQueue = None
+            print("Ending processes")
             for p in self._outputThreads.values():
                 p.join()
             print('All processes joined')
             self._outputThreads = {}
         finally:
+            print("stop processing - releasing lock")
             self._lock.release()
             self._processingEnabled = True
 
