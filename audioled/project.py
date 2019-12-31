@@ -262,6 +262,7 @@ def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audio
             print("show command")
             npArray = np.ctypeslib.as_array(virtualDevice._shared_array.get_obj()).reshape(3, -1)
             outputDevice.show(npArray.reshape(3, -1, order='C'))
+            q.task_done()
         print("output process {} exit".format(os.getpid()))
     except Exception as e:
         traceback.print_exc()
@@ -355,6 +356,9 @@ class Project(Updateable):
                     self._publishQueue.join()
                 # Send show command
                 self._sendShowCommand()
+                # Wait for output TODO: Make async
+                if self._showQueue is not None:
+                    self._showQueue.join()
             finally:
                 self._lock.release()
         else:
@@ -458,9 +462,22 @@ class Project(Updateable):
 
                 # Start output process
                 if outputDevice is not None:
-                    q = self._showQueue.register()
-                    p = multiprocessing.Process(target=output, args=(q, outputDevice, device))
-                    p.start()
+                    outSuccessful = False
+                    while not outSuccessful:
+                        q = self._showQueue.register()
+                        p = multiprocessing.Process(target=output, args=(q, outputDevice, device))
+                        p.start()
+                        # Make sure process starts
+                        q.put("test")
+                        time.sleep(0.1)
+                        if not q._unfinished_tasks._semlock._is_zero():
+                            print("Output process didn't respond in time!")
+                            self._showQueue.unregister(p)
+                            p.join(0.1)
+                            if p.is_alive():
+                                p.terminate()
+                        else:
+                            outSuccessful = True
                     self._outputProcesses[outputDevice] = p
                     print("Started output process for device {}".format(outputDevice))
                 dIdx += 1
@@ -493,9 +510,11 @@ class Project(Updateable):
             print("Ending processes")
             for p in self._filtergraphProcesses.values():
                 p.join()
+            print("Filtergraph processes joined")
             self._filtergraphProcesses = {}
             for p in self._outputProcesses.values():
                 p.join()
+            print("Output processes joined")
             self._outputProcesses = {}
             print('All processes joined')
         finally:
