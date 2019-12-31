@@ -10,10 +10,12 @@ import multiprocessing
 import traceback
 import json
 from timeit import default_timer as timer
+import ctypes
 
 import os
 import multiprocessing
 from functools import wraps
+import numpy as np
 
 
 def ensure_parent(func):
@@ -253,6 +255,19 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
     except:
         print("process interrupted")
 
+def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audioled.devices.VirtualOutput):
+    try:
+        print("output process {} start".format(os.getpid()))
+        for message in iter(q.get, None):
+            print("show command")
+            npArray = np.ctypeslib.as_array(virtualDevice._shared_array.get_obj()).reshape(3, -1)
+            outputDevice.show(npArray.reshape(3, -1, order='C'))
+        print("output process {} exit".format(os.getpid()))
+    except Exception as e:
+        traceback.print_exc()
+        print("process {} exited due to: {}".format(os.getpid(), e))
+    except:
+        print("process interrupted")
 
 class Project(Updateable):
     def __init__(self, name='Empty project', description='', device=None):
@@ -274,8 +289,10 @@ class Project(Updateable):
         self._contentRoot = None
         self._devices = []
         self._filterGraphForDeviceIndex = {}
-        self._outputThreads = {}
+        self._filtergraphProcesses = {}
+        self._outputProcesses = {}
         self._publishQueue = PublishQueue()
+        self._showQueue = PublishQueue()
         self._lock = multiprocessing.Lock()
         self._processingEnabled = True
 
@@ -333,8 +350,11 @@ class Project(Updateable):
             try:
                 self._sendUpdateCommand(dt)
                 self._updatePreviewDevice(dt, event_loop)
+                # Wait for all updates
                 if self._publishQueue is not None:
                     self._publishQueue.join()
+                # Send show command
+                self._sendShowCommand()
             finally:
                 self._lock.release()
         else:
@@ -371,6 +391,8 @@ class Project(Updateable):
         try:
             # Create new publish queue
             self._publishQueue = PublishQueue()
+            # Create new show queue
+            self._showQueue = PublishQueue()
 
             # Instanciate new scene
             dIdx = 0
@@ -389,33 +411,64 @@ class Project(Updateable):
                 # Get filtergraph
                 filterGraph = self.getSlot(slotId)
 
-                if dIdx != self._previewDeviceIndex:
-                    successful = False
-                    while not successful:
-                        q = self._publishQueue.register()
-                        p = multiprocessing.Process(target=worker,
-                                                args=(q, filterGraph, device, slotId))
-                        p.start()
-                        # Process sometimes doesn't start...
-                        q.put(123)
-                        time.sleep(0.1)
-                        if not q._unfinished_tasks._semlock._is_zero():
-                            print("Process didn't respond in time!")
-                            self._publishQueue.unregister(q)
-                            p.join(0.1)
-                            if p.is_alive():
-                                p.terminate()
-                        else:
-                            successful = True
-                    self._outputThreads[dIdx] = p
-                    print('Started process for device {} with device {}'.format(dIdx, device))
+                if dIdx == self._previewDeviceIndex:
+                    dIdx += 1
+                    continue
+
+                # Not preview device: Start processes
+
+                outputDevice = None
+                if isinstance(device, audioled.devices.VirtualOutput):
+                    # Reuse virtual output, construct output process if not already present
+                    realDevice = device.device
+                    if realDevice not in self._outputProcesses:
+                        outputDevice = realDevice
+                    pass
+                else:
+                    # New virtual output
+                    outputDevice = device
+                    lock = multiprocessing.Lock()
+                    array = multiprocessing.Array(ctypes.c_uint8, 3*device.getNumPixels(), lock)
+                    device = audioled.devices.VirtualOutput(device=device,
+                                                            num_pixels=device.getNumPixels(),
+                                                            shared_array=array,
+                                                            shared_lock=lock,
+                                                            num_rows=device.getNumRows(),
+                                                            start_index=0)
+                
+                # Start filtergraph process
+                successful = False
+                while not successful:
+                    q = self._publishQueue.register()
+                    p = multiprocessing.Process(target=worker, args=(q, filterGraph, device, slotId))
+                    p.start()
+                    # Process sometimes doesn't start...
+                    q.put(123)
+                    time.sleep(0.1)
+                    if not q._unfinished_tasks._semlock._is_zero():
+                        print("Process didn't respond in time!")
+                        self._publishQueue.unregister(q)
+                        p.join(0.1)
+                        if p.is_alive():
+                            p.terminate()
+                    else:
+                        successful = True
+                self._filtergraphProcesses[dIdx] = p
+                print('Started process for device {} with device {}'.format(dIdx, device))
+
+                # Start output process
+                if outputDevice is not None:
+                    q = self._showQueue.register()
+                    p = multiprocessing.Process(target=output, args=(q, outputDevice, device))
+                    p.start()
+                    self._outputProcesses[outputDevice] = p
+                    print("Started output process for device {}".format(outputDevice))
                 dIdx += 1
         finally:
             self._processingEnabled = True
             print("activate scene - releasing lock")
             self._lock.release()
             
-
     def stopProcessing(self):
         print('Stop processing')
         self._processingEnabled = False
@@ -429,13 +482,22 @@ class Project(Updateable):
                 self._publishQueue.publish(None)
                 self._publishQueue.close()
                 self._publishQueue.join_thread()
-                print('Queue ended')
+                print('Publish queue ended')
                 self._publishQueue = None
+            if self._showQueue is not None:
+                self._showQueue.publish(None)
+                self._showQueue.close()
+                self._showQueue.join_thread()
+                print("Show queue ended")
+                self._showQueue = None
             print("Ending processes")
-            for p in self._outputThreads.values():
+            for p in self._filtergraphProcesses.values():
                 p.join()
+            self._filtergraphProcesses = {}
+            for p in self._outputProcesses.values():
+                p.join()
+            self._outputProcesses = {}
             print('All processes joined')
-            self._outputThreads = {}
         finally:
             print("stop processing - releasing lock")
             self._lock.release()
@@ -559,6 +621,12 @@ class Project(Updateable):
             print("No publish queue. Possibly exiting")
             return
         self._publishQueue.publish(UpdateMessage(dt, audioled.audio.GlobalAudio.buffer))
+    
+    def _sendShowCommand(self):
+        if self._showQueue is None:
+            print("No show queue. Possibly exiting")
+            return
+        self._showQueue.publish("show!")
 
     def _updatePreviewDevice(self, dt, event_loop=asyncio.get_event_loop()):
         # Process preview in this process
