@@ -390,13 +390,14 @@ class LEDOutput(Effect):
 
 
 class VirtualOutput(LEDController):
-    def __init__(self, device, num_pixels, shared_array: multiprocessing.Array, num_rows=1, start_index=0):
+    def __init__(self, device, num_pixels, shared_array: multiprocessing.Array, shared_lock: multiprocessing.Lock, num_rows=1, start_index=0):
         self.device = device
         self.num_pixels = num_pixels
         self.num_rows = num_rows
         self.pixel_mapping = None
         self.start_index = start_index
         self._shared_array = shared_array
+        self._shared_lock = shared_lock
 
     def getBrightness(self):
         return self.device.getBrightness()
@@ -417,12 +418,17 @@ class VirtualOutput(LEDController):
         self.num_rows = num_rows
 
     def show(self, pixels):
-        # print("propagating virtual from {} to {}".format(self.start_index, (self.start_index+self.num_pixels)))
-        npArray = np.frombuffer(self._shared_array.get_obj(), dtype="uint8").reshape(3, -1)
+        print("propagating virtual from {} to {}".format(self.start_index, (self.start_index+self.num_pixels)))
+        npArray = np.ctypeslib.as_array(self._shared_array.get_obj()).reshape(3, -1)
+        # npArray = np.frombuffer(self._shared_array.get_obj(), dtype="uint8").reshape(3, -1)
         npArray[:, self.start_index:self.start_index+self.num_pixels] = pixels
         # Propagate
         # TODO: pixels are propagated for every show() -> actually we only need to propagate once
-        self.device.show(npArray.reshape(3, -1, order='C'))
+        self._shared_lock.acquire()
+        try:
+            self.device.show(npArray.reshape(3, -1, order='C'))
+        finally:
+            self._shared_lock.release()
 
 class PanelWrapper(LEDController):
     """Device Wrapper for LED Panels

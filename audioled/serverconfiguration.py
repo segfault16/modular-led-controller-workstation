@@ -269,6 +269,7 @@ class ServerConfiguration:
         """
         outputDevices = []
         multiDevices = {}
+        multiDeviceLocks = {}
         multiDeviceArrays = {}
         for entry in config:
             # TODO: Support multi output device
@@ -294,12 +295,15 @@ class ServerConfiguration:
                     # TODO: Make sure only one device or support multi
                     firstDevice = deviceWrapper._devices[0]
                     multiDevices[referencedConf] = firstDevice
-                    multiDeviceArrays[referencedConf] = multiprocessing.Array(ctypes.c_uint8, 3*firstDevice.getNumPixels())
+                    lock = multiprocessing.Lock()
+                    multiDeviceArrays[referencedConf] = multiprocessing.Array(ctypes.c_uint8, 3*firstDevice.getNumPixels(), lock=lock)
+                    multiDeviceLocks[referencedConf] = lock
                 realDevice = multiDevices[referencedConf]
                 virtualArray = multiDeviceArrays[referencedConf]
+                virtualLock = multiDeviceLocks[referencedConf]
 
                 # Add virtual devices
-                device = devices.VirtualOutput(num_pixels=pixels, num_rows=rows, device=realDevice, shared_array=virtualArray, start_index=start_index)
+                device = devices.VirtualOutput(num_pixels=pixels, num_rows=rows, device=realDevice, shared_array=virtualArray, shared_lock=virtualLock, start_index=start_index)
             else:
                 device = self.createSingleDevice(deviceName, pixels, rows, candyServer=candyServer, panelMapping=panelMapping)
             outputDevices.append(device)
