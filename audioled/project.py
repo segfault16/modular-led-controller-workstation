@@ -66,9 +66,26 @@ class PublishQueue(object):
             q.join_thread()
 
     @ensure_parent
-    def join(self):
-        for q in self._queues:
-            q.join()
+    def join(self, timeout=None):
+        # Join without timeout
+        if timeout is None:
+            for q in self._queues:
+                q.join()
+            return
+        # Join with timeout
+        stop = time.time() + timeout
+        all_done = False
+        while not all_done and time.time() < stop:
+            time.sleep(0.001)
+            all_done = True
+            for q in self._queues:
+                if not q._unfinished_tasks._semlock._is_zero():
+                    all_done = False
+        if all_done:
+            for q in self._queues:
+                q.join()
+            return
+        raise TimeoutError
 
 
 class UpdateMessage:
@@ -272,7 +289,6 @@ def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audio
     try:
         print("output process {} start".format(os.getpid()))
         for message in iter(q.get, None):
-            print("show command")
             npArray = np.ctypeslib.as_array(virtualDevice._shared_array.get_obj()).reshape(3, -1)
             outputDevice.show(npArray.reshape(3, -1, order='C'))
             q.task_done()
@@ -365,14 +381,17 @@ class Project(Updateable):
             try:
                 self._sendUpdateCommand(dt)
                 self._updatePreviewDevice(dt, event_loop)
+                # Wait for previous show command done
+                if self._showQueue is not None:
+                    self._showQueue.join(1)
                 # Wait for all updates
                 if self._publishQueue is not None:
-                    self._publishQueue.join()
-                # Send show command
+                    self._publishQueue.join(1)
+                # Send show command and return
                 self._sendShowCommand()
-                # Wait for output TODO: Make async
-                if self._showQueue is not None:
-                    self._showQueue.join()
+
+            except TimeoutError:
+                print("Update timeout")
             finally:
                 self._lock.release()
         else:
@@ -503,6 +522,7 @@ class Project(Updateable):
                         p.terminate()
                 else:
                     outSuccessful = True
+                    q.put("first")
             self._outputProcesses[outputDevice] = p
             print("Started output process for device {}".format(outputDevice))
 
