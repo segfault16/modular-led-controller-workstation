@@ -174,9 +174,9 @@ const FilterGraphService = {
     getEffectParameterHelp: function(selectedEffect) {
         return fetch('./effect/' + selectedEffect + '/parameterHelp').then(res => res.json());
     },
-    activateSlot: function(slot) {
+    activateScene: function(slot) {
         var postData = {slot: slot}
-        return fetch('./project/activeSlot', {
+        return fetch('./project/activeScene', {
             method: 'POST', // or 'PUT'
             body: JSON.stringify(postData),
             headers: {
@@ -184,8 +184,31 @@ const FilterGraphService = {
             }
         })
     },
-    getActiveSlot: function() {
-        return fetch('./project/activeSlot').then(res => res.json())
+    getActiveScene: function() {
+        return fetch('./project/activeScene').then(res => res.json())
+    },
+    updateSceneMatrix: function(sceneMatrix) {
+        var postData = sceneMatrix
+        return fetch('./project/sceneMatrix', {
+            method: 'PUT',
+            body: JSON.stringify(postData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+    },
+    getSceneMatrix: function() {
+        return fetch('./project/sceneMatrix').then(res => res.json())
+    },
+    activateSlot: function(slot) {
+        var postData = {slot: slot}
+        return fetch('./project/activateSlot', {
+            method: 'POST',
+            body: JSON.stringify(postData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
     }
 }
 

@@ -444,21 +444,49 @@ def create_app():
             result[error.node.uid] = error.message
         return json.dumps(result)
 
-    @app.route('/project/activeSlot', methods=['POST'])
-    def project_activeSlot_post():
+    @app.route('/project/activeScene', methods=['POST'])
+    def project_activeScene_post():
         global proj
         if not request.json:
             abort(400)
         value = request.json['slot']
         # print("Activating slot {}".format(value))
         proj.activateScene(value)
+        # proj.previewSlot(value)
+        return "OK"
+
+    @app.route('/project/activeScene', methods=['GET'])
+    def project_activeSlot_get():
+        global proj
+        print(proj.outputSlotMatrix)
+        return jsonify({
+            'activeSlot': proj.activeSlotId,
+            'activeScene': proj.activeSceneId,
+            })
+    
+    @app.route('/project/sceneMatrix', methods=['PUT'])
+    def project_sceneMatrix_put():
+        global proj
+        if not request.json:
+            abort(400)
+        value = request.json
+        print(value)
+        proj.setSceneMatrix(json.dumps(value))
+        return "OK"
+    
+    @app.route('/project/activateSlot', methods=['POST'])
+    def project_activateSlot_post():
+        global proj
+        if not request.json:
+            abort(400)
+        value = request.json['slot']
         proj.previewSlot(value)
         return "OK"
 
-    @app.route('/project/activeSlot', methods=['GET'])
-    def project_activeSlot_get():
+    @app.route('/project/sceneMatrix', methods=['GET'])
+    def project_sceneMatrix_get():
         global proj
-        return jsonify({'slot': proj.activeSlotId})
+        return json.dumps(proj.getSceneMatrix())
 
     @app.route('/project/assets/<path:path>', methods=['GET'])
     def project_assets_get(path):

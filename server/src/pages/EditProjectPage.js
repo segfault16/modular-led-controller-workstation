@@ -7,6 +7,7 @@ import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
 import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
 import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import Button from '@material-ui/core/Button';
 
 import FormGroup from '@material-ui/core/FormGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
@@ -18,7 +19,7 @@ import FilterGraphService from '../services/FilterGraphService';
 import { Piano, KeyboardShortcuts, MidiNumbers } from 'react-piano';
 import 'react-piano/dist/styles.css';
 
-import {firstNote, lastNote, keyboardShortcuts} from '../config/PianoConfig'
+import { firstNote, lastNote, keyboardShortcuts } from '../config/PianoConfig'
 
 const styles = theme => ({
   heading: {
@@ -34,9 +35,11 @@ class EditProjectPage extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      activeNote: null,
+      activeScene: null,
+      activeSlot: null,
       activeNotes: [],
-      switchLED: true
+      switchLED: true,
+      sceneMatrix: null,
     }
   }
 
@@ -48,39 +51,73 @@ class EditProjectPage extends Component {
       switchLED = JSON.parse(persistentSwitchLED);
     }
 
-    return FilterGraphService.getActiveSlot().then(res => {
-      var slot = res.slot;
-      this.setState(state => {
-        if(switchLED) {
-          return {
-            switchLED: switchLED,
-            activeNote: slot,
-            activeNotes: [slot]
+    return Promise.all([FilterGraphService.getActiveScene(), FilterGraphService.getSceneMatrix()]).then(
+      res => {
+        let activeScene = res[0];
+        let sceneMatrix = res[1];
+        console.log(activeScene)
+        console.log(sceneMatrix)
+        var sceneId = activeScene.activeScene;
+        var slotId = activeScene.activeSlot
+        this.setState(state => {
+          if (switchLED) {
+            return {
+              switchLED: switchLED,
+              activateScene: sceneId,
+              activeNotes: [sceneId],
+              activeSlot: slotId,
+              sceneMatrix: sceneMatrix
+            }
+          } else {
+            return {
+              switchLED: switchLED,
+              activeScene: activeNote !== null ? JSON.parse(activeNote) : sceneId,
+              activeNotes: activeNote !== null ? [JSON.parse(activeNote)] : [sceneId],
+              activeSlot: slotId,
+              sceneMatrix: sceneMatrix
+            }
           }
-        } else {
-          return {
-            switchLED: switchLED,
-            activeNote: activeNote !== null ? JSON.parse(activeNote) : slot,
-            activeNotes: activeNote !== null ? [JSON.parse(activeNote)] : [slot]
-          }
-        }
-      })
-    })
+        })
+      }
+    )
   }
 
   playNote = midiNumber => {
-    if (this.state.activeNote == midiNumber) {
+    if (this.state.activeScene == midiNumber) {
       return
     }
     console.log("play note", midiNumber)
     localStorage.setItem(EDIT_ACTIVE_NOTE, midiNumber);
     if (this.state.switchLED) {
-      FilterGraphService.activateSlot(midiNumber)
+      FilterGraphService.activateScene(midiNumber).then(res => 
+        {
+          console.log(res)
+          res.json['toString']
+          FilterGraphService.activateSlot()
+        }
+        ).then(res =>
+        FilterGraphService.getSceneMatrix()).then(
+          res => {
+            console.log(res)
+            let activeSlot = res[0][midiNumber]
+            console.log('active slot', activeSlot)
+            if (activeSlot) {
+              FilterGraphService.activateSlot(activeSlot)
+            }
+            this.setState({
+              activeSlot: activeSlot,
+              activeScene: midiNumber,
+              activeNotes: [midiNumber],
+              sceneMatrix: res
+            })
+          }
+        )
+    } else {
+      this.setState({
+        activeScene: midiNumber,
+        activeNotes: [midiNumber],
+      });
     }
-    this.setState({
-      activeNote: midiNumber,
-      activeNotes: [midiNumber],
-    });
   }
 
   stopNote = midiNumber => {
@@ -101,32 +138,90 @@ class EditProjectPage extends Component {
         switchLED: value
       }
     })
+
+  }
+
+  handleSlotMatrixChanged = (rowIdx, colIdx) => {
+    let matrix = this.state.sceneMatrix;
+    matrix[rowIdx][this.state.activeScene] = colIdx
+    Promise.all([FilterGraphService.updateSceneMatrix(matrix), FilterGraphService.activateSlot(colIdx)]).then(res => {
+      this.setState({
+        sceneMatrix: matrix,
+        activeSlot: colIdx
+      })
+    })
+  }
+
+  domCreateSquare = (rowIdx, colIdx) => {
+    let sqrColor = "primary"
+    let sqrStyle = {
+      maxWidth: '25px',
+      minWidth: '25px',
+      maxHeight: '25px',
+      minHeight: '25px',
+      margin: '2px'
+    }
+    let sqrVariant = "outlined"
+    if (this.state.sceneMatrix[rowIdx][this.state.activeScene] == colIdx) {
+      sqrVariant = "contained"
+    }
+    if (this.state.activeSlot == colIdx) {
+      sqrColor = "secondary"
+      // sqrVariant = "contained"
+    }
+    return (
+      <Button variant={sqrVariant} color={sqrColor} style={sqrStyle} onClick={() => this.handleSlotMatrixChanged(rowIdx, colIdx)}></Button>
+    )
+  }
+
+  domCreateRow = (rowIdx, numCols) => {
+    let cols = [];
+    for (var i = 0; i < numCols; i++) {
+      cols.push(this.domCreateSquare(rowIdx, i));
+    }
+    return <div>{cols}</div>;
+  }
+
+  domCreateSlotMatrix = (numRows, numCols) => {
+    let rows = [];
+    for (var i = 0; i < numRows; i++) {
+      rows.push(this.domCreateRow(i, numCols));
+    }
+    return <div>{rows}</div>
   }
 
   render() {
     const { classes } = this.props;
+    var matrix = null;
+    console.log(this.state.sceneMatrix)
+    if (this.state.sceneMatrix != null) {
+      let rows = Object.keys(this.state.sceneMatrix).length;
+      matrix = this.domCreateSlotMatrix(rows, 30);
+    }
     return (
       <div id="content">
         <React.Fragment>
-          <VisGraph slot={this.state.activeNote} />
+          <VisGraph slot={this.state.activeSlot} />
           <ExpansionPanel defaultExpanded={true}>
             <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
               <Typography className={classes.heading}>Configurations</Typography>
             </ExpansionPanelSummary>
             <ExpansionPanelDetails>
+
               <Grid
                 container
                 direction="column"
                 justify="flex-start"
                 alignItems="stretch"
               >
+                {matrix}
                 <div style={{ "height": "100px", "maxWidth": "1000px" }}>
                   <Piano
                     noteRange={{ first: firstNote, last: lastNote }}
                     playNote={this.playNote}
                     stopNote={this.stopNote}
                     activeNotes={this.state.activeNotes}
-                    // keyboardShortcuts={keyboardShortcuts}
+                  // keyboardShortcuts={keyboardShortcuts}
                   />
                 </div>
                 <FormGroup row>

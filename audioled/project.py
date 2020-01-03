@@ -277,7 +277,16 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
             except audioled.filtergraph.NodeException:
                 print("Continuing on NodeException")
             finally:
-                q.task_done()
+                # print("{} done".format(os.getpid()))
+                # q.task_done()
+                # TODO: Investigate the task_done() called too many times error further
+                # Quick fix seems to be:
+                with q._cond:
+                    if not q._unfinished_tasks.acquire(True):
+                        raise ValueError('task_done() called too many times')
+                    if q._unfinished_tasks._semlock._is_zero():
+                        q._cond.notify_all()
+                
         print("process {} exit".format(os.getpid()))
     except Exception as e:
         traceback.print_exc()
@@ -302,6 +311,7 @@ def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audio
 class Project(Updateable):
     def __init__(self, name='Empty project', description='', device=None):
         self.slots = [None for i in range(127)]
+        self.activeSceneId = 0
         self.activeSlotId = 0
         self.name = name
         self.description = description
@@ -314,6 +324,10 @@ class Project(Updateable):
             self.outputSlotMatrix
         except AttributeError:
             self.outputSlotMatrix = {}
+        try:
+            self.activeSceneId
+        except AttributeError:
+            self.activeSceneId = self.activeSlotId
         self._previewDevice = None  # type: audioled.devices.LEDController
         self._previewDeviceIndex = 0
         self._contentRoot = None
@@ -344,18 +358,18 @@ class Project(Updateable):
         return state
 
     def __setstate__(self, state):
-        self.__initstate__()
         self.__dict__.update(state)
+        self.__initstate__()
         idx = -1
         for slot in self.slots:
             idx += 1
             # Initialize Project Callback
             if slot is not None:
                 slot._project = self
-            # Activate loaded scene
-            if idx == self.activeSlotId:
-                print("Active slot {}".format(self.activeSlotId))
-                self.activateScene(idx)
+        # Activate loaded scene
+        if self.activeSceneId is not None:
+            print("Active scene {}".format(self.activeSceneId))
+            self.activateScene(self.activeSceneId)
 
     def setDevice(self, device: audioled.devices.MultiOutputWrapper):
         if not isinstance(device, audioled.devices.MultiOutputWrapper):
@@ -363,8 +377,8 @@ class Project(Updateable):
         self._devices = device._devices
         print("Devices updated. Renewing active scene...")
         self.stopProcessing()
-        if self.activeSlotId is not None:
-            self.activateScene(self.activeSlotId)
+        if self.activeSceneId is not None:
+            self.activateScene(self.activeSceneId)
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         """Update active FilterGraph
@@ -392,6 +406,10 @@ class Project(Updateable):
 
             except TimeoutError:
                 print("Update timeout")
+                # TODO: Error handling
+
+                # self.stopProcessing()
+                # self.activateScene(self.activeSceneId)
             finally:
                 self._lock.release()
         else:
@@ -418,7 +436,7 @@ class Project(Updateable):
 
         # TODO: Make configurable
         self._previewDeviceIndex = None
-        self.activeSlotId = sceneId
+        self.activeSceneId = sceneId
 
         self._processingEnabled = False
         self._lock.acquire()
@@ -435,14 +453,14 @@ class Project(Updateable):
             for device in self._devices:
                 # Get slot Id associated with this device
                 try:
-                    slotId = self.outputSlotMatrix[dIdx]
+                    slotId = self.outputSlotMatrix[dIdx][sceneId]
                 except Exception:
                     # Backwards compatibility: Init with slotId = sceneId
-                    self.outputSlotMatrix[dIdx] = sceneId
+                    if dIdx not in self.outputSlotMatrix:
+                        self.outputSlotMatrix[dIdx] = {}
+                    if sceneId not in self.outputSlotMatrix[dIdx]:
+                        self.outputSlotMatrix[dIdx][sceneId] = sceneId
                     slotId = sceneId
-
-                # TODO: For testing only, remove once outputSlotMatrix stable
-                slotId = sceneId
 
                 # Get filtergraph
                 filterGraph = self.getSlot(slotId)
@@ -526,7 +544,6 @@ class Project(Updateable):
             self._outputProcesses[outputDevice] = p
             print("Started output process for device {}".format(outputDevice))
 
-            
     def stopProcessing(self):
         print('Stop processing')
         self._processingEnabled = False
@@ -565,7 +582,7 @@ class Project(Updateable):
 
     def previewSlot(self, slotId):
         # Remove eventing from current previewSlot
-        fg = self.getSlot(self.activeSlotId)  # type: FilterGraph
+        fg = self.getSlot(self.activeSceneId)  # type: FilterGraph
         fg._onConnectionAdded = None
         fg._onConnectionRemoved = None
         fg._onModulationAdded = None
@@ -598,6 +615,14 @@ class Project(Updateable):
             print("Initializing slot {}".format(slotId))
             self.slots[slotId] = FilterGraph()
         return self.slots[slotId]
+
+    def getSceneMatrix(self):
+        return self.outputSlotMatrix
+    
+    def setSceneMatrix(self, value):
+        matrix = json.loads(value, object_hook=lambda d: {int(k): {int(i):j for i,j in v.items()} if isinstance(v, dict) else v for k, v in d.items()})
+        self.outputSlotMatrix = matrix
+        self.activateScene(self.activeSceneId)
 
     def _handleNodeAdded(self, node: audioled.filtergraph.Node):
         self._lock.acquire()
@@ -695,7 +720,7 @@ class Project(Updateable):
     def _updatePreviewDevice(self, dt, event_loop=asyncio.get_event_loop()):
         # Process preview in this process
         if self._previewDeviceIndex is not None:
-            activeFilterGraph = self.getSlot(self.activeSlotId)
+            activeFilterGraph = self.getSlot(self.activeSceneId)
             if activeFilterGraph is None:
                 return
             previewDevice = self._devices[self._previewDeviceIndex]
@@ -712,7 +737,7 @@ class Project(Updateable):
         # Process preview in this process
         if self._previewDeviceIndex is not None:
 
-            activeFilterGraph = self.getSlot(self.activeSlotId)
+            activeFilterGraph = self.getSlot(self.activeSceneId)
             if activeFilterGraph is None:
                 return
             previewDevice = self._devices[self._previewDeviceIndex]
