@@ -558,6 +558,7 @@ class Project(Updateable):
                     p.join(0.1)
                     if p.is_alive():
                         p.terminate()
+                self._lock.release()
             finally:
                 self._filtergraphProcesses = {}
                 self._outputProcesses = {}
