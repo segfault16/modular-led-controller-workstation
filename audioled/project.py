@@ -561,6 +561,8 @@ class Project(Updateable):
             finally:
                 self._filtergraphProcesses = {}
                 self._outputProcesses = {}
+                self._publishQueue = None
+                self._showQueue = None
                 self._processingEnabled = True
             return
         # Normal shutdown
