@@ -471,7 +471,7 @@ def create_app():
             abort(400)
         value = request.json
         print(value)
-        proj.setSceneMatrix(json.dumps(value))
+        proj.setSceneMatrix(value)
         return "OK"
     
     @app.route('/project/activateSlot', methods=['POST'])

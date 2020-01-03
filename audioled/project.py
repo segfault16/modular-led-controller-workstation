@@ -254,7 +254,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
         print("process {} start".format(os.getpid()))
         event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(event_loop)
-        
+        filtergraph.propagateNumPixels(outputDevice.getNumPixels(), outputDevice.getNumRows()) 
         for message in iter(q.get, None):
             try:
                 if isinstance(message, UpdateMessage):
@@ -428,11 +428,11 @@ class Project(Updateable):
             self.slots[slotId] = filterGraph
 
     def activateScene(self, sceneId):
-        print("activate scene")
         """Activates a scene
 
         Scene: Project Slot per Output Device
         """
+        print("activate scene {}".format(sceneId))
 
         # TODO: Make configurable
         self._previewDeviceIndex = None
@@ -453,13 +453,13 @@ class Project(Updateable):
             for device in self._devices:
                 # Get slot Id associated with this device
                 try:
-                    slotId = self.outputSlotMatrix[dIdx][sceneId]
+                    slotId = self.outputSlotMatrix[str(dIdx)][str(sceneId)]
                 except Exception:
                     # Backwards compatibility: Init with slotId = sceneId
-                    if dIdx not in self.outputSlotMatrix:
-                        self.outputSlotMatrix[dIdx] = {}
-                    if sceneId not in self.outputSlotMatrix[dIdx]:
-                        self.outputSlotMatrix[dIdx][sceneId] = sceneId
+                    if str(dIdx) not in self.outputSlotMatrix:
+                        self.outputSlotMatrix[str(dIdx)] = {}
+                    if sceneId not in self.outputSlotMatrix[str(dIdx)]:
+                        self.outputSlotMatrix[str(dIdx)][str(sceneId)] = sceneId
                     slotId = sceneId
 
                 # Get filtergraph
@@ -620,8 +620,8 @@ class Project(Updateable):
         return self.outputSlotMatrix
     
     def setSceneMatrix(self, value):
-        matrix = json.loads(value, object_hook=lambda d: {int(k): {int(i):j for i,j in v.items()} if isinstance(v, dict) else v for k, v in d.items()})
-        self.outputSlotMatrix = matrix
+        #matrix = json.loads(value, object_hook=lambda d: {int(k): {int(i):j for i,j in v.items()} if isinstance(v, dict) else v for k, v in d.items()})
+        self.outputSlotMatrix = value
         self.activateScene(self.activeSceneId)
 
     def _handleNodeAdded(self, node: audioled.filtergraph.Node):
