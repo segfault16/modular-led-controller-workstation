@@ -554,7 +554,7 @@ class Project(Updateable):
                     p.join(0.1)
                     if p.is_alive():
                         p.terminate()
-                for p in self._outputProcesses.vales():
+                for p in self._outputProcesses.values():
                     p.join(0.1)
                     if p.is_alive():
                         p.terminate()
