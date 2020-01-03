@@ -405,11 +405,10 @@ class Project(Updateable):
                 self._sendShowCommand()
 
             except TimeoutError:
-                print("Update timeout")
-                # TODO: Error handling
-
-                # self.stopProcessing()
-                # self.activateScene(self.activeSceneId)
+                print("Update timeout. Forcing reset")
+                self.stopProcessing()
+                if self.activeSceneId is not None:
+                    self.activateScene(self.activeSceneId)
             finally:
                 self._lock.release()
         else:
@@ -549,8 +548,22 @@ class Project(Updateable):
         self._processingEnabled = False
         aquire = self._lock.acquire(block=True, timeout=1)
         if not aquire:
-            print("Couldn't get lock")
-            self._lock.acquire()
+            print("Couldn't get lock. Force shutdown")
+            try:
+                for p in self._filtergraphProcesses.values():
+                    p.join(0.1)
+                    if p.is_alive():
+                        p.terminate()
+                for p in self._outputProcesses.vales():
+                    p.join(0.1)
+                    if p.is_alive():
+                        p.terminate()
+            finally:
+                self._filtergraphProcesses = {}
+                self._outputProcesses = {}
+                self._processingEnabled = True
+            return
+        # Normal shutdown
         try:
             print("Ending queue")
             if self._publishQueue is not None:
