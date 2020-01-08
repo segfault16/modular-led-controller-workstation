@@ -6,7 +6,7 @@ import audioled.devices
 import audioled.audio
 import audioled.filtergraph
 import time
-import multiprocessing
+import multiprocessing as mp
 import traceback
 import ctypes
 
@@ -27,7 +27,7 @@ def ensure_parent(func):
 
 class PublishQueue(object):
     def __init__(self):
-        self._queues = []  # type: List[multiprocessing.JoinableQueue]
+        self._queues = []  # type: List[mp.JoinableQueue]
         self._creator_pid = os.getpid()
 
     def __getstate__(self):
@@ -40,7 +40,7 @@ class PublishQueue(object):
 
     @ensure_parent
     def register(self):
-        q = multiprocessing.JoinableQueue()
+        q = mp.JoinableQueue()
         self._queues.append(q)
         return q
 
@@ -341,7 +341,7 @@ class Project(Updateable):
         self._outputProcesses = {}
         self._publishQueue = PublishQueue()
         self._showQueue = PublishQueue()
-        self._lock = multiprocessing.Lock()
+        self._lock = mp.Lock()
         self._processingEnabled = True
 
     def __cleanState__(self, stateDict):
@@ -495,8 +495,8 @@ class Project(Updateable):
         else:
             # New virtual output
             outputDevice = device
-            lock = multiprocessing.Lock()
-            array = multiprocessing.Array(ctypes.c_uint8, 3 * device.getNumPixels(), lock)
+            lock = mp.Lock()
+            array = mp.Array(ctypes.c_uint8, 3 * device.getNumPixels(), lock=lock)
             device = audioled.devices.VirtualOutput(device=device,
                                                     num_pixels=device.getNumPixels(),
                                                     shared_array=array,
@@ -508,7 +508,7 @@ class Project(Updateable):
         successful = False
         while not successful:
             q = self._publishQueue.register()
-            p = multiprocessing.Process(target=worker, args=(q, filterGraph, device, dIdx, slotId))
+            p = mp.Process(target=worker, args=(q, filterGraph, device, dIdx, slotId))
             p.start()
             # Process sometimes doesn't start...
             q.put(123)
@@ -529,7 +529,7 @@ class Project(Updateable):
             outSuccessful = False
             while not outSuccessful:
                 q = self._showQueue.register()
-                p = multiprocessing.Process(target=output, args=(q, outputDevice, device))
+                p = mp.Process(target=output, args=(q, outputDevice, device))
                 p.start()
                 # Make sure process starts
                 q.put("test")
