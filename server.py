@@ -462,8 +462,8 @@ def create_app():
         return jsonify({
             'activeSlot': proj.activeSlotId,
             'activeScene': proj.activeSceneId,
-            })
-    
+        })
+
     @app.route('/project/sceneMatrix', methods=['PUT'])
     def project_sceneMatrix_put():
         global proj
@@ -473,7 +473,7 @@ def create_app():
         print(value)
         proj.setSceneMatrix(value)
         return "OK"
-    
+
     @app.route('/project/activateSlot', methods=['POST'])
     def project_activateSlot_post():
         global proj

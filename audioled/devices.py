@@ -392,7 +392,7 @@ class LEDOutput(Effect):
 class VirtualOutput(LEDController):
     """VirtualOutput that stores output data in a process-safe buffer array
     """
-    def __init__(self, device, num_pixels, shared_array: multiprocessing.Array, shared_lock: multiprocessing.Lock, num_rows=1, 
+    def __init__(self, device, num_pixels, shared_array: multiprocessing.Array, shared_lock: multiprocessing.Lock, num_rows=1,
                  start_index=0):
         self.device = device
         self.num_pixels = num_pixels
