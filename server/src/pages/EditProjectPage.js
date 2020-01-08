@@ -174,18 +174,18 @@ class EditProjectPage extends Component {
     )
   }
 
-  domCreateRow = (rowIdx, numCols) => {
+  domCreateRow = (rowIdx, numCols, startIndex=0) => {
     let cols = [];
     for (var i = 0; i < numCols; i++) {
-      cols.push(this.domCreateSquare(rowIdx, i));
+      cols.push(this.domCreateSquare(rowIdx, startIndex + i));
     }
     return <div>{cols}</div>;
   }
 
-  domCreateSlotMatrix = (numRows, numCols) => {
+  domCreateSlotMatrix = (numRows, numCols, startIndex=0) => {
     let rows = [];
     for (var i = 0; i < numRows; i++) {
-      rows.push(this.domCreateRow(i, numCols));
+      rows.push(this.domCreateRow(i, numCols, startIndex));
     }
     return <div>{rows}</div>
   }
@@ -196,7 +196,7 @@ class EditProjectPage extends Component {
     console.log(this.state.sceneMatrix)
     if (this.state.sceneMatrix != null) {
       let rows = Object.keys(this.state.sceneMatrix).length;
-      matrix = this.domCreateSlotMatrix(rows, 30);
+      matrix = this.domCreateSlotMatrix(rows, 30, 12);
     }
     return (
       <div id="content">
