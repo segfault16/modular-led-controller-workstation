@@ -35,9 +35,9 @@ class EditProjectPage extends Component {
   constructor(props) {
     super(props)
     this.state = {
-      activeScene: null,
-      activeSlot: null,
-      activeNotes: [],
+      activeScene: null,  // activated scene
+      activeSlot: null,   // activated slot
+      activeNotes: [],    // activated scene for piano
       switchLED: true,
       sceneMatrix: null,
     }
@@ -55,8 +55,6 @@ class EditProjectPage extends Component {
       res => {
         let activeScene = res[0];
         let sceneMatrix = res[1];
-        console.log(activeScene)
-        console.log(sceneMatrix)
         var sceneId = activeScene.activeScene;
         var slotId = activeScene.activeSlot
         this.setState(state => {
@@ -113,10 +111,23 @@ class EditProjectPage extends Component {
           }
         )
     } else {
-      this.setState({
-        activeScene: midiNumber,
-        activeNotes: [midiNumber],
-      });
+      // Get slot for first device
+      var activeSlot = null
+      if(this.state.sceneMatrix && Object.keys(this.state.sceneMatrix).length > 0) {
+        activeSlot = this.state.sceneMatrix[0][midiNumber]
+      }
+      if(activeSlot) {
+        FilterGraphService.activateSlot(activeSlot).then(this.setState({
+          activeScene: midiNumber,
+          activeNotes: [midiNumber],
+          activeSlot: activeSlot
+        }))
+      } else {
+        this.setState({
+          activeScene: midiNumber,
+          activeNotes: [midiNumber],
+        });
+      }
     }
   }
 
@@ -208,14 +219,12 @@ class EditProjectPage extends Component {
             </ExpansionPanelSummary>
             <ExpansionPanelDetails>
 
-              <Grid
-                container
-                direction="column"
-                justify="flex-start"
-                alignItems="stretch"
-              >
+              <Grid container direction="column" justify="flex-start" alignItems="stretch">
+                Slots:
                 {matrix}
+                Scenes:
                 <div style={{ "height": "100px", "maxWidth": "1000px" }}>
+                  
                   <Piano
                     noteRange={{ first: firstNote, last: lastNote }}
                     playNote={this.playNote}

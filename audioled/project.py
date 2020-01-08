@@ -613,9 +613,8 @@ class Project(Updateable):
         fg._onNodeAdded = None
         fg._onNodeRemoved = None
         fg._onNodeUpdate = None
-        # TODO: Separate preview slot and active slot
         self.activeSlotId = slotId
-        print("Activate slot {} with {}".format(slotId, self.slots[slotId]))
+        print("Edit slot {} with {}".format(slotId, self.slots[slotId]))
         fg = self.getSlot(slotId)  # type: FilterGraph
         fg._onNodeAdded = self._handleNodeAdded
         fg._onNodeRemoved = self._handleNodeRemoved
