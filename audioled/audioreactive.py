@@ -161,7 +161,7 @@ class Spectrum(Effect):
 
         return fft * 255
 
-# TODO: Add Bandpass filter
+
 class VUMeterRMS(Effect):
     """ VU Meter style effect
     Inputs:
@@ -173,14 +173,21 @@ class VUMeterRMS(Effect):
         return \
             "VUMeterRMS visualizes the RMS value of the audio input (channel 0) with the color (channel 1)."
 
-    def __init__(self, db_range=60.0, n_overlaps=1):
+    def __init__(self,
+                 db_range=60.0,
+                 n_overlaps=1,
+                 lowcut_hz=0.0,
+                 highcut_hz=20000.0):
         self.db_range = db_range
         self.n_overlaps = n_overlaps
+        self.lowcut_hz = lowcut_hz
+        self.highcut_hz = highcut_hz
         self.__initstate__()
 
     def __initstate__(self):
         super().__initstate__()
         self._hold_values = []
+        self._bandpass = None
         self._default_color = None
 
     def numInputChannels(self):
@@ -196,7 +203,9 @@ class VUMeterRMS(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("db_range", [60.0, 20.0, 100.0, 1.0]),
-                ("n_overlaps", [1, 0, 20, 1])
+                ("n_overlaps", [1, 0, 20, 1]),
+                ("lowcut_hz", [0.0, 0.0, 8000.0, 1.0]),
+                ("highcut_hz", [20000.0, 0.0, 20000.0, 1.0]),
             ])
         }
         return definition
@@ -206,7 +215,9 @@ class VUMeterRMS(Effect):
         help = {
             "parameters": {
                 "db_range": "Range of the VU Meter in decibels.",
-                "n_overlaps": "Number of overlapping samples in time. This smoothes the VU Meter."
+                "n_overlaps": "Number of overlapping samples in time. This smoothes the VU Meter.",
+                "lowcut_hz": "Lowcut frequency of the audio input.",
+                "highcut_hz": "Highcut frequency of the audio input."
             }
         }
         return help
@@ -246,6 +257,15 @@ class VUMeterRMS(Effect):
             color = self._default_color
 
         y = self._inputBuffer[0].audio
+        fs = self._inputBuffer[0].sample_rate
+
+        if self.lowcut_hz > 0 and self.highcut_hz < 20000:
+            # construct filter if needed
+            if self._bandpass is None:
+                self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
+            # process audio
+            y = self._bandpass.filter(np.array(y), fs)
+
         rms = dsp.rms(y)
         # calculate rms over hold_time
         while len(self._hold_values) > self.n_overlaps:
