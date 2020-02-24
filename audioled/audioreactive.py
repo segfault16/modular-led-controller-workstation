@@ -259,10 +259,12 @@ class VUMeterRMS(Effect):
         y = self._inputBuffer[0].audio
         fs = self._inputBuffer[0].sample_rate
 
-        if self.lowcut_hz > 0 and self.highcut_hz < 20000:
+        if self.lowcut_hz > 0 or self.highcut_hz < 20000:
             # construct filter if needed
             if self._bandpass is None:
                 self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
+            # update bandpass
+            self._bandpass.updateParams(self.lowcut_hz, self.highcut_hz, fs, 3)
             # process audio
             y = self._bandpass.filter(np.array(y), fs)
 
@@ -378,10 +380,12 @@ class VUMeterPeak(Effect):
         y = self._inputBuffer[0].audio
         fs = self._inputBuffer[0].sample_rate
 
-        if self.lowcut_hz > 0 and self.highcut_hz < 20000:
+        if self.lowcut_hz > 0 or self.highcut_hz < 20000:
             # construct filter if needed
             if self._bandpass is None:
                 self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
+            # update bandpass params
+            self._bandpass.updateParams(self.lowcut_hz, self.highcut_hz, fs, 3)
             # process audio
             y = self._bandpass.filter(np.array(y), fs)
 
@@ -504,6 +508,8 @@ class MovingLight(Effect):
         # construct filter if needed
         if self._bandpass is None:
             self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
+        # update bandpass
+        self._bandpass.updateParams(self.lowcut_hz, self.highcut_hz, fs, 3)
         # apply bandpass to audio
         y = self._bandpass.filter(np.array(audio), fs)
         # move in speed
@@ -635,6 +641,8 @@ class Bonfire(Effect):
         # construct filter if needed
         if self._bandpass is None:
             self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
+        # update bandpass
+        self._bandpass.updateParams(self.lowcut_hz, self.highcut_hz, fs, 3)
         # apply bandpass to audio
         y = self._bandpass.filter(np.array(audio), fs)
         peak = np.max(y) * 1.0
@@ -785,6 +793,8 @@ class FallingStars(Effect):
         # construct filter if needed
         if self._bandpass is None:
             self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
+        # update bandpass
+        self._bandpass.updateParams(self.lowcut_hz, self.highcut_hz, fs, 3)
         # apply bandpass to audio
         y = self._bandpass.filter(np.array(audio), fs)
 
@@ -899,6 +909,9 @@ class Oscilloscope(Effect):
         # construct filter if needed
         if self._bandpass is None:
             self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
+        # update bandpass
+        self._bandpass.updateParams(self.lowcut_hz, self.highcut_hz, fs, 3)
+        
         # apply bandpass to audio
         y = self._bandpass.filter(np.array(audio), fs)
 
@@ -1105,6 +1118,8 @@ class Shift(Effect):
         # construct filter if needed
         if self._bandpass is None:
             self._bandpass = dsp.Bandpass(self.lowcut_hz, self.highcut_hz, fs, 3)
+        # update bandpass
+        self._bandpass.updateParams(self.lowcut_hz, self.highcut_hz, fs, 3)
         # apply bandpass to audio
         y = self._bandpass.filter(np.array(audio), fs)
 

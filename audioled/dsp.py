@@ -222,6 +222,8 @@ def rms(normalized_sample_points):
 
 def design_filter(lowcut, highcut, fs, order=3):
     nyq = 0.5 * fs
+    lowcut = max(lowcut, 10)
+    highcut = min(highcut, 22000)
     low = lowcut / nyq
     high = highcut / nyq
     b, a = butter(order, [low, high], btype='band')
@@ -244,6 +246,14 @@ class Bandpass():
             self._initFilter()
         y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=audio, zi=self._filter_zi)
         return y
+
+    def updateParams(self, lowcut, highcut, fs, order):
+        if self._lowcut != lowcut or self._highcut != highcut or self._fs != fs or self._order != order:
+            self._lowcut = lowcut
+            self._highcut = highcut
+            self._fs = fs
+            self._order = order
+            self._initFilter()
 
     def _initFilter(self):
         self._filter_b, self._filter_a, self._filter_zi = design_filter(self._lowcut, self._highcut, self._fs, self._order)
