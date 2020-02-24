@@ -630,7 +630,7 @@ class Bonfire(Effect):
             self._outputBuffer[0] = None
             return
         if self._inputBufferValid(1):
-            pixelbuffer = self._inputBuffer[1]
+            pixelbuffer = np.array(self._inputBuffer[1])
         else:
             # default color: all white
             pixelbuffer = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
