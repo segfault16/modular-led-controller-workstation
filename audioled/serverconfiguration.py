@@ -221,9 +221,22 @@ class ServerConfiguration:
                 with open(mappingFile, "r", encoding='utf-8') as f:
                     mapping = json.loads(f.read())
                     device = devices.PanelWrapper(device, mapping)
-                    print("Active pixel mapping: {}".format(mappingFile))
+                    print("Active pixel mapping on real device: {}".format(mappingFile))
             else:
                 raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
+        return device
+
+    def createVirtualOutput(self, num_pixels, num_rows, real_device, shared_array, shared_lock, start_index, panelMapping):
+        device = devices.VirtualOutput(num_pixels=num_pixels, num_rows=num_rows, device=real_device, shared_array=shared_array, shared_lock=shared_lock, start_index=start_index)
+        if panelMapping and panelMapping:
+            mappingFile = panelMapping
+            if os.path.exists(mappingFile):
+                with open(mappingFile, "r", encoding='utf-8') as f:
+                    mapping = json.loads(f.read())
+                    device = devices.PanelWrapper(device, mapping)
+                    print("Active pixel mapping on virtual device: {}".format(mappingFile))
+            else:
+                raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile)) 
         return device
 
     def createOutputDeviceFromConfig(self, config, fullConfig):
@@ -304,11 +317,13 @@ class ServerConfiguration:
                 virtualLock = multiDeviceLocks[referencedConf]
 
                 # Add virtual devices
-                device = devices.VirtualOutput(num_pixels=pixels, num_rows=rows, device=realDevice, shared_array=virtualArray, shared_lock=virtualLock, start_index=start_index)
+                device = self.createVirtualOutput(num_pixels=pixels, num_rows=rows, real_device=realDevice, shared_array=virtualArray, shared_lock=virtualLock, start_index=start_index, panelMapping=panelMapping)
             else:
                 device = self.createSingleDevice(deviceName, pixels, rows, candyServer=candyServer, panelMapping=panelMapping)
             outputDevices.append(device)
         return MultiOutputWrapper(outputDevices)
+
+
 
     def _metadataForProject(self, project, projectUid):
         return {'name': project.name, 'description': project.description, 'id': projectUid}

@@ -486,9 +486,22 @@ class Project(Updateable):
             return
         # Create device
         outputDevice = None
+        virtualDevice = None
+        fgDevice = None
         if isinstance(device, audioled.devices.VirtualOutput):
             # Reuse virtual output, construct output process if not already present
-            realDevice = device.device
+            virtualDevice = device
+            realDevice = virtualDevice.device
+            fgDevice = device
+            if realDevice not in self._outputProcesses:
+                outputDevice = realDevice
+            pass
+        elif isinstance(device, audioled.devices.PanelWrapper):
+            if not isinstance(device.device, audioled.devices.VirtualOutput):
+                raise RuntimeError("PanelWrapper must contain a VirtualOutput")
+            fgDevice = device  # PanelWrapper
+            virtualDevice = fgDevice.device  # VirtualDevice
+            realDevice = virtualDevice.device  # Select real device in virtualoutput
             if realDevice not in self._outputProcesses:
                 outputDevice = realDevice
             pass
@@ -497,18 +510,19 @@ class Project(Updateable):
             outputDevice = device
             lock = mp.Lock()
             array = mp.Array(ctypes.c_uint8, 3 * device.getNumPixels(), lock=lock)
-            device = audioled.devices.VirtualOutput(device=device,
+            virtualDevice = audioled.devices.VirtualOutput(device=device,
                                                     num_pixels=device.getNumPixels(),
                                                     shared_array=array,
                                                     shared_lock=lock,
                                                     num_rows=device.getNumRows(),
                                                     start_index=0)
+            device = virtualDevice
 
         # Start filtergraph process
         successful = False
         while not successful:
             q = self._publishQueue.register()
-            p = mp.Process(target=worker, args=(q, filterGraph, device, dIdx, slotId))
+            p = mp.Process(target=worker, args=(q, filterGraph, fgDevice, dIdx, slotId))
             p.start()
             # Process sometimes doesn't start...
             q.put(123)
@@ -522,14 +536,14 @@ class Project(Updateable):
             else:
                 successful = True
         self._filtergraphProcesses[dIdx] = p
-        print('Started process for device {} with device {}'.format(dIdx, device))
+        print('Started process for device {} with device {}'.format(dIdx, fgDevice))
 
         # Start output process
         if outputDevice is not None:
             outSuccessful = False
             while not outSuccessful:
                 q = self._showQueue.register()
-                p = mp.Process(target=output, args=(q, outputDevice, device))
+                p = mp.Process(target=output, args=(q, outputDevice, virtualDevice))
                 p.start()
                 # Make sure process starts
                 q.put("test")
