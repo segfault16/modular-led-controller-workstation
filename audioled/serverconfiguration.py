@@ -189,7 +189,8 @@ class ServerConfiguration:
                         "device": self.getConfiguration(CONFIG_DEVICE),
                         "device.candy.server": self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER),
                         "device.num_pixels": self.getConfiguration(CONFIG_NUM_PIXELS),
-                        "device.num_rows": self.getConfiguration(CONFIG_NUM_ROWS)
+                        "device.num_rows": self.getConfiguration(CONFIG_NUM_ROWS),
+                        "device.panel.mapping": self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
                     }]
                 })
             print("Creating device config {}".format(deviceConfigName))
