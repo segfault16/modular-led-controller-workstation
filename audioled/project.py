@@ -369,7 +369,7 @@ class Project(Updateable):
             idx += 1
             # Initialize Project Callback
             if slot is not None:
-                slot._project = self
+                slot._contentRoot = self._contentRoot
         # Activate loaded scene
         if self.activeSceneId is not None:
             print("Active scene {}".format(self.activeSceneId))
@@ -427,7 +427,7 @@ class Project(Updateable):
     def setFiltergraphForSlot(self, slotId, filterGraph):
         print("Set {} for slot {}".format(filterGraph, slotId))
         if isinstance(filterGraph, FilterGraph):
-            filterGraph._project = self
+            filterGraph._contentRoot = self._contentRoot
             self.slots[slotId] = filterGraph
 
     def activateScene(self, sceneId):
@@ -632,7 +632,9 @@ class Project(Updateable):
         if self.slots[slotId] is None:
             print("Initializing slot {}".format(slotId))
             self.slots[slotId] = FilterGraph()
-        return self.slots[slotId]
+        fg = self.slots[slotId]
+        fg._contentRoot = self._contentRoot
+        return fg
 
     def getSceneMatrix(self):
         return self.outputSlotMatrix

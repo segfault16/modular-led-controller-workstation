@@ -205,7 +205,7 @@ class FilterGraph(Updateable):
         self._updateTimings = {}
         self._processTimings = {}
         self._outputNode = None
-        self._project = None
+        self._contentRoot = None
         self.__modulationsources = []  # type: List[ModulationSourceNode]
         self.__modulations = []  # type: List[Modulation]
         # Events
@@ -611,10 +611,13 @@ class FilterGraph(Updateable):
         state['recordTimings'] = self.recordTimings
         state['modulationSources'] = [mod for mod in self.__modulationsources]
         state['modulations'] = [con.__getstate__() for con in self.__modulations]
+        state['_contentRoot'] = self._contentRoot
         return state
 
     def __setstate__(self, state):
         self.__init__()
+        if '_contentRoot' in state:
+            self._contentRoot = state['_contentRoot']
         if 'recordTimings' in state:
             self.recordTimings = state['recordTimings']
         if 'nodes' in state:
