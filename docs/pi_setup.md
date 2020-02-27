@@ -39,7 +39,7 @@ On RaspberryPi, `sudo` privileges are required for accessing the GPIO of Raspber
 
 ```
 # Run on Raspberry Pi with 300 pixels and strand test at startup:
-sudo python3 server.py -D RaspberryPi -N 300 --strand
+sudo pipenv run python server.py -D RaspberryPi -N 300 --strand
 ```
 
 ## Run as service
@@ -64,5 +64,6 @@ WantedBy=multi-user.target
 ```
 
 and starting the service with `sudo systemctl start ledserver`.
+To start at login do `sudo systemctl enable ledserver`.
 The service can be restarted with `sudo systemctl restart ledserver`.
 Adjust `--config_location` for a different configuration location.
