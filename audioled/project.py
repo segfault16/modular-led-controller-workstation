@@ -517,6 +517,7 @@ class Project(Updateable):
                                                     num_rows=device.getNumRows(),
                                                     start_index=0)
             device = virtualDevice
+            fgDevice = virtualDevice
 
         # Start filtergraph process
         successful = False
