@@ -497,14 +497,31 @@ class Project(Updateable):
                 outputDevice = realDevice
             pass
         elif isinstance(device, audioled.devices.PanelWrapper):
-            if not isinstance(device.device, audioled.devices.VirtualOutput):
-                raise RuntimeError("PanelWrapper must contain a VirtualOutput")
-            fgDevice = device  # PanelWrapper
-            virtualDevice = fgDevice.device  # VirtualDevice
-            realDevice = virtualDevice.device  # Select real device in virtualoutput
-            if realDevice not in self._outputProcesses:
-                outputDevice = realDevice
-            pass
+            if isinstance(device.device, audioled.devices.VirtualOutput):
+                fgDevice = device  # PanelWrapper
+                virtualDevice = fgDevice.device  # VirtualDevice
+                realDevice = virtualDevice.device  # Select real device in virtualoutput
+                if realDevice not in self._outputProcesses:
+                    outputDevice = realDevice
+            else:
+                oldPanelWrapper = device
+                
+                # Construct virtual output, TODO: Make sure device is realDevice...
+                realDevice = oldPanelWrapper.device
+
+                lock = mp.Lock()
+                array = mp.Array(ctypes.c_uint8, 3 * device.getNumPixels(), lock=lock)
+                virtualDevice = audioled.devices.VirtualOutput(device=realDevice,
+                                                        num_pixels=realDevice.getNumPixels(),
+                                                        shared_array=array,
+                                                        shared_lock=lock,
+                                                        num_rows=realDevice.getNumRows(),
+                                                        start_index=0)
+
+                oldPanelWrapper.setDevice(virtualDevice)
+                fgDevice = oldPanelWrapper
+
+            
         else:
             # New virtual output
             outputDevice = device
@@ -516,7 +533,8 @@ class Project(Updateable):
                                                     shared_lock=lock,
                                                     num_rows=device.getNumRows(),
                                                     start_index=0)
-            device = virtualDevice
+            fgDevice = virtualDevice
+            realDevice =  device
 
         # Start filtergraph process
         successful = False

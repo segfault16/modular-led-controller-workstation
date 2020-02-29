@@ -487,6 +487,13 @@ class PanelWrapper(LEDController):
         if self.pixel_mapping is not None:
             mapped_pixels = pixels[self.pixel_mapping[:, :, 0], self.pixel_mapping[:, :, 1]]
         self.device.show(mapped_pixels)
+    
+    def setPixelMapping(self, mappingJson):
+        if mappingJson:
+            self.pixel_mapping = self._createPixelMapping(mappingJson)
+    
+    def setDevice(self, device):
+        self.device = device
 
     def _createPixelMapping(self, mappingJson):
         def toIdx(row, col, num_cols):

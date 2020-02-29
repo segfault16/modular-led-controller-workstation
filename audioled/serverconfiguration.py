@@ -202,6 +202,7 @@ class ServerConfiguration:
                 # TODO: Error handling
                 pass
             deviceConfig = deviceConfigs[deviceConfigName]
+            self.setConfiguration(CONFIG_ACTIVE_DEVICE_CONFIGURATION, deviceConfigName)
             return self.createOutputDeviceFromConfig(deviceConfig, deviceConfigs)
 
     def createSingleDevice(self, deviceName, numPixels, numRows, candyServer=None, panelMapping=None):
