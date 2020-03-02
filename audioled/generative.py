@@ -1125,7 +1125,7 @@ class GIFPlayer(Effect):
 
     def __initstate__(self):
         super(GIFPlayer, self).__initstate__()
-        self._last_t = 0.0
+        self._last_show_t = 0
         self._cur_index = 0
         self._cur_image = None
         self._gif = None
@@ -1182,7 +1182,7 @@ class GIFPlayer(Effect):
 
     async def update(self, dt):
         await super().update(dt)
-        if self._t - self._last_t > 1.0 / self.fps:
+        if self._t - self._last_show_t > 1.0 / self.fps:
             # go to next image
             try:
                 self._gif.seek(self._gif.tell() + 1)
@@ -1196,7 +1196,7 @@ class GIFPlayer(Effect):
                                                Image.ANTIALIAS,
                                                centering=(self.center_x, self.center_y))
             # update time
-            self._last_t = self._t
+            self._last_show_t = self._t
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
