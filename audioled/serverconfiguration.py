@@ -21,15 +21,8 @@ CONFIG_ACTIVE_DEVICE_CONFIGURATION = 'active_device_config'
 CONFIG_DEVICE_CONFIGS = 'device_configs'
 
 allowed_configs = [
-    CONFIG_NUM_PIXELS,
-    CONFIG_NUM_ROWS,
-    CONFIG_DEVICE,
-    CONFIG_DEVICE_CANDY_SERVER,
-    CONFIG_AUDIO_DEVICE_INDEX,
-    CONFIG_ACTIVE_PROJECT,
-    CONFIG_DEVICE_PANEL_MAPPING,
-    CONFIG_ACTIVE_DEVICE_CONFIGURATION,
-    CONFIG_DEVICE_CONFIGS
+    CONFIG_NUM_PIXELS, CONFIG_NUM_ROWS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_AUDIO_DEVICE_INDEX,
+    CONFIG_ACTIVE_PROJECT, CONFIG_DEVICE_PANEL_MAPPING, CONFIG_ACTIVE_DEVICE_CONFIGURATION, CONFIG_DEVICE_CONFIGS
 ]
 
 
@@ -73,7 +66,7 @@ class ServerConfiguration:
         print("Updating {} to {}".format(key, value))
         if key not in allowed_configs:
             print("Updating value {} is not allowed.".format(key))
-        
+
         if not self._assertConfigChangeValid(key, value):
             raise RuntimeError("Error in setting {} to {}: {}".format(key, value, "Unknown error"))
         self._config[key] = value
@@ -216,15 +209,16 @@ class ServerConfiguration:
             deviceConfigName = self.getConfiguration(CONFIG_ACTIVE_DEVICE_CONFIGURATION)
             if deviceConfigName is None:
                 deviceConfigName = "default"
-                self.setConfigurationValue(CONFIG_DEVICE_CONFIGS, {
-                    deviceConfigName: [{
-                        "device": self.getConfiguration(CONFIG_DEVICE),
-                        "device.candy.server": self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER),
-                        "device.num_pixels": self.getConfiguration(CONFIG_NUM_PIXELS),
-                        "device.num_rows": self.getConfiguration(CONFIG_NUM_ROWS),
-                        "device.panel.mapping": self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
-                    }]
-                })
+                self.setConfigurationValue(
+                    CONFIG_DEVICE_CONFIGS, {
+                        deviceConfigName: [{
+                            "device": self.getConfiguration(CONFIG_DEVICE),
+                            "device.candy.server": self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER),
+                            "device.num_pixels": self.getConfiguration(CONFIG_NUM_PIXELS),
+                            "device.num_rows": self.getConfiguration(CONFIG_NUM_ROWS),
+                            "device.panel.mapping": self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
+                        }]
+                    })
             print("Creating device config {}".format(deviceConfigName))
             deviceConfigs = self.getConfiguration(CONFIG_DEVICE_CONFIGS)
             if deviceConfigs is None:
@@ -260,7 +254,12 @@ class ServerConfiguration:
         return device
 
     def createVirtualOutput(self, num_pixels, num_rows, real_device, shared_array, shared_lock, start_index, panelMapping):
-        device = devices.VirtualOutput(num_pixels=num_pixels, num_rows=num_rows, device=real_device, shared_array=shared_array, shared_lock=shared_lock, start_index=start_index)
+        device = devices.VirtualOutput(num_pixels=num_pixels,
+                                       num_rows=num_rows,
+                                       device=real_device,
+                                       shared_array=shared_array,
+                                       shared_lock=shared_lock,
+                                       start_index=start_index)
         if panelMapping and panelMapping:
             mappingFile = panelMapping
             if os.path.exists(mappingFile):
@@ -269,7 +268,7 @@ class ServerConfiguration:
                     device = devices.PanelWrapper(device, mapping)
                     print("Active pixel mapping on virtual device: {}".format(mappingFile))
             else:
-                raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile)) 
+                raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
         return device
 
     def createOutputDeviceFromConfig(self, config, fullConfig):
@@ -343,20 +342,26 @@ class ServerConfiguration:
                     firstDevice = deviceWrapper._devices[0]
                     multiDevices[referencedConf] = firstDevice
                     lock = multiprocessing.Lock()
-                    multiDeviceArrays[referencedConf] = multiprocessing.Array(ctypes.c_uint8, 3*firstDevice.getNumPixels(), lock=lock)
+                    multiDeviceArrays[referencedConf] = multiprocessing.Array(ctypes.c_uint8,
+                                                                              3 * firstDevice.getNumPixels(),
+                                                                              lock=lock)
                     multiDeviceLocks[referencedConf] = lock
                 realDevice = multiDevices[referencedConf]
                 virtualArray = multiDeviceArrays[referencedConf]
                 virtualLock = multiDeviceLocks[referencedConf]
 
                 # Add virtual devices
-                device = self.createVirtualOutput(num_pixels=pixels, num_rows=rows, real_device=realDevice, shared_array=virtualArray, shared_lock=virtualLock, start_index=start_index, panelMapping=panelMapping)
+                device = self.createVirtualOutput(num_pixels=pixels,
+                                                  num_rows=rows,
+                                                  real_device=realDevice,
+                                                  shared_array=virtualArray,
+                                                  shared_lock=virtualLock,
+                                                  start_index=start_index,
+                                                  panelMapping=panelMapping)
             else:
                 device = self.createSingleDevice(deviceName, pixels, rows, candyServer=candyServer, panelMapping=panelMapping)
             outputDevices.append(device)
         return MultiOutputWrapper(outputDevices)
-
-
 
     def _metadataForProject(self, project, projectUid):
         return {'name': project.name, 'description': project.description, 'id': projectUid}
@@ -405,7 +410,8 @@ class ServerConfiguration:
             for key in keys:
                 deviceConfigEntries = config[key]
                 if not isinstance(deviceConfigEntries, list):
-                    raise RuntimeError("{} entry {} must have list of entries, not {}".format(configEntryName, key, type(deviceConfigEntries)))
+                    raise RuntimeError("{} entry {} must have list of entries, not {}".format(
+                        configEntryName, key, type(deviceConfigEntries)))
 
                 deviceConfigItems = deviceConfigEntries
                 for deviceConfigItem in deviceConfigItems:
@@ -418,21 +424,29 @@ class ServerConfiguration:
                         raise RuntimeError("{} entry {} must have device.num_rows".format(configEntryName, key))
                     # Make sure device.virtual.reference exists
                     if deviceConfigItem['device'] == 'VirtualOutput' and 'device.virtual.reference' not in deviceConfigItem:
-                        raise RuntimeError("{} entry {} has VirtualOutput which must have device.virtual.reference".format(configEntryName, key))
+                        raise RuntimeError("{} entry {} has VirtualOutput which must have device.virtual.reference".format(
+                            configEntryName, key))
                     # Make sure device.virtual.start_index exists
                     if deviceConfigItem['device'] == 'VirtualOutput' and 'device.virtual.start_index' not in deviceConfigItem:
-                        raise RuntimeError("{} entry {} has VirtualOutput which must have device.virtual.start_index".format(configEntryName, key))
+                        raise RuntimeError("{} entry {} has VirtualOutput which must have device.virtual.start_index".format(
+                            configEntryName, key))
                     # Make sure device.virtual.reference is valid
-                    if deviceConfigItem['device'] == 'VirtualOutput' and deviceConfigItem['device.virtual.reference'] not in keys:
-                        raise RuntimeError("{} entry {} has device.virtual.reference to non-existing {}".format(configEntryName, key, deviceConfigItem['device.virtual.reference']))
+                    if deviceConfigItem['device'] == 'VirtualOutput' and deviceConfigItem[
+                            'device.virtual.reference'] not in keys:
+                        raise RuntimeError("{} entry {} has device.virtual.reference to non-existing {}".format(
+                            configEntryName, key, deviceConfigItem['device.virtual.reference']))
                     if deviceConfigItem['device'] == 'VirtualOutput':
                         referencedKey = deviceConfigItem['device.virtual.reference']
                         referencedConfigItem = config[referencedKey]
                         if len(referencedConfigItem) != 1 or referencedConfigItem[0]['device'] == 'VirtualOutput':
-                            raise RuntimeError("{} entry {} referenced device config must have one entry that is no VirtualOutput".format(configEntryName, key, deviceConfigItem['device.virtual.reference']))
+                            raise RuntimeError(
+                                "{} entry {} referenced device config must have one entry that is no VirtualOutput".format(
+                                    configEntryName, key, deviceConfigItem['device.virtual.reference']))
                     # Make sure device.virtual.reference is non-cyclic
                     if deviceConfigItem['device'] == 'VirtualOutput' and deviceConfigItem['device.virtual.reference'] == key:
-                        raise RuntimeError("{} entry {} has device.virtual.reference to self. Circular reference is not allowed".format(configEntryName, key))
+                        raise RuntimeError(
+                            "{} entry {} has device.virtual.reference to self. Circular reference is not allowed".format(
+                                configEntryName, key))
         # No error in _isConfigChangeValid()
         return True
 
