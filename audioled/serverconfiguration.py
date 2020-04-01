@@ -43,9 +43,9 @@ class ServerConfiguration:
     @staticmethod
     def getConfigurationParameters():
         return {
-            CONFIG_NUM_PIXELS: [300, 1, 2000, 1],
-            CONFIG_NUM_ROWS: [1, 1, 100, 1],
-            CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
+            # CONFIG_NUM_PIXELS: [300, 1, 2000, 1],
+            # CONFIG_NUM_ROWS: [1, 1, 100, 1],
+            # CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
         }
 
     def setConfiguration(self, dict):
@@ -77,6 +77,7 @@ class ServerConfiguration:
                 CONFIG_DEVICE_CANDY_SERVER,
                 CONFIG_NUM_ROWS,
                 CONFIG_DEVICE_PANEL_MAPPING,
+                CONFIG_DEVICE_CONFIGS
         ]:
             print("Renewing device")
             self._reusableDevice = None
@@ -321,10 +322,10 @@ class ServerConfiguration:
             # TODO: Support multi output device
             # Get parameters
             deviceName = entry['device']
-            pixels = entry['device.num_pixels']
+            pixels = int(entry['device.num_pixels'])
             rows = 1
             if 'device.num_rows' in entry:
-                rows = entry['device.num_rows']
+                rows = int(entry['device.num_rows'])
             candyServer = None
             if 'device.candy.server' in entry:
                 candyServer = entry['device.candy.server']
