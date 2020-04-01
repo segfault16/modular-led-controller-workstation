@@ -63,6 +63,9 @@ class LEDController:
     def setNumRows(self, num_rows):
         self.num_rows = num_rows
 
+    def shutdown(self):
+        print("Shutting down device")
+
     def show(self, pixels):
         """Set LED pixels to the values given in the array
 
@@ -281,6 +284,10 @@ class RaspberryPi(LEDController):
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.__initstate__()
+
+    def shutdown(self):
+        self._strip.end()
+        return super().shutdown()
 
     def show(self, pixels):
         """Writes new LED values to the Raspberry Pi's LED strip

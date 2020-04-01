@@ -288,7 +288,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                         raise ValueError('task_done() called too many times')
                     if q._unfinished_tasks._semlock._is_zero():
                         q._cond.notify_all()
-
+        outputDevice.shutdown()
         print("process {} exit".format(os.getpid()))
     except Exception as e:
         traceback.print_exc()
@@ -304,6 +304,7 @@ def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audio
             npArray = np.ctypeslib.as_array(virtualDevice._shared_array.get_obj()).reshape(3, -1)
             outputDevice.show(npArray.reshape(3, -1, order='C'))
             q.task_done()
+        outputDevice.shutdown()
         print("output process {} exit".format(os.getpid()))
     except Exception as e:
         traceback.print_exc()
