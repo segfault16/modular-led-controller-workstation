@@ -377,8 +377,11 @@ class Project(Updateable):
             self.activateScene(self.activeSceneId)
 
     def setDevice(self, device: audioled.devices.MultiOutputWrapper):
+        print("setting device")
         if not isinstance(device, audioled.devices.MultiOutputWrapper):
             raise RuntimeError("Device has to be MultiOutputWrapper")
+        if self._devices == device._devices:
+            return
         self._devices = device._devices
         print("Devices updated. Renewing active scene...")
         self.stopProcessing()
