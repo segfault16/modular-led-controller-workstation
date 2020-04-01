@@ -286,7 +286,7 @@ class RaspberryPi(LEDController):
         self.__initstate__()
 
     def shutdown(self):
-        self._strip.end()
+        self._strip._cleanup()
         return super().shutdown()
 
     def show(self, pixels):
