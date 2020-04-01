@@ -583,8 +583,11 @@ def create_app():
         global serverconfig
         if not request.json:
             abort(400)
-        for key, value in request.json.items():
-            serverconfig.setConfiguration(key, value)
+        try:
+            serverconfig.setConfiguration(request.json)
+        except RuntimeError as e:
+            print("ERROR updating configuration: {}".format(e))
+            abort(400, str(e))
         return jsonify(serverconfig.getFullConfiguration())
 
     @app.route('/remote/brightness', methods=['POST'])
@@ -732,26 +735,26 @@ if __name__ == '__main__':
     # Update num pixels
     if args.num_pixels is not None:
         num_pixels = args.num_pixels
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_NUM_PIXELS, num_pixels)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_NUM_PIXELS, num_pixels)
 
     # Update num rows
     if args.num_rows is not None:
         num_rows = args.num_rows
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_NUM_ROWS, num_rows)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_NUM_ROWS, num_rows)
 
     # Update LED device
     if args.device is not None:
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE, args.device)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_DEVICE, args.device)
 
     if args.device_candy_server is not None:
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER, args.device_candy_server)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER, args.device_candy_server)
 
     if args.device_panel_mapping is not None:
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_PANEL_MAPPING, args.device_panel_mapping)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_DEVICE_PANEL_MAPPING, args.device_panel_mapping)
 
     # Update Audio device
     if args.audio_device_index is not None:
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX, args.audio_device_index)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX, args.audio_device_index)
 
     if args.process_timing:
         record_timings = True

@@ -20,6 +20,18 @@ CONFIG_DEVICE_PANEL_MAPPING = 'device.panel.mapping'
 CONFIG_ACTIVE_DEVICE_CONFIGURATION = 'active_device_config'
 CONFIG_DEVICE_CONFIGS = 'device_configs'
 
+allowed_configs = [
+    CONFIG_NUM_PIXELS,
+    CONFIG_NUM_ROWS,
+    CONFIG_DEVICE,
+    CONFIG_DEVICE_CANDY_SERVER,
+    CONFIG_AUDIO_DEVICE_INDEX,
+    CONFIG_ACTIVE_PROJECT,
+    CONFIG_DEVICE_PANEL_MAPPING,
+    CONFIG_ACTIVE_DEVICE_CONFIGURATION,
+    CONFIG_DEVICE_CONFIGS
+]
+
 
 class ServerConfiguration:
     def __init__(self):
@@ -43,9 +55,29 @@ class ServerConfiguration:
             CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
         }
 
-    def setConfiguration(self, key, value):
+    def setConfiguration(self, dict):
+        """Set configuration
+
+        raises:
+        - RuntimeError if config not valid
+        """
+        for key, value in dict.items():
+            self.setConfigurationValue(key, value)
+
+    def setConfigurationValue(self, key, value):
+        """Set configuration value
+
+        raises:
+        - RuntimeError if config not valid
+        """
         print("Updating {} to {}".format(key, value))
+        if key not in allowed_configs:
+            print("Updating value {} is not allowed.".format(key))
+        
+        if not self._assertConfigChangeValid(key, value):
+            raise RuntimeError("Error in setting {} to {}: {}".format(key, value, "Unknown error"))
         self._config[key] = value
+
         if self._activeProject is not None and key in [
                 CONFIG_NUM_PIXELS,
                 CONFIG_DEVICE,
@@ -184,7 +216,7 @@ class ServerConfiguration:
             deviceConfigName = self.getConfiguration(CONFIG_ACTIVE_DEVICE_CONFIGURATION)
             if deviceConfigName is None:
                 deviceConfigName = "default"
-                self.setConfiguration(CONFIG_DEVICE_CONFIGS, {
+                self.setConfigurationValue(CONFIG_DEVICE_CONFIGS, {
                     deviceConfigName: [{
                         "device": self.getConfiguration(CONFIG_DEVICE),
                         "device.candy.server": self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER),
@@ -202,7 +234,7 @@ class ServerConfiguration:
                 # TODO: Error handling
                 pass
             deviceConfig = deviceConfigs[deviceConfigName]
-            self.setConfiguration(CONFIG_ACTIVE_DEVICE_CONFIGURATION, deviceConfigName)
+            self.setConfigurationValue(CONFIG_ACTIVE_DEVICE_CONFIGURATION, deviceConfigName)
             return self.createOutputDeviceFromConfig(deviceConfig, deviceConfigs)
 
     def createSingleDevice(self, deviceName, numPixels, numRows, candyServer=None, panelMapping=None):
@@ -329,6 +361,81 @@ class ServerConfiguration:
     def _metadataForProject(self, project, projectUid):
         return {'name': project.name, 'description': project.description, 'id': projectUid}
 
+    def _assertConfigChangeValid(self, configEntryName, config):
+        """ Raises RuntimeError if config change is not valid
+        """
+        if configEntryName == CONFIG_DEVICE_CONFIGS:
+            # Example:
+            # "device_configs": {
+            #     "oneStrip": [
+            #         {
+            #             "device": "RaspberryPi",
+            #             "device.num_pixels": 490,
+            #             "device.num_rows": 1,
+            #             "device.panel.mapping": ""
+            #         }
+            #     ],
+            #     "twoInOne": [
+            #         {
+            #             "device": "VirtualOutput",
+            #             "device.num_pixels": 290,
+            #             "device.num_rows": 1,
+            #             "device.panel.mapping": "",
+            #             "device.virtual.reference": "oneStrip",
+            #             "device.virtual.start_index": 0
+            #         },
+            #         {
+            #             "device": "VirtualOutput",
+            #             "device.num_pixels": 200,
+            #             "device.num_rows": 1,
+            #             "device.panel.mapping": "",
+            #             "device.virtual.reference": "oneStrip",
+            #             "device.virtual.start_index": 290
+            #         }
+            #     ]
+            # },
+            # Make sure we have a string dict in the beginning:
+            for key, value in config.items():
+                if not isinstance(key, str):
+                    raise RuntimeError("{} must consist of string keys".format(configEntryName))
+                if not isinstance(value, list):
+                    print(type(value))
+                    raise RuntimeError("{} values must consist of dict".format(configEntryName))
+            keys = config.keys()
+            for key in keys:
+                deviceConfigEntries = config[key]
+                if not isinstance(deviceConfigEntries, list):
+                    raise RuntimeError("{} entry {} must have list of entries, not {}".format(configEntryName, key, type(deviceConfigEntries)))
+
+                deviceConfigItems = deviceConfigEntries
+                for deviceConfigItem in deviceConfigItems:
+                    # Make sure device exists
+                    if 'device' not in deviceConfigItem:
+                        raise RuntimeError("{} entry {} must have device".format(configEntryName, key))
+                    if 'device.num_pixels' not in deviceConfigItem:
+                        raise RuntimeError("{} entry {} must have device.num_pixels".format(configEntryName, key))
+                    if 'device.num_rows' not in deviceConfigItem:
+                        raise RuntimeError("{} entry {} must have device.num_rows".format(configEntryName, key))
+                    # Make sure device.virtual.reference exists
+                    if deviceConfigItem['device'] == 'VirtualOutput' and 'device.virtual.reference' not in deviceConfigItem:
+                        raise RuntimeError("{} entry {} has VirtualOutput which must have device.virtual.reference".format(configEntryName, key))
+                    # Make sure device.virtual.start_index exists
+                    if deviceConfigItem['device'] == 'VirtualOutput' and 'device.virtual.start_index' not in deviceConfigItem:
+                        raise RuntimeError("{} entry {} has VirtualOutput which must have device.virtual.start_index".format(configEntryName, key))
+                    # Make sure device.virtual.reference is valid
+                    if deviceConfigItem['device'] == 'VirtualOutput' and deviceConfigItem['device.virtual.reference'] not in keys:
+                        raise RuntimeError("{} entry {} has device.virtual.reference to non-existing {}".format(configEntryName, key, deviceConfigItem['device.virtual.reference']))
+                    if deviceConfigItem['device'] == 'VirtualOutput':
+                        referencedKey = deviceConfigItem['device.virtual.reference']
+                        referencedConfigItem = config[referencedKey]
+                        if len(referencedConfigItem) != 1 or referencedConfigItem[0]['device'] == 'VirtualOutput':
+                            raise RuntimeError("{} entry {} referenced device config must have one entry that is no VirtualOutput".format(configEntryName, key, deviceConfigItem['device.virtual.reference']))
+                    # Make sure device.virtual.reference is non-cyclic
+                    if deviceConfigItem['device'] == 'VirtualOutput' and deviceConfigItem['device.virtual.reference'] == key:
+                        raise RuntimeError("{} entry {} has device.virtual.reference to self. Circular reference is not allowed".format(configEntryName, key))
+        # No error in _isConfigChangeValid()
+        return True
+
     def store(self):
         pass
 
@@ -357,8 +464,11 @@ class PersistentConfiguration(ServerConfiguration):
         self._lastProjectHashs = {}
         self._load()
 
-    def setConfiguration(self, key, value):
-        super().setConfiguration(key, value)
+    def setConfiguration(self, dict):
+        super().setConfiguration(dict)
+
+    def setConfigurationValue(self, key, value):
+        super().setConfigurationValue(key, value)
 
     def getConfiguration(self, key):
         return super().getConfiguration(key)
