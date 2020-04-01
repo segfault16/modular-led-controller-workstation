@@ -250,6 +250,7 @@ class ConfigurationPage extends Component {
                     Server Configuration
                 </h2>
                 {configurator}
+                Please note: Changing output configuration might require a restart for some devices
                 <MaterialTable
                     icons={tableIcons}
                     title="Output configuration"
