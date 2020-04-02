@@ -18,7 +18,7 @@ from flask import Flask, abort, jsonify, request, send_from_directory, redirect,
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project
+from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project, bluetooth
 
 proj = None  # type: project.Project
 default_values = {}
@@ -782,6 +782,8 @@ if __name__ == '__main__':
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
 
+    bt = bluetooth.MidiBluetoothService()
+    
     app = create_app()
     app.run(debug=False, host="0.0.0.0", port=args.port)
     print("End of server main")
