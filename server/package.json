@@ -43,11 +43,13 @@
     "npm": "^6.12.1",
     "react": "^16.11.0",
     "react-dom": "^16.11.0",
-    "react-graph-vis": "https://github.com/segfault16/react-graph-vis.git",
     "react-measure": "^2.3.0",
     "react-piano": "^3.1.3",
     "react-router": "^5.1.2",
     "react-router-config": "^5.1.1",
-    "react-router-dom": "^5.1.2"
+    "react-router-dom": "^5.1.2",
+    "vis-data": "^6.5.1",
+    "vis-network": "^7.5.1",
+    "vis-util": "^4.0.0"
   }
 }
