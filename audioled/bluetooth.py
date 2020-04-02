@@ -6,7 +6,7 @@ class BluetoothMidiLELevelCharacteristic(Characteristic):
     def __init__(self):
         Characteristic.__init__(self, {
             'uuid': '7772e5db-3868-4112-a1a9-f2669d106bf3',
-            'properties': ['notify', 'read', 'write', 'write-without-response'],
+            'properties': ['read', 'write', 'writeWithoutResponse', 'notify'],
             # 'secure': ['read', 'write', 'writeWithoutResponse', 'notify'],
             'value': None,
             'descriptors': [
