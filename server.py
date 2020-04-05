@@ -701,6 +701,10 @@ def strandTest(dev, num_pixels):
         t = t + dt
         time.sleep(dt)
 
+def handleMidiMsg(msg):
+    if msg.type=='program_change':
+        global proj
+        proj.activateScene(msg.program)
 
 if __name__ == '__main__':
     parser = runtimeconfiguration.commonRuntimeArgumentParser()
@@ -782,7 +786,7 @@ if __name__ == '__main__':
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
 
-    bt = bluetooth.MidiBluetoothService()
+    bt = bluetooth.MidiBluetoothService(callback = handleMidiMsg)
     
     app = create_app()
     app.run(debug=False, host="0.0.0.0", port=args.port)

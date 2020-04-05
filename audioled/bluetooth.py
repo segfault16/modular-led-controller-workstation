@@ -1,9 +1,11 @@
 from pybleno import *
 import sys
 import signal
+import mido
 
 class BluetoothMidiLELevelCharacteristic(Characteristic):
-    def __init__(self):
+    def __init__(self, _msgReceivedCallback):
+        self._msgReceivedCallback = _msgReceivedCallback
         Characteristic.__init__(self, {
             'uuid': '7772e5db-3868-4112-a1a9-f2669d106bf3',
             'properties': ['read', 'write', 'writeWithoutResponse', 'notify'],
@@ -38,24 +40,32 @@ class BluetoothMidiLELevelCharacteristic(Characteristic):
         self._value = data
 
         print('EchoCharacteristic - %s - onWriteRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
+        msgs = mido.parse_all(self._value)
+        for msg in msgs:
+            if msg.type == 'program_change':
+                print("is program change: {}".format(msg.program))
+            if self._msgReceivedCallback is not None:
+                self._msgReceivedCallback(msg)
 
 class BluetoothMidiLEService(BlenoPrimaryService):
-    def __init__(self):
+    def __init__(self, _msgReceivedCallback):
+        self._characteristic = BluetoothMidiLELevelCharacteristic(_msgReceivedCallback)
         BlenoPrimaryService.__init__(self, {
           'uuid': '03b80e5a-ede8-4b33-a751-6ce34ec4c700',
           'characteristics': [
-              BluetoothMidiLELevelCharacteristic()
+              self._characteristic
           ],
         })
 
 class MidiBluetoothService(object):
-    def __init__(self):
+    def __init__(self, callback = None):
+        self._callback = callback
         self.bleno = Bleno()
-        self.primaryService = BluetoothMidiLEService();
+        self.primaryService = BluetoothMidiLEService(self._onMessageReceived);
 
 
-        self.bleno.on('advertisingStart', self.onAdvertisingStart)
-        self.bleno.on('stateChange', self.onStateChange)
+        self.bleno.on('advertisingStart', self._onAdvertisingStart)
+        self.bleno.on('stateChange', self._onStateChange)
         print("Starting Advertising")
         self.bleno.start()
         # self.bleno.startAdvertising("MOLECOLE Control")
@@ -73,7 +83,13 @@ class MidiBluetoothService(object):
         # print ('terminated.')
         # sys.exit(1)
 
-    def onStateChange(self, state):
+    def _onMessageReceived(self, msg : mido.Message):
+        print("Received msg: {}".format(msg))
+        if self._callback is not None:
+            self._callback(msg)
+        
+
+    def _onStateChange(self, state):
         print('on -> stateChange: ' + state);
 
         if (state == 'poweredOn'):
@@ -82,7 +98,7 @@ class MidiBluetoothService(object):
             self.bleno.stopAdvertising();
     
 
-    def onAdvertisingStart(self, error):
+    def _onAdvertisingStart(self, error):
         print('on -> advertisingStart: ' + ('error ' + error if error else 'success'));
 
         if not error:
