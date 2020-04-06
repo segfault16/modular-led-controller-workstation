@@ -4,6 +4,7 @@ import traceback
 import jsonpickle
 from timeit import default_timer as timer
 from typing import List
+import logging
 
 from audioled import modulation
 from audioled import devices
@@ -489,10 +490,12 @@ class FilterGraph(Updateable):
         return node
 
     def updateModulationSourceValue(self, modulationIndex, newValue):
+        print("Updating mod source value for {}".format(modulationIndex))
         cnt = 0
         found = False
         for mod in self.__modulationsources:
-            if isinstance(mod, modulation.ExternalLinearController):
+            print("Checking {}".format(mod.modulator))
+            if isinstance(mod.modulator, modulation.ExternalLinearController):
                 if cnt == modulationIndex:
                     found = True
                     break
@@ -500,9 +503,10 @@ class FilterGraph(Updateable):
                     cnt = cnt + 1
         
         if found:
+            print("Updating mod source value")
             mod = self.__modulationsources[cnt]
             mod.modulator.updateParameter({
-                "amount": 0.953
+                "amount": newValue
             })
 
     def updateModulationSourceParameter(self, modSourceUid, updateParameters):
@@ -632,30 +636,36 @@ class FilterGraph(Updateable):
 
     def __setstate__(self, state):
         self.__init__()
-        if '_contentRoot' in state:
-            self._contentRoot = state['_contentRoot']
-        if 'recordTimings' in state:
-            self.recordTimings = state['recordTimings']
-        if 'nodes' in state:
-            nodes = state['nodes']
-            for node in nodes:
-                newnode = self.addEffectNode(node.effect)
-                newnode.uid = node.uid
-        if 'connections' in state:
-            connections = state['connections']
-            for con in connections:
-                fromChannel = con['from_node_channel']
-                toChannel = con['to_node_channel']
-                newcon = self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
-                newcon.uid = con['uid']
-        if 'modulationSources' in state:
-            modSources = state['modulationSources']
-            for mod in modSources:
-                newModSource = self.addModulationSource(mod.modulator)
-                newModSource.uid = mod.uid
-        if 'modulations' in state:
-            mods = state['modulations']
-            for mod in mods:
-                newMod = self.addModulation(mod['modulation_source_uid'], mod['target_node_uid'], mod['target_param'],
-                                            mod['amount'], mod['inverted'])
-                newMod.uid = mod['uid']
+        try:
+            if '_contentRoot' in state:
+                self._contentRoot = state['_contentRoot']
+            if 'recordTimings' in state:
+                self.recordTimings = state['recordTimings']
+            if 'nodes' in state:
+                nodes = state['nodes']
+                for node in nodes:
+                    newnode = self.addEffectNode(node.effect)
+                    newnode.uid = node.uid
+            if 'connections' in state:
+                connections = state['connections']
+                for con in connections:
+                    fromChannel = con['from_node_channel']
+                    toChannel = con['to_node_channel']
+                    newcon = self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
+                    newcon.uid = con['uid']
+            if 'modulationSources' in state:
+                modSources = state['modulationSources']
+                for mod in modSources:
+                    newModSource = self.addModulationSource(mod.modulator)
+                    newModSource.uid = mod.uid
+            if 'modulations' in state:
+                mods = state['modulations']
+                for mod in mods:
+                    try:
+                        newMod = self.addModulation(mod['modulation_source_uid'], mod['target_node_uid'], mod['target_param'],
+                                                    mod['amount'], mod['inverted'])
+                        newMod.uid = mod['uid']
+                    except Exception as e: 
+                        logging.error("Error restoring filtergraph modulation: {}".format(e))
+        except Exception as e:
+            logging.error("Error restoring filtergraph: {}".format(e))

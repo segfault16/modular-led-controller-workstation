@@ -3,6 +3,7 @@ import sys
 import signal
 import mido
 import pybleno
+import logging
 
 
 class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
@@ -47,7 +48,7 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
 
     def onReadRequest(self, offset, callback):
         print('EchoCharacteristic - %s - onReadRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
-        callback(Characteristic.RESULT_SUCCESS, self._value[offset:])
+        callback(pybleno.Characteristic.RESULT_SUCCESS, self._value[offset:])
 
     def onWriteRequest(self, data, offset, withoutResponse, callback):
         self._value = data
@@ -60,10 +61,10 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
             if self._msgReceivedCallback is not None:
                 self._msgReceivedCallback(msg)
 
-class BluetoothMidiLEService(BlenoPrimaryService):
+class BluetoothMidiLEService(pybleno.BlenoPrimaryService):
     def __init__(self, _msgReceivedCallback):
         self._characteristic = BluetoothMidiLELevelCharacteristic(_msgReceivedCallback)
-        BlenoPrimaryService.__init__(self, {
+        pybleno.BlenoPrimaryService.__init__(self, {
           'uuid': '03b80e5a-ede8-4b33-a751-6ce34ec4c700',
           'characteristics': [
               self._characteristic
@@ -73,13 +74,13 @@ class BluetoothMidiLEService(BlenoPrimaryService):
 class MidiBluetoothService(object):
     def __init__(self, callback = None):
         self._callback = callback
-        self.bleno = Bleno()
+        self.bleno = pybleno.Bleno()
         self.primaryService = BluetoothMidiLEService(self._onMessageReceived);
 
 
         self.bleno.on('advertisingStart', self._onAdvertisingStart)
         self.bleno.on('stateChange', self._onStateChange)
-        print("Starting Advertising")
+        logging.info("Advertising Bluetooth Service")
         self.bleno.start()
         # self.bleno.startAdvertising("MOLECOLE Control")
 

@@ -24,8 +24,7 @@ from audioled import audio, effects, filtergraph, serverconfiguration, runtimeco
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
 
-libnames = ['bluetooth']
-
+libnames = ['audioled.bluetooth']
 for libname in libnames:
     try:
         lib = __import__(libname)
@@ -740,13 +739,22 @@ def handleMidiMsg(msg):
         global proj
         proj.activateScene(msg.program)
     elif msg.type == 'control_change':
-        proj.updateModulationSourceValue()
-        msg.control
+        controllerMap = {
+            7: 0, # mod wheel?
+            11: 1, # expression
+            21: 2, # TODO: Brightness
+        }
+        if msg.control in controllerMap:
+            print("Propagating control change message")
+            proj.updateModulationSourceValue(0xFFF, controllerMap[msg.control], msg.value/127)
+        else:
+            print("Unknown controller")
 
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
+    logging.getLogger('audioled').setLevel(logging.DEBUG) # TODO: Not working?
     parser = runtimeconfiguration.commonRuntimeArgumentParser()
     # Adjust defaults from commonRuntimeArgumentParser
     parser.set_defaults(
@@ -827,9 +835,11 @@ if __name__ == '__main__':
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
     logging.warn("Adding bluetooth server to the mix")
     try:
-        bt = bluetooth.MidiBluetoothService(callback=handleMidiMsg)
-    except Exception:
+        import audioled
+        bt = audioled.bluetooth.MidiBluetoothService(callback=handleMidiMsg)
+    except Exception as e:
         logging.warning("Ignoring Bluetooth error")
+        logging.error(e)
 
     app = create_app()
     logging.debug("Here?")

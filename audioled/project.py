@@ -265,6 +265,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
     """
     try:
         print("process {} start".format(os.getpid()))
+        # logging.basicConfig(level=logging.DEBUG) # TODO: logging not working?
         event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(event_loop)
         filtergraph.propagateNumPixels(outputDevice.getNumPixels(), outputDevice.getNumRows())
@@ -287,7 +288,9 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                         filtergraph.propagateNumPixels(outputDevice.getNumPixels(), outputDevice.getNumRows())
                 elif isinstance(message, UpdateModulationSourceValueMessage):
                     message = message  # type: UpdateModulationSourceValueMessage
-                    if deviceId & message.deviceMask:
+                    dMask = 2 << deviceId
+                    if dMask & message.deviceMask:
+                        print("Device mask match for device {}".format(deviceId))
                         filtergraph.updateModulationSourceValue(message.controller, message.newValue)
                 else:
                     print("Message not supported: {}".format(message))
@@ -432,7 +435,7 @@ class Project(Updateable):
                 self.stopProcessing()
                 if self.activeSceneId is not None:
                     self.activateScene(self.activeSceneId)
-            finally:
+            else:
                 self._lock.release()
         else:
             time.sleep(0.01)
@@ -795,7 +798,7 @@ class Project(Updateable):
         self._publishQueue.publish(ReplaceFiltergraphMessage(dIdx, slotId, filtergraph))
 
     def _sendModulationSourceValueUpdateCommand(self, deviceMask, controller, newValue):
-        self._publishQueue.publish(UpdateModulationSourceValueMessage(dIdx, controller, newValue))
+        self._publishQueue.publish(UpdateModulationSourceValueMessage(deviceMask, controller, newValue))
 
     def _updatePreviewDevice(self, dt, event_loop=asyncio.get_event_loop()):
         # Process preview in this process
