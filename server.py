@@ -13,7 +13,6 @@ import traceback
 from timeit import default_timer as timer
 import logging
 
-
 import jsonpickle
 import numpy as np
 from flask import Flask, abort, jsonify, request, send_from_directory, redirect, send_file
@@ -21,7 +20,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
 from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project
-
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
@@ -33,10 +31,9 @@ for libname in libnames:
         lib = __import__(libname)
     except Exception as e:
         logging.error("Import for bluetooth failed. {}".format(e))
-        
+
     else:
         globals()[libname] = lib
-
 
 
 proj = None  # type: project.Project
@@ -103,7 +100,7 @@ def create_app():
         except RuntimeError as e:
             app.logger.info("LED thread cancelled: {}".format(e))
             pass
-        
+
         sched.shutdown()
         app.logger.debug('Background scheduler shutdown')
 
@@ -724,10 +721,29 @@ def strandTest(dev, num_pixels):
         t = t + dt
         time.sleep(dt)
 
+
 def handleMidiMsg(msg):
-    if msg.type=='program_change':
+    # channel	0..15	0
+    # frame_type	0..7	0
+    # frame_value	0..15	0
+    # control	0..127	0
+    # note	0..127	0
+    # program	0..127	0
+    # song	0..127	0
+    # value	0..127	0
+    # velocity	0..127	64
+    # data	(0..127, 0..127, …)	() (empty tuple)
+    # pitch	-8192..8191	0
+    # pos	0..16383	0
+    # time	any integer or float	0
+    if msg.type == 'program_change':
         global proj
         proj.activateScene(msg.program)
+    elif msg.type == 'control_change':
+        proj.updateModulationSourceValue()
+        msg.control
+
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -811,10 +827,10 @@ if __name__ == '__main__':
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
     logging.warn("Adding bluetooth server to the mix")
     try:
-        bt = bluetooth.MidiBluetoothService(callback = handleMidiMsg)
+        bt = bluetooth.MidiBluetoothService(callback=handleMidiMsg)
     except Exception:
         logging.warning("Ignoring Bluetooth error")
-    
+
     app = create_app()
     logging.debug("Here?")
     app.run(debug=False, host="0.0.0.0", port=args.port)

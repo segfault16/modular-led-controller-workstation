@@ -103,6 +103,16 @@ class ReplaceFiltergraphMessage:
         return "FiltergraphMessage - deviceId: {}, slotId: {}, filtergraph: {}".format(self.deviceId, self.slotId,
                                                                                        self.filtergraph)
 
+class UpdateModulationSourceValueMessage:
+    def __init__(self, deviceMask, controller, newValue):
+        self.controller = controller
+        self.newValue = newValue
+        self.deviceMask = deviceMask
+
+    def __str__(self):
+        return "UpdateModulationSourceValueMessage - deviceMask: {}, controller: {}, newValue: {}".format(self.deviceMask, self.controller,
+                                                                                       self.newValue)
+
 
 class NodeMessage:
     def __init__(self, slotId, nodeUid, operation, params=None):
@@ -275,6 +285,10 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                         filtergraph = message.filtergraph
                         slotId = message.slotId
                         filtergraph.propagateNumPixels(outputDevice.getNumPixels(), outputDevice.getNumRows())
+                elif isinstance(message, UpdateModulationSourceValueMessage):
+                    message = message  # type: UpdateModulationSourceValueMessage
+                    if deviceId & message.deviceMask:
+                        filtergraph.updateModulationSourceValue(message.controller, message.newValue)
                 else:
                     print("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
@@ -483,6 +497,13 @@ class Project(Updateable):
             self._processingEnabled = True
             print("activate scene - releasing lock")
             self._lock.release()
+
+    def updateModulationSourceValue(self, deviceMask, controller, newValue):
+        # TODO: Apply for deviceMask
+        dIdx = 0
+        self._sendModulationSourceValueUpdateCommand(deviceMask, controller, newValue)
+        
+
 
     def _createOrUpdateProcess(self, dIdx, device, slotId, filterGraph):
         if dIdx in self._filtergraphProcesses:
@@ -772,6 +793,9 @@ class Project(Updateable):
 
     def _sendReplaceFiltergraphCommand(self, dIdx, slotId, filtergraph):
         self._publishQueue.publish(ReplaceFiltergraphMessage(dIdx, slotId, filtergraph))
+
+    def _sendModulationSourceValueUpdateCommand(self, deviceMask, controller, newValue):
+        self._publishQueue.publish(UpdateModulationSourceValueMessage(dIdx, controller, newValue))
 
     def _updatePreviewDevice(self, dt, event_loop=asyncio.get_event_loop()):
         # Process preview in this process
