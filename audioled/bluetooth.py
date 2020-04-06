@@ -1,21 +1,34 @@
-from pybleno import *
+
 import sys
 import signal
 import mido
+import pybleno
 
-class BluetoothMidiLELevelCharacteristic(Characteristic):
+
+class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
     def __init__(self, _msgReceivedCallback):
+        try:
+            
+            pybleno.Characteristic.__init__(self, {
+                'uuid': '7772e5db-3868-4112-a1a9-f2669d106bf3',
+                'properties': ['read', 'write', 'writeWithoutResponse', 'notify'],
+                # 'secure': ['read', 'write', 'writeWithoutResponse', 'notify'],
+                'value': None,
+                'descriptors': []
+                })
+        except ImportError:
+            url = 'https://github.com/Adam-Langley/pybleno'
+            print('Could not import the pybleno library')
+            print('For installation instructions, see {}'.format(url))
+            print('If running on RaspberryPi, please install.')
+        except OSError:
+            print("Seems like pybleno is not working.")
+            url = 'https://github.com/Adam-Langley/pybleno'
+            print('For installation instructions, see {}'.format(url))
+            print('If running on RaspberryPi, please install.')
+            
         self._msgReceivedCallback = _msgReceivedCallback
-        Characteristic.__init__(self, {
-            'uuid': '7772e5db-3868-4112-a1a9-f2669d106bf3',
-            'properties': ['read', 'write', 'writeWithoutResponse', 'notify'],
-            # 'secure': ['read', 'write', 'writeWithoutResponse', 'notify'],
-            'value': None,
-            'descriptors': [
-                ]            
-          })
-          
-        self._value = array.array('B', [0] * 0)
+        self._value = pybleno.array.array('B', [0] * 0)
         self._updateValueCallback = None
           
     # def onReadRequest(self, offset, callback):

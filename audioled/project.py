@@ -9,6 +9,7 @@ import time
 import multiprocessing as mp
 import traceback
 import ctypes
+import logging
 
 import os
 from functools import wraps
@@ -439,7 +440,7 @@ class Project(Updateable):
 
         Scene: Project Slot per Output Device
         """
-        print("activate scene {}".format(sceneId))
+        logging.info("activate scene {}".format(sceneId))
 
         # TODO: Make configurable
         self._previewDeviceIndex = None

@@ -11,6 +11,8 @@ import time
 import multiprocessing
 import traceback
 from timeit import default_timer as timer
+import logging
+
 
 import jsonpickle
 import numpy as np
@@ -18,7 +20,24 @@ from flask import Flask, abort, jsonify, request, send_from_directory, redirect,
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project, bluetooth
+from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project
+
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger('apscheduler').setLevel(logging.ERROR)
+
+libnames = ['bluetooth']
+
+for libname in libnames:
+    try:
+        lib = __import__(libname)
+    except Exception as e:
+        logging.error("Import for bluetooth failed. {}".format(e))
+        
+    else:
+        globals()[libname] = lib
+
+
 
 proj = None  # type: project.Project
 default_values = {}
@@ -51,7 +70,11 @@ def multiprocessing_func(sc):
 
 
 def create_app():
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Creating app")
     app = Flask(__name__)
+    logging.debug("App created")
+    logging.basicConfig(level=logging.ERROR)
 
     def store_configuration():
         try:
@@ -63,26 +86,26 @@ def create_app():
             serverconfig.updateMd5HashFromFiles()
             serverconfig.postStore()
         except Exception:
-            print("ERROR on storing configuration")
+            app.logger.error("ERROR on storing configuration")
 
     sched = BackgroundScheduler(daemon=True)
     sched.add_job(store_configuration, 'interval', seconds=5)
     sched.start()
 
     def interrupt():
-        print('cancelling LED thread')
+        app.logger.info('cancelling LED thread')
         global ledThread
         global proj
         # stop_signal = True
         try:
             proj.stopProcessing()
             ledThread.join()
-        except RuntimeError:
+        except RuntimeError as e:
+            app.logger.info("LED thread cancelled: {}".format(e))
             pass
-
-        print('LED thread cancelled')
+        
         sched.shutdown()
-        print('Background scheduler shutdown')
+        app.logger.debug('Background scheduler shutdown')
 
     @app.after_request
     def add_header(response):
@@ -132,7 +155,7 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            print(request.json)
+            app.logger.debug(request.json)
             node = fg.updateNodeParameter(nodeUid, request.json)
             return jsonpickle.encode(node)
         except StopIteration:
@@ -176,7 +199,7 @@ def create_app():
             abort(400)
         full_class_name = request.json[0]
         parameters = request.json[1]
-        print(parameters)
+        app.logger.debug(parameters)
         module_name, class_name = None, None
         try:
             module_name, class_name = getModuleAndClassName(full_class_name)
@@ -186,10 +209,10 @@ def create_app():
         instance = class_(**parameters)
         node = None
         if module_name == 'audioled.modulation':
-            print("Adding modulation source")
+            app.logger.info("Adding modulation source")
             node = fg.addModulationSource(instance)
         else:
-            print("Adding effect node")
+            app.logger.info("Adding effect node")
             node = fg.addEffectNode(instance)
         return jsonpickle.encode(node)
 
@@ -252,7 +275,7 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            print(request.json)
+            app.logger.debug(request.json)
             mod = fg.updateModulationSourceParameter(modulationUid, request.json)
             return jsonpickle.encode(mod)
         except StopIteration:
@@ -311,7 +334,7 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            print(request.json)
+            app.logger.debug(request.json)
             mod = fg.updateModulationParameter(modulationUid, request.json)
             return jsonpickle.encode(mod)
         except StopIteration:
@@ -387,7 +410,7 @@ def create_app():
             result.update({key: None for key in argspec.args[1:len(argspec.args) - len(argspec.defaults)]})  # 1 removes self
 
         result.update({key: default_values[key] for key in default_values if key in result})
-        print(result)
+        app.logger.debug(result)
         return jsonify(result)
 
     @app.route('/effect/<full_class_name>/parameter', methods=['GET'])
@@ -450,7 +473,7 @@ def create_app():
         if not request.json:
             abort(400)
         value = request.json['slot']
-        # print("Activating slot {}".format(value))
+        # app.logger.info("Activating slot {}".format(value))
         proj.activateScene(value)
         # proj.previewSlot(value)
         return "OK"
@@ -458,7 +481,7 @@ def create_app():
     @app.route('/project/activeScene', methods=['GET'])
     def project_activeSlot_get():
         global proj
-        print(proj.outputSlotMatrix)
+        app.logger.debug(proj.outputSlotMatrix)
         return jsonify({
             'activeSlot': proj.activeSlotId,
             'activeScene': proj.activeSceneId,
@@ -470,7 +493,7 @@ def create_app():
         if not request.json:
             abort(400)
         value = request.json
-        print(value)
+        app.logger.debug(value)
         proj.setSceneMatrix(value)
         return "OK"
 
@@ -500,17 +523,17 @@ def create_app():
         global serverconfig
         global proj
         if 'file' not in request.files:
-            print("No file in request")
+            app.logger.warn("No file in request")
             abort(400)
         file = request.files['file']
         if file.filename == '':
-            print("File has no filename")
+            app.logger.warn("File has no filename")
             abort(400)
         if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ['gif']:
-            print("Adding asset to proj {}".format(proj.id))
+            app.logger.info("Adding asset to proj {}".format(proj.id))
             filename = serverconfig.addProjectAsset(proj.id, file)
             return jsonify({'filename': filename})
-        print("Unknown content for asset: {}".format(file.filename))
+        app.logger.error("Unknown content for asset: {}".format(file.filename))
         abort(400)
 
     @app.route('/projects', methods=['GET'])
@@ -541,7 +564,7 @@ def create_app():
         global serverconfig
         proj = serverconfig.getProject(uid)
         if proj is not None:
-            print("Exporting project {}".format(uid))
+            app.logger.info("Exporting project {}".format(uid))
             return jsonpickle.encode(proj)
         abort(404)
 
@@ -558,11 +581,11 @@ def create_app():
         if not request.json:
             abort(400)
         uid = request.json['project']
-        print("Activating project {}".format(uid))
+        app.logger.info("Activating project {}".format(uid))
         try:
             proj = serverconfig.activateProject(uid)
         except Exception as e:
-            print("Error opening project: {}".format(e))
+            app.logger.error("Error opening project: {}".format(e))
             if serverconfig._activeProject is None:
                 serverconfig.initDefaultProject()
                 abort(500, "Could not active project. No other project found. Initializing default.")
@@ -586,7 +609,7 @@ def create_app():
         try:
             serverconfig.setConfiguration(request.json)
         except RuntimeError as e:
-            print("ERROR updating configuration: {}".format(e))
+            app.logger.error("ERROR updating configuration: {}".format(e))
             abort(400, str(e))
         return jsonify(serverconfig.getFullConfiguration())
 
@@ -595,7 +618,7 @@ def create_app():
         global device
         value = int(request.args.get('value'))
         floatVal = float(value / 100)
-        print("Setting brightness: {}".format(floatVal))
+        app.logger.info("Setting brightness: {}".format(floatVal))
         device.setBrightness(floatVal)
         return "OK"
 
@@ -609,7 +632,7 @@ def create_app():
                 proj.setFiltergraphForSlot(proj.activeSlotId, fg)
                 return "OK"
         else:
-            print("Favorite not found: {}".format(filename))
+            app.logger.info("Favorite not found: {}".format(filename))
 
         abort(404)
 
@@ -641,13 +664,13 @@ def create_app():
 
         except filtergraph.NodeException as ne:
             if count == 100:
-                print("NodeError in {}: {}".format(ne.node.effect, ne))
-                print("Skipping next 100 errors...")
+                app.logger.error("NodeError in {}: {}".format(ne.node.effect, ne))
+                app.logger.info("Skipping next 100 errors...")
                 count = 0
             errors.clear()
             errors.append(ne)
         except Exception as e:
-            print("Unknown error: {}".format(e))
+            app.logger.error("Unknown error: {}".format(e))
             traceback.print_tb(e.__traceback__)
         finally:
             # Set the next thread to happen
@@ -657,8 +680,8 @@ def create_app():
                 if record_timings:
                     proj.getSlot(proj.activeSlotId).printProcessTimings()
                     proj.getSlot(proj.activeSlotId).printUpdateTimings()
-                    print("Process time: {}".format(real_process_time))
-                    print("Waiting {}".format(timeToWait))
+                    app.logger.info("Process time: {}".format(real_process_time))
+                    app.logger.info("Waiting {}".format(timeToWait))
                 count = 0
             if not stop_signal:
                 ledThread = threading.Timer(timeToWait, processLED, ())
@@ -672,7 +695,7 @@ def create_app():
         # Create your thread
         current_time = timer()
         ledThread = threading.Timer(POOL_TIME, processLED, ())
-        print('starting LED thread')
+        app.logger.info('starting LED thread')
         ledThread.start()
 
     # Initiate
@@ -707,6 +730,7 @@ def handleMidiMsg(msg):
         proj.activateScene(msg.program)
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     parser = runtimeconfiguration.commonRuntimeArgumentParser()
     # Adjust defaults from commonRuntimeArgumentParser
     parser.set_defaults(
@@ -717,7 +741,7 @@ if __name__ == '__main__':
     runtimeconfiguration.addServerRuntimeArguments(parser)
 
     # print audio information
-    print("The following audio devices are available:")
+    logging.info("The following audio devices are available:")
     audio.print_audio_devices()
 
     args = parser.parse_args()
@@ -728,13 +752,13 @@ if __name__ == '__main__':
         config_location = os.path.join(args.config_location, '.ledserver')
 
     if args.no_conf:
-        print("Using in-memory configuration")
+        logging.info("Using in-memory configuration")
         serverconfig = serverconfiguration.ServerConfiguration()
     else:
-        print("Using configuration from {}".format(config_location))
+        logging.info("Using configuration from {}".format(config_location))
         serverconfig = serverconfiguration.PersistentConfiguration(config_location, args.no_store)
 
-    print("Applying arguments")
+    logging.info("Applying arguments")
 
     # Update num pixels
     if args.num_pixels is not None:
@@ -767,7 +791,7 @@ if __name__ == '__main__':
 
     # Audio
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
-        print("Overriding Audio device with device index {}".format(
+        logging.info("Overriding Audio device with device index {}".format(
             serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
         audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
         # Initialize global audio
@@ -785,11 +809,15 @@ if __name__ == '__main__':
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
-
-    bt = bluetooth.MidiBluetoothService(callback = handleMidiMsg)
+    logging.warn("Adding bluetooth server to the mix")
+    try:
+        bt = bluetooth.MidiBluetoothService(callback = handleMidiMsg)
+    except Exception:
+        logging.warning("Ignoring Bluetooth error")
     
     app = create_app()
+    logging.debug("Here?")
     app.run(debug=False, host="0.0.0.0", port=args.port)
-    print("End of server main")
+    logging.info("End of server main")
     proj.stopProcessing()
     stop_signal = True
