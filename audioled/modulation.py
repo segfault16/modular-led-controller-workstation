@@ -8,6 +8,13 @@ import inspect
 import logging
 logger = logging.getLogger(__name__)
 
+CTRL_MODULATION = 'Modulation'
+CTRL_SPEED = 'Speed'
+CTRL_INTENSITY = 'Intensity'
+CTRL_PRIMARY_COLOR = 'PrimaryColor'
+CTRL_SECONDARY_COLOR = 'SecondaryColor'
+availableController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY, CTRL_PRIMARY_COLOR, CTRL_SECONDARY_COLOR]
+
 
 class ModulationSource(object):
     """
@@ -90,10 +97,10 @@ class ModulationSource(object):
     def getEffectDescription():
         return ""
 
-
 class ExternalLinearController(ModulationSource):
-    def __init__(self, amount=.0):
+    def __init__(self, amount=.0, controller=None):
         self.amount = amount
+        self.controller = controller
 
     @staticmethod
     def getParameterDefinition():
@@ -101,6 +108,7 @@ class ExternalLinearController(ModulationSource):
             "parameters": OrderedDict([
                 # default, min, max, stepsize
                 ("amount", [1.0, .0, 1.0, .001]),
+                ("controller", availableController)
             ])
         }
         return definition
@@ -110,6 +118,7 @@ class ExternalLinearController(ModulationSource):
         help = {
             "parameters": {
                 "amount": "Global scale of the controller.",
+                "controller": "Which remote controller will control this modulation."
             }
         }
         return help

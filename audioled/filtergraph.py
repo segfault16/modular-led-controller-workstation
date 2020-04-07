@@ -492,25 +492,15 @@ class FilterGraph(Updateable):
             self._onNodeUpdate(node, updateParameters)
         return node
 
-    def updateModulationSourceValue(self, modulationIndex, newValue):
-        logger.info("Updating mod source value for {}".format(modulationIndex))
-        cnt = 0
-        found = False
+    def updateModulationSourceValue(self, modCtrl, newValue):
+        logger.info("Updating mod source value for {}".format(modCtrl))
         for mod in self.__modulationsources:
-            logger.info("Checking {}".format(mod.modulator))
             if isinstance(mod.modulator, modulation.ExternalLinearController):
-                if cnt == modulationIndex:
-                    found = True
-                    break
-                else:
-                    cnt = cnt + 1
-        
-        if found:
-            logger.info("Updating mod source value")
-            mod = self.__modulationsources[cnt]
-            mod.modulator.updateParameter({
-                "amount": newValue
-            })
+                if mod.modulator.controller == modCtrl:
+                    logger.info("Updating mod source value")
+                    mod.modulator.updateParameter({
+                        "amount": newValue
+                    })
 
     def updateModulationSourceParameter(self, modSourceUid, updateParameters):
         mod = next(mod for mod in self.__modulationsources if mod.uid == modSourceUid)  # type: ModulationSourceNode

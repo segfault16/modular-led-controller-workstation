@@ -520,12 +520,8 @@ class Project(Updateable):
             self._lock.release()
 
     def updateModulationSourceValue(self, deviceMask, controller, newValue):
-        # TODO: Apply for deviceMask
-        dIdx = 0
         self._sendModulationSourceValueUpdateCommand(deviceMask, controller, newValue)
         
-
-
     def _createOrUpdateProcess(self, dIdx, device, slotId, filterGraph):
         if dIdx in self._filtergraphProcesses:
             # Send command
@@ -593,7 +589,7 @@ class Project(Updateable):
             q.put(123)
             time.sleep(0.1)
             if not q._unfinished_tasks._semlock._is_zero():
-                logger.info("Process didn't respond in time!")
+                logger.warning("Process didn't respond in time!")
                 self._publishQueue.unregister(q)
                 p.join(0.1)
                 if p.is_alive():
@@ -614,7 +610,7 @@ class Project(Updateable):
                 q.put("test")
                 time.sleep(0.1)
                 if not q._unfinished_tasks._semlock._is_zero():
-                    logger.info("Output process didn't respond in time!")
+                    logger.warning("Output process didn't respond in time!")
                     self._showQueue.unregister(p)
                     p.join(0.1)
                     if p.is_alive():
@@ -630,7 +626,7 @@ class Project(Updateable):
         self._processingEnabled = False
         aquire = self._lock.acquire(block=True, timeout=1)
         if not aquire:
-            logger.info("Couldn't get lock. Force shutdown")
+            logger.warning("Couldn't get lock. Force shutdown")
             try:
                 for p in self._filtergraphProcesses.values():
                     p.join(0.1)

@@ -40,6 +40,7 @@ logging.setLogRecordFactory(record_factory)
 logging.basicConfig(level=logging.INFO, format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
 logging.getLogger('audioled').setLevel(logging.DEBUG) # TODO: Not working?
+logger = logging.getLogger(__name__)
 
 libnames = ['audioled.bluetooth']
 for libname in libnames:
@@ -755,15 +756,16 @@ def handleMidiMsg(msg):
         proj.activateScene(msg.program)
     elif msg.type == 'control_change':
         controllerMap = {
-            7: 0, # mod wheel?
-            11: 1, # expression
-            21: 2, # TODO: Brightness
+            7: modulation.CTRL_MODULATION, # mod wheel?
+            11: modulation.CTRL_INTENSITY, # expression
+            21: modulation.CTRL_SPEED, # unknown param?
+            # TODO: Brightness
         }
         if msg.control in controllerMap:
-            print("Propagating control change message")
+            logger.info("Propagating control change message")
             proj.updateModulationSourceValue(0xFFF, controllerMap[msg.control], msg.value/127)
         else:
-            print("Unknown controller")
+            logger.warn("Unknown controller {}".format(msg.control))
 
 
 
