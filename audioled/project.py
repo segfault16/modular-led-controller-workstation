@@ -350,6 +350,14 @@ class Project(Updateable):
 
     def __initstate__(self):
         try:
+            self._last_t
+        except AttributeError:
+            self._last_t = 0
+        try:
+            self._cur_t
+        except AttributeError:
+            self._cur_t = 0
+        try:
             self.outputSlotMatrix
         except AttributeError:
             self.outputSlotMatrix = {}
@@ -425,8 +433,12 @@ class Project(Updateable):
                 logger.info("Skipping update, couldn't acquire lock")
                 return
             try:
+                self._cur_t = self._cur_t + dt
                 self._sendUpdateCommand(dt)
-                self._updatePreviewDevice(dt, event_loop)
+                if(self._cur_t - self._last_t > 1 ):
+                    logger.debug("Updating preview device")
+                    self._updatePreviewDevice(dt, event_loop)
+                    self._last_t = self._cur_t
                 # Wait for previous show command done
                 if self._showQueue is not None:
                     self._showQueue.join(1)
