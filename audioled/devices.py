@@ -66,7 +66,7 @@ class LEDController:
         self.num_rows = num_rows
 
     def shutdown(self):
-        logger.info("Shutting down device")
+        logger.debug("Shutting down device")
 
     def show(self, pixels):
         """Set LED pixels to the values given in the array
@@ -167,8 +167,8 @@ class FadeCandy(LEDController):
         if self.client.can_connect():
             logger.info('Successfully connected to FadeCandy server.')
         else:
-            logger.info('Could not connect to FadeCandy server.')
-            logger.info('Ensure that fcserver is running and try again.')
+            logger.error('Could not connect to FadeCandy server.')
+            logger.error('Ensure that fcserver is running and try again.')
 
     def show(self, pixels):
         if pixels is None:
@@ -183,8 +183,8 @@ class BlinkStick(LEDController):
         try:
             from blinkstick import blinkstick
         except ImportError as e:
-            logger.info('Unable to import the blinkstick library')
-            logger.info('You can install this library with `pip install blinkstick`')
+            logger.error('Unable to import the blinkstick library')
+            logger.error('You can install this library with `pip install blinkstick`')
             raise e
         self.stick = blinkstick.find_first()
 
@@ -238,7 +238,7 @@ class RaspberryPi(LEDController):
             DMA (direct memory access) channel used to drive PWM signals.
             If you aren't sure, try 5.
         """
-        logger.info('construct')
+        logger.debug('Creating RaspberryPi LED device')
         self.pin = pin
         self.freq_hz = freq
         self.dma = dma
@@ -249,7 +249,7 @@ class RaspberryPi(LEDController):
     def __initstate__(self):
         try:
             import rpi_ws281x
-            logger.info('init')
+            logger.debug('Initializing RaspberryPI LED device')
             self._strip = rpi_ws281x.PixelStrip(num=self.num_pixels,
                                                 pin=self.pin,
                                                 freq_hz=self.freq_hz,
@@ -259,12 +259,12 @@ class RaspberryPi(LEDController):
             self._strip.begin()
         except ImportError:
             url = 'learn.adafruit.com/neopixels-on-raspberry-pi/software'
-            logger.info('Could not import the neopixel library')
-            logger.info('For installation instructions, see {}'.format(url))
-            logger.info('If running on RaspberryPi, please install.')
-            logger.info('------------------------------------------')
-            logger.info('Otherwise rely on dependency injection')
-            logger.info('Disconnecting Device.')
+            logger.error('Could not import the neopixel library')
+            logger.error('For installation instructions, see {}'.format(url))
+            logger.error('If running on RaspberryPi, please install.')
+            logger.error('------------------------------------------')
+            logger.error('Otherwise rely on dependency injection')
+            logger.error('Disconnecting Device.')
 
     def __cleanState__(self, stateDict):
         """
@@ -333,8 +333,8 @@ class DotStar(LEDController):
             import apa102
         except ImportError as e:
             url = 'https://github.com/tinue/APA102_Pi'
-            logger.info('Could not import the apa102 library')
-            logger.info('For installation instructions, see {}'.format(url))
+            logger.error('Could not import the apa102 library')
+            logger.error('For installation instructions, see {}'.format(url))
             raise e
         self._strip = apa102.APA102(numLEDs=num_pixels, globalBrightness=brightness)  # Initialize the strip
         led_data = np.array(self._strip.leds, dtype=np.uint8)
@@ -430,7 +430,7 @@ class VirtualOutput(LEDController):
         self.num_rows = num_rows
 
     def show(self, pixels):
-        # logger.info("propagating virtual from {} to {}".format(self.start_index, (self.start_index+self.num_pixels)))
+        # logger.debug("propagating virtual from {} to {}".format(self.start_index, (self.start_index+self.num_pixels)))
         npArray = np.ctypeslib.as_array(self._shared_array.get_obj()).reshape(3, -1)
         npArray[:, self.start_index:self.start_index+self.num_pixels] = pixels
 

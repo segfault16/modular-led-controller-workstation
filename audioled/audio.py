@@ -49,7 +49,7 @@ class GlobalAudio():
         try:
             self.global_stream, GlobalAudio.sample_rate = self.stream_audio(device_index, chunk_rate, num_channels)
         except Exception:
-            logger.info("!!! Fatal error in audio device !!!")
+            logger.error("!!! Fatal error in audio device !!!")
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
         chunk = np.fromstring(in_data, np.float32).astype(np.float)
@@ -96,7 +96,7 @@ class GlobalAudio():
                 err += 'Check your operating system\'s audio device configuration. '
                 err += 'Audio device information: \n'
                 err += str(device_info)
-                logger.info(err)
+                logger.error(err)
                 raise e
             time.sleep(retry)
             return self._open_input_stream(chunk_length, device_index=device_index, channels=channels, retry=retry + 1)

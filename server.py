@@ -113,7 +113,7 @@ def create_app():
             proj.stopProcessing()
             ledThread.join()
         except RuntimeError as e:
-            app.logger.info("LED thread cancelled: {}".format(e))
+            app.logger.error("LED thread cancelled: {}".format(e))
             pass
 
         sched.shutdown()

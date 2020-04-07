@@ -10,7 +10,6 @@ from audioled import modulation
 from audioled import devices
 from audioled import effect
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -659,6 +658,6 @@ class FilterGraph(Updateable):
                                                     mod['amount'], mod['inverted'])
                         newMod.uid = mod['uid']
                     except Exception as e: 
-                        logging.error("Error restoring filtergraph modulation: {}".format(e))
+                        logger.error("Error restoring filtergraph modulation: {}".format(e))
         except Exception as e:
-            logging.error("Error restoring filtergraph: {}".format(e))
+            logger.error("Error restoring filtergraph: {}".format(e))

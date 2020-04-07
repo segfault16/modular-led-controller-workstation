@@ -77,7 +77,7 @@ class OPCMessage:
             # Should be ready to read
             data = self.sock.recv(4096)
         except BlockingIOError as e:
-            logger.info("Error reading from socket: {}".format(e))
+            logger.error("Error reading from socket: {}".format(e))
             # Resource temporarily unavailable (errno EWOULDBLOCK)
             pass
         else:
@@ -154,12 +154,12 @@ class OPCMessage:
         try:
             self.selector.unregister(self.sock)
         except Exception as e:
-            logger.info("error: selector.unregister() exception for {}: {}".format(self.addr, repr(e)))
+            logger.error("error: selector.unregister() exception for {}: {}".format(self.addr, repr(e)))
 
         try:
             self.sock.close()
         except OSError as e:
-            logger.info("error: socket.close() exception for {}: {}".format(self.addr, repr(e)))
+            logger.error("error: socket.close() exception for {}: {}".format(self.addr, repr(e)))
         finally:
             # Delete reference to socket object for garbage collection
             self.sock = None
@@ -226,7 +226,7 @@ class ServerThread(object):
             self._socket.getpeername()
             return True
         except Exception as e:
-            logger.info("Error getting peername: {}".format(e))
+            logger.error("Error getting peername: {}".format(e))
             return False
 
     def getHost(self):
@@ -338,8 +338,8 @@ class Server(object):
             self._thread.start()
             return True
         except socket.error as e:
-            logger.info("FadeCandy Server error listening on {}:{}".format(self._host, self._port))
-            logger.info(e)
+            logger.error("FadeCandy Server error listening on {}:{}".format(self._host, self._port))
+            logger.error(e)
             self._socket = None
             return False
 
@@ -353,7 +353,7 @@ class Server(object):
             pixels = array.reshape((-1, 3)).T
             self._lastMessage = pixels
         except Exception as e:
-            logger.info("Error decoding to pixels. array length: {}, error: {}".format(len(array), e))
+            logger.error("Error decoding to pixels. array length: {}, error: {}".format(len(array), e))
 
     def get_pixels(self, block=False):
         isListening = self._ensure_listening()

@@ -186,14 +186,14 @@ def worker_process_updateMessage(filtergraph: FilterGraph, outputDevice: audiole
             return
         outputDevice.show(fgBuffer[0])
     except Exception as e:
-        logger.info("Error propagating to device: {}".format(e))
+        logger.error("Error propagating to device: {}".format(e))
 
 
 def worker_process_nodeMessage(filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int,
                                message: NodeMessage):
     if message.slotId != slotId:
         # Message not meant for this slot
-        logger.info("Skipping node message for slot {}".format(message.slotId))
+        logger.debug("Skipping node message for slot {}".format(message.slotId))
         return
     logger.info("Process node message: {}".format(message))
     if message.operation == 'add':
@@ -300,7 +300,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                 else:
                     logger.info("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
-                logger.info("Continuing on NodeException")
+                logger.debug("Continuing on NodeException")
             finally:
                 # logger.info("{} done".format(os.getpid()))
                 # q.task_done()
@@ -315,7 +315,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
         logger.info("process {} exit".format(os.getpid()))
     except Exception as e:
         traceback.print_exc()
-        logger.info("process {} exited due to: {}".format(os.getpid(), e))
+        logger.error("process {} exited due to: {}".format(os.getpid(), e))
     except:
         logger.info("process interrupted")
 
@@ -329,7 +329,7 @@ def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audio
             outputDevice.show(npArray.reshape(3, -1, order='C'))
             q.task_done()
         outputDevice.shutdown()
-        logger.info("output process {} exit".format(os.getpid()))
+        logger.error("output process {} exit".format(os.getpid()))
     except Exception as e:
         traceback.print_exc()
         logger.info("process {} exited due to: {}".format(os.getpid(), e))
@@ -449,7 +449,7 @@ class Project(Updateable):
                 self._sendShowCommand()
 
             except TimeoutError:
-                logger.info("Update timeout. Forcing reset")
+                logger.error("Update timeout. Forcing reset")
                 self.stopProcessing()
                 if self.activeSceneId is not None:
                     self.activateScene(self.activeSceneId)
@@ -457,7 +457,7 @@ class Project(Updateable):
                 self._lock.release()
         else:
             time.sleep(0.01)
-            logger.info("Waiting...")
+            logger.debug("Waiting...")
 
     def process(self):
         """Process active FilterGraph

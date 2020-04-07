@@ -214,8 +214,8 @@ class MidiKeyboard(Effect):
         try:
             import mido
         except ImportError as e:
-            logger.info('Unable to import the mido library')
-            logger.info('You can install this library with `pip install mido`')
+            logger.error('Unable to import the mido library')
+            logger.error('You can install this library with `pip install mido`')
             raise e
         try:
             self._midi.close()
@@ -241,11 +241,11 @@ class MidiKeyboard(Effect):
             import mido
             return mido.get_input_names()
         except ImportError:
-            logger.info('Unable to import the mido library')
-            logger.info('You can install this library with `pip install mido`')
+            logger.error('Unable to import the mido library')
+            logger.error('You can install this library with `pip install mido`')
             return []
         except Exception:
-            logger.info("Error while getting midi inputs")
+            logger.error("Error while getting midi inputs")
             return []
 
     @staticmethod
@@ -1180,7 +1180,7 @@ class GIFPlayer(Effect):
         try:
             self._gif = Image.open(adjustedFile)
         except Exception:
-            logger.info("Cannot open file {}".format(adjustedFile))
+            logger.error("Cannot open file {}".format(adjustedFile))
 
     async def update(self, dt):
         await super().update(dt)

@@ -103,7 +103,7 @@ class ServerConfiguration:
         try:
             activeProj = self.getProject(activeProjectUid)
         except Exception as e:
-            logger.info("Error reading project {}: {}".format(activeProjectUid, e))
+            logger.error("Error reading project {}: {}".format(activeProjectUid, e))
             raise e
         self._activeProject = activeProj
         return activeProj

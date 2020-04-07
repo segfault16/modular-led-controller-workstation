@@ -143,7 +143,7 @@ class Client(object):
             self._socket.sendall(message)
         except socket.error as e:
             self._debug('put_pixels: connection lost.  could not send pixels.')
-            logger.info("Error on sending pixel data to FadeCandy Server: {}".format(e))
+            logger.error("Error on sending pixel data to FadeCandy Server: {}".format(e))
             self._socket = None
             return False
 
