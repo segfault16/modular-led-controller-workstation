@@ -854,6 +854,8 @@ if __name__ == '__main__':
     except Exception as e:
         logging.warning("Ignoring Bluetooth error")
         logging.error(e)
+        traceback.print_tb(e.__traceback__)
+
 
     app = create_app()
     logging.debug("Here?")
