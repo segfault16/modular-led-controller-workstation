@@ -20,7 +20,7 @@ import Tooltip from '@material-ui/core/Tooltip'
 import { withSnackbar } from 'notistack';
 import IconButton from '@material-ui/core/IconButton';
 
-import Graph from "react-graph-vis";
+import Graph from "./Graph";
 
 import FilterGraphConfigurationService from "../services/FilterGraphConfigurationService";
 import FilterGraphService from "../services/FilterGraphService";
