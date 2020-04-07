@@ -9,6 +9,8 @@ import pyaudio
 from audioled.effects import Effect
 from audioled.effect import AudioBuffer
 
+import logging
+logger = logging.getLogger(__name__)
 
 def print_audio_devices():
     """Print information about the system's audio devices"""
@@ -47,7 +49,7 @@ class GlobalAudio():
         try:
             self.global_stream, GlobalAudio.sample_rate = self.stream_audio(device_index, chunk_rate, num_channels)
         except Exception:
-            print("!!! Fatal error in audio device !!!")
+            logger.info("!!! Fatal error in audio device !!!")
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
         chunk = np.fromstring(in_data, np.float32).astype(np.float)
@@ -67,7 +69,7 @@ class GlobalAudio():
         p = pyaudio.PyAudio()
         defaults = p.get_default_host_api_info()
 
-        print("Using audio device {}".format(device_index))
+        logger.info("Using audio device {}".format(device_index))
         device_info = p.get_device_info_by_index(device_index)
 
         if device_info['maxInputChannels'] == 0:
@@ -86,7 +88,7 @@ class GlobalAudio():
                             frames_per_buffer=chunk_length,
                             stream_callback=self._audio_callback)
             stream.start_stream()
-            print("Started stream on device {}, fs: {}, chunk_length: {}".format(device_index, frameRate, chunk_length))
+            logger.info("Started stream on device {}, fs: {}, chunk_length: {}".format(device_index, frameRate, chunk_length))
             GlobalAudio.buffer = np.zeros(chunk_length)
         except OSError as e:
             if retry == 5:
@@ -94,7 +96,7 @@ class GlobalAudio():
                 err += 'Check your operating system\'s audio device configuration. '
                 err += 'Audio device information: \n'
                 err += str(device_info)
-                print(err)
+                logger.info(err)
                 raise e
             time.sleep(retry)
             return self._open_input_stream(chunk_length, device_index=device_index, channels=channels, retry=retry + 1)
@@ -102,10 +104,10 @@ class GlobalAudio():
 
     def stream_audio(self, device_index=None, chunk_rate=60, channels=1):
         if device_index == -1:
-            print("Audio device disabled by device_index -1.")
+            logger.info("Audio device disabled by device_index -1.")
             return None, None
         if device_index is None:
-            print("No device_index for audio given. Using default.")
+            logger.info("No device_index for audio given. Using default.")
             p = pyaudio.PyAudio()
             defaults = p.get_default_host_api_info()
             p.terminate()
@@ -143,7 +145,7 @@ class AudioInput(Effect):
         self._outBuffer = []
         self._autogain_perc = None
         self._cur_gain = 1.0
-        print("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
+        logger.info("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
 
     def numOutputChannels(self):
         return self.num_channels
@@ -221,10 +223,10 @@ class AudioInput(Effect):
                 self._cur_gain = 1. / maxVal
             elif self._cur_gain < self.autogain_max:
                 self._cur_gain = min(self.autogain_max, self._cur_gain * self._autogain_perc)
-            # print("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
+            # logger.info("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
         for i in range(0, self.num_channels):
             # layout for multiple channel is interleaved:
             # 00 01 .. 0n 10 11 .. 1n
             self._outBuffer[i].audio = self._cur_gain * self._buffer[i::self.num_channels]
             self._outputBuffer[i] = self._outBuffer[i]
-            # print("{}: {}".format(i, self._outputBuffer[i]))
+            # logger.info("{}: {}".format(i, self._outputBuffer[i]))

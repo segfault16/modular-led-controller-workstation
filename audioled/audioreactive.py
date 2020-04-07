@@ -14,6 +14,9 @@ import audioled.dsp as dsp
 from audioled.effects import Effect
 import audioled.effect as effect
 
+import logging
+logger = logging.getLogger(__name__)
+
 # TODO: Adjustable Frequency for Bass and Melody
 # TODO: Single Band version
 class Spectrum(Effect):
@@ -890,10 +893,10 @@ class Oscilloscope(Effect):
         cur_fps = 1.0 / dt
         if cur_fps > self.speed_fps:
             # Return to exit
-            # print("Met t= {}".format(self._t))
+            # logger.info("Met t= {}".format(self._t))
             return
 
-        # print("Process")
+        # logger.info("Process")
 
         # Init color input
         cols = int(self._num_pixels / self._num_rows)

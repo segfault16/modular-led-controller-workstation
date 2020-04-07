@@ -10,11 +10,14 @@ import multiprocessing as mp
 import traceback
 import ctypes
 import logging
+import threading
 
 import os
 from functools import wraps
 import numpy as np
 
+import logging
+logger = logging.getLogger(__name__)
 
 def ensure_parent(func):
     @wraps(func)
@@ -166,7 +169,7 @@ def worker_process_updateMessage(filtergraph: FilterGraph, outputDevice: audiole
                                  event_loop, message: UpdateMessage):
     dt = message.dt
     audioBuffer = message.audioBuffer
-    # print("got item {} in process {}".format(dt, os.getpid()))
+    # logger.info("got item {} in process {}".format(dt, os.getpid()))
 
     # TODO: Hack to propagate audio?
     audioled.audio.GlobalAudio.buffer = audioBuffer
@@ -183,16 +186,16 @@ def worker_process_updateMessage(filtergraph: FilterGraph, outputDevice: audiole
             return
         outputDevice.show(fgBuffer[0])
     except Exception as e:
-        print("Error propagating to device: {}".format(e))
+        logger.info("Error propagating to device: {}".format(e))
 
 
 def worker_process_nodeMessage(filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int,
                                message: NodeMessage):
     if message.slotId != slotId:
         # Message not meant for this slot
-        print("Skipping node message for slot {}".format(message.slotId))
+        logger.info("Skipping node message for slot {}".format(message.slotId))
         return
-    print("Process node message: {}".format(message))
+    logger.info("Process node message: {}".format(message))
     if message.operation == 'add':
         node = filtergraph.addEffectNode(message.params)
         node.uid = message.nodeUid
@@ -205,9 +208,9 @@ def worker_process_nodeMessage(filtergraph: FilterGraph, outputDevice: audioled.
 def worker_process_modulationMessage(filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int,
                                      message: ModulationMessage):
     if message.slotId != slotId:
-        print("Skipping modulation message for slot {}".format(message.slotId))
+        logger.info("Skipping modulation message for slot {}".format(message.slotId))
         return
-    print("Process modulation message: {}".format(message))
+    logger.info("Process modulation message: {}".format(message))
     if message.operation == 'add':
         mod = message.params  # type: audioled.filtergraph.Modulation
         newMod = filtergraph.addModulation(modSourceUid=mod.modulationSource.uid,
@@ -225,9 +228,9 @@ def worker_process_modulationMessage(filtergraph: FilterGraph, outputDevice: aud
 def worker_process_modulationSourceMessage(filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int,
                                            message: ModulationSourceMessage):
     if message.slotId != slotId:
-        print("Skipping modulation source message for slot {}".format(message.slotId))
+        logger.info("Skipping modulation source message for slot {}".format(message.slotId))
         return
-    print("Process modulation source message: {}".format(message))
+    logger.info("Process modulation source message: {}".format(message))
     if message.operation == 'add':
         modSource = message.params
         newModSource = filtergraph.addModulationSource(modSource)
@@ -241,9 +244,9 @@ def worker_process_modulationSourceMessage(filtergraph: FilterGraph, outputDevic
 def worker_process_connectionMessage(filtergraph: FilterGraph, outputDevice: audioled.devices.LEDController, slotId: int,
                                      message: ConnectionMessage):
     if message.slotId != slotId:
-        print("Skipping connection message for slot {}".format(message.slotId))
+        logger.info("Skipping connection message for slot {}".format(message.slotId))
         return
-    print("Process connection message: {}".format(message))
+    logger.info("Process connection message: {}".format(message))
     if message.operation == 'add':
         con = message.params  # type: Dict[str, str]
         newCon = filtergraph.addNodeConnection(con['from_node_uid'], con['from_node_channel'], con['to_node_uid'],
@@ -264,7 +267,9 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
         slotId {int} -- [description]
     """
     try:
-        print("process {} start".format(os.getpid()))
+        threading.current_thread().name = 'WorkerThread'
+        logger.info("process {} start".format(os.getpid()))
+        logging.getLogger("audioled").info("process {} start".format(os.getpid()))
         # logging.basicConfig(level=logging.DEBUG) # TODO: logging not working?
         event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(event_loop)
@@ -290,14 +295,14 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     message = message  # type: UpdateModulationSourceValueMessage
                     dMask = 2 << deviceId
                     if dMask & message.deviceMask:
-                        print("Device mask match for device {}".format(deviceId))
+                        logger.info("Device mask match for device {}".format(deviceId))
                         filtergraph.updateModulationSourceValue(message.controller, message.newValue)
                 else:
-                    print("Message not supported: {}".format(message))
+                    logger.info("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
-                print("Continuing on NodeException")
+                logger.info("Continuing on NodeException")
             finally:
-                # print("{} done".format(os.getpid()))
+                # logger.info("{} done".format(os.getpid()))
                 # q.task_done()
                 # TODO: Investigate the task_done() called too many times error further
                 # Quick fix seems to be:
@@ -307,28 +312,29 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     if q._unfinished_tasks._semlock._is_zero():
                         q._cond.notify_all()
         outputDevice.shutdown()
-        print("process {} exit".format(os.getpid()))
+        logger.info("process {} exit".format(os.getpid()))
     except Exception as e:
         traceback.print_exc()
-        print("process {} exited due to: {}".format(os.getpid(), e))
+        logger.info("process {} exited due to: {}".format(os.getpid(), e))
     except:
-        print("process interrupted")
+        logger.info("process interrupted")
 
 
 def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audioled.devices.VirtualOutput):
     try:
-        print("output process {} start".format(os.getpid()))
+        threading.current_thread().name = 'OutputThread'
+        logger.info("output process {} start".format(os.getpid()))
         for message in iter(q.get, None):
             npArray = np.ctypeslib.as_array(virtualDevice._shared_array.get_obj()).reshape(3, -1)
             outputDevice.show(npArray.reshape(3, -1, order='C'))
             q.task_done()
         outputDevice.shutdown()
-        print("output process {} exit".format(os.getpid()))
+        logger.info("output process {} exit".format(os.getpid()))
     except Exception as e:
         traceback.print_exc()
-        print("process {} exited due to: {}".format(os.getpid(), e))
+        logger.info("process {} exited due to: {}".format(os.getpid(), e))
     except:
-        print("process interrupted")
+        logger.info("process interrupted")
 
 
 class Project(Updateable):
@@ -391,17 +397,17 @@ class Project(Updateable):
                 slot._contentRoot = self._contentRoot
         # Activate loaded scene
         if self.activeSceneId is not None:
-            print("Active scene {}".format(self.activeSceneId))
+            logger.info("Active scene {}".format(self.activeSceneId))
             self.activateScene(self.activeSceneId)
 
     def setDevice(self, device: audioled.devices.MultiOutputWrapper):
-        print("setting device")
+        logging.info("setting device")
         if not isinstance(device, audioled.devices.MultiOutputWrapper):
             raise RuntimeError("Device has to be MultiOutputWrapper")
         if self._devices == device._devices:
             return
         self._devices = device._devices
-        print("Devices updated. Renewing active scene...")
+        logger.info("Devices updated. Renewing active scene...")
         self.stopProcessing()
         if self.activeSceneId is not None:
             self.activateScene(self.activeSceneId)
@@ -412,11 +418,11 @@ class Project(Updateable):
         Arguments:
             dt {[float]} -- Time since last update
         """
-        # print("project: update")
+        # logger.info("project: update")
         if self._processingEnabled:
             aquired = self._lock.acquire(block=True, timeout=0)
             if not aquired:
-                print("Skipping update, couldn't acquire lock")
+                logger.info("Skipping update, couldn't acquire lock")
                 return
             try:
                 self._sendUpdateCommand(dt)
@@ -431,7 +437,7 @@ class Project(Updateable):
                 self._sendShowCommand()
 
             except TimeoutError:
-                print("Update timeout. Forcing reset")
+                logger.info("Update timeout. Forcing reset")
                 self.stopProcessing()
                 if self.activeSceneId is not None:
                     self.activateScene(self.activeSceneId)
@@ -439,7 +445,7 @@ class Project(Updateable):
                 self._lock.release()
         else:
             time.sleep(0.01)
-            print("Waiting...")
+            logger.info("Waiting...")
 
     def process(self):
         """Process active FilterGraph
@@ -447,7 +453,7 @@ class Project(Updateable):
         self._processPreviewDevice()
 
     def setFiltergraphForSlot(self, slotId, filterGraph):
-        print("Set {} for slot {}".format(filterGraph, slotId))
+        logger.info("Set {} for slot {}".format(filterGraph, slotId))
         if isinstance(filterGraph, FilterGraph):
             filterGraph._contentRoot = self._contentRoot
             self.slots[slotId] = filterGraph
@@ -498,7 +504,7 @@ class Project(Updateable):
                 dIdx += 1
         finally:
             self._processingEnabled = True
-            print("activate scene - releasing lock")
+            logger.info("activate scene - releasing lock")
             self._lock.release()
 
     def updateModulationSourceValue(self, deviceMask, controller, newValue):
@@ -575,7 +581,7 @@ class Project(Updateable):
             q.put(123)
             time.sleep(0.1)
             if not q._unfinished_tasks._semlock._is_zero():
-                print("Process didn't respond in time!")
+                logger.info("Process didn't respond in time!")
                 self._publishQueue.unregister(q)
                 p.join(0.1)
                 if p.is_alive():
@@ -583,7 +589,7 @@ class Project(Updateable):
             else:
                 successful = True
         self._filtergraphProcesses[dIdx] = p
-        print('Started process for device {} with device {}'.format(dIdx, fgDevice))
+        logger.info('Started process for device {} with device {}'.format(dIdx, fgDevice))
 
         # Start output process
         if outputDevice is not None:
@@ -596,7 +602,7 @@ class Project(Updateable):
                 q.put("test")
                 time.sleep(0.1)
                 if not q._unfinished_tasks._semlock._is_zero():
-                    print("Output process didn't respond in time!")
+                    logger.info("Output process didn't respond in time!")
                     self._showQueue.unregister(p)
                     p.join(0.1)
                     if p.is_alive():
@@ -605,14 +611,14 @@ class Project(Updateable):
                     outSuccessful = True
                     q.put("first")
             self._outputProcesses[outputDevice] = p
-            print("Started output process for device {}".format(outputDevice))
+            logger.info("Started output process for device {}".format(outputDevice))
 
     def stopProcessing(self):
-        print('Stop processing')
+        logger.info('Stop processing')
         self._processingEnabled = False
         aquire = self._lock.acquire(block=True, timeout=1)
         if not aquire:
-            print("Couldn't get lock. Force shutdown")
+            logger.info("Couldn't get lock. Force shutdown")
             try:
                 for p in self._filtergraphProcesses.values():
                     p.join(0.1)
@@ -632,31 +638,31 @@ class Project(Updateable):
             return
         # Normal shutdown
         try:
-            print("Ending queue")
+            logger.info("Ending queue")
             if self._publishQueue is not None:
                 self._publishQueue.publish(None)
                 self._publishQueue.close()
                 self._publishQueue.join_thread()
-                print('Publish queue ended')
+                logger.info('Publish queue ended')
                 self._publishQueue = None
             if self._showQueue is not None:
                 self._showQueue.publish(None)
                 self._showQueue.close()
                 self._showQueue.join_thread()
-                print("Show queue ended")
+                logger.info("Show queue ended")
                 self._showQueue = None
-            print("Ending processes")
+            logger.info("Ending processes")
             for p in self._filtergraphProcesses.values():
                 p.join()
-            print("Filtergraph processes joined")
+            logger.info("Filtergraph processes joined")
             self._filtergraphProcesses = {}
             for p in self._outputProcesses.values():
                 p.join()
-            print("Output processes joined")
+            logger.info("Output processes joined")
             self._outputProcesses = {}
-            print('All processes joined')
+            logger.info('All processes joined')
         finally:
-            print("stop processing - releasing lock")
+            logger.info("stop processing - releasing lock")
             self._lock.release()
             self._processingEnabled = True
 
@@ -675,7 +681,7 @@ class Project(Updateable):
         fg._onNodeRemoved = None
         fg._onNodeUpdate = None
         self.activeSlotId = slotId
-        print("Edit slot {} with {}".format(slotId, self.slots[slotId]))
+        logger.info("Edit slot {} with {}".format(slotId, self.slots[slotId]))
         fg = self.getSlot(slotId)  # type: FilterGraph
         fg._onNodeAdded = self._handleNodeAdded
         fg._onNodeRemoved = self._handleNodeRemoved
@@ -691,7 +697,7 @@ class Project(Updateable):
 
     def getSlot(self, slotId):
         if self.slots[slotId] is None:
-            print("Initializing slot {}".format(slotId))
+            logger.info("Initializing slot {}".format(slotId))
             self.slots[slotId] = FilterGraph()
         fg = self.slots[slotId]
         fg._contentRoot = self._contentRoot
@@ -784,13 +790,13 @@ class Project(Updateable):
 
     def _sendUpdateCommand(self, dt):
         if self._publishQueue is None:
-            print("No publish queue. Possibly exiting")
+            logger.info("No publish queue. Possibly exiting")
             return
         self._publishQueue.publish(UpdateMessage(dt, audioled.audio.GlobalAudio.buffer))
 
     def _sendShowCommand(self):
         if self._showQueue is None:
-            print("No show queue. Possibly exiting")
+            logger.info("No show queue. Possibly exiting")
             return
         self._showQueue.publish("show!")
 
@@ -810,7 +816,7 @@ class Project(Updateable):
             if previewDevice is not None and activeFilterGraph.getLEDOutput() is not None:
                 if (previewDevice.getNumPixels() != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels()
                         or previewDevice.getNumRows() != activeFilterGraph.getLEDOutput().effect.getNumOutputRows()):
-                    print("propagating {} pixels on {} rows".format(previewDevice.getNumPixels(), previewDevice.getNumRows()))
+                    logger.info("propagating {} pixels on {} rows".format(previewDevice.getNumPixels(), previewDevice.getNumRows()))
                     activeFilterGraph.propagateNumPixels(previewDevice.getNumPixels(), previewDevice.getNumRows())
             activeFilterGraph.update(dt, event_loop)
 

@@ -5,6 +5,9 @@ from collections import OrderedDict
 import math
 import inspect
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class ModulationSource(object):
     """
@@ -26,7 +29,7 @@ class ModulationSource(object):
             argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
             for key in argsWithDefaults:
                 if key not in self.__dict__:
-                    print("Backwards compatibility: Adding default value {}={}".format(key, argsWithDefaults[key]))
+                    logger.info("Backwards compatibility: Adding default value {}={}".format(key, argsWithDefaults[key]))
                     self.__dict__[key] = argsWithDefaults[key]
 
     def __cleanState__(self, stateDict):
@@ -72,7 +75,7 @@ class ModulationSource(object):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        print(definition)
+        logger.info(definition)
         return definition
 
     @staticmethod

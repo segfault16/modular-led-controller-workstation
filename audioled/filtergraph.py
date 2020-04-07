@@ -10,6 +10,9 @@ from audioled import modulation
 from audioled import devices
 from audioled import effect
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class NodeException(Exception):
     def __init__(self, message, node, error):
@@ -101,7 +104,7 @@ class Connection(object):
         return state
     
     def __setstate__(self, dict):
-        print("Not pickable")
+        logger.info("Not pickable")
 
 
 class ModulationSourceNode(object):
@@ -297,19 +300,19 @@ class FilterGraph(Updateable):
 
     def printUpdateTimings(self):
         if self._updateTimings is None:
-            print("No metrics collected")
+            logger.info("No metrics collected")
             return
-        print("Update timings:")
+        logger.info("Update timings:")
         for key, val in self._updateTimings.items():
-            print("{0:30s}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(key[0:30], val._min, val._max, val._avg))
+            logger.info("{0:30s}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(key[0:30], val._min, val._max, val._avg))
 
     def printProcessTimings(self):
         if self._processTimings is None:
-            print("No metrics collected")
+            logger.info("No metrics collected")
             return
-        print("Process timings:")
+        logger.info("Process timings:")
         for key, val in self._processTimings.items():
-            print("{0:30s}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(
+            logger.info("{0:30s}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(
                 str(key.effect)[0:30], val._min, val._max, val._avg))
 
     def addEffectNode(self, effectToAdd: effect.Effect):
@@ -404,7 +407,7 @@ class FilterGraph(Updateable):
                 self._onConnectionRemoved(con)
             con.toNode._incomingConnections.remove(con)
         else:
-            print("Could not remove connection {}".format(conUid))
+            logger.info("Could not remove connection {}".format(conUid))
 
     def getLEDOutput(self):
         return self._outputNode
@@ -484,17 +487,17 @@ class FilterGraph(Updateable):
     def updateNodeParameter(self, nodeUid, updateParameters):
         node = next(node for node in self.__filterNodes if node.uid == nodeUid)
         node.effect.updateParameter(updateParameters)
-        print(jsonpickle.encode(node.effect))
+        logger.info(jsonpickle.encode(node.effect))
         if self._onNodeUpdate is not None:
             self._onNodeUpdate(node, updateParameters)
         return node
 
     def updateModulationSourceValue(self, modulationIndex, newValue):
-        print("Updating mod source value for {}".format(modulationIndex))
+        logger.info("Updating mod source value for {}".format(modulationIndex))
         cnt = 0
         found = False
         for mod in self.__modulationsources:
-            print("Checking {}".format(mod.modulator))
+            logger.info("Checking {}".format(mod.modulator))
             if isinstance(mod.modulator, modulation.ExternalLinearController):
                 if cnt == modulationIndex:
                     found = True
@@ -503,7 +506,7 @@ class FilterGraph(Updateable):
                     cnt = cnt + 1
         
         if found:
-            print("Updating mod source value")
+            logger.info("Updating mod source value")
             mod = self.__modulationsources[cnt]
             mod.modulator.updateParameter({
                 "amount": newValue
@@ -526,7 +529,7 @@ class FilterGraph(Updateable):
     def _updateProcessOrder(self):
         processOrder = []
         if self._outputNode is None:
-            print("No output node")
+            logger.info("No output node")
             return
 
         unprocessedNodes = self.__filterNodes.copy()
@@ -573,7 +576,7 @@ class FilterGraph(Updateable):
         for node in reversed(processOrder):
             # find connections to the current node
             inputConnections = [con for con in self.__filterConnections if con.toNode == node]
-            # print("{} input connections found for node {}".format(len(inputConnections), node.effect))
+            # logger.info("{} input connections found for node {}".format(len(inputConnections), node.effect))
             for con in inputConnections:
                 num_pixels = node.effect.getNumInputPixels(con.toChannel)
                 num_rows = node.effect.getNumInputRows(con.toChannel)

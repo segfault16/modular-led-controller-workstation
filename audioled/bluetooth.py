@@ -4,6 +4,7 @@ import signal
 import mido
 import pybleno
 import logging
+logger = logging.getLogger(__name__)
 
 
 class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
@@ -19,14 +20,14 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
                 })
         except ImportError:
             url = 'https://github.com/Adam-Langley/pybleno'
-            print('Could not import the pybleno library')
-            print('For installation instructions, see {}'.format(url))
-            print('If running on RaspberryPi, please install.')
+            logger.info(('Could not import the pybleno library')
+            logger.info(('For installation instructions, see {}'.format(url))
+            logger.info(('If running on RaspberryPi, please install.')
         except OSError:
-            print("Seems like pybleno is not working.")
+            logger.info(("Seems like pybleno is not working.")
             url = 'https://github.com/Adam-Langley/pybleno'
-            print('For installation instructions, see {}'.format(url))
-            print('If running on RaspberryPi, please install.')
+            logger.info(('For installation instructions, see {}'.format(url))
+            logger.info(('If running on RaspberryPi, please install.')
             
         self._msgReceivedCallback = _msgReceivedCallback
         self._value = pybleno.array.array('B', [0] * 0)
@@ -47,17 +48,17 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
     #         callback(Characteristic.RESULT_SUCCESS, array.array('B', [98]))
 
     def onReadRequest(self, offset, callback):
-        print('EchoCharacteristic - %s - onReadRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
+        logger.info(('EchoCharacteristic - %s - onReadRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
         callback(pybleno.Characteristic.RESULT_SUCCESS, self._value[offset:])
 
     def onWriteRequest(self, data, offset, withoutResponse, callback):
         self._value = data
 
-        print('EchoCharacteristic - %s - onWriteRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
+        logger.info(('EchoCharacteristic - %s - onWriteRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
         msgs = mido.parse_all(self._value)
         for msg in msgs:
             if msg.type == 'program_change':
-                print("is program change: {}".format(msg.program))
+                logger.info(("is program change: {}".format(msg.program))
             if self._msgReceivedCallback is not None:
                 self._msgReceivedCallback(msg)
 
@@ -84,7 +85,7 @@ class MidiBluetoothService(object):
         self.bleno.start()
         # self.bleno.startAdvertising("MOLECOLE Control")
 
-        # print ('Hit <ENTER> to disconnect')
+        # logger.info( ('Hit <ENTER> to disconnect')
 
         # if (sys.version_info > (3, 0)):
         #     input()
@@ -94,17 +95,17 @@ class MidiBluetoothService(object):
         # bleno.stopAdvertising()
         # bleno.disconnect()
 
-        # print ('terminated.')
+        # logger.info( ('terminated.')
         # sys.exit(1)
 
     def _onMessageReceived(self, msg : mido.Message):
-        print("Received msg: {}".format(msg))
+        logger.info(("Received msg: {}".format(msg))
         if self._callback is not None:
             self._callback(msg)
         
 
     def _onStateChange(self, state):
-        print('on -> stateChange: ' + state);
+        logger.info(('on -> stateChange: ' + state);
 
         if (state == 'poweredOn'):
             self.bleno.startAdvertising('MOLECOLE Control', [self.primaryService.uuid]);
@@ -113,11 +114,11 @@ class MidiBluetoothService(object):
     
 
     def _onAdvertisingStart(self, error):
-        print('on -> advertisingStart: ' + ('error ' + error if error else 'success'));
+        logger.info(('on -> advertisingStart: ' + ('error ' + error if error else 'success'));
 
         if not error:
             def on_setServiceError(error):
-                print('setServices: %s'  % ('error ' + error if error else 'success'))
+                logger.info(('setServices: %s'  % ('error ' + error if error else 'success'))
                 
             self.bleno.setServices([
                 self.primaryService

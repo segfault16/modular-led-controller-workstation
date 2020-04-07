@@ -9,6 +9,9 @@ import math
 import audioled.colors as colors
 from audioled.effect import Effect
 
+import logging
+logger = logging.getLogger(__name__)
+
 SHORT_NORMALIZE = 1.0 / 32768.0
 
 

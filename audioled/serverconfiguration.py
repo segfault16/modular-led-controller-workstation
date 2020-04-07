@@ -10,6 +10,9 @@ import ctypes
 
 from audioled.devices import MultiOutputWrapper
 
+import logging
+logger = logging.getLogger(__name__)
+
 CONFIG_NUM_PIXELS = 'num_pixels'
 CONFIG_NUM_ROWS = 'num_rows'
 CONFIG_DEVICE = 'device'
@@ -63,9 +66,9 @@ class ServerConfiguration:
         raises:
         - RuntimeError if config not valid
         """
-        print("Updating {} to {}".format(key, value))
+        logger.info("Updating {} to {}".format(key, value))
         if key not in allowed_configs:
-            print("Updating value {} is not allowed.".format(key))
+            logger.info("Updating value {} is not allowed.".format(key))
 
         if not self._assertConfigChangeValid(key, value):
             raise RuntimeError("Error in setting {} to {}: {}".format(key, value, "Unknown error"))
@@ -79,7 +82,7 @@ class ServerConfiguration:
                 CONFIG_DEVICE_PANEL_MAPPING,
                 CONFIG_DEVICE_CONFIGS
         ]:
-            print("Renewing device")
+            logger.info("Renewing device")
             self._reusableDevice = None
             self.getActiveProjectOrDefault().setDevice(self._createOrReuseOutputDevice())
 
@@ -94,13 +97,13 @@ class ServerConfiguration:
     def getActiveProjectOrDefault(self):
         activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)
         if activeProjectUid is None:
-            print("No active project ID. Initializing new default project")
+            logger.info("No active project ID. Initializing new default project")
             activeProjectUid = self.initDefaultProject()
-            print("Default project initialized: {}".format(activeProjectUid))
+            logger.info("Default project initialized: {}".format(activeProjectUid))
         try:
             activeProj = self.getProject(activeProjectUid)
         except Exception as e:
-            print("Error reading project {}: {}".format(activeProjectUid, e))
+            logger.info("Error reading project {}: {}".format(activeProjectUid, e))
             raise e
         self._activeProject = activeProj
         return activeProj
@@ -220,7 +223,7 @@ class ServerConfiguration:
                             "device.panel.mapping": self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
                         }]
                     })
-            print("Creating device config {}".format(deviceConfigName))
+            logger.info("Creating device config {}".format(deviceConfigName))
             deviceConfigs = self.getConfiguration(CONFIG_DEVICE_CONFIGS)
             if deviceConfigs is None:
                 # TODO: Error handling
@@ -234,13 +237,13 @@ class ServerConfiguration:
 
     def createSingleDevice(self, deviceName, numPixels, numRows, candyServer=None, panelMapping=None):
         # Single device legacy implementation, TODO: Deprecate or adjust
-        print("Creating device: {}".format(deviceName))
+        logger.info("Creating device: {}".format(deviceName))
         if deviceName == devices.RaspberryPi.__name__:
             device = devices.RaspberryPi(numPixels, numRows)
         elif deviceName == devices.FadeCandy.__name__:
             device = devices.FadeCandy(numPixels, numRows, candyServer)
         else:
-            print("Unknown device: {}".format(deviceName))
+            logger.info("Unknown device: {}".format(deviceName))
             return None
 
         if panelMapping and panelMapping:
@@ -249,7 +252,7 @@ class ServerConfiguration:
                 with open(mappingFile, "r", encoding='utf-8') as f:
                     mapping = json.loads(f.read())
                     device = devices.PanelWrapper(device, mapping)
-                    print("Active pixel mapping on real device: {}".format(mappingFile))
+                    logger.info("Active pixel mapping on real device: {}".format(mappingFile))
             else:
                 raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
         return device
@@ -267,7 +270,7 @@ class ServerConfiguration:
                 with open(mappingFile, "r", encoding='utf-8') as f:
                     mapping = json.loads(f.read())
                     device = devices.PanelWrapper(device, mapping)
-                    print("Active pixel mapping on virtual device: {}".format(mappingFile))
+                    logger.info("Active pixel mapping on virtual device: {}".format(mappingFile))
             else:
                 raise FileNotFoundError("Mapping file {} does not exist.".format(mappingFile))
         return device
@@ -405,7 +408,7 @@ class ServerConfiguration:
                 if not isinstance(key, str):
                     raise RuntimeError("{} must consist of string keys".format(configEntryName))
                 if not isinstance(value, list):
-                    print(type(value))
+                    logger.info(type(value))
                     raise RuntimeError("{} values must consist of dict".format(configEntryName))
             keys = config.keys()
             for key in keys:
@@ -462,7 +465,7 @@ class ServerConfiguration:
                 mimetype = 'image/gif'
             with open(location, 'rb') as b:
                 return [io.BytesIO(b.read()), filename, mimetype]
-        print("Cannot find project asset {}".format(location))
+        logger.info("Cannot find project asset {}".format(location))
         return None
 
     def addProjectAsset(self, projectUid, file):
@@ -494,9 +497,9 @@ class PersistentConfiguration(ServerConfiguration):
     def deleteProject(self, uid):
         """Overrides deleteProject and deletes the corresponding project file from disk
         """
-        print("Deleting project {} from disk".format(uid))
+        logger.info("Deleting project {} from disk".format(uid))
         if uid not in self._projectMetadatas:
-            print("Cannot delete project {}: No metadata".format(uid))
+            logger.info("Cannot delete project {}: No metadata".format(uid))
             return
         projMeta = self._projectMetadatas[uid]
         projFile = projMeta['location']
@@ -535,7 +538,7 @@ class PersistentConfiguration(ServerConfiguration):
         if not self.no_store and self.need_write:
             if not os.path.exists(self.storageLocation):
                 os.makedirs(self.storageLocation)
-            print("Writing configuration to {}".format(os.path.join(self.storageLocation, "configuration.json")))
+            logger.info("Writing configuration to {}".format(os.path.join(self.storageLocation, "configuration.json")))
             with open(os.path.join(self.storageLocation, 'configuration.json'), "w") as f:
                 f.write(value)
             self.need_write = False
@@ -545,7 +548,7 @@ class PersistentConfiguration(ServerConfiguration):
         for key, proj in self._projects.items():
             projMeta = self._projectMetadatas[key]
             if projMeta is None:
-                print("No metadata found. Can't write project {}".format(key))
+                logger.info("No metadata found. Can't write project {}".format(key))
                 continue
             lastProjHash = None
             if key in self._lastProjectHashs:
@@ -568,7 +571,7 @@ class PersistentConfiguration(ServerConfiguration):
             if projMeta is None:
                 continue
             if proj._contentRoot is None or proj._contentRoot != os.path.dirname(projMeta['location']):
-                print("Adjusting content root for project {}".format(key))
+                logger.info("Adjusting content root for project {}".format(key))
                 proj._contentRoot = os.path.dirname(projMeta['location'])
 
     def updateMd5HashFromFiles(self):
@@ -603,7 +606,7 @@ class PersistentConfiguration(ServerConfiguration):
         configFile = os.path.join(self.storageLocation, "configuration.json")
         if os.path.exists(configFile):
             with open(os.path.join(self.storageLocation, "configuration.json"), "r", encoding='utf-8') as f:
-                print("Reading configuration from {}".format(configFile))
+                logger.info("Reading configuration from {}".format(configFile))
                 content = f.read()
                 config_from_file = json.loads(content)
                 # Merge configuration with default config
@@ -614,7 +617,7 @@ class PersistentConfiguration(ServerConfiguration):
                 m.update(current_config.encode('utf-8'))
                 self._lastHash = m.hexdigest()
         else:
-            print("Configuration not found. Skipping read.")
+            logger.info("Configuration not found. Skipping read.")
 
         # Read project metadata
         projPath = self._getProjectPath()
@@ -628,7 +631,7 @@ class PersistentConfiguration(ServerConfiguration):
         # Backwards compatibility: Move file to new folder
         for f in onlyfiles:
             projUid = os.path.splitext(os.path.basename(f))[0]
-            print("Moving project {} to folder".format(f))
+            logger.info("Moving project {} to folder".format(f))
             os.makedirs(os.path.join(projPath, projUid))
             os.rename(os.path.join(projPath, f), os.path.join(os.path.join(projPath, projUid), f))
         # Read projects from subfolders
@@ -641,7 +644,7 @@ class PersistentConfiguration(ServerConfiguration):
             ]
             if len(jsonFiles) == 1:
                 f = os.path.basename(jsonFiles[0])
-                print("Reading project metadata from {}/{}".format(path, f))
+                logger.info("Reading project metadata from {}/{}".format(path, f))
                 projUid = os.path.splitext(os.path.basename(f))[0]
                 try:
                     data = self._readProjectMetadata(os.path.join(path, f), projUid)
@@ -649,7 +652,7 @@ class PersistentConfiguration(ServerConfiguration):
                 except RuntimeError:
                     pass
             else:
-                print("Couldn't read project from {}, only one json file expected".format(p))
+                logger.info("Couldn't read project from {}, only one json file expected".format(p))
 
     def _getProjectPath(self):
         return os.path.join(self.storageLocation, "projects")
@@ -672,7 +675,7 @@ class PersistentConfiguration(ServerConfiguration):
         projData = super()._metadataForProject(project, projectUid)
         # Add storage location to metadata
         projData['location'] = os.path.join(os.path.join(self._getProjectPath(), projectUid), "{}.json".format(projectUid))
-        print("Storage location for project {}: {}".format(projectUid, projData['location']))
+        logger.info("Storage location for project {}: {}".format(projectUid, projData['location']))
         return projData
 
     def _readProject(self, uid):
@@ -681,7 +684,7 @@ class PersistentConfiguration(ServerConfiguration):
         projMeta = self._projectMetadatas[uid]
 
         filepath = projMeta['location']
-        print("Reading project {} from {}".format(uid, filepath))
+        logger.info("Reading project {} from {}".format(uid, filepath))
         with open(filepath, "r", encoding='utf-8') as fc:
             content = fc.read()
             proj = jsonpickle.decode(content)
@@ -690,7 +693,7 @@ class PersistentConfiguration(ServerConfiguration):
             return proj
 
     def _writeProject(self, proj, projFile):
-        print("Writing project to {}".format(projFile))
+        logger.info("Writing project to {}".format(projFile))
         projJson = json.dumps(json.loads(jsonpickle.encode(proj)), indent=4, sort_keys=True)
         with open(projFile, "w") as f:
             f.write(projJson)

@@ -6,6 +6,8 @@ from time import sleep
 
 import numpy as np
 
+import logging
+logger = logging.getLogger(__name__)
 
 class OPCMessage:
     """
@@ -34,7 +36,7 @@ class OPCMessage:
 
     def _debug(self, message):
         if self._verbose:
-            print(message)
+            logger.info(message)
 
     def _set_selector_events_mask(self, mode):
         """Set selector to listen for events: mode is 'r', 'w', or 'rw'."""
@@ -75,7 +77,7 @@ class OPCMessage:
             # Should be ready to read
             data = self.sock.recv(4096)
         except BlockingIOError as e:
-            print("Error reading from socket: {}".format(e))
+            logger.info("Error reading from socket: {}".format(e))
             # Resource temporarily unavailable (errno EWOULDBLOCK)
             pass
         else:
@@ -152,12 +154,12 @@ class OPCMessage:
         try:
             self.selector.unregister(self.sock)
         except Exception as e:
-            print("error: selector.unregister() exception for {}: {}".format(self.addr, repr(e)))
+            logger.info("error: selector.unregister() exception for {}: {}".format(self.addr, repr(e)))
 
         try:
             self.sock.close()
         except OSError as e:
-            print("error: socket.close() exception for {}: {}".format(self.addr, repr(e)))
+            logger.info("error: socket.close() exception for {}: {}".format(self.addr, repr(e)))
         finally:
             # Delete reference to socket object for garbage collection
             self.sock = None
@@ -184,7 +186,7 @@ class ServerThread(object):
 
     def _debug(self, message):
         if self._verbose:
-            print(message)
+            logger.info(message)
 
     def start(self):
         """Start the server thread"""
@@ -193,7 +195,7 @@ class ServerThread(object):
 
         self._stopSignal = False
         self._socket.listen()
-        print("FadeCandy Server thread listening.")
+        logger.info("FadeCandy Server thread listening.")
         self._thread = threading.Thread(target=self._process_thread, args=[self._socket, self._callback])
         self._thread.daemon = True
         self._thread.start()
@@ -224,7 +226,7 @@ class ServerThread(object):
             self._socket.getpeername()
             return True
         except Exception as e:
-            print("Error getting peername: {}".format(e))
+            logger.info("Error getting peername: {}".format(e))
             return False
 
     def getHost(self):
@@ -330,14 +332,14 @@ class Server(object):
             _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             _socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _socket.bind((self._host, self._port))
-            print("FadeCandy Server begin listening on {}:{}".format(self._host, self._port))
+            logger.info("FadeCandy Server begin listening on {}:{}".format(self._host, self._port))
             self._thread = ServerThread(self._host, self._port, _socket, self._pixelCallback, self._verbose)
             self.all_threads.append(self._thread)
             self._thread.start()
             return True
         except socket.error as e:
-            print("FadeCandy Server error listening on {}:{}".format(self._host, self._port))
-            print(e)
+            logger.info("FadeCandy Server error listening on {}:{}".format(self._host, self._port))
+            logger.info(e)
             self._socket = None
             return False
 
@@ -351,7 +353,7 @@ class Server(object):
             pixels = array.reshape((-1, 3)).T
             self._lastMessage = pixels
         except Exception as e:
-            print("Error decoding to pixels. array length: {}, error: {}".format(len(array), e))
+            logger.info("Error decoding to pixels. array length: {}, error: {}".format(len(array), e))
 
     def get_pixels(self, block=False):
         isListening = self._ensure_listening()
@@ -359,6 +361,6 @@ class Server(object):
             raise Exception("Server cannot listen")
         if block:
             while self._lastMessage is None:
-                print("Waiting for message...")
+                logger.info("Waiting for message...")
                 sleep(0.01)
         return self._lastMessage

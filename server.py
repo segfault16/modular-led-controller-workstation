@@ -21,8 +21,25 @@ from werkzeug.serving import is_running_from_reloader
 
 from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project
 
-logging.basicConfig(level=logging.INFO)
+# configure logging here
+orig_factory = logging.getLogRecordFactory()
+
+def record_factory(*args, **kwargs):
+    record = orig_factory(*args, **kwargs)
+    record.sname = record.name[-10:] if len(
+        record.name) > 10 else record.name
+    if record.threadName and len(record.threadName) > 10:
+        record.sthreadName = record.threadName[:10]
+    elif not record.threadName:
+        record.sthreadName = ""
+    else:
+        record.sthreadName = record.threadName
+    return record
+
+logging.setLogRecordFactory(record_factory)
+logging.basicConfig(level=logging.INFO, format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
+logging.getLogger('audioled').setLevel(logging.DEBUG) # TODO: Not working?
 
 libnames = ['audioled.bluetooth']
 for libname in libnames:
@@ -66,11 +83,9 @@ def multiprocessing_func(sc):
 
 
 def create_app():
-    logging.basicConfig(level=logging.INFO)
     logging.info("Creating app")
     app = Flask(__name__)
     logging.debug("App created")
-    logging.basicConfig(level=logging.ERROR)
 
     def store_configuration():
         try:
@@ -753,8 +768,7 @@ def handleMidiMsg(msg):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    logging.getLogger('audioled').setLevel(logging.DEBUG) # TODO: Not working?
+    
     parser = runtimeconfiguration.commonRuntimeArgumentParser()
     # Adjust defaults from commonRuntimeArgumentParser
     parser.set_defaults(
@@ -833,7 +847,7 @@ if __name__ == '__main__':
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
-    logging.warn("Adding bluetooth server to the mix")
+    logging.info("Adding bluetooth server to the mix")
     try:
         import audioled
         bt = audioled.bluetooth.MidiBluetoothService(callback=handleMidiMsg)

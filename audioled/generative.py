@@ -13,6 +13,9 @@ from audioled.effect import Effect
 
 from PIL import Image, ImageOps
 
+import logging
+logger = logging.getLogger(__name__)
+
 wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
 wave_mode_default = 'sin'
 sortby = ['red', 'green', 'blue', 'brightness']
@@ -211,8 +214,8 @@ class MidiKeyboard(Effect):
         try:
             import mido
         except ImportError as e:
-            print('Unable to import the mido library')
-            print('You can install this library with `pip install mido`')
+            logger.info('Unable to import the mido library')
+            logger.info('You can install this library with `pip install mido`')
             raise e
         try:
             self._midi.close()
@@ -223,7 +226,7 @@ class MidiKeyboard(Effect):
         except OSError:
             self._midi = mido.open_input()
             self.midiPort = self._midi.name
-            print(self.midiPort)
+            logger.info(self.midiPort)
         self._on_notes = []
 
     def numInputChannels(self):
@@ -238,11 +241,11 @@ class MidiKeyboard(Effect):
             import mido
             return mido.get_input_names()
         except ImportError:
-            print('Unable to import the mido library')
-            print('You can install this library with `pip install mido`')
+            logger.info('Unable to import the mido library')
+            logger.info('You can install this library with `pip install mido`')
             return []
         except Exception:
-            print("Error while getting midi inputs")
+            logger.info("Error while getting midi inputs")
             return []
 
     @staticmethod
@@ -1177,7 +1180,7 @@ class GIFPlayer(Effect):
         try:
             self._gif = Image.open(adjustedFile)
         except Exception:
-            print("Cannot open file {}".format(adjustedFile))
+            logger.info("Cannot open file {}".format(adjustedFile))
 
     async def update(self, dt):
         await super().update(dt)
