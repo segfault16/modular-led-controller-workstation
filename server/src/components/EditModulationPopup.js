@@ -143,11 +143,10 @@ class EditModulationPopup extends React.Component {
         }
         // New request with new AbortController
         this._modTargetChangeCtrl = new AbortController()
-        this._modTargetChangeReq = FilterGraphService.updateModulation(this.props.slot, this.props.modulationUid, { [parameter]: value }, this._modTargetChangeCtrl.signal)
+        this._modTargetChangeReq = FilterGraphService.updateModulation(this.props.slot, this.props.modulationUid, { 'target_param': value}, this._modTargetChangeCtrl.signal)
         this._modTargetChangeReq.then(res => {
             this._modTargetChangeReq = null;
         }).catch((reason) => reason.name == "AbortError" ? null : console.error(reason));
-        FilterGraphService.updateModulation(this.props.slot, this.props.modulationUid, { 'target_param': value})
 
         this.setState(newState);
     }
