@@ -118,7 +118,17 @@ class EditModulationPopup extends React.Component {
     handleParameterChange = (value, parameter) => {
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.config.values[parameter] = value;
-        FilterGraphService.updateModulation(this.props.slot, this.props.modulationUid, { [parameter]: value })
+        if (this._modParamChangeReq && this._modParamChangeCtrl) {
+            // Abort previous request
+            this._modParamChangeCtrl.abort()
+            this._modParamChangeReq = null
+        }
+        // New request with new AbortController
+        this._modParamChangeCtrl = new AbortController()
+        this._modParamChangeReq = FilterGraphService.updateModulation(this.props.slot, this.props.modulationUid, { [parameter]: value }, this._modParamChangeCtrl.signal)
+        this._modParamChangeReq.then(res => {
+            this._modParamChangeReq = null;
+        }).catch((reason) => reason.name == "AbortError" ? null : console.error(reason));
         this.setState(newState);
     };
 
@@ -126,7 +136,19 @@ class EditModulationPopup extends React.Component {
         console.log("Selected parameter:", value)
         let newState = Object.assign({}, this.state); // create copy of state
         newState.selectedParameter = value;
+        if (this._modTargetChangeReq && this._modTargetChangeCtrl) {
+            // Abort previous request
+            this._modTargetChangeCtrl.abort()
+            this._modTargetChangeReq = null
+        }
+        // New request with new AbortController
+        this._modTargetChangeCtrl = new AbortController()
+        this._modTargetChangeReq = FilterGraphService.updateModulation(this.props.slot, this.props.modulationUid, { [parameter]: value }, this._modTargetChangeCtrl.signal)
+        this._modTargetChangeReq.then(res => {
+            this._modTargetChangeReq = null;
+        }).catch((reason) => reason.name == "AbortError" ? null : console.error(reason));
         FilterGraphService.updateModulation(this.props.slot, this.props.modulationUid, { 'target_param': value})
+
         this.setState(newState);
     }
 

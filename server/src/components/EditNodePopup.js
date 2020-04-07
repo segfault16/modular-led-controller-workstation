@@ -134,22 +134,34 @@ class EditNodePopup extends React.Component {
     handleParameterChange = (value, parameter) => {
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.config.values[parameter] = value;
-        FilterGraphService.updateNode(this.props.slot, this.props.nodeUid, { [parameter]: value })
+        if (this._nodeParamChangeReq && this._nodeParamChangeCtrl) {
+            // Abort previous request
+            this._nodeParamChangeCtrl.abort()
+            this._nodeParamChangeReq = null
+        }
+        // New request with new AbortController
+        this._nodeParamChangeCtrl = new AbortController()
+        this._nodeParamChangeReq = FilterGraphService.updateNode(this.props.slot, this.props.nodeUid, { [parameter]: value }, this._nodeParamChangeCtrl.signal)
+        this._nodeParamChangeReq.then(res => {
+            this._nodeParamChangeReq = null;
+        }).catch((reason) => reason.name == "AbortError" ? null : console.error(reason));
         this.setState(newState);
     };
 
     handleModulationValueChange = (value, modUid) => {
         let newState = Object.assign({}, this.state);
         newState.modulations[modUid]['value'] = value;
-        if (this._updateModulationPromise && !this._updateModulationPromise.isCanceled()) {
-            console.log("cancelling")
-            this._updateModulationPromise.cancel()
-            this._updateModulationPromise = null
+        if (this._modValChangeReq && this._modValChangeCtrl) {
+            // Abort previous request
+            this._modValChangeCtrl.abort()
+            this._modValChangeReq = null
         }
-        this._updateModulationPromise = makeCancelable(FilterGraphService.updateModulation(this.props.slot, modUid, { 'amount': value }))
-        this._updateModulationPromise.promise.then( () => {
-            console.log("success")
-        })
+        // New request with new AbortController
+        this._modValChangeCtrl = new AbortController()
+        this._modValChangeReq = FilterGraphService.updateModulation(this.props.slot, modUid, { 'amount': value }, this._modValChangeCtrl.signal)
+        this._modValChangeReq.then(res => {
+            this._modValChangeReq = null;
+        }).catch((reason) => reason.name == "AbortError" ? null : console.error(reason));
         this.setState(newState);
     }
     handleModulationInvertChange = (value, modUid) => {
