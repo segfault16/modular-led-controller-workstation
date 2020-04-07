@@ -141,7 +141,15 @@ class EditNodePopup extends React.Component {
     handleModulationValueChange = (value, modUid) => {
         let newState = Object.assign({}, this.state);
         newState.modulations[modUid]['value'] = value;
-        FilterGraphService.updateModulation(this.props.slot, modUid, { 'amount': value })
+        if (this._updateModulationPromise && !this._updateModulationPromise.isCanceled()) {
+            console.log("cancelling")
+            this._updateModulationPromise.cancel()
+            this._updateModulationPromise = null
+        }
+        this._updateModulationPromise = makeCancelable(FilterGraphService.updateModulation(this.props.slot, modUid, { 'amount': value }))
+        this._updateModulationPromise.promise.then( () => {
+            console.log("success")
+        })
         this.setState(newState);
     }
     handleModulationInvertChange = (value, modUid) => {

@@ -13,5 +13,8 @@ export const makeCancelable = (promise) => {
       cancel() {
         hasCanceled_ = true;
       },
+      isCanceled() {
+        return hasCanceled_
+      }
     };
   };
