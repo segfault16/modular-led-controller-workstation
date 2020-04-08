@@ -630,11 +630,11 @@ def create_app():
 
     @app.route('/remote/brightness', methods=['POST'])
     def remote_brightness_post():
-        global device
+        global proj
         value = int(request.args.get('value'))
         floatVal = float(value / 100)
         app.logger.info("Setting brightness: {}".format(floatVal))
-        device.setBrightness(floatVal)
+        proj.setBrightness(floatVal)
         return "OK"
 
     @app.route('/remote/favorites/<id>', methods=['POST'])
@@ -754,19 +754,25 @@ def handleMidiMsg(msg):
     # pitch	-8192..8191	0
     # pos	0..16383	0
     # time	any integer or float	0
+    global proj
     if msg.type == 'program_change':
-        global proj
         proj.activateScene(msg.program)
     elif msg.type == 'control_change':
         controllerMap = {
-            7: modulation.CTRL_MODULATION, # mod wheel?
+            1: modulation.CTRL_MODULATION, # mod wheel
+            7: modulation.CTRL_BRIGHTNESS, # volume
             11: modulation.CTRL_INTENSITY, # expression
             21: modulation.CTRL_SPEED, # unknown param?
-            # TODO: Brightness
         }
         if msg.control in controllerMap:
-            logger.info("Propagating control change message")
-            proj.updateModulationSourceValue(0xFFF, controllerMap[msg.control], msg.value/127)
+            controlMsg = controllerMap[msg.control]
+            controlVal = msg.value/127
+            logger.debug("Propagating control change message")
+            if controlMsg == modulation.CTRL_BRIGHTNESS:
+                # Handle brightness globally
+                proj.setBrightness(controlVal)
+            else:
+                proj.updateModulationSourceValue(0xFFF, controlMsg, msg.controlVal)
         else:
             logger.warn("Unknown controller {}".format(msg.control))
 

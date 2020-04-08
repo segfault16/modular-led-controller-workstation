@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 CTRL_MODULATION = 'Modulation'
 CTRL_SPEED = 'Speed'
 CTRL_INTENSITY = 'Intensity'
+CTRL_BRIGHTNESS = 'Brightness' # Not available on purpose, handled globally
 CTRL_PRIMARY_COLOR = 'PrimaryColor'
 CTRL_SECONDARY_COLOR = 'SecondaryColor'
 availableController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY, CTRL_PRIMARY_COLOR, CTRL_SECONDARY_COLOR]

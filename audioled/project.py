@@ -95,6 +95,14 @@ class UpdateMessage:
         self.dt = dt
         self.audioBuffer = audioBuffer
 
+class BrightnessMessage:
+    def __init__(self, value):
+        self.value = value
+
+class ShowMessage:
+    def __init(self):
+        pass
+
 
 class ReplaceFiltergraphMessage:
     def __init__(self, deviceId, slotId, filtergraph):
@@ -295,12 +303,12 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     message = message  # type: UpdateModulationSourceValueMessage
                     dMask = 2 << deviceId
                     if dMask & message.deviceMask:
-                        logger.info("Device mask match for device {}".format(deviceId))
+                        logger.debug("Device mask match for device {}".format(deviceId))
                         filtergraph.updateModulationSourceValue(message.controller, message.newValue)
                 else:
                     logger.warning("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
-                logger.debug("Continuing on NodeException")
+                logger.info("Continuing on NodeException")
             finally:
                 # logger.info("{} done".format(os.getpid()))
                 # q.task_done()
@@ -325,8 +333,12 @@ def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audio
         threading.current_thread().name = 'OutputThread'
         logger.info("output process {} start".format(os.getpid()))
         for message in iter(q.get, None):
-            npArray = np.ctypeslib.as_array(virtualDevice._shared_array.get_obj()).reshape(3, -1)
-            outputDevice.show(npArray.reshape(3, -1, order='C'))
+            if isinstance(message, ShowMessage):
+                npArray = np.ctypeslib.as_array(virtualDevice._shared_array.get_obj()).reshape(3, -1)
+                outputDevice.show(npArray.reshape(3, -1, order='C'))
+            elif isinstance(message, BrightnessMessage):
+                bm = message  # type: BrightnessMessage
+                outputDevice.setBrightness(bm.value)
             q.task_done()
         outputDevice.shutdown()
         logger.error("output process {} exit".format(os.getpid()))
@@ -523,6 +535,10 @@ class Project(Updateable):
 
     def updateModulationSourceValue(self, deviceMask, controller, newValue):
         self._sendModulationSourceValueUpdateCommand(deviceMask, controller, newValue)
+
+    def setBrightness(self, value):
+        self._sendBrightnessCommand(value)
+        
         
     def _createOrUpdateProcess(self, dIdx, device, slotId, filterGraph):
         if dIdx in self._filtergraphProcesses:
@@ -721,6 +737,9 @@ class Project(Updateable):
         self.outputSlotMatrix = value
         self.activateScene(self.activeSceneId)
 
+    def _sendBrightnessCommand(self, value):
+        self._showQueue.publish(BrightnessMessage(value))
+
     def _handleNodeAdded(self, node: audioled.filtergraph.Node):
         self._lock.acquire()
         try:
@@ -808,7 +827,7 @@ class Project(Updateable):
         if self._showQueue is None:
             logger.info("No show queue. Possibly exiting")
             return
-        self._showQueue.publish("show!")
+        self._showQueue.publish(ShowMessage())
 
     def _sendReplaceFiltergraphCommand(self, dIdx, slotId, filtergraph):
         self._publishQueue.publish(ReplaceFiltergraphMessage(dIdx, slotId, filtergraph))

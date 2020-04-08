@@ -496,7 +496,7 @@ class FilterGraph(Updateable):
         for mod in self.__modulationsources:
             if isinstance(mod.modulator, modulation.ExternalLinearController):
                 if mod.modulator.controller == modCtrl:
-                    logger.info("Updating mod source value")
+                    logger.debug("Updating mod source value")
                     mod.modulator.updateParameter({
                         "amount": newValue
                     })
