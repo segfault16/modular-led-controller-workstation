@@ -298,7 +298,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                         logger.info("Device mask match for device {}".format(deviceId))
                         filtergraph.updateModulationSourceValue(message.controller, message.newValue)
                 else:
-                    logger.info("Message not supported: {}".format(message))
+                    logger.warning("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
                 logger.debug("Continuing on NodeException")
             finally:
@@ -405,11 +405,11 @@ class Project(Updateable):
                 slot._contentRoot = self._contentRoot
         # Activate loaded scene
         if self.activeSceneId is not None:
-            logger.info("Active scene {}".format(self.activeSceneId))
+            logger.debug("Active scene {} from setstate".format(self.activeSceneId))
             self.activateScene(self.activeSceneId)
 
     def setDevice(self, device: audioled.devices.MultiOutputWrapper):
-        logging.info("setting device")
+        logging.debug("setting device")
         if not isinstance(device, audioled.devices.MultiOutputWrapper):
             raise RuntimeError("Device has to be MultiOutputWrapper")
         if self._devices == device._devices:
@@ -436,7 +436,7 @@ class Project(Updateable):
                 self._cur_t = self._cur_t + dt
                 self._sendUpdateCommand(dt)
                 if(self._cur_t - self._last_t > 1 ):
-                    logger.debug("Updating preview device")
+                    # logger.debug("Updating preview device")
                     self._updatePreviewDevice(dt, event_loop)
                     self._last_t = self._cur_t
                 # Wait for previous show command done
@@ -475,7 +475,7 @@ class Project(Updateable):
 
         Scene: Project Slot per Output Device
         """
-        logging.info("activate scene {}".format(sceneId))
+        logging.debug("activate scene {}".format(sceneId))
 
         # TODO: Make configurable
         self._previewDeviceIndex = None
@@ -516,7 +516,7 @@ class Project(Updateable):
                 dIdx += 1
         finally:
             self._processingEnabled = True
-            logger.info("activate scene - releasing lock")
+            logger.debug("activate scene - releasing lock")
             self._lock.release()
 
     def updateModulationSourceValue(self, deviceMask, controller, newValue):
@@ -597,7 +597,7 @@ class Project(Updateable):
             else:
                 successful = True
         self._filtergraphProcesses[dIdx] = p
-        logger.info('Started process for device {} with device {}'.format(dIdx, fgDevice))
+        logger.debug('Started process for device {} with device {}'.format(dIdx, fgDevice))
 
         # Start output process
         if outputDevice is not None:
@@ -646,31 +646,31 @@ class Project(Updateable):
             return
         # Normal shutdown
         try:
-            logger.info("Ending queue")
+            logger.debug("Ending queue")
             if self._publishQueue is not None:
                 self._publishQueue.publish(None)
                 self._publishQueue.close()
                 self._publishQueue.join_thread()
-                logger.info('Publish queue ended')
+                logger.debug('Publish queue ended')
                 self._publishQueue = None
             if self._showQueue is not None:
                 self._showQueue.publish(None)
                 self._showQueue.close()
                 self._showQueue.join_thread()
-                logger.info("Show queue ended")
+                logger.debug("Show queue ended")
                 self._showQueue = None
-            logger.info("Ending processes")
+            logger.debug("Ending processes")
             for p in self._filtergraphProcesses.values():
                 p.join()
-            logger.info("Filtergraph processes joined")
+            logger.debug("Filtergraph processes joined")
             self._filtergraphProcesses = {}
             for p in self._outputProcesses.values():
                 p.join()
-            logger.info("Output processes joined")
+            logger.debug("Output processes joined")
             self._outputProcesses = {}
-            logger.info('All processes joined')
+            logger.debug('All processes joined')
         finally:
-            logger.info("stop processing - releasing lock")
+            logger.debug("stopped processing - releasing lock")
             self._lock.release()
             self._processingEnabled = True
 

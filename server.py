@@ -39,8 +39,11 @@ def record_factory(*args, **kwargs):
 logging.setLogRecordFactory(record_factory)
 logging.basicConfig(level=logging.INFO, format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
-logging.getLogger('audioled').setLevel(logging.DEBUG) # TODO: Not working?
+logging.getLogger('audioled').setLevel(logging.DEBUG)
+logging.getLogger('root').setLevel(logging.DEBUG)
+logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO) # Silence!
 logger = logging.getLogger(__name__)
+
 
 libnames = ['audioled.bluetooth']
 for libname in libnames:
@@ -849,7 +852,7 @@ if __name__ == '__main__':
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
-    logging.info("Adding bluetooth server to the mix")
+    logging.debug("Adding bluetooth server to the mix")
     try:
         import audioled
         bt = audioled.bluetooth.MidiBluetoothService(callback=handleMidiMsg)
@@ -860,7 +863,6 @@ if __name__ == '__main__':
 
 
     app = create_app()
-    logging.debug("Here?")
     app.run(debug=False, host="0.0.0.0", port=args.port)
     logging.info("End of server main")
     proj.stopProcessing()

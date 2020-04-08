@@ -492,7 +492,7 @@ class FilterGraph(Updateable):
         return node
 
     def updateModulationSourceValue(self, modCtrl, newValue):
-        logger.info("Updating mod source value for {}".format(modCtrl))
+        logger.debug("Updating mod source value for {}".format(modCtrl))
         for mod in self.__modulationsources:
             if isinstance(mod.modulator, modulation.ExternalLinearController):
                 if mod.modulator.controller == modCtrl:
@@ -504,7 +504,9 @@ class FilterGraph(Updateable):
     def updateModulationSourceParameter(self, modSourceUid, updateParameters):
         mod = next(mod for mod in self.__modulationsources if mod.uid == modSourceUid)  # type: ModulationSourceNode
         mod.modulator.updateParameter(updateParameters)
+        logger.debug("Updating mod source: {}".format(modSourceUid))
         if self._onModulationSourceUpdate is not None:
+            logger.debug("Firing: {}".format(modSourceUid))
             self._onModulationSourceUpdate(mod, updateParameters)
         return mod
 
@@ -518,7 +520,7 @@ class FilterGraph(Updateable):
     def _updateProcessOrder(self):
         processOrder = []
         if self._outputNode is None:
-            logger.info("No output node")
+            # logger.debug("No output node")
             return
 
         unprocessedNodes = self.__filterNodes.copy()

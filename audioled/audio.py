@@ -5,12 +5,49 @@ from collections import OrderedDict
 
 import numpy as np
 import pyaudio
+from ctypes import *
+
+
 
 from audioled.effects import Effect
 from audioled.effect import AudioBuffer
 
 import logging
 logger = logging.getLogger(__name__)
+alogger = logging.getLogger(__name__ + ".libasound")
+
+# Kudos https://stackoverflow.com/questions/7088672/pyaudio-working-but-spits-out-error-messages-each-time
+# From alsa-lib Git 3fd4ab9be0db7c7430ebd258f2717a976381715d
+# $ grep -rn snd_lib_error_handler_t
+# include/error.h:59:typedef void (*snd_lib_error_handler_t)(const char *file, int line, const char *function, int err, const char *fmt, ...) /* __attribute__ ((format (printf, 5, 6))) */;
+# Define our error handler type
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p,)
+def py_error_handler(filename, line, function, err, fmt, *val):
+    formatted = None
+    # TODO: Doesn't work?
+    if len(val) > 0:
+        try:
+            import StringIO 
+            def sprintf(buf, fmt, *args):
+                buf.write(fmt % args)
+
+            buf = StringIO.StringIO()
+            sprintf(buf, fmt, val)
+            formatted = buf.getvalue()
+            alogger.debug("{}:{} {} {} ({})".format(filename, line, function, formatted, *val))
+        except Exception:
+            alogger.debug("Problem formatting libalsa message {}, arguments: {}".format(fmt, val))
+    else:
+        alogger.debug("{}:{} {} {}".format(filename, line, function, fmt))
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
+try:
+    asound = cdll.LoadLibrary('libasound.so')
+    # Set error handler
+    asound.snd_lib_error_set_handler(c_error_handler)
+except Exception as e:
+    logger.error("Error setting logger for libasound: {}", e)
+
 
 def print_audio_devices():
     """Print information about the system's audio devices"""
@@ -145,7 +182,7 @@ class AudioInput(Effect):
         self._outBuffer = []
         self._autogain_perc = None
         self._cur_gain = 1.0
-        logger.info("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
+        logger.debug("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
 
     def numOutputChannels(self):
         return self.num_channels
