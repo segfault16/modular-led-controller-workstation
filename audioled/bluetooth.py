@@ -3,6 +3,7 @@ import sys
 import signal
 import mido
 import pybleno
+import traceback
 import logging
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,12 @@ class MidiBluetoothService(object):
     def _onMessageReceived(self, msg : mido.Message):
         logger.debug("Received msg: {}".format(msg))
         if self._callback is not None:
-            self._callback(msg)
+            try:
+                self._callback(msg)
+            except Exception as e:
+                logger.error("Error in bluetooth callback: {}".format(e))
+                traceback.print_tb(e.__traceback__)
+
         
 
     def _onStateChange(self, state):

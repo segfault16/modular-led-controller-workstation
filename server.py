@@ -772,7 +772,7 @@ def handleMidiMsg(msg):
                 # Handle brightness globally
                 proj.setBrightness(controlVal)
             else:
-                proj.updateModulationSourceValue(0xFFF, controlMsg, msg.controlVal)
+                proj.updateModulationSourceValue(0xFFF, controlMsg, controlVal)
         else:
             logger.warn("Unknown controller {}".format(msg.control))
 
