@@ -406,7 +406,9 @@ class Project(Updateable):
         # Activate loaded scene
         if self.activeSceneId is not None:
             logger.debug("Active scene {} from setstate".format(self.activeSceneId))
+            # TODO: Needs to be revised?
             self.activateScene(self.activeSceneId)
+            self.previewSlot(self.activeSceneId)
 
     def setDevice(self, device: audioled.devices.MultiOutputWrapper):
         logging.debug("setting device")
