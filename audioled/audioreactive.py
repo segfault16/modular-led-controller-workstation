@@ -769,10 +769,10 @@ class FallingStars(Effect):
             controlArray.append(oneStarArray)
         return controlArray
 
-    def starControl(self, prob, peak):
+    def starControl(self, prob, intensity):
         for i in range(int(self.max_spawns)):
             if random.random() <= prob:
-                self.spawnStar(peak)
+                self.spawnStar(intensity)
         outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray, self._peakArray)
         return np.sum(outputArray, axis=0)
 
@@ -803,11 +803,22 @@ class FallingStars(Effect):
 
         # adjust probability according to peak of audio
         peak = np.max(y) * 1.0
+        maxpeak = 1
         try:
             peak = peak**self.peak_filter
+            maxpeak = maxpeak**self.peak_filter
         except Exception:
             peak = peak
-        prob = min(self.probability + peak, 1.0)
+            maxpeak = peak
+        def jrange(value0To1, minRange, maxRange):
+            value0To1 = min(max(value0To1, 0), 1)
+            return (maxRange-minRange)*value0To1 + minRange
+        def jvalue(minRange, maxRange, value):
+            if maxRange - minRange == 0:
+                return 0
+            return (value - minRange) / (maxRange - minRange)
+        prob = min(jvalue(0, maxpeak, self.probability) + peak, 1.0)
+        # logger.debug("spawn start {}".format(prob))
         if self._outputBuffer is not None:
             self._output = np.multiply(
                 color,

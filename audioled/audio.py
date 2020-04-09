@@ -265,5 +265,6 @@ class AudioInput(Effect):
             # layout for multiple channel is interleaved:
             # 00 01 .. 0n 10 11 .. 1n
             self._outBuffer[i].audio = self._cur_gain * self._buffer[i::self.num_channels]
+            # TODO: Calculate audio stats per channel: peak, rms, FFT buckets for remote display
             self._outputBuffer[i] = self._outBuffer[i]
             # logger.info("{}: {}".format(i, self._outputBuffer[i]))
