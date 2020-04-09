@@ -276,9 +276,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
     """
     try:
         threading.current_thread().name = 'WorkerThread'
-        logger.info("process {} start".format(os.getpid()))
-        logging.getLogger("audioled").info("process {} start".format(os.getpid()))
-        # logging.basicConfig(level=logging.DEBUG) # TODO: logging not working?
+        logger.info("filtergraph process {} start".format(os.getpid()))
         event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(event_loop)
         filtergraph.propagateNumPixels(outputDevice.getNumPixels(), outputDevice.getNumRows())
@@ -320,12 +318,12 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     if q._unfinished_tasks._semlock._is_zero():
                         q._cond.notify_all()
         outputDevice.shutdown()
-        logger.info("process {} exit".format(os.getpid()))
+        logger.info("filtergraph process {} exit".format(os.getpid()))
     except Exception as e:
         traceback.print_exc()
-        logger.error("process {} exited due to: {}".format(os.getpid(), e))
+        logger.error("filtergraph process {} exited due to: {}".format(os.getpid(), e))
     except:
-        logger.info("process interrupted")
+        logger.info("filtergraph process interrupted")
 
 
 def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audioled.devices.VirtualOutput):
