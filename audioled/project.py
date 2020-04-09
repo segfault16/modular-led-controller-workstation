@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 def ensure_parent(func):
     @wraps(func)
     def inner(self, *args, **kwargs):
-        if os.getpid() != self._creator_pid:
-            raise RuntimeError("{} can only be called in the " "parent.".format(func.__name__))
+        #if os.getpid() != self._creator_pid:
+        #    raise RuntimeError("{} can only be called in the " "parent.".format(func.__name__))
         return func(self, *args, **kwargs)
 
     return inner
@@ -385,6 +385,7 @@ class Project(Updateable):
         self._publishQueue = PublishQueue()
         self._showQueue = PublishQueue()
         self._lock = mp.Lock()
+        self._handlerLock = mp.Lock() 
         self._processingEnabled = True
 
     def __cleanState__(self, stateDict):
@@ -464,6 +465,7 @@ class Project(Updateable):
                 logger.error("Update timeout. Forcing reset")
                 self.stopProcessing()
                 if self.activeSceneId is not None:
+                    logger.debug("No scene active. Activating.")
                     self.activateScene(self.activeSceneId)
             else:
                 self._lock.release()
@@ -487,7 +489,7 @@ class Project(Updateable):
 
         Scene: Project Slot per Output Device
         """
-        logging.debug("activate scene {}".format(sceneId))
+        logger.debug("activate scene {}".format(sceneId))
 
         # TODO: Make configurable
         self._previewDeviceIndex = None
@@ -732,88 +734,114 @@ class Project(Updateable):
 
     def setSceneMatrix(self, value):
         # TODO: Validate
+        if self.outputSlotMatrix is not None:
+            # Check if slot matrix stayed the same
+            if self.outputSlotMatrix == value:
+                logger.debug("No change to scene matrix")
+                return
         self.outputSlotMatrix = value
+        logger.debug("Updating scene matrix")
         self.activateScene(self.activeSceneId)
 
     def _sendBrightnessCommand(self, value):
         self._showQueue.publish(BrightnessMessage(value))
 
-    def _handleNodeAdded(self, node: audioled.filtergraph.Node):
-        self._lock.acquire()
+    def _handleNodeAdded(self, node: audioled.filtergraph.Node, niceness = 0.0):
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'add', node.effect))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
-    def _handleNodeRemoved(self, node: audioled.filtergraph.Node):
-        self._lock.acquire()
+    def _handleNodeRemoved(self, node: audioled.filtergraph.Node, niceness = 0.0):
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'remove'))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
-    def _handleNodeUpdate(self, node: audioled.filtergraph.Node, updateParameters):
-        self._lock.acquire()
+    def _handleNodeUpdate(self, node: audioled.filtergraph.Node, updateParameters, niceness = 0.1):
+        """
+        updates can come rapidly, default niceness 0.1
+        """
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'update', updateParameters))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
-    def _handleModulationAdded(self, mod: audioled.filtergraph.Modulation):
-        self._lock.acquire()
+    def _handleModulationAdded(self, mod: audioled.filtergraph.Modulation, niceness = 0.0):
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'add', mod))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
-    def _handleModulationRemoved(self, mod: audioled.filtergraph.Modulation):
-        self._lock.acquire()
+    def _handleModulationRemoved(self, mod: audioled.filtergraph.Modulation, niceness = 0.0):
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'remove'))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
-    def _handleModulationUpdate(self, mod: audioled.filtergraph.Modulation, updateParameters):
-        self._lock.acquire()
+    def _handleModulationUpdate(self, mod: audioled.filtergraph.Modulation, updateParameters, niceness = 0.1):
+        """
+        updates can come rapidly, default niceness 0.1
+        """
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'update', updateParameters))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
-    def _handleModulationSourceAdded(self, modSource: audioled.filtergraph.ModulationSourceNode):
-        self._lock.acquire()
+    def _handleModulationSourceAdded(self, modSource: audioled.filtergraph.ModulationSourceNode, niceness = 0.0):
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'add', modSource))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
-    def _handleModulationSourceRemoved(self, modSource: audioled.filtergraph.ModulationSourceNode):
-        self._lock.acquire()
+    def _handleModulationSourceRemoved(self, modSource: audioled.filtergraph.ModulationSourceNode, niceness = 0.0):
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'remove'))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
-    def _handleModulationSourceUpdate(self, modSource: audioled.filtergraph.ModulationSourceNode, updateParameters):
-        self._lock.acquire()
+    def _handleModulationSourceUpdate(self, modSource: audioled.filtergraph.ModulationSourceNode, updateParameters, niceness = 0.1):
+        """
+        updates can come rapidly, default niceness 0.1
+        """
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'update', updateParameters))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
-    def _handleConnectionAdded(self, con: audioled.filtergraph.Connection):
-        self._lock.acquire()
+    def _handleConnectionAdded(self, con: audioled.filtergraph.Connection, niceness = 0.0):
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(ConnectionMessage(self.activeSlotId, con.uid, 'add', con.__getstate__()))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
-    def _handleConnectionRemoved(self, con: audioled.filtergraph.Connection):
-        self._lock.acquire()
+    def _handleConnectionRemoved(self, con: audioled.filtergraph.Connection, niceness = 0.0):
+        self._handlerLock.acquire()
+        time.sleep(niceness)
         try:
             self._publishQueue.publish(ConnectionMessage(self.activeSlotId, con.uid, 'remove'))
         finally:
-            self._lock.release()
+            self._handlerLock.release()
 
     def _sendUpdateCommand(self, dt):
         if self._publishQueue is None:
@@ -828,10 +856,12 @@ class Project(Updateable):
         self._showQueue.publish(ShowMessage())
 
     def _sendReplaceFiltergraphCommand(self, dIdx, slotId, filtergraph):
-        self._publishQueue.publish(ReplaceFiltergraphMessage(dIdx, slotId, filtergraph))
+        if self._publishQueue is not None:
+            self._publishQueue.publish(ReplaceFiltergraphMessage(dIdx, slotId, filtergraph))
 
     def _sendModulationSourceValueUpdateCommand(self, deviceMask, controller, newValue):
-        self._publishQueue.publish(UpdateModulationSourceValueMessage(deviceMask, controller, newValue))
+        if self._publishQueue is not None:
+            self._publishQueue.publish(UpdateModulationSourceValueMessage(deviceMask, controller, newValue))
 
     def _updatePreviewDevice(self, dt, event_loop=asyncio.get_event_loop()):
         # Process preview in this process
