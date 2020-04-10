@@ -138,14 +138,14 @@ def create_app():
     @app.route('/slot/<int:slotId>/nodes', methods=['GET'])
     def slot_slotId_nodes_get(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         nodes = [node for node in fg.getNodes()]
         return jsonpickle.encode(nodes)
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['GET'])
     def slot_slotId_node_uid_get(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return jsonpickle.encode(node)
@@ -155,7 +155,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['DELETE'])
     def slot_slotId_node_uid_delete(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             fg.removeEffectNode(node.uid)
@@ -166,7 +166,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['PUT'])
     def slot_slotId_node_uid_update(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         try:
@@ -179,7 +179,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/node/<nodeUid>/parameterDefinition', methods=['GET'])
     def slot_slotId_node_uid_parameter_get(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(node.effect.getParameterDefinition())
@@ -189,7 +189,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/node/<nodeUid>/modulateableParameters', methods=['GET'])
     def slot_slotId_node_uid_parameterModulations_get(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(node.effect.getModulateableParameters())
@@ -199,7 +199,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/node/<nodeUid>/effect', methods=['GET'])
     def node_uid_effectname_get(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(getFullClassName(node.effect))
@@ -209,7 +209,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/node', methods=['POST'])
     def slot_slotId_node_post(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         full_class_name = request.json[0]
@@ -234,14 +234,14 @@ def create_app():
     @app.route('/slot/<int:slotId>/connections', methods=['GET'])
     def slot_slotId_connections_get(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         connections = [con for con in fg.getConnections()]
         return jsonpickle.encode(connections)
 
     @app.route('/slot/<int:slotId>/connection', methods=['POST'])
     def slot_slotId_connection_post(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         json = request.json
@@ -257,7 +257,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/connection/<connectionUid>', methods=['DELETE'])
     def slot_slotId_connection_uid_delete(slotId, connectionUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             connection = next(connection for connection in fg.getConnections() if connection.uid == connectionUid)
             fg.removeConnection(connection.uid)
@@ -268,14 +268,14 @@ def create_app():
     @app.route('/slot/<int:slotId>/modulationSources', methods=['GET'])
     def slot_slotId_modulationSources_get(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         mods = [mod for mod in fg.getModulationSources()]
         return jsonpickle.encode(mods)
 
     @app.route('/slot/<int:slotId>/modulationSource/<modulationSourceUid>', methods=['DELETE'])
     def slot_slotId_modulationSourceUid_delete(slotId, modulationSourceUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             mod = next(mod for mod in fg.getModulationSources() if mod.uid == modulationSourceUid)
             fg.removeModulationSource(mod.uid)
@@ -286,7 +286,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/modulationSource/<modulationUid>', methods=['PUT'])
     def slot_slotId_modulationSourceUid_update(slotId, modulationUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         try:
@@ -299,7 +299,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/modulationSource/<modulationSourceUid>', methods=['GET'])
     def slot_slotId_modulationSourceUid_get(slotId, modulationSourceUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             mod = next(mod for mod in fg.getModulationSources() if mod.uid == modulationSourceUid)
             return jsonpickle.encode(mod)
@@ -309,7 +309,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/modulations', methods=['GET'])
     def slot_slotId_modulations_get(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         modSourceId = request.args.get('modulationSourceUid', None)
         modDestinationId = request.args.get('modulationDestinationUid', None)
         mods = [mod for mod in fg.getModulations()]
@@ -325,7 +325,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/modulation', methods=['POST'])
     def slot_slotId_modulation_post(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         json = request.json
@@ -335,7 +335,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['GET'])
     def slot_slotId_modulationUid_get(slotId, modulationUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             mod = next(mod for mod in fg.getModulations() if mod.uid == modulationUid)
             return jsonpickle.encode(mod)
@@ -345,7 +345,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['PUT'])
     def slot_slotId_modulationUid_update(slotId, modulationUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         try:
@@ -358,7 +358,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['DELETE'])
     def slot_slotId_modulationUid_delete(slotId, modulationUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             mod = next(mod for mod in fg.getModulations() if mod.uid == modulationUid)
             if mod is not None:
@@ -372,7 +372,7 @@ def create_app():
     @app.route('/slot/<int:slotId>/configuration', methods=['GET'])
     def slot_slotId_configuration_get(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         config = jsonpickle.encode(fg)
         return config
 
@@ -498,7 +498,7 @@ def create_app():
         global proj
         app.logger.debug(proj.outputSlotMatrix)
         return jsonify({
-            'activeSlot': proj.activeSlotId,
+            'previewSlot': proj.previewSlotId,
             'activeScene': proj.activeSceneId,
         })
 
@@ -644,7 +644,7 @@ def create_app():
         if os.path.isfile(filename):
             with open(filename, "r") as f:
                 fg = jsonpickle.decode(f.read())
-                proj.setFiltergraphForSlot(proj.activeSlotId, fg)
+                proj.setFiltergraphForSlot(proj.previewSlotId, fg)
                 return "OK"
         else:
             app.logger.info("Favorite not found: {}".format(filename))
@@ -693,8 +693,8 @@ def create_app():
             timeToWait = max(POOL_TIME, 0.01 - real_process_time)
             if count == 100:
                 if record_timings:
-                    proj.getSlot(proj.activeSlotId).printProcessTimings()
-                    proj.getSlot(proj.activeSlotId).printUpdateTimings()
+                    # proj.previewSlot(proj.activeSlotId).printProcessTimings() # TODO:
+                    # proj.previewSlot(proj.activeSlotId).printUpdateTimings() # TODO:
                     app.logger.info("Process time: {}".format(real_process_time))
                     app.logger.info("Waiting {}".format(timeToWait))
                 count = 0
@@ -766,6 +766,7 @@ def handleMidiMsg(msg):
             30: modulation.CTRL_PRIMARY_COLOR,
             31: modulation.CTRL_PRIMARY_COLOR,
             32: modulation.CTRL_PRIMARY_COLOR,
+            33: modulation.CTRL_PRIMARY_COLOR_AMOUNT, 
         }
         if msg.control in controllerMap:
             controlMsg = controllerMap[msg.control]

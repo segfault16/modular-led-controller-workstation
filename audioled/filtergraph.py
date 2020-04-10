@@ -188,14 +188,17 @@ class ColorModulation(Modulation):
             return
         
         extColorCtrl = extColorCtrl  # type: ExternalColourAController
-        rgb = extColorCtrl.getValue()
-        if rgb is None:
+        rgb = extColorCtrl.getOverrideColor()
+        amount = extColorCtrl.getValue()
+        if rgb is None or len(rgb)!=3:
             # logger.debug("External controller holds no value")
             return
         r = rgb[0]
         g = rgb[1]
         b = rgb[2]
-        logger.debug(rgb)
+        # TODO: could we not do this with 3 normal Modulation
+        # logger.debug(rgb)
+        # logger.debug(amount)
         if isinstance(self.targetEffect, colors.StaticRGBColor):
             rgbEffect = self.targetEffect # type: StaticRGBColor
             # Set offset so we override default color
@@ -204,12 +207,15 @@ class ColorModulation(Modulation):
             oldB = rgbEffect.getOriginalParameterValue("b")
             if r is not None:
                 newOffsetR = oldR - r
+                newOffsetR = amount * newOffsetR
                 rgbEffect.setParameterOffset("r", rgbEffect.getParameterDefinition(), -newOffsetR/255.0)
             if g is not None:
                 newOffsetG = oldG - g
+                newOffsetG = amount * newOffsetG
                 rgbEffect.setParameterOffset("g", rgbEffect.getParameterDefinition(), -newOffsetG/255.0)
             if b is not None:
-                newOffsetB = oldB - b            
+                newOffsetB = oldB - b
+                newOffsetB = amount * newOffsetB
                 rgbEffect.setParameterOffset("b", rgbEffect.getParameterDefinition(), -newOffsetB/255.0)
             # logger.debug("{} {} {} with {} {} {} to {} {} {}".format(oldR, oldG, oldB, rgbEffect.getParameterOffset("r"), rgbEffect.getParameterOffset("g"), rgbEffect.getParameterOffset("b"), rgbEffect.r, rgbEffect.g, rgbEffect.b))
             # logger.debug("{}".format(rgbEffect.__dict__))
@@ -545,7 +551,7 @@ class FilterGraph(Updateable):
         return node
 
     def updateModulationSourceValue(self, modCtrl, newValue):
-        logger.debug("Updating mod source value for {}".format(modCtrl))
+        logger.debug("({})Updating mod source value for {}".format(self, modCtrl))
         for mod in self.__modulationsources:
             if isinstance(mod.modulator, modulation.ExternalLinearController):
                 if mod.modulator.controller == modCtrl:
@@ -554,27 +560,21 @@ class FilterGraph(Updateable):
                         "amount": newValue
                     })
             elif isinstance(mod.modulator, modulation.ExternalColourAController) and modCtrl == modulation.CTRL_PRIMARY_COLOR:
-                # TODO: Only testing
+                # TODO: Only testing, can this be moved?
                 logger.debug("Overriding color {}".format(newValue))
                 rgb = newValue
                 r = rgb[0]
                 g = rgb[1]
                 b = rgb[2]
-                if mod.modulator._overrideColor is not None:
-                    rgb = mod.modulator._overrideColor
-                if r is not None:
-                    rgb[0] = r
-                if g is not None:
-                    rgb[1] = g
-                if b is not None:
-                    rgb[2] = b
-
-                mod.modulator._overrideColor = rgb
+                mod.modulator.setOverrideColor(newValue)
+                mod.modulator.updateParameter({
+                    "amount": 1.
+                })
 
     def updateModulationSourceParameter(self, modSourceUid, updateParameters):
         mod = next(mod for mod in self.__modulationsources if mod.uid == modSourceUid)  # type: ModulationSourceNode
         mod.modulator.updateParameter(updateParameters)
-        logger.debug("Updating mod source: {}".format(modSourceUid))
+        logger.debug("({})Updating mod source: {}".format(self, modSourceUid))
         if self._onModulationSourceUpdate is not None:
             logger.debug("Firing: {}".format(modSourceUid))
             self._onModulationSourceUpdate(mod, updateParameters)

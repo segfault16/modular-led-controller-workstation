@@ -13,6 +13,7 @@ CTRL_SPEED = 'Speed'
 CTRL_INTENSITY = 'Intensity'
 CTRL_BRIGHTNESS = 'Brightness' # Not available on purpose, handled globally
 CTRL_PRIMARY_COLOR = 'PrimaryColor' # Not available, handled with different ModSource
+CTRL_PRIMARY_COLOR_AMOUNT = 'PrimaryColorAmount' # Not available, handled with different ModSource
 CTRL_SECONDARY_COLOR = 'SecondaryColor' # Not available, handled with different ModSource
 availableController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY]
 
@@ -21,7 +22,7 @@ class ModulationSource(object):
     """
     Base class for ModulationSource
 
-    ModulationSource have a number of parameters
+    ModulationSource have a number of parameters. Basically same as effect baseclass
     """
     def __init__(self):
         self.__initstate__()
@@ -31,7 +32,7 @@ class ModulationSource(object):
             self._t
         except AttributeError:
             self._t = 0
-        # make sure all default values are set (basic backwards compatibility)
+        # make sure all default values are set (basic backwards compatibility) # TODO: Duplicate code in effect?
         argspec = inspect.getargspec(self.__init__)
         if argspec.defaults is not None:
             argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
@@ -98,17 +99,37 @@ class ModulationSource(object):
     def getEffectDescription():
         return ""
 
-class ExternalColourAController(ModulationSource):
-    def __init__(self, controller=None):
-        self.controller = CTRL_PRIMARY_COLOR
-        self.__initstate__()
+
+class ExternalColourController(ModulationSource):
+    def __init__(self, amount=.0, controller=None):
+        self.amount = amount
+        self.controller = controller
 
     def __initstate__(self):
         super().__initstate__()
         try:
-            self._overrideColor
+            self.overrideColor
         except AttributeError:
-            self._overrideColor = None
+            self.overrideColor = None
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": OrderedDict([
+                # default, min, max, stepsize
+                ("amount", [1.0, .0, 1.0, .001]),
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "amount": "Global scale of the controller."
+            }
+        }
+        return help
 
     def update(self, dt):
         """
@@ -117,21 +138,38 @@ class ExternalColourAController(ModulationSource):
         super().update(dt)
 
     def getValue(self):
-        return self._overrideColor # can be None
+        if not isinstance(self.amount, float):
+            self.amount=0.
+        return self.amount
+        # return self.overrideColor # can be None
 
-class ExternalColourBController(ModulationSource):
-    def __init__(self, controller=None):
-        self.controller = CTRL_SECONDARY_COLOR
-        self._overrideColor = None
+    def setOverrideColor(self, rgb):
+        r = rgb[0]
+        g = rgb[1]
+        b = rgb[2]
+        if self.overrideColor is not None:
+            rgb = self.overrideColor
+        if r is not None:
+            rgb[0] = r
+        if g is not None:
+            rgb[1] = g
+        if b is not None:
+            rgb[2] = b
 
-    def update(self, dt):
-        """
-        Update timing, can be used to precalculate stuff that doesn't depend on input values
-        """
-        super().update(dt)
+        self.overrideColor = rgb
 
-    def getValue(self):
-        return self._overrideColor # can be None
+    def getOverrideColor(self):
+        if self.overrideColor:
+            return self.overrideColor
+        return None
+
+class ExternalColourBController(ExternalColourController):
+    def __init__(self, amount = 0.):
+        super.__init__(amount, CTRL_SECONDARY_COLOR)
+
+class ExternalColourAController(ExternalColourController):
+    def __init__(self, amount = 0.):
+        super.__init__(amount, CTRL_PRIMARY_COLOR)
     
 
 class ExternalLinearController(ModulationSource):

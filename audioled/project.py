@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 def ensure_parent(func):
     @wraps(func)
     def inner(self, *args, **kwargs):
-        #if os.getpid() != self._creator_pid:
-        #    raise RuntimeError("{} can only be called in the " "parent.".format(func.__name__))
+        if os.getpid() != self._creator_pid:
+           raise RuntimeError("{} can only be called in the " "parent.".format(func.__name__))
         return func(self, *args, **kwargs)
 
     return inner
@@ -351,7 +351,7 @@ class Project(Updateable):
     def __init__(self, name='Empty project', description='', device=None):
         self.slots = [None for i in range(127)]
         self.activeSceneId = 0
-        self.activeSlotId = 0
+        self.previewSlotId = 0
         self.name = name
         self.description = description
         self.id = None
@@ -374,7 +374,7 @@ class Project(Updateable):
         try:
             self.activeSceneId
         except AttributeError:
-            self.activeSceneId = self.activeSlotId
+            self.activeSceneId = self.previewSlotId
         self._previewDevice = None  # type: audioled.devices.LEDController
         self._previewDeviceIndex = 0
         self._contentRoot = None
@@ -419,7 +419,6 @@ class Project(Updateable):
             logger.debug("Active scene {} from setstate".format(self.activeSceneId))
             # TODO: Needs to be revised?
             self.activateScene(self.activeSceneId)
-            self.previewSlot(self.activeSceneId)
 
     def setDevice(self, device: audioled.devices.MultiOutputWrapper):
         logging.debug("setting device")
@@ -476,7 +475,8 @@ class Project(Updateable):
     def process(self):
         """Process active FilterGraph
         """
-        self._processPreviewDevice()
+        # self._processPreviewDevice() # TODO: Not needed to update?
+        pass
 
     def setFiltergraphForSlot(self, slotId, filterGraph):
         logger.info("Set {} for slot {}".format(filterGraph, slotId))
@@ -534,12 +534,36 @@ class Project(Updateable):
             self._lock.release()
 
     def updateModulationSourceValue(self, deviceMask, controller, newValue):
+        # Update active filtergraphs to persist
+        for filtergraph in self._activeFiltergraphs():
+            filtergraph.updateModulationSourceValue(controller, newValue)
+
+        # Update devices
         self._sendModulationSourceValueUpdateCommand(deviceMask, controller, newValue)
 
     def setBrightness(self, value):
+        # Brightness per device
         self._sendBrightnessCommand(value)
         
-        
+    def _activeFiltergraphs(self): 
+        # Instanciate new scene
+        dIdx = 0
+        sceneId = self.activeSceneId
+        for device in self._devices:
+            # Get slot Id associated with this device
+            try:
+                slotId = self.outputSlotMatrix[str(dIdx)][str(sceneId)]
+            except Exception:
+                # Backwards compatibility: Init with slotId = sceneId
+                if str(dIdx) not in self.outputSlotMatrix:
+                    self.outputSlotMatrix[str(dIdx)] = {}
+                if sceneId not in self.outputSlotMatrix[str(dIdx)]:
+                    self.outputSlotMatrix[str(dIdx)][str(sceneId)] = sceneId
+                slotId = sceneId
+
+            # Get filtergraph
+            yield self.getSlot(slotId)
+
     def _createOrUpdateProcess(self, dIdx, device, slotId, filterGraph):
         if dIdx in self._filtergraphProcesses:
             # Send command
@@ -693,8 +717,10 @@ class Project(Updateable):
             self._processingEnabled = True
 
     def previewSlot(self, slotId):
+        # TODO: This returns the filtergraph in the given slotId with eventing.
+        # Probably not threadsafe yet
         # Remove eventing from current previewSlot
-        fg = self.getSlot(self.activeSceneId)  # type: FilterGraph
+        fg = self.getSlot(self.previewSlotId)  # type: FilterGraph
         fg._onConnectionAdded = None
         fg._onConnectionRemoved = None
         fg._onModulationAdded = None
@@ -706,7 +732,7 @@ class Project(Updateable):
         fg._onNodeAdded = None
         fg._onNodeRemoved = None
         fg._onNodeUpdate = None
-        self.activeSlotId = slotId
+        self.previewSlotId = slotId
         logger.info("Edit slot {} with {}".format(slotId, self.slots[slotId]))
         fg = self.getSlot(slotId)  # type: FilterGraph
         fg._onNodeAdded = self._handleNodeAdded
@@ -720,6 +746,7 @@ class Project(Updateable):
         fg._onModulationSourceUpdate = self._handleModulationSourceUpdate
         fg._onConnectionAdded = self._handleConnectionAdded
         fg._onConnectionRemoved = self._handleConnectionRemoved
+        return fg
 
     def getSlot(self, slotId):
         if self.slots[slotId] is None:
@@ -750,7 +777,7 @@ class Project(Updateable):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'add', node.effect))
+            self._publishQueue.publish(NodeMessage(self.previewSlotId, node.uid, 'add', node.effect))
         finally:
             self._handlerLock.release()
 
@@ -758,7 +785,7 @@ class Project(Updateable):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'remove'))
+            self._publishQueue.publish(NodeMessage(self.previewSlotId, node.uid, 'remove'))
         finally:
             self._handlerLock.release()
 
@@ -766,10 +793,11 @@ class Project(Updateable):
         """
         updates can come rapidly, default niceness 0.1
         """
+        logger.debug("Handling node update {}".format(updateParameters))
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(NodeMessage(self.activeSlotId, node.uid, 'update', updateParameters))
+            self._publishQueue.publish(NodeMessage(self.previewSlotId, node.uid, 'update', updateParameters))
         finally:
             self._handlerLock.release()
 
@@ -777,7 +805,7 @@ class Project(Updateable):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'add', mod))
+            self._publishQueue.publish(ModulationMessage(self.previewSlotId, mod.uid, 'add', mod))
         finally:
             self._handlerLock.release()
 
@@ -785,7 +813,7 @@ class Project(Updateable):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'remove'))
+            self._publishQueue.publish(ModulationMessage(self.previewSlotId, mod.uid, 'remove'))
         finally:
             self._handlerLock.release()
 
@@ -796,7 +824,7 @@ class Project(Updateable):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(ModulationMessage(self.activeSlotId, mod.uid, 'update', updateParameters))
+            self._publishQueue.publish(ModulationMessage(self.previewSlotId, mod.uid, 'update', updateParameters))
         finally:
             self._handlerLock.release()
 
@@ -804,7 +832,7 @@ class Project(Updateable):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'add', modSource))
+            self._publishQueue.publish(ModulationSourceMessage(self.previewSlotId, modSource.uid, 'add', modSource))
         finally:
             self._handlerLock.release()
 
@@ -812,7 +840,7 @@ class Project(Updateable):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'remove'))
+            self._publishQueue.publish(ModulationSourceMessage(self.previewSlotId, modSource.uid, 'remove'))
         finally:
             self._handlerLock.release()
 
@@ -823,7 +851,7 @@ class Project(Updateable):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(ModulationSourceMessage(self.activeSlotId, modSource.uid, 'update', updateParameters))
+            self._publishQueue.publish(ModulationSourceMessage(self.previewSlotId, modSource.uid, 'update', updateParameters))
         finally:
             self._handlerLock.release()
 
@@ -831,7 +859,7 @@ class Project(Updateable):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(ConnectionMessage(self.activeSlotId, con.uid, 'add', con.__getstate__()))
+            self._publishQueue.publish(ConnectionMessage(self.previewSlotId, con.uid, 'add', con.__getstate__()))
         finally:
             self._handlerLock.release()
 
@@ -839,7 +867,7 @@ class Project(Updateable):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
-            self._publishQueue.publish(ConnectionMessage(self.activeSlotId, con.uid, 'remove'))
+            self._publishQueue.publish(ConnectionMessage(self.previewSlotId, con.uid, 'remove'))
         finally:
             self._handlerLock.release()
 
