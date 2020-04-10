@@ -489,7 +489,7 @@ class Project(Updateable):
 
         Scene: Project Slot per Output Device
         """
-        logger.debug("activate scene {}".format(sceneId))
+        logger.info("Activating scene {}".format(sceneId))
 
         # TODO: Make configurable
         self._previewDeviceIndex = None

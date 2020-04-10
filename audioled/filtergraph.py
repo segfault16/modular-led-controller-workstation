@@ -491,7 +491,7 @@ class FilterGraph(Updateable):
         modSource = next(modSource for modSource in self.__modulationsources if modSource.uid == modSourceUid)
         targetNode = next(node for node in self.__filterNodes if node.uid == targetNodeUid)
         newMod = None
-        logger.info("Modulation is {}".format(modSource.modulator))
+        logger.debug("Modulation is {}".format(modSource.modulator))
         if isinstance(modSource.modulator, modulation.ExternalColourAController) or isinstance(modSource.modulator, modulation.ExternalColourBController):
             logger.debug("Add colour modulation")
             newMod = ColorModulation(modSource, targetNode)
@@ -734,4 +734,4 @@ class FilterGraph(Updateable):
                         logger.error("Error restoring filtergraph modulation: {}".format(e))
         except Exception as e:
             logger.error("Error restoring filtergraph: {}".format(e))
-        logger.info("Successfully restored filtergraph")
+        logger.debug("Successfully restored filtergraph")
