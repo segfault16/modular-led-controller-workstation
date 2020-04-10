@@ -374,7 +374,11 @@ class Project(Updateable):
         try:
             self.activeSceneId
         except AttributeError:
-            self.activeSceneId = self.previewSlotId
+            self.activeSceneId = 0
+        try:
+            self.previewSlotId
+        except AttributeError:
+            self.previewSlotId = 0
         self._previewDevice = None  # type: audioled.devices.LEDController
         self._previewDeviceIndex = 0
         self._contentRoot = None
@@ -721,19 +725,23 @@ class Project(Updateable):
         Returns non-threadsafe access to filtergraph for slot with eventing enabled
         """
         # Remove eventing from current previewSlot
-        if self.previewSlotId is not None and isinstance(self.previewSlotId, int):
-            fg = self.getSlot(self.previewSlotId)  # type: FilterGraph
-            fg._onConnectionAdded = None
-            fg._onConnectionRemoved = None
-            fg._onModulationAdded = None
-            fg._onModulationRemoved = None
-            fg._onModulationSourceAdded = None
-            fg._onModulationSourceRemoved = None
-            fg._onModulationSourceUpdate = None
-            fg._onModulationUpdate = None
-            fg._onNodeAdded = None
-            fg._onNodeRemoved = None
-            fg._onNodeUpdate = None
+        try:
+            if self.previewSlotId is not None and isinstance(self.previewSlotId, int):
+                fg = self.getSlot(self.previewSlotId)  # type: FilterGraph
+                fg._onConnectionAdded = None
+                fg._onConnectionRemoved = None
+                fg._onModulationAdded = None
+                fg._onModulationRemoved = None
+                fg._onModulationSourceAdded = None
+                fg._onModulationSourceRemoved = None
+                fg._onModulationSourceUpdate = None
+                fg._onModulationUpdate = None
+                fg._onNodeAdded = None
+                fg._onNodeRemoved = None
+                fg._onNodeUpdate = None
+        except AttributeError:
+            # Ignore, 
+            pass
 
         # Update current preview slot
         self.previewSlotId = slotId

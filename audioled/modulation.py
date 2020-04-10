@@ -138,9 +138,10 @@ class ExternalColourController(ModulationSource):
         super().update(dt)
 
     def getValue(self, param = None):
+        if not isinstance(self.amount, float):
+            self.amount=0.
+
         if param is None:
-            if not isinstance(self.amount, float):
-                self.amount=0.
             return self.amount
         # return self.overrideColor # can be None
         if self.overrideColor is None:

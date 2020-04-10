@@ -193,7 +193,7 @@ class ColorChannelModulation(Modulation):
             old = rgbEffect.getOriginalParameterValue(self.targetParameter)
             if curValue is not None:
                 newOffset = old - curValue
-                # newOffset = amount * newOffset
+                newOffset = extColorCtrl.getValue() * self.amount * newOffset # multiply with amount from modulationsource and modulation
                 rgbEffect.setParameterOffset(self.targetParameter, rgbEffect.getParameterDefinition(), -newOffset/255.0)
 
         # if rgb is None or len(rgb)!=3:
@@ -555,30 +555,39 @@ class FilterGraph(Updateable):
         modSource = next(modSource for modSource in self.__modulationsources if modSource.uid == modSourceUid)
         targetNode = next(node for node in self.__filterNodes if node.uid == targetNodeUid)
         newMod = None
-        logger.debug("Modulation is {}".format(modSource.modulator))
-        if isinstance(modSource.modulator, modulation.ExternalColourAController) or isinstance(modSource.modulator, modulation.ExternalColourBController):
-            logger.debug("Add colour modulations")
+        logger.info("Modulation is {}".format(modSource.modulator))
+        if (isinstance(modSource.modulator, modulation.ExternalColourAController) or isinstance(modSource.modulator, modulation.ExternalColourBController)):
+            if targetParam == None:
+                logger.debug("Add colour modulations")
 
-            newModR = ColorChannelModulation(modSource, 1., False, targetNode, "r")
-            newModR.uid = uuid.uuid4().hex
-            self.__modulations.append(newModR)
-            if self._onModulationAdded is not None:
-                self._onModulationAdded(newModR)
+                newModR = ColorChannelModulation(modSource, 1., False, targetNode, "r")
+                newModR.uid = uuid.uuid4().hex
+                self.__modulations.append(newModR)
+                if self._onModulationAdded is not None:
+                    self._onModulationAdded(newModR)
 
-            newModG = ColorChannelModulation(modSource, 1., False, targetNode, "g")
-            newModG.uid = uuid.uuid4().hex
-            self.__modulations.append(newModG)
-            if self._onModulationAdded is not None:
-                self._onModulationAdded(newModG)
+                newModG = ColorChannelModulation(modSource, 1., False, targetNode, "g")
+                newModG.uid = uuid.uuid4().hex
+                self.__modulations.append(newModG)
+                if self._onModulationAdded is not None:
+                    self._onModulationAdded(newModG)
 
-            newModB = ColorChannelModulation(modSource, 1., False, targetNode, "b")
-            newModB.uid = uuid.uuid4().hex
-            self.__modulations.append(newModB)
-            if self._onModulationAdded is not None:
-                self._onModulationAdded(newModB)
+                newModB = ColorChannelModulation(modSource, 1., False, targetNode, "b")
+                newModB.uid = uuid.uuid4().hex
+                self.__modulations.append(newModB)
+                if self._onModulationAdded is not None:
+                    self._onModulationAdded(newModB)
 
-            # TODO: Return value used somewhere?
-            return newModR
+                # TODO: Return value used somewhere?
+                return newModR
+            else: 
+                logger.debug("Restore colour modulation")
+                newMod = ColorChannelModulation(modSource, amount, inverted, targetNode, targetParam)
+                newMod.uid = uuid.uuid4().hex
+                self.__modulations.append(newMod)
+                if self._onModulationAdded is not None:
+                    self._onModulationAdded(newMod)
+                return newMod
             
             # newMod = ColorModulation(modSource, targetNode)
         else:

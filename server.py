@@ -343,7 +343,7 @@ def create_app():
             abort(404, "Modulation Source not found")
 
     @app.route('/slot/<int:slotId>/modulations', methods=['GET'])
-    @lock_preview
+    # @lock_preview
     def slot_slotId_modulations_get(slotId):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
