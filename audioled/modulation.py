@@ -137,13 +137,26 @@ class ExternalColourController(ModulationSource):
         """
         super().update(dt)
 
-    def getValue(self):
-        if not isinstance(self.amount, float):
-            self.amount=0.
-        return self.amount
+    def getValue(self, param = None):
+        if param is None:
+            if not isinstance(self.amount, float):
+                self.amount=0.
+            return self.amount
         # return self.overrideColor # can be None
+        if self.overrideColor is None:
+            return None
+        if param == "r":
+            return self.overrideColor[0]
+        if param == "g":
+            return self.overrideColor[1]
+        if param == "b":
+            return self.overrideColor[2]
 
     def setOverrideColor(self, rgb):
+        try:
+            self.overrideColor
+        except AttributeError:
+            self.overrideColor = [None, None, None]
         r = rgb[0]
         g = rgb[1]
         b = rgb[2]
@@ -159,17 +172,19 @@ class ExternalColourController(ModulationSource):
         self.overrideColor = rgb
 
     def getOverrideColor(self):
-        if self.overrideColor:
+        try:
             return self.overrideColor
-        return None
+        except AttributeError:
+            self.overrideColor = None
+            return None
 
 class ExternalColourBController(ExternalColourController):
     def __init__(self, amount = 0.):
-        super.__init__(amount, CTRL_SECONDARY_COLOR)
+        super().__init__(amount, CTRL_SECONDARY_COLOR)
 
 class ExternalColourAController(ExternalColourController):
     def __init__(self, amount = 0.):
-        super.__init__(amount, CTRL_PRIMARY_COLOR)
+        super().__init__(amount, CTRL_PRIMARY_COLOR)
     
 
 class ExternalLinearController(ModulationSource):

@@ -169,6 +169,64 @@ class Modulation(object):
         self.targetEffect.setParameterOffset(self.targetParameter, self.targetEffect.getParameterDefinition(), newOffset)
         self._lastValue = curValue
 
+class ColorChannelModulation(Modulation):
+    def propagate(self):
+        if self.modulationSource is None or self.targetEffect is None:
+            return
+        extColorCtrl = None
+        if isinstance(self.modulationSource.modulator, modulation.ExternalColourAController):
+            extColorCtrl = self.modulationSource.modulator
+        elif isinstance(self.modulationSource.modulator, modulation.ExternalColourBController):
+            extColorCtrl = self.modulationSource.modulator
+        
+        if extColorCtrl is None:
+            logger.debug("Could not find external colour controller {}".format(self.modulationSource.modulator))
+            return
+        
+        extColorCtrl = extColorCtrl  # type: ExternalColourAController
+        rgb = extColorCtrl.getOverrideColor()
+        curValue = extColorCtrl.getValue(self.targetParameter)
+        # Propagate change
+        # calculate and propagate new offset for this parameter
+        if isinstance(self.targetEffect, colors.StaticRGBColor):
+            rgbEffect = self.targetEffect # type: StaticRGBColor
+            old = rgbEffect.getOriginalParameterValue(self.targetParameter)
+            if curValue is not None:
+                newOffset = old - curValue
+                # newOffset = amount * newOffset
+                rgbEffect.setParameterOffset(self.targetParameter, rgbEffect.getParameterDefinition(), -newOffset/255.0)
+
+        # if rgb is None or len(rgb)!=3:
+        #     # logger.debug("External controller holds no value")
+        #     return
+        # r = rgb[0]
+        # g = rgb[1]
+        # b = rgb[2]
+        # # TODO: could we not do this with 3 normal Modulation
+        # # logger.debug(rgb)
+        # # logger.debug(amount)
+        # if isinstance(self.targetEffect, colors.StaticRGBColor):
+        #     rgbEffect = self.targetEffect # type: StaticRGBColor
+        #     # Set offset so we override default color
+        #     oldR = rgbEffect.getOriginalParameterValue("r")
+        #     oldG = rgbEffect.getOriginalParameterValue("g")
+        #     oldB = rgbEffect.getOriginalParameterValue("b")
+        #     if r is not None:
+        #         newOffsetR = oldR - r
+        #         newOffsetR = amount * newOffsetR
+        #         rgbEffect.setParameterOffset("r", rgbEffect.getParameterDefinition(), -newOffsetR/255.0)
+        #     if g is not None:
+        #         newOffsetG = oldG - g
+        #         newOffsetG = amount * newOffsetG
+        #         rgbEffect.setParameterOffset("g", rgbEffect.getParameterDefinition(), -newOffsetG/255.0)
+        #     if b is not None:
+        #         newOffsetB = oldB - b
+        #         newOffsetB = amount * newOffsetB
+        #         rgbEffect.setParameterOffset("b", rgbEffect.getParameterDefinition(), -newOffsetB/255.0)
+        #     # logger.debug("{} {} {} with {} {} {} to {} {} {}".format(oldR, oldG, oldB, rgbEffect.getParameterOffset("r"), rgbEffect.getParameterOffset("g"), rgbEffect.getParameterOffset("b"), rgbEffect.r, rgbEffect.g, rgbEffect.b))
+        #     # logger.debug("{}".format(rgbEffect.__dict__))
+
+
 class ColorModulation(Modulation):
 
     def __init__(self, modulationSource, targetEffect):
@@ -499,16 +557,38 @@ class FilterGraph(Updateable):
         newMod = None
         logger.debug("Modulation is {}".format(modSource.modulator))
         if isinstance(modSource.modulator, modulation.ExternalColourAController) or isinstance(modSource.modulator, modulation.ExternalColourBController):
-            logger.debug("Add colour modulation")
-            newMod = ColorModulation(modSource, targetNode)
+            logger.debug("Add colour modulations")
+
+            newModR = ColorChannelModulation(modSource, 1., False, targetNode, "r")
+            newModR.uid = uuid.uuid4().hex
+            self.__modulations.append(newModR)
+            if self._onModulationAdded is not None:
+                self._onModulationAdded(newModR)
+
+            newModG = ColorChannelModulation(modSource, 1., False, targetNode, "g")
+            newModG.uid = uuid.uuid4().hex
+            self.__modulations.append(newModG)
+            if self._onModulationAdded is not None:
+                self._onModulationAdded(newModG)
+
+            newModB = ColorChannelModulation(modSource, 1., False, targetNode, "b")
+            newModB.uid = uuid.uuid4().hex
+            self.__modulations.append(newModB)
+            if self._onModulationAdded is not None:
+                self._onModulationAdded(newModB)
+
+            # TODO: Return value used somewhere?
+            return newModR
+            
+            # newMod = ColorModulation(modSource, targetNode)
         else:
             logger.debug("Add linear modulation")
             newMod = Modulation(modSource, amount, inverted, targetNode, targetParam)
-        newMod.uid = uuid.uuid4().hex
-        self.__modulations.append(newMod)
-        if self._onModulationAdded is not None:
-            self._onModulationAdded(newMod)
-        return newMod
+            newMod.uid = uuid.uuid4().hex
+            self.__modulations.append(newMod)
+            if self._onModulationAdded is not None:
+                self._onModulationAdded(newMod)
+            return newMod
 
     def removeModulation(self, modUid):
         """Removes a modulation driven by a modulationSource

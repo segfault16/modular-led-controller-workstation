@@ -89,9 +89,14 @@ def lock_preview(fn):
     @wraps(fn)    
     def wrapper(*arg , **kwarg):
         print("Wrapped {} {}".format(arg, kwarg))
-        preview_lock.acquire()
-        result = fn(*arg, **kwarg)
-        preview_lock.release()
+        result = None
+        try:
+            preview_lock.acquire()
+            result = fn(*arg, **kwarg)
+        except Exception as e:
+            print(e)
+        finally:
+            preview_lock.release()
         return result
     return wrapper
 
@@ -351,8 +356,10 @@ def create_app():
         if modDestinationId is not None:
             # for specific modulation destination".format(modDestinationId))
             mods = [mod for mod in mods if mod.targetNode.uid == modDestinationId]
-
-        return jsonpickle.encode(mods)
+        app.logger.info("Encoding {}".format(mods))
+        encVal = jsonpickle.encode(mods)
+        app.logger.info(encVal)
+        return encVal
 
     @app.route('/slot/<int:slotId>/modulation', methods=['POST'])
     @lock_preview
@@ -525,7 +532,7 @@ def create_app():
         if not request.json:
             abort(400)
         value = request.json['slot']
-        # app.logger.info("Activating slot {}".format(value))
+        app.logger.info("Activating scene {}".format(value))
         proj.activateScene(value)
         # proj.previewSlot(value)
         return "OK"
@@ -535,7 +542,7 @@ def create_app():
         global proj
         app.logger.debug(proj.outputSlotMatrix)
         return jsonify({
-            'previewSlot': proj.previewSlotId,
+            'activeSlot': proj.previewSlotId, # TODO: Change in FE
             'activeScene': proj.activeSceneId,
         })
 
@@ -556,6 +563,7 @@ def create_app():
         if not request.json:
             abort(400)
         value = request.json['slot']
+        app.logger.info("Activating slot {}".format(value))
         proj.previewSlot(value)
         return "OK"
 
