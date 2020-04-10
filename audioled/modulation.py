@@ -12,9 +12,9 @@ CTRL_MODULATION = 'Modulation'
 CTRL_SPEED = 'Speed'
 CTRL_INTENSITY = 'Intensity'
 CTRL_BRIGHTNESS = 'Brightness' # Not available on purpose, handled globally
-CTRL_PRIMARY_COLOR = 'PrimaryColor'
-CTRL_SECONDARY_COLOR = 'SecondaryColor'
-availableController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY, CTRL_PRIMARY_COLOR, CTRL_SECONDARY_COLOR]
+CTRL_PRIMARY_COLOR = 'PrimaryColor' # Not available, handled with different ModSource
+CTRL_SECONDARY_COLOR = 'SecondaryColor' # Not available, handled with different ModSource
+availableController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY]
 
 
 class ModulationSource(object):
@@ -97,6 +97,42 @@ class ModulationSource(object):
     @staticmethod
     def getEffectDescription():
         return ""
+
+class ExternalColourAController(ModulationSource):
+    def __init__(self, controller=None):
+        self.controller = CTRL_PRIMARY_COLOR
+        self.__initstate__()
+
+    def __initstate__(self):
+        super().__initstate__()
+        try:
+            self._overrideColor
+        except AttributeError:
+            self._overrideColor = None
+
+    def update(self, dt):
+        """
+        Update timing, can be used to precalculate stuff that doesn't depend on input values
+        """
+        super().update(dt)
+
+    def getValue(self):
+        return self._overrideColor # can be None
+
+class ExternalColourBController(ModulationSource):
+    def __init__(self, controller=None):
+        self.controller = CTRL_SECONDARY_COLOR
+        self._overrideColor = None
+
+    def update(self, dt):
+        """
+        Update timing, can be used to precalculate stuff that doesn't depend on input values
+        """
+        super().update(dt)
+
+    def getValue(self):
+        return self._overrideColor # can be None
+    
 
 class ExternalLinearController(ModulationSource):
     def __init__(self, amount=.0, controller=None):

@@ -763,6 +763,9 @@ def handleMidiMsg(msg):
             7: modulation.CTRL_BRIGHTNESS, # volume
             11: modulation.CTRL_INTENSITY, # expression
             21: modulation.CTRL_SPEED, # unknown param?
+            30: modulation.CTRL_PRIMARY_COLOR,
+            31: modulation.CTRL_PRIMARY_COLOR,
+            32: modulation.CTRL_PRIMARY_COLOR,
         }
         if msg.control in controllerMap:
             controlMsg = controllerMap[msg.control]
@@ -771,6 +774,13 @@ def handleMidiMsg(msg):
             if controlMsg == modulation.CTRL_BRIGHTNESS:
                 # Handle brightness globally
                 proj.setBrightness(controlVal)
+            elif controlMsg == modulation.CTRL_PRIMARY_COLOR:
+                if msg.control == 30:
+                    proj.updateModulationSourceValue(0xFFF, controlMsg, [controlVal * 255, None, None])
+                if msg.control == 31:
+                    proj.updateModulationSourceValue(0xFFF, controlMsg, [None, controlVal * 255, None])
+                if msg.control == 32:
+                    proj.updateModulationSourceValue(0xFFF, controlMsg, [None, None, controlVal * 255])
             else:
                 proj.updateModulationSourceValue(0xFFF, controlMsg, controlVal)
         else:

@@ -182,6 +182,12 @@ class Effect(object):
             if k.startswith('@'):
                 self.__dict__.pop(k)
 
+    def getOriginalParameterValue(self, paramId):
+        origVal = self.__dict__.get('~' + paramId, None)
+        if origVal is not None:
+            return origVal
+        return self.__dict__.get(paramId, None)
+
     def getParameter(self):
         """Get parameter values and range definition
 

@@ -9,6 +9,7 @@ import logging
 from audioled import modulation
 from audioled import devices
 from audioled import effect
+from audioled import colors
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +168,51 @@ class Modulation(object):
         newOffset = curOffset + newOffset
         self.targetEffect.setParameterOffset(self.targetParameter, self.targetEffect.getParameterDefinition(), newOffset)
         self._lastValue = curValue
+
+class ColorModulation(Modulation):
+
+    def __init__(self, modulationSource, targetEffect):
+        super().__init__(modulationSource, 0, False, targetEffect, "unused")
+
+    def propagate(self):
+        if self.modulationSource is None or self.targetEffect is None:
+            return
+        extColorCtrl = None
+        if isinstance(self.modulationSource.modulator, modulation.ExternalColourAController):
+            extColorCtrl = self.modulationSource.modulator
+        elif isinstance(self.modulationSource.modulator, modulation.ExternalColourBController):
+            extColorCtrl = self.modulationSource.modulator
+        
+        if extColorCtrl is None:
+            logger.debug("Could not find external colour controller {}".format(self.modulationSource.modulator))
+            return
+        
+        extColorCtrl = extColorCtrl  # type: ExternalColourAController
+        rgb = extColorCtrl.getValue()
+        if rgb is None:
+            # logger.debug("External controller holds no value")
+            return
+        r = rgb[0]
+        g = rgb[1]
+        b = rgb[2]
+        logger.debug(rgb)
+        if isinstance(self.targetEffect, colors.StaticRGBColor):
+            rgbEffect = self.targetEffect # type: StaticRGBColor
+            # Set offset so we override default color
+            oldR = rgbEffect.getOriginalParameterValue("r")
+            oldG = rgbEffect.getOriginalParameterValue("g")
+            oldB = rgbEffect.getOriginalParameterValue("b")
+            if r is not None:
+                newOffsetR = oldR - r
+                rgbEffect.setParameterOffset("r", rgbEffect.getParameterDefinition(), -newOffsetR/255.0)
+            if g is not None:
+                newOffsetG = oldG - g
+                rgbEffect.setParameterOffset("g", rgbEffect.getParameterDefinition(), -newOffsetG/255.0)
+            if b is not None:
+                newOffsetB = oldB - b            
+                rgbEffect.setParameterOffset("b", rgbEffect.getParameterDefinition(), -newOffsetB/255.0)
+            # logger.debug("{} {} {} with {} {} {} to {} {} {}".format(oldR, oldG, oldB, rgbEffect.getParameterOffset("r"), rgbEffect.getParameterOffset("g"), rgbEffect.getParameterOffset("b"), rgbEffect.r, rgbEffect.g, rgbEffect.b))
+            # logger.debug("{}".format(rgbEffect.__dict__))
 
 
 class Timing(object):
@@ -444,7 +490,14 @@ class FilterGraph(Updateable):
         """
         modSource = next(modSource for modSource in self.__modulationsources if modSource.uid == modSourceUid)
         targetNode = next(node for node in self.__filterNodes if node.uid == targetNodeUid)
-        newMod = Modulation(modSource, amount, inverted, targetNode, targetParam)
+        newMod = None
+        logger.info("Modulation is {}".format(modSource.modulator))
+        if isinstance(modSource.modulator, modulation.ExternalColourAController) or isinstance(modSource.modulator, modulation.ExternalColourBController):
+            logger.debug("Add colour modulation")
+            newMod = ColorModulation(modSource, targetNode)
+        else:
+            logger.debug("Add linear modulation")
+            newMod = Modulation(modSource, amount, inverted, targetNode, targetParam)
         newMod.uid = uuid.uuid4().hex
         self.__modulations.append(newMod)
         if self._onModulationAdded is not None:
@@ -500,6 +553,23 @@ class FilterGraph(Updateable):
                     mod.modulator.updateParameter({
                         "amount": newValue
                     })
+            elif isinstance(mod.modulator, modulation.ExternalColourAController) and modCtrl == modulation.CTRL_PRIMARY_COLOR:
+                # TODO: Only testing
+                logger.debug("Overriding color {}".format(newValue))
+                rgb = newValue
+                r = rgb[0]
+                g = rgb[1]
+                b = rgb[2]
+                if mod.modulator._overrideColor is not None:
+                    rgb = mod.modulator._overrideColor
+                if r is not None:
+                    rgb[0] = r
+                if g is not None:
+                    rgb[1] = g
+                if b is not None:
+                    rgb[2] = b
+
+                mod.modulator._overrideColor = rgb
 
     def updateModulationSourceParameter(self, modSourceUid, updateParameters):
         mod = next(mod for mod in self.__modulationsources if mod.uid == modSourceUid)  # type: ModulationSourceNode
@@ -630,6 +700,7 @@ class FilterGraph(Updateable):
 
     def __setstate__(self, state):
         self.__init__()
+        logger.debug("Restoring filtergraph")
         try:
             if '_contentRoot' in state:
                 self._contentRoot = state['_contentRoot']
@@ -663,3 +734,4 @@ class FilterGraph(Updateable):
                         logger.error("Error restoring filtergraph modulation: {}".format(e))
         except Exception as e:
             logger.error("Error restoring filtergraph: {}".format(e))
+        logger.info("Successfully restored filtergraph")
