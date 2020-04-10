@@ -717,24 +717,30 @@ class Project(Updateable):
             self._processingEnabled = True
 
     def previewSlot(self, slotId):
-        # TODO: This returns the filtergraph in the given slotId with eventing.
-        # Probably not threadsafe yet
+        """
+        Returns non-threadsafe access to filtergraph for slot with eventing enabled
+        """
         # Remove eventing from current previewSlot
-        fg = self.getSlot(self.previewSlotId)  # type: FilterGraph
-        fg._onConnectionAdded = None
-        fg._onConnectionRemoved = None
-        fg._onModulationAdded = None
-        fg._onModulationRemoved = None
-        fg._onModulationSourceAdded = None
-        fg._onModulationSourceRemoved = None
-        fg._onModulationSourceUpdate = None
-        fg._onModulationUpdate = None
-        fg._onNodeAdded = None
-        fg._onNodeRemoved = None
-        fg._onNodeUpdate = None
+        if self.previewSlotId is not None and isinstance(self.previewSlotId, int):
+            fg = self.getSlot(self.previewSlotId)  # type: FilterGraph
+            fg._onConnectionAdded = None
+            fg._onConnectionRemoved = None
+            fg._onModulationAdded = None
+            fg._onModulationRemoved = None
+            fg._onModulationSourceAdded = None
+            fg._onModulationSourceRemoved = None
+            fg._onModulationSourceUpdate = None
+            fg._onModulationUpdate = None
+            fg._onNodeAdded = None
+            fg._onNodeRemoved = None
+            fg._onNodeUpdate = None
+
+        # Update current preview slot
         self.previewSlotId = slotId
         logger.info("Edit slot {} with {}".format(slotId, self.slots[slotId]))
         fg = self.getSlot(slotId)  # type: FilterGraph
+
+        # Add eventing
         fg._onNodeAdded = self._handleNodeAdded
         fg._onNodeRemoved = self._handleNodeRemoved
         fg._onNodeUpdate = self._handleNodeUpdate

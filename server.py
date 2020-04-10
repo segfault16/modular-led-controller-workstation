@@ -12,6 +12,7 @@ import multiprocessing
 import traceback
 from timeit import default_timer as timer
 import logging
+from functools import wraps
 
 import jsonpickle
 import numpy as np
@@ -81,6 +82,18 @@ count = 0
 # def home():
 #     return app.send_static_file('index.html')
 
+preview_lock = multiprocessing.Lock()
+
+def lock_preview(fn):
+    
+    @wraps(fn)    
+    def wrapper(*arg , **kwarg):
+        print("Wrapped {} {}".format(arg, kwarg))
+        preview_lock.acquire()
+        result = fn(*arg, **kwarg)
+        preview_lock.release()
+        return result
+    return wrapper
 
 def multiprocessing_func(sc):
     sc.store()
@@ -136,6 +149,7 @@ def create_app():
         return send_from_directory('resources', path)
 
     @app.route('/slot/<int:slotId>/nodes', methods=['GET'])
+    # @lock_preview
     def slot_slotId_nodes_get(slotId):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -143,6 +157,7 @@ def create_app():
         return jsonpickle.encode(nodes)
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['GET'])
+    # @lock_preview
     def slot_slotId_node_uid_get(slotId, nodeUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -153,6 +168,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['DELETE'])
+    @lock_preview
     def slot_slotId_node_uid_delete(slotId, nodeUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -163,7 +179,10 @@ def create_app():
         except StopIteration:
             abort(404, "Node not found")
 
+    
+    
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['PUT'])
+    @lock_preview
     def slot_slotId_node_uid_update(slotId, nodeUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -177,6 +196,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>/parameterDefinition', methods=['GET'])
+    # @lock_preview
     def slot_slotId_node_uid_parameter_get(slotId, nodeUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -187,6 +207,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>/modulateableParameters', methods=['GET'])
+    # @lock_preview
     def slot_slotId_node_uid_parameterModulations_get(slotId, nodeUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -197,8 +218,10 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>/effect', methods=['GET'])
+    # @lock_preview
     def node_uid_effectname_get(slotId, nodeUid):
         global proj
+        print("Getting slot {}".format(slotId))
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
@@ -207,6 +230,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node', methods=['POST'])
+    @lock_preview
     def slot_slotId_node_post(slotId):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -232,6 +256,7 @@ def create_app():
         return jsonpickle.encode(node)
 
     @app.route('/slot/<int:slotId>/connections', methods=['GET'])
+    # @lock_preview
     def slot_slotId_connections_get(slotId):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -239,6 +264,7 @@ def create_app():
         return jsonpickle.encode(connections)
 
     @app.route('/slot/<int:slotId>/connection', methods=['POST'])
+    @lock_preview
     def slot_slotId_connection_post(slotId):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -255,6 +281,7 @@ def create_app():
         return jsonpickle.encode(connection)
 
     @app.route('/slot/<int:slotId>/connection/<connectionUid>', methods=['DELETE'])
+    @lock_preview
     def slot_slotId_connection_uid_delete(slotId, connectionUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -266,6 +293,7 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/modulationSources', methods=['GET'])
+    # @lock_preview
     def slot_slotId_modulationSources_get(slotId):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -273,6 +301,7 @@ def create_app():
         return jsonpickle.encode(mods)
 
     @app.route('/slot/<int:slotId>/modulationSource/<modulationSourceUid>', methods=['DELETE'])
+    @lock_preview
     def slot_slotId_modulationSourceUid_delete(slotId, modulationSourceUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -284,6 +313,7 @@ def create_app():
             abort(404, "Modulation Source not found")
 
     @app.route('/slot/<int:slotId>/modulationSource/<modulationUid>', methods=['PUT'])
+    @lock_preview
     def slot_slotId_modulationSourceUid_update(slotId, modulationUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -297,6 +327,7 @@ def create_app():
             abort(404, "Modulation not found")
 
     @app.route('/slot/<int:slotId>/modulationSource/<modulationSourceUid>', methods=['GET'])
+    # @lock_preview
     def slot_slotId_modulationSourceUid_get(slotId, modulationSourceUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -307,6 +338,7 @@ def create_app():
             abort(404, "Modulation Source not found")
 
     @app.route('/slot/<int:slotId>/modulations', methods=['GET'])
+    @lock_preview
     def slot_slotId_modulations_get(slotId):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -323,6 +355,7 @@ def create_app():
         return jsonpickle.encode(mods)
 
     @app.route('/slot/<int:slotId>/modulation', methods=['POST'])
+    @lock_preview
     def slot_slotId_modulation_post(slotId):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -333,6 +366,7 @@ def create_app():
         return jsonpickle.encode(newMod)
 
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['GET'])
+    # @lock_preview
     def slot_slotId_modulationUid_get(slotId, modulationUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -343,6 +377,7 @@ def create_app():
             abort(404, "Modulation not found")
 
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['PUT'])
+    @lock_preview
     def slot_slotId_modulationUid_update(slotId, modulationUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -356,6 +391,7 @@ def create_app():
             abort(404, "Modulation not found")
 
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['DELETE'])
+    @lock_preview
     def slot_slotId_modulationUid_delete(slotId, modulationUid):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -370,6 +406,7 @@ def create_app():
             abort(404, "Modulation not found")
 
     @app.route('/slot/<int:slotId>/configuration', methods=['GET'])
+    # @lock_preview
     def slot_slotId_configuration_get(slotId):
         global proj
         fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
@@ -513,6 +550,7 @@ def create_app():
         return "OK"
 
     @app.route('/project/activateSlot', methods=['POST'])
+    # @lock_preview
     def project_activateSlot_post():
         global proj
         if not request.json:
