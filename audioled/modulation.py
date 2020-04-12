@@ -12,9 +12,12 @@ CTRL_MODULATION = 'Modulation'
 CTRL_SPEED = 'Speed'
 CTRL_INTENSITY = 'Intensity'
 CTRL_BRIGHTNESS = 'Brightness' # Not available on purpose, handled globally
-CTRL_PRIMARY_COLOR = 'PrimaryColor' # Not available, handled with different ModSource
-CTRL_PRIMARY_COLOR_AMOUNT = 'PrimaryColorAmount' # Not available, handled with different ModSource
-CTRL_SECONDARY_COLOR = 'SecondaryColor' # Not available, handled with different ModSource
+CTRL_PRIMARY_COLOR_R = 'PrimaryColor_r'
+CTRL_PRIMARY_COLOR_G = 'PrimaryColor_g'
+CTRL_PRIMARY_COLOR_B = 'PrimaryColor_b'
+CTRL_SECONDARY_COLOR_R = 'SecondaryColor_r'
+CTRL_SECONDARY_COLOR_G = 'SecondaryColor_g'
+CTRL_SECONDARY_COLOR_B = 'SecondaryColor_b'
 availableController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY]
 
 
@@ -87,6 +90,9 @@ class ModulationSource(object):
         logger.info(definition)
         return definition
 
+    def isControlledBy(self, controller):
+        return False
+
     @staticmethod
     def getParameterDefinition():
         return {}
@@ -99,18 +105,26 @@ class ModulationSource(object):
     def getEffectDescription():
         return ""
 
-
+# TODO: Shouldn't show up
 class ExternalColourController(ModulationSource):
-    def __init__(self, amount=.0, controller=None):
+    def __init__(self, amount=.0):
         self.amount = amount
         self.controller = controller
 
     def __initstate__(self):
         super().__initstate__()
         try:
-            self.overrideColor
+            self.r
         except AttributeError:
-            self.overrideColor = None
+            self.r = None
+        try:
+            self.g
+        except AttributeError:
+            self.g = None
+        try:
+            self.b
+        except AttributeError:
+            self.b = None
 
     @staticmethod
     def getParameterDefinition():
@@ -143,49 +157,25 @@ class ExternalColourController(ModulationSource):
 
         if param is None:
             return self.amount
-        # return self.overrideColor # can be None
-        if self.overrideColor is None:
-            return None
-        if param == "r":
-            return self.overrideColor[0]
-        if param == "g":
-            return self.overrideColor[1]
-        if param == "b":
-            return self.overrideColor[2]
 
-    def setOverrideColor(self, rgb):
-        try:
-            self.overrideColor
-        except AttributeError:
-            self.overrideColor = [None, None, None]
-        r = rgb[0]
-        g = rgb[1]
-        b = rgb[2]
-        if self.overrideColor is not None:
-            rgb = self.overrideColor
-        if r is not None:
-            rgb[0] = r
-        if g is not None:
-            rgb[1] = g
-        if b is not None:
-            rgb[2] = b
+        if param in self.__dict__:
+            return self.__dict__[param]
 
-        self.overrideColor = rgb
-
-    def getOverrideColor(self):
-        try:
-            return self.overrideColor
-        except AttributeError:
-            self.overrideColor = None
-            return None
-
-class ExternalColourBController(ExternalColourController):
-    def __init__(self, amount = 0.):
-        super().__init__(amount, CTRL_SECONDARY_COLOR)
+        return None
 
 class ExternalColourAController(ExternalColourController):
     def __init__(self, amount = 0.):
-        super().__init__(amount, CTRL_PRIMARY_COLOR)
+        super().__init__(amount)
+    
+    def isControlledBy(self, controller):
+        return controller == CTRL_PRIMARY_COLOR_R or controller == CTRL_PRIMARY_COLOR_G or controller == CTRL_PRIMARY_COLOR_B
+
+class ExternalColourBController(ExternalColourController):
+    def __init__(self, amount = 0.):
+        super().__init__(amount)
+
+    def isControlledBy(self, controller):
+        return controller == CTRL_SECONDARY_COLOR_R or controller == CTRL_SECONDARY_COLOR_G or controller == CTRL_SECONDARY_COLOR_B
     
 
 class ExternalLinearController(ModulationSource):
@@ -216,6 +206,11 @@ class ExternalLinearController(ModulationSource):
 
     def getValue(self):
         return self.amount
+
+    def isControlledBy(self, controller):
+        if self.controller is not None and self.controller == controller:
+            return True
+        return False
 
 
 class SineLFO(ModulationSource):

@@ -185,6 +185,7 @@ class ColorChannelModulation(Modulation):
             logger.debug("Could not find external colour controller {}".format(self.modulationSource.modulator))
             return
 
+        
         extColorCtrl = extColorCtrl  # type: modulation.ExternalColourAController
         amount = extColorCtrl.getValue()
         colorValue = extColorCtrl.getValue(self.targetParameter)  # r, g, b values
@@ -197,60 +198,6 @@ class ColorChannelModulation(Modulation):
                 newOffset = old - colorValue
                 newOffset = amount * self.amount * newOffset  # multiply with amount from modulationsource and modulation
                 rgbEffect.setParameterOffset(self.targetParameter, rgbEffect.getParameterDefinition(), -newOffset / 255.0)
-
-
-class ColorModulation(Modulation):
-    def __init__(self, modulationSource, targetEffect):
-        super().__init__(modulationSource, 0, False, targetEffect, "unused")
-
-    def propagate(self):
-        if self.modulationSource is None or self.targetEffect is None:
-            return
-        extColorCtrl = None
-        if isinstance(self.modulationSource.modulator, modulation.ExternalColourAController):
-            extColorCtrl = self.modulationSource.modulator
-        elif isinstance(self.modulationSource.modulator, modulation.ExternalColourBController):
-            extColorCtrl = self.modulationSource.modulator
-
-        if extColorCtrl is None:
-            logger.debug("Could not find external colour controller {}".format(self.modulationSource.modulator))
-            return
-
-        extColorCtrl = extColorCtrl  # type: ExternalColourAController
-        rgb = extColorCtrl.getOverrideColor()
-        amount = extColorCtrl.getValue()
-        if rgb is None or len(rgb) != 3:
-            # logger.debug("External controller holds no value")
-            return
-        r = rgb[0]
-        g = rgb[1]
-        b = rgb[2]
-        # TODO: could we not do this with 3 normal Modulation
-        # logger.debug(rgb)
-        # logger.debug(amount)
-        if isinstance(self.targetEffect, colors.StaticRGBColor):
-            rgbEffect = self.targetEffect  # type: StaticRGBColor
-            # Set offset so we override default color
-            oldR = rgbEffect.getOriginalParameterValue("r")
-            oldG = rgbEffect.getOriginalParameterValue("g")
-            oldB = rgbEffect.getOriginalParameterValue("b")
-            if r is not None:
-                newOffsetR = oldR - r
-                newOffsetR = amount * newOffsetR
-                rgbEffect.setParameterOffset("r", rgbEffect.getParameterDefinition(), -newOffsetR / 255.0)
-            if g is not None:
-                newOffsetG = oldG - g
-                newOffsetG = amount * newOffsetG
-                rgbEffect.setParameterOffset("g", rgbEffect.getParameterDefinition(), -newOffsetG / 255.0)
-            if b is not None:
-                newOffsetB = oldB - b
-                newOffsetB = amount * newOffsetB
-                rgbEffect.setParameterOffset("b", rgbEffect.getParameterDefinition(), -newOffsetB / 255.0)
-            # logger.debug("{} {} {} with {} {} {} to {} {} {}".format(oldR, oldG, oldB, rgbEffect.getParameterOffset("r"),
-            #                                                          rgbEffect.getParameterOffset("g"),
-            #                                                          rgbEffect.getParameterOffset("b"), rgbEffect.r,
-            #                                                          rgbEffect.g, rgbEffect.b))
-            # logger.debug("{}".format(rgbEffect.__dict__))
 
 
 class Timing(object):
@@ -619,19 +566,9 @@ class FilterGraph(Updateable):
     def updateModulationSourceValue(self, modCtrl, newValue):
         logger.debug("({})Updating mod source value for {}".format(self, modCtrl))
         for mod in self.__modulationsources:
-            if isinstance(mod.modulator, modulation.ExternalLinearController):
-                if mod.modulator.controller == modCtrl:
-                    logger.debug("Updating mod source value")
-                    mod.modulator.updateParameter({"amount": newValue})
-            elif isinstance(mod.modulator, modulation.ExternalColourAController) and modCtrl == modulation.CTRL_PRIMARY_COLOR:
-                # TODO: Only testing, can this be moved?
-                logger.debug("Overriding color {}".format(newValue))
-                rgb = newValue
-                r = rgb[0]
-                g = rgb[1]
-                b = rgb[2]
-                mod.modulator.setOverrideColor(newValue)
-                mod.modulator.updateParameter({"amount": 1.})
+            if mod.modulator.isControlledBy(modCtrl):
+                logger.debug("Updating mod source value")
+                mod.modulator.updateParameter(newValue)
 
     def updateModulationSourceParameter(self, modSourceUid, updateParameters):
         mod = next(mod for mod in self.__modulationsources if mod.uid == modSourceUid)  # type: ModulationSourceNode

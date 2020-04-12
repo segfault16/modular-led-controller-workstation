@@ -774,7 +774,6 @@ class Project(Updateable):
         return self.outputSlotMatrix
 
     def setSceneMatrix(self, value):
-        # TODO: Validate
         if self.outputSlotMatrix is not None:
             # Check if slot matrix stayed the same
             if self.outputSlotMatrix == value:

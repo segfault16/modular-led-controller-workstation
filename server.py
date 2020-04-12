@@ -800,6 +800,15 @@ def handleMidiMsg(msg):
     # pitch	-8192..8191	0
     # pos	0..16383	0
     # time	any integer or float	0
+    def ctrlToValue(ctrl, val):
+        if ctrl == modulation.CTRL_PRIMARY_COLOR_R or ctrl == modulation.CTRL_SECONDARY_COLOR_R:
+            return {"amount": 1., "r":val*255}
+        elif ctrl == modulation.CTRL_PRIMARY_COLOR_G or ctrl == modulation.CTRL_SECONDARY_COLOR_G:
+            return {"amount": 1., "g":val*255}
+        elif ctrl == modulation.CTRL_PRIMARY_COLOR_B or ctrl == modulation.CTRL_SECONDARY_COLOR_B:
+            return {"amount": 1., "b":val*255}
+        else:
+            return {"amount": val}
     global proj
     if msg.type == 'program_change':
         proj.activateScene(msg.program)
@@ -809,25 +818,20 @@ def handleMidiMsg(msg):
             7: modulation.CTRL_BRIGHTNESS, # volume
             11: modulation.CTRL_INTENSITY, # expression
             21: modulation.CTRL_SPEED, # unknown param?
-            30: modulation.CTRL_PRIMARY_COLOR,
-            31: modulation.CTRL_PRIMARY_COLOR,
-            32: modulation.CTRL_PRIMARY_COLOR,
-            33: modulation.CTRL_PRIMARY_COLOR_AMOUNT, 
+            30: modulation.CTRL_PRIMARY_COLOR_R,
+            31: modulation.CTRL_PRIMARY_COLOR_G,
+            32: modulation.CTRL_PRIMARY_COLOR_B,
+            40: modulation.CTRL_SECONDARY_COLOR_R,
+            41: modulation.CTRL_SECONDARY_COLOR_G,
+            42: modulation.CTRL_SECONDARY_COLOR_B
         }
         if msg.control in controllerMap:
             controlMsg = controllerMap[msg.control]
-            controlVal = msg.value/127
+            controlVal = ctrlToValue(controlMsg, msg.value/127)
             logger.debug("Propagating control change message")
             if controlMsg == modulation.CTRL_BRIGHTNESS:
                 # Handle brightness globally
-                proj.setBrightness(controlVal)
-            elif controlMsg == modulation.CTRL_PRIMARY_COLOR:
-                if msg.control == 30:
-                    proj.updateModulationSourceValue(0xFFF, controlMsg, [controlVal * 255, None, None])
-                if msg.control == 31:
-                    proj.updateModulationSourceValue(0xFFF, controlMsg, [None, controlVal * 255, None])
-                if msg.control == 32:
-                    proj.updateModulationSourceValue(0xFFF, controlMsg, [None, None, controlVal * 255])
+                proj.setBrightness(msg.value/127)
             else:
                 proj.updateModulationSourceValue(0xFFF, controlMsg, controlVal)
         else:
