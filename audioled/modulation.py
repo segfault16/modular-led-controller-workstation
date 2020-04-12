@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 CTRL_MODULATION = 'Modulation'
 CTRL_SPEED = 'Speed'
 CTRL_INTENSITY = 'Intensity'
-CTRL_BRIGHTNESS = 'Brightness' # Not available on purpose, handled globally
+CTRL_BRIGHTNESS = 'Brightness'  # Not available on purpose, handled globally
 CTRL_PRIMARY_COLOR_R = 'PrimaryColor_r'
 CTRL_PRIMARY_COLOR_G = 'PrimaryColor_g'
 CTRL_PRIMARY_COLOR_B = 'PrimaryColor_b'
@@ -105,11 +105,11 @@ class ModulationSource(object):
     def getEffectDescription():
         return ""
 
+
 # TODO: Shouldn't show up
 class ExternalColourController(ModulationSource):
     def __init__(self, amount=.0):
         self.amount = amount
-        self.controller = controller
 
     def __initstate__(self):
         super().__initstate__()
@@ -138,11 +138,7 @@ class ExternalColourController(ModulationSource):
 
     @staticmethod
     def getParameterHelp():
-        help = {
-            "parameters": {
-                "amount": "Global scale of the controller."
-            }
-        }
+        help = {"parameters": {"amount": "Global scale of the controller."}}
         return help
 
     def update(self, dt):
@@ -151,9 +147,9 @@ class ExternalColourController(ModulationSource):
         """
         super().update(dt)
 
-    def getValue(self, param = None):
+    def getValue(self, param=None):
         if not isinstance(self.amount, float):
-            self.amount=0.
+            self.amount = 0.
 
         if param is None:
             return self.amount
@@ -163,20 +159,22 @@ class ExternalColourController(ModulationSource):
 
         return None
 
+
 class ExternalColourAController(ExternalColourController):
-    def __init__(self, amount = 0.):
+    def __init__(self, amount=0.):
         super().__init__(amount)
-    
+
     def isControlledBy(self, controller):
         return controller == CTRL_PRIMARY_COLOR_R or controller == CTRL_PRIMARY_COLOR_G or controller == CTRL_PRIMARY_COLOR_B
 
+
 class ExternalColourBController(ExternalColourController):
-    def __init__(self, amount = 0.):
+    def __init__(self, amount=0.):
         super().__init__(amount)
 
     def isControlledBy(self, controller):
         return controller == CTRL_SECONDARY_COLOR_R or controller == CTRL_SECONDARY_COLOR_G or controller == CTRL_SECONDARY_COLOR_B
-    
+
 
 class ExternalLinearController(ModulationSource):
     def __init__(self, amount=.0, controller=None):
@@ -186,7 +184,8 @@ class ExternalLinearController(ModulationSource):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": OrderedDict([
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
                 ("amount", [1.0, .0, 1.0, .001]),
                 ("controller", availableController)

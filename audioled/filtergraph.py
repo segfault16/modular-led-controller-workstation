@@ -185,14 +185,13 @@ class ColorChannelModulation(Modulation):
             logger.debug("Could not find external colour controller {}".format(self.modulationSource.modulator))
             return
 
-        
         extColorCtrl = extColorCtrl  # type: modulation.ExternalColourAController
         amount = extColorCtrl.getValue()
         colorValue = extColorCtrl.getValue(self.targetParameter)  # r, g, b values
         # Propagate change
         # calculate and propagate new offset for this parameter
         if isinstance(self.targetEffect, colors.StaticRGBColor):
-            rgbEffect = self.targetEffect  # type: StaticRGBColor
+            rgbEffect = self.targetEffect  # type: colors.StaticRGBColor
             old = rgbEffect.getOriginalParameterValue(self.targetParameter)
             if colorValue is not None:
                 newOffset = old - colorValue
@@ -481,7 +480,7 @@ class FilterGraph(Updateable):
         logger.info("Modulation is {}".format(modSource.modulator))
         if (isinstance(modSource.modulator, modulation.ExternalColourAController)
                 or isinstance(modSource.modulator, modulation.ExternalColourBController)):
-            if targetParam == None:
+            if targetParam is None:
                 logger.debug("Add colour modulations")
 
                 newModR = ColorChannelModulation(modSource, 1., False, targetNode, "r")
