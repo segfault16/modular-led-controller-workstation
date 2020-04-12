@@ -463,7 +463,7 @@ class MovingLight(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("speed", [10.0, 1.0, 200.0, 1.0]),
-                ("dim_time", [1.0, 0.01, 10.0, 0.01]),
+                ("dim_time", [1.0, 0.001, 10.0, 0.001]),
                 ("lowcut_hz", [50.0, 0.0, 8000.0, 1.0]),
                 ("highcut_hz", [100.0, 0.0, 8000.0, 1.0]),
                 ("peak_filter", [1.0, 0.0, 10.0, .01]),
