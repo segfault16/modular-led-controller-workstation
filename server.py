@@ -808,8 +808,7 @@ def handleMidiMsg(msg):
         elif ctrl == modulation.CTRL_PRIMARY_COLOR_B or ctrl == modulation.CTRL_SECONDARY_COLOR_B:
             return {"controllerAmount": 1., "b":val*255}
         else:
-            # TODO: Also use controllerAmount?
-            return {"amount": val}
+            return {"controllerAmount": val}
     global proj
     if msg.type == 'program_change':
         proj.activateScene(msg.program)

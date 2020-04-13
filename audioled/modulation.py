@@ -158,7 +158,7 @@ class ExternalColourController(ModulationSource):
         super().updateParameter(stateDict)
         if 'amount' in stateDict:
             # Reset remote controller value
-            self.controllerAmount = None
+            self.resetControllerModulation()
 
     def getValue(self, param=None):
         if not isinstance(self.amount, float) and not isinstance(self.amount, int):
@@ -175,7 +175,7 @@ class ExternalColourController(ModulationSource):
         return None
 
     def resetControllerModulation(self):
-        self.amount = 0
+        self.controllerAmount = None
 
 
 class ExternalColourAController(ExternalColourController):
@@ -199,6 +199,13 @@ class ExternalLinearController(ModulationSource):
         self.amount = amount
         self.controller = controller
 
+    def __initstate__(self):
+        super().__initstate__()
+        try:
+            self.controllerAmount
+        except AttributeError:
+            self.controllerAmount = None
+
     @staticmethod
     def getParameterDefinition():
         definition = {
@@ -221,8 +228,25 @@ class ExternalLinearController(ModulationSource):
         }
         return help
 
-    def getValue(self):
-        return self.amount
+    def updateParameter(self, stateDict):
+        super().updateParameter(stateDict)
+        if 'amount' in stateDict:
+            # Reset remote controller value
+            self.resetControllerModulation()
+
+    def getValue(self, param=None):
+        if not isinstance(self.amount, float) and not isinstance(self.amount, int):
+            self.amount = 0.
+
+        if param is None:
+            if self.controllerAmount is None:
+                return self.amount
+            return self.controllerAmount
+
+        if param in self.__dict__:
+            return self.__dict__[param]
+
+        return None
 
     def isControlledBy(self, controller):
         if self.controller is not None and self.controller == controller:
@@ -230,8 +254,7 @@ class ExternalLinearController(ModulationSource):
         return False
 
     def resetControllerModulation(self):
-        # TODO: Implement
-        pass
+        self.controllerAmount = None
 
 
 class SineLFO(ModulationSource):
