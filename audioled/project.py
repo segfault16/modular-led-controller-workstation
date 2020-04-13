@@ -296,6 +296,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     if message.deviceId == deviceId:
                         filtergraph = message.filtergraph
                         slotId = message.slotId
+                        filtergraph.asyncUpdate = False
                         filtergraph.propagateNumPixels(outputDevice.getNumPixels(), outputDevice.getNumRows())
                 elif isinstance(message, UpdateModulationSourceValueMessage):
                     message = message  # type: UpdateModulationSourceValueMessage
@@ -368,6 +369,10 @@ class Project(Updateable):
         except AttributeError:
             self._cur_t = 0
         try:
+            self._resetControllerModulation
+        except AttributeError:
+            self._resetControllerModulation = False
+        try:
             self.outputSlotMatrix
         except AttributeError:
             self.outputSlotMatrix = {}
@@ -423,6 +428,9 @@ class Project(Updateable):
             logger.debug("Active scene {} from setstate".format(self.activeSceneId))
             # TODO: Needs to be revised?
             self.activateScene(self.activeSceneId)
+
+    def setResetControllerModulation(self, newValue):
+        self._resetControllerModulation = newValue
 
     def setDevice(self, device: audioled.devices.MultiOutputWrapper):
         logging.debug("setting device")
@@ -525,6 +533,8 @@ class Project(Updateable):
 
                 # Get filtergraph
                 filterGraph = self.getSlot(slotId)
+                if self._resetControllerModulation:
+                    filterGraph.resetControllerModulations()
 
                 if dIdx == self._previewDeviceIndex:
                     dIdx += 1

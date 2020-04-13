@@ -536,6 +536,12 @@ class FilterGraph(Updateable):
             if self._onModulationRemoved is not None:
                 self._onModulationRemoved(mod)
 
+    def resetControllerModulations(self):
+        """Resets modulations to their initial value ()
+        """
+        for modSource in self.__modulationsources:
+            modSource.modulator.resetControllerModulation()
+
     def propagateNumPixels(self, num_pixels, num_rows=1):
         if self.getLEDOutput() is not None:
             self.getLEDOutput().effect.setNumOutputPixels(num_pixels)

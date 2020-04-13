@@ -93,6 +93,9 @@ class ModulationSource(object):
     def isControlledBy(self, controller):
         return False
 
+    def resetControllerModulation(self):
+        pass
+
     @staticmethod
     def getParameterDefinition():
         return {}
@@ -125,6 +128,10 @@ class ExternalColourController(ModulationSource):
             self.b
         except AttributeError:
             self.b = None
+        try:
+            self.controllerAmount
+        except AttributeError:
+            self.controllerAmount = None
 
     @staticmethod
     def getParameterDefinition():
@@ -147,17 +154,28 @@ class ExternalColourController(ModulationSource):
         """
         super().update(dt)
 
+    def updateParameter(self, stateDict):
+        super().updateParameter(stateDict)
+        if 'amount' in stateDict:
+            # Reset remote controller value
+            self.controllerAmount = None
+
     def getValue(self, param=None):
-        if not isinstance(self.amount, float):
+        if not isinstance(self.amount, float) and not isinstance(self.amount, int):
             self.amount = 0.
 
         if param is None:
-            return self.amount
+            if self.controllerAmount is None:
+                return self.amount
+            return self.controllerAmount
 
         if param in self.__dict__:
             return self.__dict__[param]
 
         return None
+
+    def resetControllerModulation(self):
+        self.amount = 0
 
 
 class ExternalColourAController(ExternalColourController):
@@ -210,6 +228,10 @@ class ExternalLinearController(ModulationSource):
         if self.controller is not None and self.controller == controller:
             return True
         return False
+
+    def resetControllerModulation(self):
+        # TODO: Implement
+        pass
 
 
 class SineLFO(ModulationSource):

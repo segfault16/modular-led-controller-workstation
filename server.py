@@ -802,12 +802,13 @@ def handleMidiMsg(msg):
     # time	any integer or float	0
     def ctrlToValue(ctrl, val):
         if ctrl == modulation.CTRL_PRIMARY_COLOR_R or ctrl == modulation.CTRL_SECONDARY_COLOR_R:
-            return {"amount": 1., "r":val*255}
+            return {"controllerAmount": 1., "r":val*255}
         elif ctrl == modulation.CTRL_PRIMARY_COLOR_G or ctrl == modulation.CTRL_SECONDARY_COLOR_G:
-            return {"amount": 1., "g":val*255}
+            return {"controllerAmount": 1., "g":val*255}
         elif ctrl == modulation.CTRL_PRIMARY_COLOR_B or ctrl == modulation.CTRL_SECONDARY_COLOR_B:
-            return {"amount": 1., "b":val*255}
+            return {"controllerAmount": 1., "b":val*255}
         else:
+            # TODO: Also use controllerAmount?
             return {"amount": val}
     global proj
     if msg.type == 'program_change':

@@ -22,10 +22,12 @@ CONFIG_ACTIVE_PROJECT = 'active_project'
 CONFIG_DEVICE_PANEL_MAPPING = 'device.panel.mapping'
 CONFIG_ACTIVE_DEVICE_CONFIGURATION = 'active_device_config'
 CONFIG_DEVICE_CONFIGS = 'device_configs'
+CONFIG_RESET_CONTROLLER_MODULATION = 'reset_controller_modulation'
 
 allowed_configs = [
     CONFIG_NUM_PIXELS, CONFIG_NUM_ROWS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_AUDIO_DEVICE_INDEX,
-    CONFIG_ACTIVE_PROJECT, CONFIG_DEVICE_PANEL_MAPPING, CONFIG_ACTIVE_DEVICE_CONFIGURATION, CONFIG_DEVICE_CONFIGS
+    CONFIG_ACTIVE_PROJECT, CONFIG_DEVICE_PANEL_MAPPING, CONFIG_ACTIVE_DEVICE_CONFIGURATION, CONFIG_DEVICE_CONFIGS,
+    CONFIG_RESET_CONTROLLER_MODULATION
 ]
 
 
@@ -38,6 +40,7 @@ class ServerConfiguration:
         self._config[CONFIG_DEVICE] = 'FadeCandy'
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
         self._config[CONFIG_DEVICE_PANEL_MAPPING] = ''
+        self._config[CONFIG_RESET_CONTROLLER_MODULATION] = False
         self._projects = {}
         self._projectMetadatas = {}
         self._activeProject = None
@@ -49,6 +52,7 @@ class ServerConfiguration:
             # CONFIG_NUM_PIXELS: [300, 1, 2000, 1],
             # CONFIG_NUM_ROWS: [1, 1, 100, 1],
             # CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
+            CONFIG_RESET_CONTROLLER_MODULATION: False
         }
 
     def setConfiguration(self, dict):
@@ -80,11 +84,14 @@ class ServerConfiguration:
                 CONFIG_DEVICE_CANDY_SERVER,
                 CONFIG_NUM_ROWS,
                 CONFIG_DEVICE_PANEL_MAPPING,
-                CONFIG_DEVICE_CONFIGS
+                CONFIG_DEVICE_CONFIGS,
+                CONFIG_RESET_CONTROLLER_MODULATION
         ]:
             logger.info("Renewing device")
             self._reusableDevice = None
             self.getActiveProjectOrDefault().setDevice(self._createOrReuseOutputDevice())
+        
+        
 
     def getConfiguration(self, key):
         if key in self._config:
@@ -106,6 +113,8 @@ class ServerConfiguration:
             logger.error("Error reading project {}: {}".format(activeProjectUid, e))
             raise e
         self._activeProject = activeProj
+        # Apply config to project
+        activeProj.setResetControllerModulation(self.getConfiguration(CONFIG_RESET_CONTROLLER_MODULATION))
         return activeProj
 
     def initDefaultProject(self):
