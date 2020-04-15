@@ -315,7 +315,7 @@ class SwimmingPool2(Effect):
     def _CreateWaves(self, num_waves, wavespread_low=50, wavespread_high=100, max_speed=30):
         _WaveArray = []
         _wavespread = np.random.randint(wavespread_low, wavespread_high, num_waves)
-        _WaveArraySpecSpeed = np.random.randint(-max_speed, max_speed, num_waves)
+        _WaveArraySpecSpeed = np.random.randint(0, max_speed, num_waves)
         _WaveArraySpecHeight = np.random.rand(num_waves)
         for i in range(0, num_waves):
             _WaveArray.append(self._SinArray(_wavespread[i], _WaveArraySpecHeight[i], _WaveArraySpecSpeed[i]))
@@ -345,7 +345,9 @@ class SwimmingPool2(Effect):
         if self._rotate_counter > 30:
             self._Wave = np.roll(self._Wave, 1, axis=0)
             self._WaveSpecSpeed = np.roll(self._WaveSpecSpeed, 1)
-            speed = np.random.randint(-self.max_speed, self.max_speed)
+            speed = np.random.randint(0, self.max_speed)
+            if self.direction == 0:
+                speed = speed * -1
             spread = np.random.randint(self.wavespread_low, self.wavespread_high)
             height = np.random.rand()
             wave = self._SinArray(spread, height, speed)
