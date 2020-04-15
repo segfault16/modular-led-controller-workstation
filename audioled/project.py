@@ -554,13 +554,21 @@ class Project(Updateable):
 
         # Update devices
         self._sendModulationSourceValueUpdateCommand(deviceMask, controller, newValue)
+    
+    def getControllerModulations(self):
+        # Iterate through active slots to aggregate
+        mods = {}
+        for fg in self._activeFiltergraphs():
+            update = fg.getControllerModulations()
+            mods.update(update)
+        return mods
 
     def setBrightness(self, value):
         # Brightness per device
         self._sendBrightnessCommand(value)
         
     def _activeFiltergraphs(self): 
-        # Instanciate new scene
+        # Iterate through devices to find which filtergraphs are in slots of the active scene
         dIdx = 0
         sceneId = self.activeSceneId
         for device in self._devices:
@@ -576,6 +584,7 @@ class Project(Updateable):
                 slotId = sceneId
 
             # Get filtergraph
+            dIdx = dIdx + 1
             yield self.getSlot(slotId)
 
     def _createOrUpdateProcess(self, dIdx, device, slotId, filterGraph):

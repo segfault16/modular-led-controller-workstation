@@ -12,6 +12,7 @@ import multiprocessing
 import traceback
 from timeit import default_timer as timer
 import logging
+import mido
 from functools import wraps
 
 import jsonpickle
@@ -84,6 +85,8 @@ count = 0
 
 preview_lock = multiprocessing.Lock()
 
+midiBluetooth = None  # type: bluetooth.BluetoothMidiLELevelCharacteristic
+
 def lock_preview(fn):
     
     @wraps(fn)    
@@ -104,10 +107,13 @@ def multiprocessing_func(sc):
     sc.store()
 
 
-def create_app():
+def create_app(midiAdvertiseName = None):
     logging.info("Creating app")
     app = Flask(__name__)
     logging.debug("App created")
+
+    advName = midiAdvertiseName
+    
 
     def store_configuration():
         try:
@@ -120,9 +126,30 @@ def create_app():
             serverconfig.postStore()
         except Exception:
             app.logger.error("ERROR on storing configuration")
+    
+    def check_midi():
+        app.logger.info("Checking midi configuration {}".format(advName))
+        # global midi
+        # if midi is None:
+        #     try:
+        #         import mido
+        #     except ImportError as e:
+        #         logger.error('Unable to import the mido library')
+        #         logger.error('You can install this library with `pip install mido`')
+        #     try:
+        #         for name in mido.get_input_names():
+        #             logger.info("Checking device {}".format(name))
+        #             if name == advName:
+        #                 midi = mido.open_input(advName)
+        #                 logger.info("Connected to midi device {}".format(advName))
+        #     except OSError as e:
+        #         midi = mido.open_input()
+        #         logger.info("Not connected midi device {}".format(advName))
+        #     pass
 
     sched = BackgroundScheduler(daemon=True)
     sched.add_job(store_configuration, 'interval', seconds=5)
+    # sched.add_job(check_midi, 'interval', seconds=1)
     sched.start()
 
     def interrupt():
@@ -787,6 +814,7 @@ def strandTest(dev, num_pixels):
 
 
 def handleMidiMsg(msg):
+    # of type mido.Message
     # channel	0..15	0
     # frame_type	0..7	0
     # frame_value	0..15	0
@@ -800,6 +828,8 @@ def handleMidiMsg(msg):
     # pitch	-8192..8191	0
     # pos	0..16383	0
     # time	any integer or float	0
+    
+    # Helper to convert to json
     def ctrlToValue(ctrl, val):
         if ctrl == modulation.CTRL_PRIMARY_COLOR_R or ctrl == modulation.CTRL_SECONDARY_COLOR_R:
             return {"controllerAmount": 1., "r":val*255}
@@ -809,22 +839,54 @@ def handleMidiMsg(msg):
             return {"controllerAmount": 1., "b":val*255}
         else:
             return {"controllerAmount": val}
+    controllerMap = {
+        1: modulation.CTRL_MODULATION, # mod wheel
+        7: modulation.CTRL_BRIGHTNESS, # volume
+        11: modulation.CTRL_INTENSITY, # expression
+        21: modulation.CTRL_SPEED, # unknown param?
+        30: modulation.CTRL_PRIMARY_COLOR_R,
+        31: modulation.CTRL_PRIMARY_COLOR_G,
+        32: modulation.CTRL_PRIMARY_COLOR_B,
+        40: modulation.CTRL_SECONDARY_COLOR_R,
+        41: modulation.CTRL_SECONDARY_COLOR_G,
+        42: modulation.CTRL_SECONDARY_COLOR_B
+    }
+    inverseControllerMap = {}
+    for k,v in controllerMap.items():
+        inverseControllerMap[v] = k
+    
     global proj
     if msg.type == 'program_change':
         proj.activateScene(msg.program)
+
+        # Send current midi controller status
+        status = proj.getControllerModulations()
+        for controller, v in status.items():
+            logger.info("Sending modulation controller value {} for controller {}".format(v, controller))
+            sendMsg = mido.Message('control_change')
+            if controller in inverseControllerMap:
+                sendMsg.channel = 1
+                sendMsg.control = inverseControllerMap[controller]
+                if sendMsg.control >= 30:
+                    # scale color data
+                    sendMsg.value = int(v / 255 * 127)
+                else:
+                    sendMsg.value = int(v * 127)
+                midiBluetooth.sendMidi(sendMsg)
+
+        # TODO: Send sysex for available controller
+        
+        # TODO: Send brightness
+        # brightness = proj.getBrightness() # TODO: Implement
+        # sendMsg = mido.Message('control_change')
+        # sendMsg.channel = 1
+        # sendMsg.control = 7
+        # sendMsg.value = brightness * 127
+        # midiBluetooth.sendMidi(sendMsg)
+
+
     elif msg.type == 'control_change':
-        controllerMap = {
-            1: modulation.CTRL_MODULATION, # mod wheel
-            7: modulation.CTRL_BRIGHTNESS, # volume
-            11: modulation.CTRL_INTENSITY, # expression
-            21: modulation.CTRL_SPEED, # unknown param?
-            30: modulation.CTRL_PRIMARY_COLOR_R,
-            31: modulation.CTRL_PRIMARY_COLOR_G,
-            32: modulation.CTRL_PRIMARY_COLOR_B,
-            40: modulation.CTRL_SECONDARY_COLOR_R,
-            41: modulation.CTRL_SECONDARY_COLOR_G,
-            42: modulation.CTRL_SECONDARY_COLOR_B
-        }
+
         if msg.control in controllerMap:
             controlMsg = controllerMap[msg.control]
             controlVal = ctrlToValue(controlMsg, msg.value/127)
@@ -920,16 +982,17 @@ if __name__ == '__main__':
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
     logging.debug("Adding bluetooth server to the mix")
+    midiAdvertiseName = None
     try:
         import audioled
-        bt = audioled.bluetooth.MidiBluetoothService(callback=handleMidiMsg)
+        midiBluetooth = audioled.bluetooth.MidiBluetoothService(callback=handleMidiMsg)
     except Exception as e:
         logging.warning("Ignoring Bluetooth error")
         logging.error(e)
         traceback.print_tb(e.__traceback__)
 
 
-    app = create_app()
+    app = create_app(midiAdvertiseName)
     app.run(debug=False, host="0.0.0.0", port=args.port)
     logging.info("End of server main")
     proj.stopProcessing()

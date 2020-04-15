@@ -235,10 +235,10 @@ class MidiKeyboard(Effect):
             pass
         try:
             self._midi = mido.open_input(self.midiPort)
-        except OSError:
+        except OSError as e:
             self._midi = mido.open_input()
             self.midiPort = self._midi.name
-            logger.info(self.midiPort)
+            logger.info("Not connected midi device {}".format(self.midiPort))
         self._on_notes = []
 
     def numInputChannels(self):

@@ -477,7 +477,7 @@ class FilterGraph(Updateable):
         modSource = next(modSource for modSource in self.__modulationsources if modSource.uid == modSourceUid)
         targetNode = next(node for node in self.__filterNodes if node.uid == targetNodeUid)
         newMod = None
-        logger.info("Modulation is {}".format(modSource.modulator))
+        logger.debug("Modulation is {}".format(modSource.modulator))
         if (isinstance(modSource.modulator, modulation.ExternalColourAController)
                 or isinstance(modSource.modulator, modulation.ExternalColourBController)):
             if targetParam is None:
@@ -541,6 +541,27 @@ class FilterGraph(Updateable):
         """
         for modSource in self.__modulationsources:
             modSource.modulator.resetControllerModulation()
+
+    def getControllerModulations(self):
+        """Returns aggregated modulation values per controller as dictionary
+        """
+        ctrlValDict = {}
+        for modSource in self.__modulationsources:
+            for controller in modulation.allController:
+                amount = modSource.modulator.getControllerModulation(controller)
+                if amount is not None:
+                    ctrlValDict[controller] = amount
+                r = modSource.modulator.getControllerModulation(controller, "r")
+                if r is not None and controller.endswith("_r"):
+                    ctrlValDict[controller] = r
+                g = modSource.modulator.getControllerModulation(controller, "g")
+                if g is not None and controller.endswith("_g"):
+                    ctrlValDict[controller] = g
+                b = modSource.modulator.getControllerModulation(controller, "b")
+                if b is not None and controller.endswith("_b"):
+                    ctrlValDict[controller] = b
+        return ctrlValDict
+                
 
     def propagateNumPixels(self, num_pixels, num_rows=1):
         if self.getLEDOutput() is not None:

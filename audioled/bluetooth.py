@@ -3,8 +3,10 @@ import sys
 import signal
 import mido
 import pybleno
+from pybleno import *
 import traceback
 import logging
+import array
 logger = logging.getLogger(__name__)
 
 
@@ -63,6 +65,29 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
             if self._msgReceivedCallback is not None:
                 self._msgReceivedCallback(msg)
 
+    def onSubscribe(self, maxValueSize, updateValueCallback):
+        logger.debug('EchoCharacteristic - onSubscribe')
+        
+        self._updateValueCallback = updateValueCallback
+
+    def onUnsubscribe(self):
+        logger.debug('EchoCharacteristic - onUnsubscribe');
+        
+        self._updateValueCallback = None
+
+    def sendMidi(self, msg : mido.Message):
+        if self._updateValueCallback is None:
+            logger.debug("No subscription?")
+            return
+        
+        bytes =  [0x80, 0x80] + msg.bytes()
+
+        logger.debug("Writing {}".format([hex(c) for c in bytes]))
+        
+        self._updateValueCallback(bytes)
+
+
+
 class BluetoothMidiLEService(pybleno.BlenoPrimaryService):
     def __init__(self, _msgReceivedCallback):
         self._characteristic = BluetoothMidiLELevelCharacteristic(_msgReceivedCallback)
@@ -78,6 +103,7 @@ class MidiBluetoothService(object):
         self._callback = callback
         self.bleno = pybleno.Bleno()
         self.primaryService = BluetoothMidiLEService(self._onMessageReceived);
+        self.primaryServiceName = 'MOLECOLE Control'
 
 
         self.bleno.on('advertisingStart', self._onAdvertisingStart)
@@ -114,7 +140,7 @@ class MidiBluetoothService(object):
         logger.debug('on -> stateChange: ' + state);
 
         if (state == 'poweredOn'):
-            self.bleno.startAdvertising('MOLECOLE Control', [self.primaryService.uuid]);
+            self.bleno.startAdvertising(self.primaryServiceName, [self.primaryService.uuid]);
         else:
             self.bleno.stopAdvertising();
     
@@ -130,3 +156,13 @@ class MidiBluetoothService(object):
                 self.primaryService
             ], on_setServiceError)
             logger.info("Started Bluetooth advertising")
+
+    def getName(self):
+        if self.primaryService is None:
+            return None
+        return self.primaryServiceName
+
+    def sendMidi(self, msg : mido.Message):
+        if self.primaryService is None:
+            return
+        self.primaryService._characteristic.sendMidi(msg)

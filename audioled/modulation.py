@@ -19,7 +19,7 @@ CTRL_SECONDARY_COLOR_R = 'SecondaryColor_r'
 CTRL_SECONDARY_COLOR_G = 'SecondaryColor_g'
 CTRL_SECONDARY_COLOR_B = 'SecondaryColor_b'
 availableController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY]
-
+allController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY, CTRL_PRIMARY_COLOR_R, CTRL_PRIMARY_COLOR_G, CTRL_PRIMARY_COLOR_B, CTRL_SECONDARY_COLOR_R, CTRL_SECONDARY_COLOR_G, CTRL_SECONDARY_COLOR_B]
 
 class ModulationSource(object):
     """
@@ -95,6 +95,10 @@ class ModulationSource(object):
 
     def resetControllerModulation(self):
         pass
+
+    def getControllerModulation(self, controller, param = None):
+        if self.isControlledBy(controller):
+            return self.getValue(param)
 
     @staticmethod
     def getParameterDefinition():
