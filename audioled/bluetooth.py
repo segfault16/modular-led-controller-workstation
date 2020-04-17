@@ -67,19 +67,17 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
             msgs = []
             msg = self._value[2:] # Strip header and lower timestamp
             logger.info("Parsing {}".format([hex(c) for c in msg]))
-            midi = mido.parse(msg)
-            if midi is not None:
+            # Sysex
+            if msg[0] == 0xF0:
+                endSysex = msg.index(0xF7)
+                msg = msg[:endSysex+1]
+                # Remove timestamps?
+                msg = [item for index, item in enumerate(msg) if (index + 1) % 4 != 0]
+                logger.info("Parsing sysex to {}: {}".format(endSysex, [hex(c) for c in msg]))
+                midi = mido.Message.from_bytes(msg)
                 msgs += [midi]
             else:
-                # Probably sysex?
-                if msg[0] == 0xF0:
-                    endSysex = msg.index(0xF7)
-                    msg = msg[:endSysex+1]
-                    # Remove timestamps?
-                    msg = [item for index, item in enumerate(msg) if (index + 1) % 4 != 0]
-                    logger.info("Parsing sysex to {}: {}".format(endSysex, [hex(c) for c in msg]))
-                    midi = mido.Message.from_bytes(msg)
-                    msgs += [midi]
+                msgs = mido.parse_all(msg)
 
             for msg in msgs:
                 logger.info("message is: ")
