@@ -58,12 +58,39 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         self._value = data
 
         logger.debug('BluetoothMidiLELevelCharacteristic - %s - onWriteRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
-        msgs = mido.parse_all(self._value)
-        for msg in msgs:
-            if msg.type == 'program_change':
-                logger.info("is program change: {}".format(msg.program))
-            if self._msgReceivedCallback is not None:
-                self._msgReceivedCallback(msg)
+        # Strip first two bytes?
+        # TODO: BLE adds bytes?
+        header = self._value[0]
+        timestamp_low = self._value[1]
+        
+        try:
+            msgs = []
+            msg = self._value[2:] # Strip header and lower timestamp
+            logger.info("Parsing {}".format([hex(c) for c in msg]))
+            midi = mido.parse(msg)
+            if midi is not None:
+                msgs += [midi]
+            else:
+                # Probably sysex?
+                if msg[0] == 0xF0:
+                    endSysex = msg.index(0xF7)
+                    msg = msg[:endSysex+1]
+                    # Remove timestamps?
+                    msg = [item for index, item in enumerate(msg) if (index + 1) % 4 != 0]
+                    logger.info("Parsing sysex to {}: {}".format(endSysex, [hex(c) for c in msg]))
+                    midi = mido.Message.from_bytes(msg)
+                    msgs += [midi]
+
+            for msg in msgs:
+                logger.info("message is: ")
+                if msg.type == 'program_change':
+                    logger.info("is program change: {}".format(msg.program))
+                if msg.type == 'sysex':
+                    logger.info("is sysex: {}".format(msg.data))
+                if self._msgReceivedCallback is not None:
+                    self._msgReceivedCallback(msg)
+        except ValueError as e:
+            logger.error("Error decoding midi: {}".format(e))
 
     def onSubscribe(self, maxValueSize, updateValueCallback):
         logger.debug('EchoCharacteristic - onSubscribe')
@@ -79,8 +106,9 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         if self._updateValueCallback is None:
             logger.debug("No subscription?")
             return
-        
-        bytes =  [0x80, 0x80] + msg.bytes()
+        bytes = msg.bytes()
+        if msg.type is not 'sysex' or True:
+            bytes =  [0x80, 0x80] + msg.bytes()
 
         logger.debug("Writing {}".format([hex(c) for c in bytes]))
         

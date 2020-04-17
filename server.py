@@ -875,6 +875,38 @@ def handleMidiMsg(msg):
                 midiBluetooth.sendMidi(sendMsg)
 
         # TODO: Send sysex for available controller
+        status = proj.getController()
+        controllerEnabled = {}
+        for controller in modulation.allController:
+            if controller in inverseControllerMap:
+                controllerEnabled[inverseControllerMap[controller]] = False
+
+        logger.info("Status: {}".format(status.keys()))
+        for controller in status.keys():
+            if controller in inverseControllerMap:
+                controllerEnabled[inverseControllerMap[controller]] = True
+        # Create midi message from map
+        # TODO: Problem with receiving sysex in JUCE?
+        # [StartOfExclusive, ID of vendor (non-commercial in this case), ... data ]
+        if False:
+            sysexData = [0xF0, 0x7D]
+            for controllerNumber, enabled in controllerEnabled.items():
+                sysexData += [controllerNumber, (0 if not enabled else 1)]
+            sysexData += [0xF7] # End of exclusive
+            logger.info("Sending sysex {}".format(sysexData))
+            sysexMsg = mido.Message.from_bytes(sysexData)
+            midiBluetooth.sendMidi(sysexMsg)
+        # Version using note on / note off commands
+        for controllerNumber, enabled in controllerEnabled.items():
+            msg = None
+            if enabled:
+                msg = mido.Message('note_on')
+            else:
+                msg = mido.Message('note_off')
+            msg.channel = 1
+            msg.note = controllerNumber
+            midiBluetooth.sendMidi(msg)
+
         
         # TODO: Send brightness
         # brightness = proj.getBrightness() # TODO: Implement

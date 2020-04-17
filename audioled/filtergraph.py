@@ -561,6 +561,15 @@ class FilterGraph(Updateable):
                 if b is not None and controller.endswith("_b"):
                     ctrlValDict[controller] = b
         return ctrlValDict
+    
+    def getController(self):
+        ctrlDict = {}
+        for modSource in self.__modulationsources:
+            for controller in modulation.allController:
+                if modSource.modulator.isControlledBy(controller):
+                    ctrlDict[controller] = True
+
+        return ctrlDict
                 
 
     def propagateNumPixels(self, num_pixels, num_rows=1):

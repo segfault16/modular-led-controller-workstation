@@ -563,6 +563,13 @@ class Project(Updateable):
             mods.update(update)
         return mods
 
+    def getController(self):
+        ctrl = {}
+        for fg in self._activeFiltergraphs():
+            update = fg.getController()
+            ctrl.update(update)
+        return ctrl
+
     def setBrightness(self, value):
         # Brightness per device
         self._sendBrightnessCommand(value)
