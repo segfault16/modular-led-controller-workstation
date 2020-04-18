@@ -1324,6 +1324,7 @@ class GenerateWaves(Effect):
 
 
 class Sorting(Effect):
+    # TODO sort like the color wheel
     """Effect for sorting an input by color or brightness."""
 
     @staticmethod
