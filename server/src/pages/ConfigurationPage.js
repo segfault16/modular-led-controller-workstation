@@ -83,7 +83,7 @@ class ConfigurationPage extends Component {
             { title: 'Num Rows', field: 'num_rows', type: 'numeric' },
             { title: 'Panel mapping file', field: 'mapping' },
             { title: 'Virtual reference', field: 'virtual_reference' },
-            { title: 'Virtual start index', field: 'virtual_startindex' }
+            { title: 'Virtual start index', field: 'virtual_startindex', type: 'numeric' }
         ],
         data: [
             { config: 'default', device: 'FadeCandy', candyserver: 'localhost', num_pixel: 63 },

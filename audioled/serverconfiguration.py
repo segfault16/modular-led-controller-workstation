@@ -25,6 +25,10 @@ allowed_configs = [
     CONFIG_ACTIVE_PROJECT, CONFIG_DEVICE_PANEL_MAPPING, CONFIG_ACTIVE_DEVICE_CONFIGURATION, CONFIG_DEVICE_CONFIGS
 ]
 
+allowed_devices = [
+    'FadeCandy', 'RaspberryPi'
+]
+
 
 class ServerConfiguration:
     def __init__(self):
@@ -40,12 +44,12 @@ class ServerConfiguration:
         self._activeProject = None
         self._reusableDevice = None
 
-    @staticmethod
-    def getConfigurationParameters():
+    def getConfigurationParameters(self):
         return {
             # CONFIG_NUM_PIXELS: [300, 1, 2000, 1],
             # CONFIG_NUM_ROWS: [1, 1, 100, 1],
             # CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
+            CONFIG_ACTIVE_DEVICE_CONFIGURATION: list(self.getConfiguration(CONFIG_DEVICE_CONFIGS).keys())
         }
 
     def setConfiguration(self, dict):
@@ -77,7 +81,8 @@ class ServerConfiguration:
                 CONFIG_DEVICE_CANDY_SERVER,
                 CONFIG_NUM_ROWS,
                 CONFIG_DEVICE_PANEL_MAPPING,
-                CONFIG_DEVICE_CONFIGS
+                CONFIG_DEVICE_CONFIGS,
+                CONFIG_ACTIVE_DEVICE_CONFIGURATION
         ]:
             print("Renewing device")
             self._reusableDevice = None
@@ -229,7 +234,8 @@ class ServerConfiguration:
                 # TODO: Error handling
                 pass
             deviceConfig = deviceConfigs[deviceConfigName]
-            self.setConfigurationValue(CONFIG_ACTIVE_DEVICE_CONFIGURATION, deviceConfigName)
+            if self.getConfiguration(CONFIG_ACTIVE_DEVICE_CONFIGURATION) != deviceConfigName:
+                self.setConfigurationValue(CONFIG_ACTIVE_DEVICE_CONFIGURATION, deviceConfigName)
             return self.createOutputDeviceFromConfig(deviceConfig, deviceConfigs)
 
     def createSingleDevice(self, deviceName, numPixels, numRows, candyServer=None, panelMapping=None):
@@ -335,7 +341,7 @@ class ServerConfiguration:
             if deviceName == 'VirtualOutput':
                 # Construct output device
                 referencedConf = entry['device.virtual.reference']
-                start_index = entry['device.virtual.start_index']
+                start_index = int(entry['device.virtual.start_index'])
                 if referencedConf not in multiDevices:
                     ref = fullConfig[referencedConf]
                     deviceWrapper = self.createOutputDeviceFromConfig(ref, fullConfig)  # type: MultiOutputWrapper
