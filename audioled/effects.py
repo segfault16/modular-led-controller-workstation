@@ -368,8 +368,8 @@ class Mirror(Effect):
         help = {
             "parameters": {
                 "mirror_lower": "Switch between mirroring the lower or the upper part of input channel 0.",
-                "recursion": "Recursion depth of the mirroring effect. If recursion is set to 1, "\
-                    "the lower and upper half of the strip are mirrored again at their centers."
+                "recursion": "Recursion depth of the mirroring effect. If recursion is set to 1, "
+                "the lower and upper half of the strip are mirrored again at their centers."
             }
         }
         return help
@@ -678,3 +678,66 @@ class Swing(Effect):
         config = self.displacement * math.sin(self._t * self.swingspeed)
 
         self._outputBuffer[0] = sp.ndimage.interpolation.shift(pixels, [0, config], mode='wrap', prefilter=True)
+
+
+class Flipping(Effect):
+    """Effect that flips output array."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Flipping output. Useful for multi-outputs."
+
+    def __init__(self, Flip=True):
+        self.Flip = Flip
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(Flipping, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                ("Flip", True),
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "Flip": "Activate the Flip."
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['Flip'] = self.Flip
+        return definition
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = None
+            return
+
+        pixels = self._inputBuffer[0]
+
+        if self.Flip is True:
+            pixels[0] = np.flip(pixels[0], 0)
+            pixels[1] = np.flip(pixels[1], 0)
+            pixels[2] = np.flip(pixels[2], 0)
+
+        self._outputBuffer[0] = pixels
