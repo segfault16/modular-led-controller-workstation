@@ -2,7 +2,6 @@ from __future__ import (absolute_import, division, print_function, unicode_liter
 
 import math
 import random
-import threading
 from collections import OrderedDict
 import os.path
 
@@ -18,8 +17,10 @@ wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
 wave_mode_default = 'sin'
 sortby = ['red', 'green', 'blue', 'brightness']
 sortbydefault = 'red'
+direction = ['side1', 'side2', 'random']
+direction_default = 'random'
 wave_pool2 = ['sin(x)', '1/x', '1/(x^2)', '1/(x^3)', 'const(x)', 'x', 'x^2', 'x^3', 'x * e^(-x)', 'all']
-wave_pool2_default = '1/x'
+wave_pool2_default = 'sin(x)'
 
 
 class SwimmingPool(Effect):
@@ -188,15 +189,13 @@ class SwimmingPool2(Effect):
                  wavespread_low=30,
                  wavespread_high=70,
                  max_speed=30,
-                 directed=False,
-                 direction=False,
+                 direction=direction_default,
                  wave_pool2=wave_pool2_default):
         self.num_waves = num_waves
         self.scale = scale
         self.wavespread_low = wavespread_low
         self.wavespread_high = wavespread_high
         self.max_speed = max_speed
-        self.directed = directed
         self.direction = direction
         self.wave_pool2 = wave_pool2
         self.__initstate__()
@@ -234,10 +233,9 @@ class SwimmingPool2(Effect):
                 ("num_waves", [30, 1, 100, 1]),
                 ("scale", [0.2, 0.01, 1.0, 0.01]),
                 ("wavespread_low", [30, 1, 100, 1]),
-                ("wavespread_high", [70, 50, 150, 1]),
+                ("wavespread_high", [70, 2, 150, 1]),
                 ("max_speed", [30, 1, 200, 1]),
-                ("directed", False),
-                ("direction", False),
+                ("direction", direction),
                 ("wave_pool2", wave_pool2),
             ])
         }
@@ -252,8 +250,7 @@ class SwimmingPool2(Effect):
                 "wavespread_low": "Minimal spread of the randomly generated waves.",
                 "wavespread_high": "Maximum spread of the randomly generated waves.",
                 "max_speed": "Maximum movement speed of the waves.",
-                "directed": "Activate direction of waves.",
-                "direction": "Select left or right.",
+                "direction": "Select a direction or random behavior.",
                 "wave_pool2": "Select type of waves to spawn."
             }
         }
@@ -266,8 +263,7 @@ class SwimmingPool2(Effect):
         definition['parameters']['wavespread_low'][0] = self.wavespread_low
         definition['parameters']['wavespread_high'][0] = self.wavespread_high
         definition['parameters']['max_speed'][0] = self.max_speed
-        definition['parameters']['directed'] = self.directed
-        definition['parameters']['direction'] = self.direction
+        definition['parameters']['direction'] = [self.direction] + [x for x in direction if x != self.direction]
         definition['parameters']['wave_pool2'] = [self.wave_pool2] + [x for x in wave_pool2 if x != self.wave_pool2]
         return definition
 
@@ -346,8 +342,10 @@ class SwimmingPool2(Effect):
             self._Wave = np.roll(self._Wave, 1, axis=0)
             self._WaveSpecSpeed = np.roll(self._WaveSpecSpeed, 1)
             speed = np.random.randint(0, self.max_speed)
-            if self.direction == 0:
+            if self.direction == 'side1':
                 speed = speed * -1
+            elif self.direction == 'random':
+                speed = speed * random.choice([-1, 1])
             spread = np.random.randint(self.wavespread_low, self.wavespread_high)
             height = np.random.rand()
             wave = self._SinArray(spread, height, speed)
