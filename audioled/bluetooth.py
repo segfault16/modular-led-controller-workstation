@@ -78,46 +78,64 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         msgs = []
         timestampIndex = 0
         lastStatus = None
+        isSysex = False
+        sysexData = []
         for id, inByte in enumerate(msg):
             # First byte is always timestamp
-            if id == timestampIndex:
+            if id <= timestampIndex:
+                logger.debug("Skipping timestamp idx {}: {}".format(id, hex(inByte)))
                 continue
             
             # respect running status
             if lastStatus is None:
                 if not inByte & 0x80:
                     # TODO: Midi sysex over multiple packages
+                    logger.debug("TODO: Sysex multiple packages")
                     pass
-                else:
-                    # Save status
-                    lastStatus = inByte
             
             if inByte & 0x80 and id < len(msg) - 1 and msg[id+1] & 0x80:
                 # Midi status only byte
+                logger.debug("Midi status only messages {}".format(hex(inByte)))
                 msgs.append([inByte])
                 timestampIndex = id + 1
                 continue
-            elif inByte & 0x80:
+            elif inByte & 0x80 and not inByte == 0xF7:
                 # Save status
+                logger.debug("New status: {}".format(hex(inByte)))
                 lastStatus = inByte
+                if inByte == 0xF0:
+                    logger.debug("Sysex start")
+                    isSysex = True
             else:
                 # Check preceding byte for new timestamp
-                if id < len(msg) - 1 and msg[id+1] & 0x80:
-                    # End of message indicated by new timestamp
-                    newMsg = msg[timestampIndex:id+1]
-                    if not newMsg[0] & 0x80:
-                        # Add running status
-                        newMsg = [lastStatus] + newMsg
-                    msgs.append(newMsg)
-                    # skip first byte in next iteration
-                    timestampIndex = id+1
+                if id < len(msg) - 1 and msg[id+1] & 0x80 and not msg[id+1] == 0xF7:
+                    logger.debug("Next byte after {} is timestamp".format(hex(inByte)))
+                    if not isSysex:
+                        # End of message indicated by new timestamp
+                        newMsg = msg[timestampIndex:id+1]
+                        
+                        if not newMsg[0] & 0x80:
+                            # Add running status
+                            newMsg = [lastStatus] + newMsg
+                        msgs.append(newMsg)
+                        # skip first byte in next iteration
+                        timestampIndex = id+1
+                    elif id < len(msg) - 2 and msg[id+1] & 0x80 and msg[id+2] == 0xF7:
+                        # End of sysex
+                        logger.debug("End of sysex")
+                        newMsg = msg[timestampIndex:id+1]
+                        newMsg.append(0xF7)
+                        msgs.append(newMsg)
+                        timestampIndex = id+3
+                        isSysex = False
                 else:
+                    logger.debug("Skipping data byte {}".format(hex(inByte)))
                     continue
         # last message
         if timestampIndex < len(msg):
             msgs.append(msg[timestampIndex:])
         for m in msgs:
-            logger.debug("Parsing message {}".format(m))
+            logger.debug("Parsing message {}".format([hex(c) for c in m]))
             try:
                 midi = mido.Message.from_bytes(m[1:]) # Strip timestamp on parse
                 midiMsgs.append(midi)
