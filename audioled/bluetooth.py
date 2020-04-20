@@ -58,37 +58,81 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         self._value = data
 
         logger.debug('BluetoothMidiLELevelCharacteristic - %s - onWriteRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
-        # Strip first two bytes?
-        # TODO: BLE adds bytes?
+        if self._value is None or len(self._value) <= 2:
+            logger.warning("Not enough bytes in MIDI-BLE message")
+            return
+        # First byte: Header byte
         header = self._value[0]
+        if not header & 0x80:
+            logger.warning("Header byte doesn't start with status byte")
+            return
+        # Second byte: Timestamp byte
         timestamp_low = self._value[1]
+        if not timestamp_low & 0x80:
+            logger.warning("Second MIDI-BLE byte not status")
+            return
         
-        try:
-            msgs = []
-            msg = self._value[2:] # Strip header and lower timestamp
-            logger.info("Parsing {}".format([hex(c) for c in msg]))
-            # Sysex
-            if msg[0] == 0xF0:
-                endSysex = msg.index(0xF7)
-                msg = msg[:endSysex+1]
-                # Remove timestamps?
-                msg = [item for index, item in enumerate(msg) if (index + 1) % 4 != 0]
-                logger.info("Parsing sysex to {}: {}".format(endSysex, [hex(c) for c in msg]))
-                midi = mido.Message.from_bytes(msg)
-                msgs += [midi]
+        midiMsgs = []  # type: [mido.Message]
+        msg = self._value[1:]  # Strip header
+        logger.info("Parsing {}".format([hex(c) for c in msg]))
+        msgs = []
+        timestampIndex = 0
+        lastStatus = None
+        for id, inByte in enumerate(msg):
+            # First byte is always timestamp
+            if id == timestampIndex:
+                continue
+            
+            # respect running status
+            if lastStatus is None:
+                if not inByte & 0x80:
+                    # TODO: Midi sysex over multiple packages
+                    pass
+                else:
+                    # Save status
+                    lastStatus = inByte
+            
+            if inByte & 0x80 and id < len(msg) - 1 and msg[id+1] & 0x80:
+                # Midi status only byte
+                msgs.append([inByte])
+                timestampIndex = id + 1
+                continue
+            elif inByte & 0x80:
+                # Save status
+                lastStatus = inByte
             else:
-                msgs = mido.parse_all(msg)
+                # Check preceding byte for new timestamp
+                if id < len(msg) - 1 and msg[id+1] & 0x80:
+                    # End of message indicated by new timestamp
+                    newMsg = msg[timestampIndex:id+1]
+                    if not newMsg[0] & 0x80:
+                        # Add running status
+                        newMsg = [lastStatus] + newMsg
+                    msgs.append(newMsg)
+                    # skip first byte in next iteration
+                    timestampIndex = id+1
+                else:
+                    continue
+        # last message
+        if timestampIndex < len(msg):
+            msgs.append(msg[timestampIndex:])
+        for m in msgs:
+            logger.debug("Parsing message {}".format(m))
+            try:
+                midi = mido.Message.from_bytes(m[1:]) # Strip timestamp on parse
+                midiMsgs.append(midi)
+            except ValueError as e:
+                logger.error("Error decoding midi: {}".format(e))
 
-            for msg in msgs:
-                logger.info("message is: ")
-                if msg.type == 'program_change':
-                    logger.info("is program change: {}".format(msg.program))
-                if msg.type == 'sysex':
-                    logger.info("is sysex: {}".format(msg.data))
-                if self._msgReceivedCallback is not None:
-                    self._msgReceivedCallback(msg)
-        except ValueError as e:
-            logger.error("Error decoding midi: {}".format(e))
+        for msg in midiMsgs:
+            logger.info("message is: {}".format(msg))
+            if msg.type == 'program_change':
+                logger.info("is program change: {}".format(msg.program))
+            if msg.type == 'sysex':
+                logger.info("is sysex: {}".format(msg.data))
+            if self._msgReceivedCallback is not None:
+                self._msgReceivedCallback(msg)
+
 
     def onSubscribe(self, maxValueSize, updateValueCallback):
         logger.debug('EchoCharacteristic - onSubscribe')
