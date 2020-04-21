@@ -85,7 +85,7 @@ count = 0
 
 preview_lock = multiprocessing.Lock()
 
-midiBluetooth = None  # type: bluetooth.BluetoothMidiLELevelCharacteristic
+midiBluetooth = None  # type: audioled.bluetooth.BluetoothMidiLELevelCharacteristic
 
 def lock_preview(fn):
     
