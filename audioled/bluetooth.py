@@ -190,7 +190,7 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
             logger.debug("No subscription?")
             return
         bytes = msg.bytes()
-        if msg.type is not 'sysex' or True:
+        if msg.type != 'sysex' or True:
             bytes =  [0x80, 0x80] + msg.bytes()
 
         logger.debug("Writing {}".format([hex(c) for c in bytes]))
