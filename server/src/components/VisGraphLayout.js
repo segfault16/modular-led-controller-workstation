@@ -81,6 +81,7 @@ export const VisGraphLayout = {
     // Find effect nodes without output
     var startWith = effectNodes.filter(n => outNodes.filter(o => o.nodeUid === n.id).length == 0)
     var nodesWithOutCon = outNodes.filter(n => edges.filter(e => e.from == n.id).length != 0).map(o => o.nodeUid)
+    
     var temp = effectNodes.filter(n => !nodesWithOutCon.find(t => t === n.id))
     temp.forEach( t => {
       if (!startWith.find(k => k.id === t.id)) {
@@ -91,9 +92,10 @@ export const VisGraphLayout = {
     var processed = []
     var unprocessed = [...effectNodes]
     var maxLevel = 0
+    // start at level 0, go left
+    var level = 0;
     startWith.forEach(sN => {
-      // start at level 0, go left
-      var level = 0;
+      
       console.log("Processing startnode", sN)
       if(sN.level != null) {
         console.log("Using startnode level", sN.level)
@@ -105,7 +107,7 @@ export const VisGraphLayout = {
       }
       // set level of startnode
       sN.level = level;
-      // proceed, respect reserved leves
+      // proceed, respect reserved levels
       level = level - 3;
       if (reservedLevel != null && reservedLevel == level) {
         level = level - 3;
@@ -121,18 +123,18 @@ export const VisGraphLayout = {
         var before = unprocessed.length
         var curUnprocessed = [...unprocessed]
         var curPocessed = [...processed]
-        curUnprocessed.forEach(n => {
-          if(startWith.find(t => t.id === n.id)) {
+        curUnprocessed.forEach(curUnprocessedNode => {
+          if(startWith.find(t => t.id === curUnprocessedNode.id)) {
             // skip start nodes
             return
           }
           // find connections from this node
-          var cons = edges.filter(e => e.from_node === n.id);
+          var cons = edges.filter(e => e.from_node === curUnprocessedNode.id);
           // check all nodes after this node have been processed (or find one that isn't)
           if (cons.find(c => (curPocessed.find(t => t.id === c.to_node) == null)) == null) {
-            n.level = level
-            processed.push(n)
-            var idx = unprocessed.indexOf(n)
+            curUnprocessedNode.level = level
+            processed.push(curUnprocessedNode)
+            var idx = unprocessed.indexOf(curUnprocessedNode)
             if (idx > -1) {
               unprocessed.splice(idx, 1)
             }
