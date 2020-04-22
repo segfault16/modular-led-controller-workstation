@@ -277,6 +277,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                 else:
                     print("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
+                # TODO: Propagate NodeException to project
                 print("Continuing on NodeException")
             finally:
                 # print("{} done".format(os.getpid()))
@@ -673,11 +674,19 @@ class Project(Updateable):
         return fg
 
     def getSceneMatrix(self):
-        return self.outputSlotMatrix
+        numDevices = len(self._devices)
+        retMatrix = {}
+        for i in range(0, numDevices):
+            if i in self.outputSlotMatrix:
+                retMatrix[i] = self.outputSlotMatrix[i]
+            if '%s' % i in self.outputSlotMatrix:
+                retMatrix[i] = self.outputSlotMatrix['%s' % i]
+        return retMatrix
 
     def setSceneMatrix(self, value):
         # TODO: Validate
-        self.outputSlotMatrix = value
+        for key, val in value.items():
+            self.outputSlotMatrix[key] = val
         self.activateScene(self.activeSceneId)
 
     def _handleNodeAdded(self, node: audioled.filtergraph.Node):
