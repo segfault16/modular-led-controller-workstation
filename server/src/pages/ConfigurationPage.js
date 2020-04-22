@@ -24,6 +24,7 @@ import Remove from '@material-ui/icons/Remove';
 import SaveAlt from '@material-ui/icons/SaveAlt';
 import Search from '@material-ui/icons/Search';
 import ViewColumn from '@material-ui/icons/ViewColumn';
+import Typography from '@material-ui/core/Typography';
 
 import { withSnackbar } from 'notistack';
 
@@ -76,7 +77,7 @@ class ConfigurationPage extends Component {
         values: null,
         device_configs: null,
         columns: [
-            { title: 'Config name', field: 'config' },
+            { title: 'Output group', field: 'config' },
             { title: 'Device', field: 'device', lookup: { FadeCandy: 'FadeCandy', RaspberryPi: 'RaspberryPi', VirtualOutput: 'VirtualOutput' }, },
             { title: 'Candy Server (if device is CandyServer)', field: 'candyserver' },
             { title: 'Num Pixel', field: 'num_pixel', type: 'numeric' },
@@ -250,7 +251,18 @@ class ConfigurationPage extends Component {
                     Server Configuration
                 </h2>
                 {configurator}
-                Please note: Changing output configuration might require a restart for some devices
+                <h2>
+                    Device Configuration
+                </h2>
+                <Typography>
+                    In the following section you can figure one or more outputs for LED strips and panels.
+                    Multiple devices can be can be grouped in one output group and will be visible as separate slots in Edit View.
+                    If multiple slots for a single hardware device are required, create an output group with VirtualOutputs.
+                    They must refer to the same non-virtual output group via Virtual reference.
+                </Typography>
+                <Typography>
+                    Please note: Changing output configuration might require a restart for some devices
+                </Typography>
                 <MaterialTable
                     icons={tableIcons}
                     title="Output configuration"
