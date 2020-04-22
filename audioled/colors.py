@@ -89,7 +89,6 @@ class StaticRGBColor(Effect):
 
     def __initstate__(self):
         # state
-        print("init state")
         self._color = None
         super(StaticRGBColor, self).__initstate__()
 

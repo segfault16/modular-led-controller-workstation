@@ -18,7 +18,7 @@ jobs:
     - name: Install linux dependencies
       if: matrix.os == 'ubuntu-latest'
       run: |
-        sudo apt-get install portaudio19-dev
+        sudo apt-get update && sudo apt-get install portaudio19-dev
     - name: Install macOS dependencies
       if: matrix.os == 'macOS-latest'
       run: |

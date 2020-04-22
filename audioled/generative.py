@@ -1116,8 +1116,8 @@ class GIFPlayer(Effect):
         return \
             "Effect for displaying GIFs on LED panels."
 
-    def __init__(self, gif_file=None, fps=30, center_x=0.5, center_y=0.5):
-        self.file = gif_file
+    def __init__(self, file=None, fps=30, center_x=0.5, center_y=0.5):
+        self.file = file
         self.fps = fps
         self.center_x = center_x
         self.center_y = center_y
@@ -1172,9 +1172,8 @@ class GIFPlayer(Effect):
         adjustedFile = self.file
         if self.file is None:
             return
-        if self._filterGraph is not None and self._filterGraph._project is not None:
-            if self._filterGraph._project._contentRoot is not None:
-                adjustedFile = os.path.join(self._filterGraph._project._contentRoot, self.file)
+        if self._filterGraph is not None and self._filterGraph._contentRoot is not None:
+            adjustedFile = os.path.join(self._filterGraph._contentRoot, self.file)
         try:
             self._gif = Image.open(adjustedFile)
         except Exception:

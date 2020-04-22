@@ -18,9 +18,9 @@ from flask import Flask, abort, jsonify, request, send_from_directory, redirect,
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation
+from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project
 
-proj = None
+proj = None  # type: project.Project
 default_values = {}
 record_timings = False
 serverconfig = None
@@ -72,8 +72,10 @@ def create_app():
     def interrupt():
         print('cancelling LED thread')
         global ledThread
+        global proj
         # stop_signal = True
         try:
+            proj.stopProcessing()
             ledThread.join()
         except RuntimeError:
             pass
@@ -99,7 +101,7 @@ def create_app():
     def slot_slotId_nodes_get(slotId):
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
-        nodes = [node for node in fg._filterNodes]
+        nodes = [node for node in fg.getNodes()]
         return jsonpickle.encode(nodes)
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['GET'])
@@ -107,7 +109,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return jsonpickle.encode(node)
         except StopIteration:
             abort(404, "Node not found")
@@ -117,8 +119,8 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
-            fg.removeEffectNode(node.effect)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
+            fg.removeEffectNode(node.uid)
             return "OK"
         except StopIteration:
             abort(404, "Node not found")
@@ -130,10 +132,8 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
-            # data =  json.loads(request.json)
             print(request.json)
-            node.effect.updateParameter(request.json)
+            node = fg.updateNodeParameter(nodeUid, request.json)
             return jsonpickle.encode(node)
         except StopIteration:
             abort(404, "Node not found")
@@ -143,7 +143,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(node.effect.getParameterDefinition())
         except StopIteration:
             abort(404, "Node not found")
@@ -153,7 +153,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(node.effect.getModulateableParameters())
         except StopIteration:
             abort(404, "Node not found")
@@ -163,7 +163,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            node = next(node for node in fg._filterNodes if node.uid == nodeUid)
+            node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(getFullClassName(node.effect))
         except StopIteration:
             abort(404, "Node not found")
@@ -197,7 +197,7 @@ def create_app():
     def slot_slotId_connections_get(slotId):
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
-        connections = [con for con in fg._filterConnections]
+        connections = [con for con in fg.getConnections()]
         return jsonpickle.encode(connections)
 
     @app.route('/slot/<int:slotId>/connection', methods=['POST'])
@@ -221,13 +221,8 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            connection = next(connection for connection in fg._filterConnections if connection.uid == connectionUid)
-            fg.removeConnection(
-                connection.fromNode.effect,
-                connection.fromChannel,
-                connection.toNode.effect,
-                connection.toChannel,
-            )
+            connection = next(connection for connection in fg.getConnections() if connection.uid == connectionUid)
+            fg.removeConnection(connection.uid)
             return "OK"
         except StopIteration:
             abort(404, "Node not found")
@@ -236,7 +231,7 @@ def create_app():
     def slot_slotId_modulationSources_get(slotId):
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
-        mods = [mod for mod in fg._modulationSources]
+        mods = [mod for mod in fg.getModulationSources()]
         return jsonpickle.encode(mods)
 
     @app.route('/slot/<int:slotId>/modulationSource/<modulationSourceUid>', methods=['DELETE'])
@@ -244,7 +239,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            mod = next(mod for mod in fg._modulationSources if mod.uid == modulationSourceUid)
+            mod = next(mod for mod in fg.getModulationSources() if mod.uid == modulationSourceUid)
             fg.removeModulationSource(mod.uid)
             return "OK"
         except StopIteration:
@@ -257,11 +252,8 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            mod = next(mod for mod in fg._modulationSources
-                       if mod.uid == modulationUid)  # type: filtergraph.ModulationSourceNode
-            # data =  json.loads(request.json)
             print(request.json)
-            mod = mod.modulator.updateParameter(request.json)
+            mod = fg.updateModulationSourceParameter(modulationUid, request.json)
             return jsonpickle.encode(mod)
         except StopIteration:
             abort(404, "Modulation not found")
@@ -271,7 +263,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            mod = next(mod for mod in fg._modulationSources if mod.uid == modulationSourceUid)
+            mod = next(mod for mod in fg.getModulationSources() if mod.uid == modulationSourceUid)
             return jsonpickle.encode(mod)
         except StopIteration:
             abort(404, "Modulation Source not found")
@@ -282,7 +274,7 @@ def create_app():
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         modSourceId = request.args.get('modulationSourceUid', None)
         modDestinationId = request.args.get('modulationDestinationUid', None)
-        mods = [mod for mod in fg._modulations]
+        mods = [mod for mod in fg.getModulations()]
         if modSourceId is not None:
             # for specific modulation source
             mods = [mod for mod in mods if mod.modulationSource.uid == modSourceId]
@@ -307,7 +299,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid)
+            mod = next(mod for mod in fg.getModulations() if mod.uid == modulationUid)
             return jsonpickle.encode(mod)
         except StopIteration:
             abort(404, "Modulation not found")
@@ -319,10 +311,8 @@ def create_app():
         if not request.json:
             abort(400)
         try:
-            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid)  # type: filtergraph.Modulation
-            # data =  json.loads(request.json)
             print(request.json)
-            mod.updateParameter(request.json)
+            mod = fg.updateModulationParameter(modulationUid, request.json)
             return jsonpickle.encode(mod)
         except StopIteration:
             abort(404, "Modulation not found")
@@ -332,7 +322,7 @@ def create_app():
         global proj
         fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
         try:
-            mod = next(mod for mod in fg._modulations if mod.uid == modulationUid)
+            mod = next(mod for mod in fg.getModulations() if mod.uid == modulationUid)
             if mod is not None:
                 fg.removeModulation(modulationUid)
                 return "OK"
@@ -454,20 +444,49 @@ def create_app():
             result[error.node.uid] = error.message
         return json.dumps(result)
 
-    @app.route('/project/activeSlot', methods=['POST'])
-    def project_activeSlot_post():
+    @app.route('/project/activeScene', methods=['POST'])
+    def project_activeScene_post():
         global proj
         if not request.json:
             abort(400)
         value = request.json['slot']
         # print("Activating slot {}".format(value))
-        proj.activateSlot(value)
+        proj.activateScene(value)
+        # proj.previewSlot(value)
         return "OK"
 
-    @app.route('/project/activeSlot', methods=['GET'])
+    @app.route('/project/activeScene', methods=['GET'])
     def project_activeSlot_get():
         global proj
-        return jsonify({'slot': proj.activeSlotId})
+        print(proj.outputSlotMatrix)
+        return jsonify({
+            'activeSlot': proj.activeSlotId,
+            'activeScene': proj.activeSceneId,
+        })
+
+    @app.route('/project/sceneMatrix', methods=['PUT'])
+    def project_sceneMatrix_put():
+        global proj
+        if not request.json:
+            abort(400)
+        value = request.json
+        print(value)
+        proj.setSceneMatrix(value)
+        return "OK"
+
+    @app.route('/project/activateSlot', methods=['POST'])
+    def project_activateSlot_post():
+        global proj
+        if not request.json:
+            abort(400)
+        value = request.json['slot']
+        proj.previewSlot(value)
+        return "OK"
+
+    @app.route('/project/sceneMatrix', methods=['GET'])
+    def project_sceneMatrix_get():
+        global proj
+        return json.dumps(proj.getSceneMatrix())
 
     @app.route('/project/assets/<path:path>', methods=['GET'])
     def project_assets_get(path):
@@ -564,8 +583,11 @@ def create_app():
         global serverconfig
         if not request.json:
             abort(400)
-        for key, value in request.json.items():
-            serverconfig.setConfiguration(key, value)
+        try:
+            serverconfig.setConfiguration(request.json)
+        except RuntimeError as e:
+            print("ERROR updating configuration: {}".format(e))
+            abort(400, str(e))
         return jsonify(serverconfig.getFullConfiguration())
 
     @app.route('/remote/brightness', methods=['POST'])
@@ -618,7 +640,10 @@ def create_app():
                 errors.clear()
 
         except filtergraph.NodeException as ne:
-            print("NodeError in {}: {}".format(ne.node.effect, ne))
+            if count == 100:
+                print("NodeError in {}: {}".format(ne.node.effect, ne))
+                print("Skipping next 100 errors...")
+                count = 0
             errors.clear()
             errors.append(ne)
         except Exception as e:
@@ -685,53 +710,7 @@ if __name__ == '__main__':
         num_rows=None,
         num_pixels=None,
     )
-    # Add specific arguments
-    parser.add_argument(
-        '-p',
-        '--port',
-        dest='port',
-        default='5000',
-        help='Port to listen on',
-    )
-    parser.add_argument('-C',
-                        '--config_location',
-                        dest='config_location',
-                        default=None,
-                        help='Location of the server configuration to store. Defaults to $HOME/.ledserver.')
-    parser.add_argument(
-        '--no_conf',
-        dest='no_conf',
-        action='store_true',
-        default=False,
-        help="Don't load config from file",
-    )
-    parser.add_argument(
-        '--no_store',
-        dest='no_store',
-        action='store_true',
-        default=False,
-        help="Don't save anything to disk",
-    )
-    deviceChoices = serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')
-    parser.add_argument('-D',
-                        '--device',
-                        dest='device',
-                        default=None,
-                        choices=deviceChoices,
-                        help='device to send RGB to (default: FadeCandy)')
-    parser.add_argument('-P',
-                        '--process_timing',
-                        dest='process_timing',
-                        action='store_true',
-                        default=False,
-                        help='Print process timing')
-    parser.add_argument(
-        '--strand',
-        dest='strand',
-        action='store_true',
-        default=False,
-        help="Perform strand test at start of server.",
-    )
+    runtimeconfiguration.addServerRuntimeArguments(parser)
 
     # print audio information
     print("The following audio devices are available:")
@@ -756,26 +735,26 @@ if __name__ == '__main__':
     # Update num pixels
     if args.num_pixels is not None:
         num_pixels = args.num_pixels
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_NUM_PIXELS, num_pixels)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_NUM_PIXELS, num_pixels)
 
     # Update num rows
     if args.num_rows is not None:
         num_rows = args.num_rows
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_NUM_ROWS, num_rows)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_NUM_ROWS, num_rows)
 
     # Update LED device
     if args.device is not None:
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE, args.device)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_DEVICE, args.device)
 
     if args.device_candy_server is not None:
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER, args.device_candy_server)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_DEVICE_CANDY_SERVER, args.device_candy_server)
 
     if args.device_panel_mapping is not None:
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_DEVICE_PANEL_MAPPING, args.device_panel_mapping)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_DEVICE_PANEL_MAPPING, args.device_panel_mapping)
 
     # Update Audio device
     if args.audio_device_index is not None:
-        serverconfig.setConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX, args.audio_device_index)
+        serverconfig.setConfigurationValue(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX, args.audio_device_index)
 
     if args.process_timing:
         record_timings = True
@@ -806,4 +785,5 @@ if __name__ == '__main__':
     app = create_app()
     app.run(debug=False, host="0.0.0.0", port=args.port)
     print("End of server main")
+    proj.stopProcessing()
     stop_signal = True

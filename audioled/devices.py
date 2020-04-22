@@ -3,8 +3,10 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
 from collections import OrderedDict
+from typing import List
 import time
 import numpy as np
+import multiprocessing
 from audioled.effect import Effect
 
 _GAMMA_TABLE = [
@@ -60,6 +62,9 @@ class LEDController:
 
     def setNumRows(self, num_rows):
         self.num_rows = num_rows
+
+    def shutdown(self):
+        print("Shutting down device")
 
     def show(self, pixels):
         """Set LED pixels to the values given in the array
@@ -139,6 +144,8 @@ class ESP8266(LEDController):
             g (0 to 255): Green value of LED
             b (0 to 255): Blue value of LED
         """
+        if pixels is None:
+            pixels = np.zeros((3, self.num_pixels))
         message = (pixels * self.getBrightness()).T.clip(0, 255).astype(np.uint8).ravel().tostring()
         self._sock.sendto(message, (self._ip, self._port))
 
@@ -162,6 +169,8 @@ class FadeCandy(LEDController):
             print('Ensure that fcserver is running and try again.')
 
     def show(self, pixels):
+        if pixels is None:
+            pixels = np.zeros((3, self.num_pixels))
         self.client.put_pixels((pixels * self.getBrightness()).T.clip(0, 255).astype(int).tolist())
 
 
@@ -182,6 +191,8 @@ class BlinkStick(LEDController):
 
         This function updates the LED strip with new values.
         """
+        if pixels is None:
+            pixels = np.zeros((3, self.num_pixels))
         # Truncate values and cast to integer
         n_pixels = pixels.shape[1]
         pixels = (pixels * self.getBrightness()).clip(0, 255).astype(int)
@@ -274,12 +285,18 @@ class RaspberryPi(LEDController):
         self.__dict__.update(state)
         self.__initstate__()
 
+    def shutdown(self):
+        self._strip._cleanup()
+        return super().shutdown()
+
     def show(self, pixels):
         """Writes new LED values to the Raspberry Pi's LED strip
 
         Raspberry Pi uses the rpi_ws281x to control the LED strip directly.
         This function updates the LED strip with new values.
         """
+        if pixels is None:
+            pixels = np.zeros((3, self.num_pixels))
 
         # Truncate values and cast to integer
         n_pixels = pixels.shape[1]
@@ -325,6 +342,8 @@ class DotStar(LEDController):
         self.led_data = led_data.reshape((num_pixels, 4))  # or (-1, 4)
 
     def show(self, pixels):
+        if pixels is None:
+            pixels = np.zeros((3, self.num_pixels))
         bgr = [2, 1, 0]
         self.led_data[0:, 1:4] = (pixels * self.getBrightness())[bgr].T.clip(0, 255)
         self._strip.show()
@@ -376,6 +395,42 @@ class LEDOutput(Effect):
             else:
                 self._outputBuffer[0] = None
 
+
+class VirtualOutput(LEDController):
+    """VirtualOutput that stores output data in a process-safe buffer array
+    """
+    def __init__(self, device, num_pixels, shared_array: multiprocessing.Array, shared_lock: multiprocessing.Lock, num_rows=1,
+                 start_index=0):
+        self.device = device
+        self.num_pixels = num_pixels
+        self.num_rows = num_rows
+        self.pixel_mapping = None
+        self.start_index = start_index
+        self._shared_array = shared_array
+        self._shared_lock = shared_lock
+
+    def getBrightness(self):
+        return self.device.getBrightness()
+
+    def setBrightness(self, value):
+        self.device.setBrightness(value)
+
+    def getNumPixels(self):
+        return self.num_pixels
+
+    def setNumPixels(self, num_pixels):
+        self.num_pixels = num_pixels
+
+    def getNumRows(self):
+        return self.num_rows
+
+    def setNumRows(self, num_rows):
+        self.num_rows = num_rows
+
+    def show(self, pixels):
+        # print("propagating virtual from {} to {}".format(self.start_index, (self.start_index+self.num_pixels)))
+        npArray = np.ctypeslib.as_array(self._shared_array.get_obj()).reshape(3, -1)
+        npArray[:, self.start_index:self.start_index+self.num_pixels] = pixels
 
 class PanelWrapper(LEDController):
     """Device Wrapper for LED Panels
@@ -439,6 +494,13 @@ class PanelWrapper(LEDController):
         if self.pixel_mapping is not None:
             mapped_pixels = pixels[self.pixel_mapping[:, :, 0], self.pixel_mapping[:, :, 1]]
         self.device.show(mapped_pixels)
+    
+    def setPixelMapping(self, mappingJson):
+        if mappingJson:
+            self.pixel_mapping = self._createPixelMapping(mappingJson)
+    
+    def setDevice(self, device):
+        self.device = device
 
     def _createPixelMapping(self, mappingJson):
         def toIdx(row, col, num_cols):
@@ -471,20 +533,6 @@ class PanelWrapper(LEDController):
                     cur_row = cur_row + 1
         return mapping
 
-
-# # Execute this file to run a LED strand test
-# # If everything is working, you should see a red, green, and blue pixel scroll
-# # across the LED strip continously
-# if __name__ == '__main__':
-#     import time
-#     # Turn all pixels off
-#     pixels = np.zeros((3, config.N_PIXELS))
-#     update(pixels)
-#     pixels[0, 0] = 255  # Set 1st pixel red
-#     pixels[1, 1] = 255  # Set 2nd pixel green
-#     pixels[2, 2] = 255  # Set 3rd pixel blue
-#     print('Starting LED strand test')
-#     while True:
-#         pixels = np.roll(pixels, 1, axis=1)
-#         update(pixels)
-#         time.sleep(1)
+class MultiOutputWrapper(object):
+    def __init__(self, devices: List[LEDController]):
+        self._devices = devices
