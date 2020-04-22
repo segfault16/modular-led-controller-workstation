@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import time
+import traceback
 from collections import OrderedDict
 
 import numpy as np
@@ -84,8 +85,9 @@ class GlobalAudio():
         self.num_channels = num_channels
         try:
             self.global_stream, GlobalAudio.sample_rate = self.stream_audio(device_index, chunk_rate, num_channels)
-        except Exception:
+        except Exception as e:
             logger.error("!!! Fatal error in audio device !!!")
+            traceback.print_tb(e.__traceback__)
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
         chunk = np.fromstring(in_data, np.float32).astype(np.float)

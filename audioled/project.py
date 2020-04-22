@@ -307,6 +307,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                 else:
                     logger.warning("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
+                # TODO: Propagate NodeException to project
                 logger.info("Continuing on NodeException")
             finally:
                 # logger.info("{} done".format(os.getpid()))
@@ -797,16 +798,18 @@ class Project(Updateable):
         return fg
 
     def getSceneMatrix(self):
-        return self.outputSlotMatrix
+        numDevices = len(self._devices)
+        retMatrix = {}
+        for i in range(0, numDevices):
+            if i in self.outputSlotMatrix:
+                retMatrix[i] = self.outputSlotMatrix[i]
+            if '%s' % i in self.outputSlotMatrix:
+                retMatrix[i] = self.outputSlotMatrix['%s' % i]
+        return retMatrix
 
     def setSceneMatrix(self, value):
-        if self.outputSlotMatrix is not None:
-            # Check if slot matrix stayed the same
-            if self.outputSlotMatrix == value:
-                logger.debug("No change to scene matrix")
-                return
-        self.outputSlotMatrix = value
-        logger.debug("Updating scene matrix")
+        for key, val in value.items():
+            self.outputSlotMatrix[key] = val
         self.activateScene(self.activeSceneId)
 
     def _sendBrightnessCommand(self, value):

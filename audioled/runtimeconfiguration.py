@@ -72,7 +72,8 @@ def addServerRuntimeArguments(parser: argparse.ArgumentParser):
         default=False,
         help="Don't save anything to disk",
     )
-    deviceChoices = serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')
+    # deviceChoices = serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')
+    deviceChoices = serverconfiguration.allowed_devices
     parser.add_argument('-D',
                         '--device',
                         dest='device',
