@@ -243,6 +243,10 @@ class ExternalLinearController(ModulationSource):
             self.amount = 0.
 
         if param is None:
+            try:
+                self.controllerAmount
+            except AttributeError:
+                self.controllerAmount = None
             if self.controllerAmount is None:
                 return self.amount
             return self.controllerAmount
