@@ -10,6 +10,7 @@ import audioled.colors as colors
 from audioled.effect import Effect
 
 SHORT_NORMALIZE = 1.0 / 32768.0
+inter = ['lin', 'sawtooth', 'sawtooth_reversed', 'square']
 
 
 class Shift(Effect):
@@ -741,3 +742,74 @@ class Flipping(Effect):
             pixels[2] = np.flip(pixels[2], 0)
 
         self._outputBuffer[0] = pixels
+
+
+class Shapes(Effect):
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Shapes, yo!"
+
+    def __init__(self, x1=0, x2=100, inter='lin'):
+        self.x1 = x1
+        self.x2 = x2
+        self.inter = inter
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(Shapes, self).__initstate__()
+
+        self._last_t = self._t
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": OrderedDict([
+                # default, min, max, stepsize
+                ("x1", [0, 0.0, 100.0, 1.0]),
+                ("x2", [100, 0.0, 100.0, 1.0]),
+                ("inter", inter),
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "x1": "Starting brightness",
+                "x2": "Ending brightness",
+                "inter": "Interpolation mode",
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['x1'][0] = self.x1
+        definition['parameters']['x2'][0] = self.x2
+        definition['parameters']['inter'] = [self.inter] + [x for x in inter if x != self.inter]
+        return definition
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = None
+            return
+
+        y = self._inputBuffer[0]
+        slope = (self.x2 - self.x1) / len(y[0])
+
+        for i in range(len(y[0])):
+            for j in range(3):
+                y[j][i] = slope * i + y[j][i]
+
+        self._outputBuffer[0] = y
