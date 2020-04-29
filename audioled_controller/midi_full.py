@@ -83,7 +83,7 @@ class MidiProjectController:
             # Create midi message from map
             # TODO: Problem with receiving sysex in JUCE?
             # [StartOfExclusive, ID of vendor (non-commercial in this case), ... data ]
-            if False:
+            if True:
                 sysexData = [0xF0, 0x7D]
                 for controllerNumber, enabled in controllerEnabled.items():
                     sysexData += [controllerNumber, (0 if not enabled else 1)]
