@@ -10,7 +10,7 @@ import audioled.colors as colors
 from audioled.effect import Effect
 
 SHORT_NORMALIZE = 1.0 / 32768.0
-inter = ['linear', 'quadratic', 'cubic']
+inter = ['linear', 'quadratic', 'cubic', 'sphere']
 
 
 class Shift(Effect):
@@ -771,9 +771,9 @@ class Shapes(Effect):
         definition = {
             "parameters": OrderedDict([
                 # default, min, max, stepsize
+                ("inter", inter),
                 ("x1", [0, 0.0, 100.0, 1.0]),
                 ("x2", [100, 0.0, 100.0, 1.0]),
-                ("inter", inter),
             ])
         }
         return definition
@@ -791,9 +791,9 @@ class Shapes(Effect):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
+        definition['parameters']['inter'] = [self.inter] + [x for x in inter if x != self.inter]
         definition['parameters']['x1'][0] = self.x1
         definition['parameters']['x2'][0] = self.x2
-        definition['parameters']['inter'] = [self.inter] + [x for x in inter if x != self.inter]
         return definition
 
     def process(self):
