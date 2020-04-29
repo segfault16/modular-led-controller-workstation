@@ -48,7 +48,7 @@ logging.getLogger('root').setLevel(logging.DEBUG)
 logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO)  # Silence!
 logger = logging.getLogger(__name__)
 
-libnames = ['audioled.bluetooth']
+libnames = ['audioled_controller.bluetooth']
 for libname in libnames:
     try:
         lib = __import__(libname)
