@@ -10,7 +10,7 @@ import audioled.colors as colors
 from audioled.effect import Effect
 
 SHORT_NORMALIZE = 1.0 / 32768.0
-inter = ['lin', 'sawtooth', 'sawtooth_reversed', 'square']
+inter = ['linear', 'quadratic', 'cubic']
 
 
 class Shift(Effect):
@@ -750,7 +750,7 @@ class Shapes(Effect):
         return \
             "Shapes, yo!"
 
-    def __init__(self, x1=0, x2=100, inter='lin'):
+    def __init__(self, x1=0, x2=100, inter='linear'):
         self.x1 = x1
         self.x2 = x2
         self.inter = inter
@@ -759,8 +759,6 @@ class Shapes(Effect):
     def __initstate__(self):
         # state
         super(Shapes, self).__initstate__()
-
-        self._last_t = self._t
 
     def numInputChannels(self):
         return 1
@@ -784,9 +782,9 @@ class Shapes(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "x1": "Starting brightness",
-                "x2": "Ending brightness",
-                "inter": "Interpolation mode",
+                "Interpolation mode": "Choose the interpolation mode",
+                "x1": "Lowest brightness",
+                "x2": "Highest brightness",
             }
         }
         return help
@@ -806,10 +804,13 @@ class Shapes(Effect):
             return
 
         y = self._inputBuffer[0]
-        slope = (self.x2 - self.x1) / len(y[0])
+
+        a = np.array([[0, 1], [len(y[0]), 1]])
+        b = np.array([self.x1 / 100, self.x2 / 100])
+        slope = np.linalg.solve(a, b)
 
         for i in range(len(y[0])):
             for j in range(3):
-                y[j][i] = slope * i + y[j][i]
+                y[j][i] = (slope[0] * i + slope[1]) * y[j][i]
 
         self._outputBuffer[0] = y
