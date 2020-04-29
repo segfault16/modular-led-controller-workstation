@@ -86,7 +86,7 @@ count = 0
 preview_lock = multiprocessing.Lock()
 
 midiController = []
-midiBluetooth = None  # type: audioled.bluetooth.BluetoothMidiLELevelCharacteristic
+midiBluetooth = None  # type: audioled_controller.bluetooth.BluetoothMidiLELevelCharacteristic
 
 
 def lock_preview(fn):
@@ -812,7 +812,7 @@ def strandTest(dev, num_pixels):
         t = t + dt
         time.sleep(dt)
 
-def handleBluetoothMidi(msg: mido.Message):
+def handleMidiIn(msg: mido.Message):
     global proj
     global midiController
     for c in midiController:
@@ -907,10 +907,10 @@ if __name__ == '__main__':
     logging.debug("Adding bluetooth server to the mix")
     midiAdvertiseName = None
     try:
-        import audioled_controller
-        fullMidiController = audioled_controller.midi_full.MidiProjectController(callback=handleMidiOut)
+        from audioled_controller import midi_full, bluetooth
+        fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
         midiController.append(fullMidiController)
-        midiBluetooth = audioled_controller.bluetooth.MidiBluetoothService(callback=handleBluetoothMidi)
+        midiBluetooth = bluetooth.MidiBluetoothService(callback=handleMidiIn)
     except Exception as e:
         logging.warning("Ignoring Bluetooth error")
         logging.error(e)
