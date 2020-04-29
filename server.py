@@ -54,7 +54,7 @@ for libname in libnames:
         lib = __import__(libname)
     except Exception as e:
         logging.error("Import for bluetooth failed. {}".format(e))
-
+        traceback.print_tb(e.__traceback__)
     else:
         globals()[libname] = lib
 
