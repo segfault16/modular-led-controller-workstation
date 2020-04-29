@@ -588,8 +588,8 @@ class Bonfire(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("spread", [10, 0, 100, 1]),
-                ("lowcut_hz", [50.0, 0.0, 8000.0, 1.0]),
-                ("highcut_hz", [100.0, 0.0, 8000.0, 1.0]),
+                ("lowcut_hz", [50.0, 1.0, 8000.0, 1.0]),
+                ("highcut_hz", [100.0, 1.0, 8000.0, 1.0]),
             ])
         }
         return definition
