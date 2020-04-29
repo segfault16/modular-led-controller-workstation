@@ -1,12 +1,9 @@
 
-import sys
-import signal
 import mido
 import pybleno
 from pybleno import *
 import traceback
 import logging
-import array
 logger = logging.getLogger(__name__)
 
 
@@ -198,7 +195,6 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         self._updateValueCallback(bytes)
 
 
-
 class BluetoothMidiLEService(pybleno.BlenoPrimaryService):
     def __init__(self, _msgReceivedCallback):
         self._characteristic = BluetoothMidiLELevelCharacteristic(_msgReceivedCallback)
@@ -210,12 +206,11 @@ class BluetoothMidiLEService(pybleno.BlenoPrimaryService):
         })
 
 class MidiBluetoothService(object):
-    def __init__(self, callback = None):
+    def __init__(self, callback=None):
         self._callback = callback
         self.bleno = pybleno.Bleno()
         self.primaryService = BluetoothMidiLEService(self._onMessageReceived);
         self.primaryServiceName = 'MOLECOLE Control'
-
 
         self.bleno.on('advertisingStart', self._onAdvertisingStart)
         self.bleno.on('stateChange', self._onStateChange)
@@ -236,7 +231,7 @@ class MidiBluetoothService(object):
         # logger.info( ('terminated.')
         # sys.exit(1)
 
-    def _onMessageReceived(self, msg : mido.Message):
+    def _onMessageReceived(self, msg: mido.Message):
         logger.debug("Received msg: {}".format(msg))
         if self._callback is not None:
             try:
@@ -245,23 +240,20 @@ class MidiBluetoothService(object):
                 logger.error("Error in bluetooth callback: {}".format(e))
                 traceback.print_tb(e.__traceback__)
 
-        
-
     def _onStateChange(self, state):
         logger.debug('on -> stateChange: ' + state);
 
         if (state == 'poweredOn'):
             self.bleno.startAdvertising(self.primaryServiceName, [self.primaryService.uuid]);
         else:
-            self.bleno.stopAdvertising();
-    
+            self.bleno.stopAdvertising()
 
     def _onAdvertisingStart(self, error):
         logger.debug('on -> advertisingStart: ' + ('error ' + error if error else 'success'));
 
         if not error:
             def on_setServiceError(error):
-                logger.debug('setServices: %s'  % ('error ' + error if error else 'success'))
+                logger.debug('setServices: %s' % ('error ' + error if error else 'success'))
                 
             self.bleno.setServices([
                 self.primaryService
@@ -273,7 +265,7 @@ class MidiBluetoothService(object):
             return None
         return self.primaryServiceName
 
-    def sendMidi(self, msg : mido.Message):
+    def sendMidi(self, msg: mido.Message):
         if self.primaryService is None:
             return
         self.primaryService._characteristic.sendMidi(msg)

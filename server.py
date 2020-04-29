@@ -26,10 +26,10 @@ from audioled import audio, effects, filtergraph, serverconfiguration, runtimeco
 # configure logging here
 orig_factory = logging.getLogRecordFactory()
 
+
 def record_factory(*args, **kwargs):
     record = orig_factory(*args, **kwargs)
-    record.sname = record.name[-10:] if len(
-        record.name) > 10 else record.name
+    record.sname = record.name[-10:] if len(record.name) > 10 else record.name
     if record.threadName and len(record.threadName) > 10:
         record.sthreadName = record.threadName[:10]
     elif not record.threadName:
@@ -38,14 +38,15 @@ def record_factory(*args, **kwargs):
         record.sthreadName = record.threadName
     return record
 
+
 logging.setLogRecordFactory(record_factory)
-logging.basicConfig(level=logging.INFO, format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
+logging.basicConfig(level=logging.INFO,
+                    format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
 logging.getLogger('audioled').setLevel(logging.DEBUG)
 logging.getLogger('root').setLevel(logging.DEBUG)
-logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO) # Silence!
+logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO)  # Silence!
 logger = logging.getLogger(__name__)
-
 
 libnames = ['audioled.bluetooth']
 for libname in libnames:
@@ -56,7 +57,6 @@ for libname in libnames:
 
     else:
         globals()[libname] = lib
-
 
 proj = None  # type: project.Project
 default_values = {}
@@ -87,10 +87,10 @@ preview_lock = multiprocessing.Lock()
 
 midiBluetooth = None  # type: audioled.bluetooth.BluetoothMidiLELevelCharacteristic
 
+
 def lock_preview(fn):
-    
-    @wraps(fn)    
-    def wrapper(*arg , **kwarg):
+    @wraps(fn)
+    def wrapper(*arg, **kwarg):
         print("Wrapped {} {}".format(arg, kwarg))
         result = None
         try:
@@ -101,19 +101,20 @@ def lock_preview(fn):
         finally:
             preview_lock.release()
         return result
+
     return wrapper
+
 
 def multiprocessing_func(sc):
     sc.store()
 
 
-def create_app(midiAdvertiseName = None):
+def create_app(midiAdvertiseName=None):
     logging.info("Creating app")
     app = Flask(__name__)
     logging.debug("App created")
 
     advName = midiAdvertiseName
-    
 
     def store_configuration():
         try:
@@ -126,7 +127,7 @@ def create_app(midiAdvertiseName = None):
             serverconfig.postStore()
         except Exception:
             app.logger.error("ERROR on storing configuration")
-    
+
     def check_midi():
         app.logger.info("Checking midi configuration {}".format(advName))
         # global midi
@@ -211,8 +212,6 @@ def create_app(midiAdvertiseName = None):
         except StopIteration:
             abort(404, "Node not found")
 
-    
-    
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['PUT'])
     @lock_preview
     def slot_slotId_node_uid_update(slotId, nodeUid):
@@ -569,7 +568,7 @@ def create_app(midiAdvertiseName = None):
         global proj
         app.logger.debug(proj.outputSlotMatrix)
         return jsonify({
-            'activeSlot': proj.previewSlotId, # TODO: Change in FE
+            'activeSlot': proj.previewSlotId,  # TODO: Change in FE
             'activeScene': proj.activeSceneId,
         })
 
@@ -828,22 +827,23 @@ def handleMidiMsg(msg):
     # pitch	-8192..8191	0
     # pos	0..16383	0
     # time	any integer or float	0
-    
+
     # Helper to convert to json
     def ctrlToValue(ctrl, val):
         if ctrl == modulation.CTRL_PRIMARY_COLOR_R or ctrl == modulation.CTRL_SECONDARY_COLOR_R:
-            return {"controllerAmount": 1., "r":val*255}
+            return {"controllerAmount": 1., "r": val * 255}
         elif ctrl == modulation.CTRL_PRIMARY_COLOR_G or ctrl == modulation.CTRL_SECONDARY_COLOR_G:
-            return {"controllerAmount": 1., "g":val*255}
+            return {"controllerAmount": 1., "g": val * 255}
         elif ctrl == modulation.CTRL_PRIMARY_COLOR_B or ctrl == modulation.CTRL_SECONDARY_COLOR_B:
-            return {"controllerAmount": 1., "b":val*255}
+            return {"controllerAmount": 1., "b": val * 255}
         else:
             return {"controllerAmount": val}
+
     controllerMap = {
-        1: modulation.CTRL_MODULATION, # mod wheel
-        7: modulation.CTRL_BRIGHTNESS, # volume
-        11: modulation.CTRL_INTENSITY, # expression
-        21: modulation.CTRL_SPEED, # unknown param?
+        1: modulation.CTRL_MODULATION,  # mod wheel
+        7: modulation.CTRL_BRIGHTNESS,  # volume
+        11: modulation.CTRL_INTENSITY,  # expression
+        21: modulation.CTRL_SPEED,  # unknown param?
         30: modulation.CTRL_PRIMARY_COLOR_R,
         31: modulation.CTRL_PRIMARY_COLOR_G,
         32: modulation.CTRL_PRIMARY_COLOR_B,
@@ -852,9 +852,9 @@ def handleMidiMsg(msg):
         42: modulation.CTRL_SECONDARY_COLOR_B
     }
     inverseControllerMap = {}
-    for k,v in controllerMap.items():
+    for k, v in controllerMap.items():
         inverseControllerMap[v] = k
-    
+
     global proj
     if msg.type == 'program_change':
         proj.activateScene(msg.program)
@@ -892,7 +892,7 @@ def handleMidiMsg(msg):
             sysexData = [0xF0, 0x7D]
             for controllerNumber, enabled in controllerEnabled.items():
                 sysexData += [controllerNumber, (0 if not enabled else 1)]
-            sysexData += [0xF7] # End of exclusive
+            sysexData += [0xF7]  # End of exclusive
             logger.info("Sending sysex {}".format(sysexData))
             sysexMsg = mido.Message.from_bytes(sysexData)
             midiBluetooth.sendMidi(sysexMsg)
@@ -907,7 +907,6 @@ def handleMidiMsg(msg):
             msg.note = controllerNumber
             midiBluetooth.sendMidi(msg)
 
-        
         # TODO: Send brightness
         # brightness = proj.getBrightness() # TODO: Implement
         # sendMsg = mido.Message('control_change')
@@ -916,25 +915,23 @@ def handleMidiMsg(msg):
         # sendMsg.value = brightness * 127
         # midiBluetooth.sendMidi(sendMsg)
 
-
     elif msg.type == 'control_change':
 
         if msg.control in controllerMap:
             controlMsg = controllerMap[msg.control]
-            controlVal = ctrlToValue(controlMsg, msg.value/127)
+            controlVal = ctrlToValue(controlMsg, msg.value / 127)
             logger.debug("Propagating control change message")
             if controlMsg == modulation.CTRL_BRIGHTNESS:
                 # Handle brightness globally
-                proj.setBrightness(msg.value/127)
+                proj.setBrightness(msg.value / 127)
             else:
                 proj.updateModulationSourceValue(0xFFF, controlMsg, controlVal)
         else:
             logger.warn("Unknown controller {}".format(msg.control))
 
 
-
 if __name__ == '__main__':
-    
+
     parser = runtimeconfiguration.commonRuntimeArgumentParser()
     # Adjust defaults from commonRuntimeArgumentParser
     parser.set_defaults(
@@ -1022,7 +1019,6 @@ if __name__ == '__main__':
         logging.warning("Ignoring Bluetooth error")
         logging.error(e)
         traceback.print_tb(e.__traceback__)
-
 
     app = create_app(midiAdvertiseName)
     app.run(debug=False, host="0.0.0.0", port=args.port)
