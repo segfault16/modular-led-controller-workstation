@@ -23,6 +23,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.serving import is_running_from_reloader
 
 from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project
+from audioled_controller import midi_full
 
 # configure logging here
 orig_factory = logging.getLogRecordFactory()
@@ -88,7 +89,7 @@ count = 0
 preview_lock = multiprocessing.Lock()
 
 midiController = []
-midiBluetooth = None  # type: audioled_controller.bluetooth.BluetoothMidiLELevelCharacteristic
+midiBluetooth = None  # type: audioled_controller.bluetooth.BluetoothMidiLELevelCharacteristic # noqa: F821
 
 
 def lock_preview(fn):
@@ -818,7 +819,7 @@ def handleMidiIn(msg: mido.Message):
     global proj
     global midiController
     for c in midiController:
-        c = c  # type: audioled_controller.midi_full.MidiProjectController
+        c = c  # type: midi_full.MidiProjectController
         c.handleMidiMsg(msg, proj)
 
 def handleMidiOut(msg: mido.Message):
@@ -910,7 +911,7 @@ if __name__ == '__main__':
     logger.debug("Adding bluetooth server to the mix")
     midiAdvertiseName = None
     try:
-        from audioled_controller import midi_full, bluetooth
+        from audioled_controller import bluetooth
         fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
         midiController.append(fullMidiController)
         midiBluetooth = bluetooth.MidiBluetoothService(callback=handleMidiIn)
