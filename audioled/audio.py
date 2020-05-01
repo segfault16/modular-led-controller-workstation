@@ -6,9 +6,7 @@ from collections import OrderedDict
 
 import numpy as np
 import pyaudio
-from ctypes import *
-
-
+from ctypes import cdll, CFUNCTYPE, c_char_p, c_int
 
 from audioled.effects import Effect
 from audioled.effect import AudioBuffer
@@ -27,7 +25,8 @@ def py_error_handler(filename, line, function, err, fmt, *val):
     formatted = None
     if len(val) > 0:
         try:
-            import StringIO 
+            import StringIO
+
             def sprintf(buf, fmt, *args):
                 buf.write(fmt % args)
 
@@ -39,12 +38,16 @@ def py_error_handler(filename, line, function, err, fmt, *val):
             alogger.debug("Problem formatting libalsa message {}, arguments: {}".format(fmt, val))
     else:
         alogger.debug("{}:{} {} {}".format(filename, line, function, fmt))
+
+
 c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
 
 try:
     asound = cdll.LoadLibrary('libasound.so')
     # Set error handler
     asound.snd_lib_error_set_handler(c_error_handler)
+except OSError as e:
+    pass
 except Exception as e:
     logger.error("Error setting logger for libasound: {}", e)
 

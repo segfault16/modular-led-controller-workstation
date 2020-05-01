@@ -48,14 +48,15 @@ logging.getLogger('audioled').setLevel(logging.DEBUG)
 logging.getLogger('root').setLevel(logging.DEBUG)
 logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO)  # Silence!
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 libnames = ['audioled_controller.bluetooth']
 for libname in libnames:
     try:
         lib = __import__(libname)
     except Exception as e:
-        logging.error("Import for bluetooth failed. {}".format(e))
-        traceback.print_tb(e.__traceback__)
+        logger.error("Import for bluetooth failed. {}".format(e))
+        logger.debug("Error importing bluetooth", exc_info=1)
     else:
         globals()[libname] = lib
 
@@ -112,9 +113,9 @@ def multiprocessing_func(sc):
 
 
 def create_app(midiAdvertiseName=None):
-    logging.info("Creating app")
+    logger.info("Creating app")
     app = Flask(__name__)
-    logging.debug("App created")
+    logger.debug("App created")
 
     advName = midiAdvertiseName
 
@@ -838,7 +839,7 @@ if __name__ == '__main__':
     runtimeconfiguration.addServerRuntimeArguments(parser)
 
     # print audio information
-    logging.info("The following audio devices are available:")
+    logger.info("The following audio devices are available:")
     audio.print_audio_devices()
 
     args = parser.parse_args()
@@ -849,13 +850,13 @@ if __name__ == '__main__':
         config_location = os.path.join(args.config_location, '.ledserver')
 
     if args.no_conf:
-        logging.info("Using in-memory configuration")
+        logger.info("Using in-memory configuration")
         serverconfig = serverconfiguration.ServerConfiguration()
     else:
-        logging.info("Using configuration from {}".format(config_location))
+        logger.info("Using configuration from {}".format(config_location))
         serverconfig = serverconfiguration.PersistentConfiguration(config_location, args.no_store)
 
-    logging.info("Applying arguments")
+    logger.info("Applying arguments")
 
     # Update num pixels
     if args.num_pixels is not None:
@@ -888,7 +889,7 @@ if __name__ == '__main__':
 
     # Audio
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
-        logging.info("Overriding Audio device with device index {}".format(
+        logger.info("Overriding Audio device with device index {}".format(
             serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
         audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
         # Initialize global audio
@@ -906,7 +907,7 @@ if __name__ == '__main__':
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
-    logging.debug("Adding bluetooth server to the mix")
+    logger.debug("Adding bluetooth server to the mix")
     midiAdvertiseName = None
     try:
         from audioled_controller import midi_full, bluetooth
@@ -914,12 +915,12 @@ if __name__ == '__main__':
         midiController.append(fullMidiController)
         midiBluetooth = bluetooth.MidiBluetoothService(callback=handleMidiIn)
     except Exception as e:
-        logging.warning("Ignoring Bluetooth error")
-        logging.error(e)
-        traceback.print_tb(e.__traceback__)
-
+        logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
+        logger.error(e)
+        logger.debug("Bluetooth error", exc_info=1)
+        
     app = create_app(midiAdvertiseName)
     app.run(debug=False, host="0.0.0.0", port=args.port)
-    logging.info("End of server main")
+    logger.info("End of server main")
     proj.stopProcessing()
     stop_signal = True
