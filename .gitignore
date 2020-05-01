@@ -6,7 +6,7 @@ ehthumbs.db
 Desktop.ini
 
 # Package build output
-audioled.egg-info/
+molecole.egg-info/
 build/
 dist/
 
