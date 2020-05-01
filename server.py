@@ -13,6 +13,7 @@ import traceback
 from timeit import default_timer as timer
 import logging
 import mido
+import pkg_resources
 from functools import wraps
 
 import jsonpickle
@@ -824,8 +825,9 @@ def handleMidiOut(msg: mido.Message):
     if midiBluetooth is not None:
         midiBluetooth.sendMidi(msg)
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
+    logger.info("Running MOLECOLE version {}".format(pkg_resources.get_distribution('molecole').version))
     parser = runtimeconfiguration.commonRuntimeArgumentParser()
     # Adjust defaults from commonRuntimeArgumentParser
     parser.set_defaults(
