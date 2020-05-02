@@ -26,11 +26,7 @@ class Shift(Effect):
     def __initstate__(self):
         # state
         super(Shift, self).__initstate__()
-        try:
-            self._shift_pixels
-        except AttributeError:
-            self._shift_pixels = 0
-
+        self._shift_pixels = 0
         self._last_t = self._t
 
     def numInputChannels(self):
@@ -57,11 +53,6 @@ class Shift(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['speed'][0] = self.speed
-        return definition
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -107,9 +98,7 @@ class Append(Effect):
 
     def __initstate__(self):
         super().__initstate__()
-        self._flipMask = [
-            self.flip0, self.flip1, self.flip2, self.flip3, self.flip4, self.flip5, self.flip6, self.flip7
-        ]
+        self._flipMask = [self.flip0, self.flip1, self.flip2, self.flip3, self.flip4, self.flip5, self.flip6, self.flip7]
 
     def numInputChannels(self):
         return self.num_channels
@@ -136,6 +125,10 @@ class Append(Effect):
         }
         return definition
 
+    def getModulateableParameters(self):
+        # Disable all modulations
+        return []
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -154,16 +147,8 @@ class Append(Effect):
         return help
 
     def getParameter(self):
-        definition = self.getParameterDefinition()
+        definition = super().getParameter()
         del definition['parameters']['num_channels']  # not editable at runtime
-        definition['parameters']['flip0'] = self.flip0
-        definition['parameters']['flip1'] = self.flip1
-        definition['parameters']['flip2'] = self.flip2
-        definition['parameters']['flip3'] = self.flip3
-        definition['parameters']['flip4'] = self.flip4
-        definition['parameters']['flip5'] = self.flip5
-        definition['parameters']['flip6'] = self.flip6
-        definition['parameters']['flip7'] = self.flip7
         return definition
 
     def process(self):
@@ -218,6 +203,10 @@ class Combine(Effect):
         definition = {"parameters": OrderedDict([("mode", colors.blend_modes)])}
         return definition
 
+    def getModulateableParameters(self):
+        # Disable all modulations
+        return []
+
     @staticmethod
     def getParameterHelp():
         help = {
@@ -228,7 +217,7 @@ class Combine(Effect):
         return help
 
     def getParameter(self):
-        definition = self.getParameterDefinition()
+        definition = super().getParameter()
         definition['parameters']['mode'] = [self.mode] + [x for x in colors.blend_modes if x != self.mode]
         return definition
 
@@ -264,7 +253,6 @@ class AfterGlow(Effect):
     def __initstate__(self):
         # state
         self._pixel_state = None
-        self._last_t = 0.0
         super(AfterGlow, self).__initstate__()
 
     def numInputChannels(self):
@@ -291,11 +279,6 @@ class AfterGlow(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['glow_time'][0] = self.glow_time
-        return definition
 
     async def update(self, dt):
         await super().update(dt)
@@ -355,14 +338,18 @@ class Mirror(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters":
-            OrderedDict([
+            "parameters": OrderedDict([
                 ("mirror_lower", True),
                 # default, min, max, stepsize
                 ("recursion", [0, 0, 8, 1]),
             ])
         }
         return definition
+
+    def getModulateableParameters(self):
+        params = super().getModulateableParameters()
+        params.remove('mirror_lower')  # disable modulation on bool param
+        return params
 
     @staticmethod
     def getParameterHelp():
@@ -371,15 +358,10 @@ class Mirror(Effect):
                 "mirror_lower": "Switch between mirroring the lower or the upper part of input channel 0.",
                 "recursion": "Recursion depth of the mirroring effect. If recursion is set to 1, "
                 "the lower and upper half of the strip are mirrored again at their centers."
+                             "the lower and upper half of the strip are mirrored again at their centers."
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['mirror_lower'] = self.mirror_lower
-        definition['parameters']['recursion'][0] = self.recursion
-        return definition
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -401,9 +383,8 @@ class Mirror(Effect):
             self._outputBuffer[0] = buffer[self._mirrorUpper[:, :, 0], self._mirrorUpper[:, :, 1]]
 
     def _genMirrorLowerMap(self, n, recursion):
-        mapMask = np.array(
-            [[[0, i] for i in range(0, n)], [[1, i] for i in range(0, n)], [[2, i] for i in range(0, n)]],
-            dtype=np.int64)
+        mapMask = np.array([[[0, i] for i in range(0, n)], [[1, i] for i in range(0, n)], [[2, i] for i in range(0, n)]],
+                           dtype=np.int64)
         mapMask = self._genMirrorLower(mapMask, recursion)
         return mapMask
 
@@ -422,9 +403,8 @@ class Mirror(Effect):
         return mapMask
 
     def _genMirrorUpperMap(self, n, recursion):
-        mapMask = np.array(
-            [[[0, i] for i in range(0, n)], [[1, i] for i in range(0, n)], [[2, i] for i in range(0, n)]],
-            dtype=np.int64)
+        mapMask = np.array([[[0, i] for i in range(0, n)], [[1, i] for i in range(0, n)], [[2, i] for i in range(0, n)]],
+                           dtype=np.int64)
         mapMask = self._genMirrorUpper(mapMask, recursion)
         return mapMask
 
@@ -471,7 +451,6 @@ class SpringCombine(Effect):
         trigger_threshold   -- Above this threshold springs are actuated based on input 0
 
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -544,18 +523,6 @@ class SpringCombine(Effect):
         }
         return help
 
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['dampening'][0] = self.dampening
-        definition['parameters']['tension'][0] = self.tension
-        definition['parameters']['spread'][0] = self.spread
-        definition['parameters']['scale_low'][0] = self.scale_low
-        definition['parameters']['scale_mid'][0] = self.scale_mid
-        definition['parameters']['scale_high'][0] = self.scale_high
-        definition['parameters']['speed'][0] = self.speed
-        definition['parameters']['trigger_threshold'][0] = self.trigger_threshold
-        return definition
-
     async def update(self, dt):
         await super().update(dt)
         if self._num_pixels is None:
@@ -607,10 +574,8 @@ class SpringCombine(Effect):
 
         # Output: Interpolate between low and mid for self._pos < 0, interpolate between mid and high for self._pos > 0
         out = np.zeros(self._num_pixels) * np.array([[0], [0], [0]])
-        out[:, self._pos <= 0] = (
-            np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
-        out[:, self._pos >= 0] = (
-            np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
+        out[:, self._pos <= 0] = (np.multiply(1 + self._pos, baseCol) + np.multiply(-self._pos, lowCol))[:, self._pos <= 0]
+        out[:, self._pos >= 0] = (np.multiply(self._pos, highCol) + np.multiply(1 - self._pos, baseCol))[:, self._pos >= 0]
         self._outputBuffer[0] = out
 
 
@@ -619,7 +584,6 @@ class Swing(Effect):
     Inputs:
     - 0: Pixels
     """
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -655,12 +619,6 @@ class Swing(Effect):
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['displacement'][0] = self.displacement
-        definition['parameters']['swingspeed'][0] = self.swingspeed
-        return definition
 
     def numInputChannels(self):
         return 1

@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import time
+import traceback
 from collections import OrderedDict
 
 import numpy as np
@@ -46,8 +47,9 @@ class GlobalAudio():
         self.num_channels = num_channels
         try:
             self.global_stream, GlobalAudio.sample_rate = self.stream_audio(device_index, chunk_rate, num_channels)
-        except:
+        except Exception as e:
             print("!!! Fatal error in audio device !!!")
+            traceback.print_tb(e.__traceback__)
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
         chunk = np.fromstring(in_data, np.float32).astype(np.float)
@@ -78,14 +80,13 @@ class GlobalAudio():
 
         try:
             frameRate = int(device_info['defaultSampleRate'])
-            stream = p.open(
-                format=pyaudio.paFloat32,
-                channels=channels,
-                rate=frameRate,
-                input=True,
-                input_device_index=device_index,
-                frames_per_buffer=chunk_length,
-                stream_callback=self._audio_callback)
+            stream = p.open(format=pyaudio.paFloat32,
+                            channels=channels,
+                            rate=frameRate,
+                            input=True,
+                            input_device_index=device_index,
+                            frames_per_buffer=chunk_length,
+                            stream_callback=self._audio_callback)
             stream.start_stream()
             print("Started stream on device {}, fs: {}, chunk_length: {}".format(device_index, frameRate, chunk_length))
             GlobalAudio.buffer = np.zeros(chunk_length)
@@ -125,18 +126,13 @@ class GlobalAudio():
 
 
 class AudioInput(Effect):
-
     @staticmethod
     def getEffectDescription():
         return \
             "Audio input captures audio from your device and " \
             "makes each channel available as an output. "
 
-    def __init__(self,
-                 num_channels=2,
-                 autogain_max=10.0,
-                 autogain=False,
-                 autogain_time=10.0):
+    def __init__(self, num_channels=2, autogain_max=10.0, autogain=False, autogain_time=10.0):
         self.num_channels = num_channels
         self.autogain_max = autogain_max
         self.autogain = autogain
@@ -150,7 +146,7 @@ class AudioInput(Effect):
         self._autogain_perc = None
         self._cur_gain = 1.0
         print("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
-        
+
     def numOutputChannels(self):
         return self.num_channels
 
@@ -171,28 +167,23 @@ class AudioInput(Effect):
         }
         return definition
 
+    def getModulateableParameters(self):
+        # Disable all modulations
+        return []
+
     @staticmethod
     def getParameterHelp():
         help = {
             "parameters": {
-                "num_channels":
-                "Number of input channels of the audio device.",
+                "num_channels": "Number of input channels of the audio device.",
                 "autogain":
-                "Automatically adjust the gain of the input channels.\nThe input signal will be scaled up to 'autogain_max', gain will be reduced if the audio signal would clip.",
-                "autogain_max":
-                "Maximum gain makeup.",
-                "autogain_time":
-                "Control the lag of the gain adjustment. Higher values will result in slower gain makeup."
+                "Automatically adjust the gain of the input channels.\nThe input signal will be scaled up to 'autogain_max', "
+                    "gain will be reduced if the audio signal would clip.",
+                "autogain_max": "Maximum gain makeup.",
+                "autogain_time": "Control the lag of the gain adjustment. Higher values will result in slower gain makeup."
             }
         }
         return help
-
-    def getParameter(self):
-        definition = self.getParameterDefinition()
-        definition['parameters']['autogain_max'][0] = self.autogain_max
-        definition['parameters']['autogain_time'][0] = self.autogain_time
-        definition['parameters']['autogain'] = self.autogain
-        return definition
 
     def getSampleRate(self):
         return GlobalAudio.sample_rate

@@ -23,7 +23,6 @@ class Effect(object):
     Input values can be accessed by self._inputBuffer[channelNumber], output values
     are to be written into self_outputBuffer[channelNumber].
     """
-
     def __init__(self):
         self.__initstate__()
 
@@ -36,6 +35,10 @@ class Effect(object):
             self._t
         except AttributeError:
             self._t = 0
+        try:
+            self._last_t
+        except AttributeError:
+            self._last_t = 0
         try:
             self._num_pixels
         except AttributeError:
@@ -98,6 +101,8 @@ class Effect(object):
         """
         Update timing, can be used to precalculate stuff that doesn't depend on input values
         """
+        if self._t:
+            self._last_t = self._t
         self._t += dt
 
     def __cleanState__(self, stateDict):
@@ -105,7 +110,15 @@ class Effect(object):
         Cleans given state dictionary from state objects beginning with __
         """
         for k in list(stateDict.keys()):
+            # Remove internal variables
             if k.startswith('_'):
+                stateDict.pop(k)
+            # Remove parameter offsets
+            if k.startswith('@'):
+                stateDict.pop(k)
+            # Reset to original values
+            if k.startswith('~'):
+                stateDict[k[1:]] = stateDict[k]
                 stateDict.pop(k)
         return stateDict
 
@@ -118,23 +131,87 @@ class Effect(object):
         return state
 
     def __setstate__(self, state):
+        argspec = inspect.getargspec(self.__init__)
+        for k in list(state.keys()):
+            if k not in argspec.args:
+                print("Removing deprecated parameter {} from state of {}".format(k, self))
+                state.pop(k)
         self.__dict__.update(state)
         self.__initstate__()
 
     def updateParameter(self, stateDict):
-        self.__setstate__(stateDict)
+        # Save updated parameter as original value
+        for k in list(stateDict.keys()):
+            stateDict['~' + k] = stateDict[k]
+        self.__dict__.update(stateDict)
+
+    def setParameterOffset(self, paramId, paramDefinition, offset):
+        state = self.__dict__.copy()
+        # Get min and max range of parameter from parameterDefinition
+        paramDef = paramDefinition['parameters'][paramId]
+        if len(paramDef) != 4:
+            return
+        minP = paramDef[1]
+        maxP = paramDef[2]
+
+        # Store original value if not already stored
+        origVal = state.get('~' + paramId, None)
+        if origVal is None:
+            origVal = state.get(paramId, None)
+            if origVal is not None:
+                state['~' + paramId] = origVal
+
+        adjustedValue = origVal + (maxP - minP) * offset
+        # print("orig: {}, adjusted: {}".format(origVal, adjustedValue))
+        # ensure we stay inside max and min
+        adjustedValue = min(maxP, adjustedValue)
+        adjustedValue = max(minP, adjustedValue)
+        state[paramId] = adjustedValue
+
+        # store offset for getParameterOffset
+        state['@' + paramId] = offset
+        self.__dict__.update(state)
+
+    def getParameterOffset(self, paramId):
+        return self.__dict__.get('@' + paramId, None)
+
+    def resetParameterOffsets(self):
+        for k in list(self.__dict__.keys()):
+            if k.startswith('@'):
+                self.__dict__.pop(k)
 
     def getParameter(self):
-        return {}
+        """Get parameter values and range definition
+
+        Returns:
+            {
+                "parameters": {
+                    "param1": [curValue, minValue, maxValue, step]
+                }
+            }
+
+        TODO: Can this be deprecated?
+        """
+
+        definition = self.getParameterDefinition()
+        state = self.__getstate__()  # cleaned state
+        for k in state.keys():
+            val = state[k]
+            definition['parameters'][k][0] = val
+        print(definition)
+        return definition
 
     @staticmethod
     def getParameterDefinition():
         return {}
-        
+
+    def getModulateableParameters(self):
+        return [key for key in self.getParameterDefinition()['parameters'].keys()]
+
     @staticmethod
     def getParameterHelp():
         return {}
-    
+
     @staticmethod
     def getEffectDescription():
         return ""
@@ -168,7 +245,7 @@ class Effect(object):
         self._num_rows = num_rows
         if num_rows is not None:
             self._num_rows = int(num_rows)
-    
+
     def getNumOutputRows(self):
         return self._num_rows
 

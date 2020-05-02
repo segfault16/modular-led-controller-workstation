@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import (absolute_import, division, print_function, unicode_literals)
 
 import itertools
 import math
@@ -14,7 +13,7 @@ def rollwin(signal, n_overlaps):
     """
     frame = next(signal)
     N = len(frame)
-    window = np.zeros(N * n_overlaps)
+    window = np.zeros(N * max(n_overlaps, 1))
     window[-N:] = frame  # last N points
     for data in signal:
         S = len(data)
@@ -185,11 +184,18 @@ def warped_psd(y, bins, fs, frange, scale):
     """Returns the power spectrum mapped to a perceptual scale"""
     N = len(y)
     # Transform to frequency domain
-    pow_spectrum = np.absolute(np.fft.rfft(y))**2 * (2 / N)
+    pow_spectrum = np.abs(np.fft.rfft(y))**2 * (2 / N)
     # Construct triangular filter bank
     output, f = filter_bank(bins, N, fs, frange[0], frange[1], scale)
     # Apply filter bank to power spectrum
-    output = np.dot(pow_spectrum, output.T)
+    # Remark: Numpy matrix multiplication uses all available CPU cores for a rather small matrix multiplication
+    # output_np = np.dot(pow_spectrum, output.T)
+
+    # Own MM:
+    pow_spectrum = pow_spectrum.reshape(1, -1)
+    output = np.sum(pow_spectrum[:, :, None]*output.T[None, :, :], axis=1)
+    output = output.reshape(-1)
+    # print(np.allclose(output, output_np))
     return output
 
 
@@ -216,6 +222,8 @@ def rms(normalized_sample_points):
 
 def design_filter(lowcut, highcut, fs, order=3):
     nyq = 0.5 * fs
+    lowcut = max(lowcut, 10)
+    highcut = min(highcut, 22000)
     low = lowcut / nyq
     high = highcut / nyq
     b, a = butter(order, [low, high], btype='band')
@@ -232,12 +240,20 @@ class Bandpass():
         self._highcut = highcut
         self._order = order
         self._initFilter()
-         
+
     def filter(self, audio, fs):
         if fs != self._fs:
             self._initFilter()
         y, self._filter_zi = lfilter(b=self._filter_b, a=self._filter_a, x=audio, zi=self._filter_zi)
         return y
+
+    def updateParams(self, lowcut, highcut, fs, order):
+        if self._lowcut != lowcut or self._highcut != highcut or self._fs != fs or self._order != order:
+            self._lowcut = lowcut
+            self._highcut = highcut
+            self._fs = fs
+            self._order = order
+            self._initFilter()
 
     def _initFilter(self):
         self._filter_b, self._filter_a, self._filter_zi = design_filter(self._lowcut, self._highcut, self._fs, self._order)

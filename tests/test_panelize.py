@@ -52,7 +52,6 @@ class Test_Panelize(unittest.TestCase):
         for i in range(0, num_rows):
             for j in range(0, num_cols):
                 index = self._indexFor(i, j, num_rows, num_cols)
-                print(index)
                 self.assertEqual(input[0, index], output[0, j + i * num_cols])
 
     def _indexFor(self, row, col, num_rows, num_cols, input_displacement=0.5):
