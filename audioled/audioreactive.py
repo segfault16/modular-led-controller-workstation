@@ -599,8 +599,10 @@ class Bonfire(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("spread", [10, 0, 100, 1]),
-                ("lowcut_hz", [50.0, 1.0, 8000.0, 1.0]),
                 ("lowcut_hz", [50.0, 0.0, 8000.0, 1.0]),
+                ("highcut_hz", [100.0, 0.0, 8000.0, 1.0]),
+                ("peak_filter", [1.0, 0.0, 10.0, .01]),
+                ("peak_scale", [1.0, 0.0, 5.0, .01]),
                 ("smoothing", [0, 0, 1, 0.01]),
             ])
         }
