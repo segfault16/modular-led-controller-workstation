@@ -2,6 +2,8 @@ def encode(data):
     """
     Encodes a byte-array for use in midi sysex (msb of each byte must be 0, 8th byte encodes msbs of 7 preceding bytes)
     """
+    if isinstance(data, str):
+        data = data.encode('utf8')
     ret = []
     cnt = 0
     msbs = 0
@@ -32,7 +34,7 @@ def decode(data):
         msbs = data[7]
         for i in range(7):
             d = data[i]
-            if msbs & 1 << (7 - i  - 1):
+            if msbs & 1 << (7 - i - 1):
                 d = d | 0x80
             ret.append(d)
         data = data[8:]
