@@ -47,9 +47,25 @@ followed by `0xf7` for Midi Sysex End.
 ## Get Version
 
 ### Request
-- Request ID: `0x00`
+- Request ID: `0x00`, `0x00` 
 - Data: ``
 
 ### Response
-- Response ID: `0x00`
-- Data: Binary data encode of utf8 string
+- Response ID: `0x00`, `0x00`
+- Data: Binary data encode of utf8 version string
+
+## Update server
+
+## Get active project
+
+## Get projects
+
+## Activate project
+
+## Export project
+
+## Import project
+
+## Get active scene
+
+## Get enabled controller for active scene
