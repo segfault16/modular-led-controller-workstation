@@ -1,8 +1,9 @@
-from audioled import modulation, project
+from audioled import modulation, project, serverconfiguration
 from audioled_controller import sysex_data
 import mido
 import logging
 import pkg_resources
+import json
 logger = logging.getLogger(__name__)
 
 controllerMap = {
@@ -37,7 +38,7 @@ class MidiProjectController:
     def __init__(self, callback=None):
         self._sendMidiCallback = callback
 
-    def handleMidiMsg(self, msg: mido.Message, proj: project.Project):
+    def handleMidiMsg(self, msg: mido.Message, serverconfig: serverconfiguration.ServerConfiguration, proj: project.Project):
         # of type mido.Message
         # channel	0..15	0
         # frame_type	0..7	0
@@ -58,9 +59,9 @@ class MidiProjectController:
         elif msg.type == 'control_change':
             self._handleControlChange(msg.control, msg.value, proj)
         elif msg.type == 'sysex':
-            self._handleSysex(msg.data, proj)
+            self._handleSysex(msg.data, serverconfig, proj)
 
-    def _handleSysex(self, data, proj):
+    def _handleSysex(self, data, serverconfig: serverconfiguration.ServerConfiguration, proj: project.Project):
         if len(data) < 2:
             logger.error("Sysex message too short")
             return
@@ -69,7 +70,17 @@ class MidiProjectController:
             # Version
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createVersionMsg())
+        elif data[0] == 0x00 and data[1] == 0x01:
+            # Active project metadata
+            if self._sendMidiCallback is not None:
+                metadata = serverconfig.getProjectMetadata(proj.id)
+                self._sendMidiCallback(self._createActiveProjectMsg(metadata))
     
+    def _createActiveProjectMsg(self, metadata):
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x01] + sysex_data.encode(json.dumps(metadata))
+        return sendMsg
+
     def _createVersionMsg(self):
         version = "UNDEFINED"
         try:

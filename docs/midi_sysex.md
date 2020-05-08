@@ -58,6 +58,15 @@ followed by `0xf7` for Midi Sysex End.
 
 ## Get active project
 
+### Request
+- Request ID: `0x00`, `0x01`
+- Data: ``
+
+### Response
+
+- Response ID: `0x00`, `0x01`
+- Data: Binary data encode of utf8 project uuid string
+
 ## Get projects
 
 ## Activate project

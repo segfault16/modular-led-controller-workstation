@@ -16,14 +16,13 @@ import os
 from functools import wraps
 import numpy as np
 
-import logging
 logger = logging.getLogger(__name__)
 
 def ensure_parent(func):
     @wraps(func)
     def inner(self, *args, **kwargs):
         if os.getpid() != self._creator_pid:
-           raise RuntimeError("{} can only be called in the " "parent.".format(func.__name__))
+            raise RuntimeError("{} can only be called in the " "parent.".format(func.__name__))
         return func(self, *args, **kwargs)
 
     return inner
@@ -395,7 +394,7 @@ class Project(Updateable):
         self._publishQueue = PublishQueue()
         self._showQueue = PublishQueue()
         self._lock = mp.Lock()
-        self._handlerLock = mp.Lock() 
+        self._handlerLock = mp.Lock()
         self._processingEnabled = True
 
     def __cleanState__(self, stateDict):
@@ -460,7 +459,7 @@ class Project(Updateable):
             try:
                 self._cur_t = self._cur_t + dt
                 self._sendUpdateCommand(dt)
-                if(self._cur_t - self._last_t > 1 ):
+                if(self._cur_t - self._last_t > 1):
                     # logger.debug("Updating preview device")
                     self._updatePreviewDevice(dt, event_loop)
                     self._last_t = self._cur_t
@@ -575,7 +574,7 @@ class Project(Updateable):
         # Brightness per device
         self._sendBrightnessCommand(value)
         
-    def _activeFiltergraphs(self): 
+    def _activeFiltergraphs(self):
         # Iterate through devices to find which filtergraphs are in slots of the active scene
         dIdx = 0
         sceneId = self.activeSceneId
@@ -636,7 +635,6 @@ class Project(Updateable):
 
                 oldPanelWrapper.setDevice(virtualDevice)
                 fgDevice = oldPanelWrapper
-
             
         else:
             # New virtual output
@@ -650,29 +648,32 @@ class Project(Updateable):
                                                     num_rows=device.getNumRows(),
                                                     start_index=0)
             fgDevice = virtualDevice
-            realDevice =  device
+            realDevice = device
 
         # Start filtergraph process
         successful = False
+        sleepfact = 1.
         while not successful:
             q = self._publishQueue.register()
             p = mp.Process(target=worker, args=(q, filterGraph, fgDevice, dIdx, slotId))
             p.start()
             # Process sometimes doesn't start...
             q.put(123)
-            time.sleep(0.1)
+            time.sleep(sleepfact * 0.1)
             if not q._unfinished_tasks._semlock._is_zero():
                 logger.warning("Process didn't respond in time!")
                 self._publishQueue.unregister(q)
-                p.join(0.1)
+                p.join(sleepfact * 0.1)
                 if p.is_alive():
                     p.terminate()
             else:
                 successful = True
+            sleepfact = 2. * sleepfact
         self._filtergraphProcesses[dIdx] = p
         logger.debug('Started process for device {} with device {}'.format(dIdx, fgDevice))
 
         # Start output process
+        sleepfact = 1.
         if outputDevice is not None:
             outSuccessful = False
             while not outSuccessful:
@@ -681,16 +682,17 @@ class Project(Updateable):
                 p.start()
                 # Make sure process starts
                 q.put("test")
-                time.sleep(0.1)
+                time.sleep(sleepfact * 0.1)
                 if not q._unfinished_tasks._semlock._is_zero():
                     logger.warning("Output process didn't respond in time!")
                     self._showQueue.unregister(p)
-                    p.join(0.1)
+                    p.join(sleepfact * 0.1)
                     if p.is_alive():
                         p.terminate()
                 else:
                     outSuccessful = True
                     q.put("first")
+                sleepfact = 2. * sleepfact
             self._outputProcesses[outputDevice] = p
             logger.info("Started output process for device {}".format(outputDevice))
 
@@ -767,7 +769,7 @@ class Project(Updateable):
                 fg._onNodeRemoved = None
                 fg._onNodeUpdate = None
         except AttributeError:
-            # Ignore, 
+            # Ignore
             pass
 
         # Update current preview slot
@@ -815,7 +817,7 @@ class Project(Updateable):
     def _sendBrightnessCommand(self, value):
         self._showQueue.publish(BrightnessMessage(value))
 
-    def _handleNodeAdded(self, node: audioled.filtergraph.Node, niceness = 0.0):
+    def _handleNodeAdded(self, node: audioled.filtergraph.Node, niceness=0.0):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
@@ -823,7 +825,7 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleNodeRemoved(self, node: audioled.filtergraph.Node, niceness = 0.0):
+    def _handleNodeRemoved(self, node: audioled.filtergraph.Node, niceness=0.0):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
@@ -831,7 +833,7 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleNodeUpdate(self, node: audioled.filtergraph.Node, updateParameters, niceness = 0.1):
+    def _handleNodeUpdate(self, node: audioled.filtergraph.Node, updateParameters, niceness=0.1):
         """
         updates can come rapidly, default niceness 0.1
         """
@@ -843,7 +845,7 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleModulationAdded(self, mod: audioled.filtergraph.Modulation, niceness = 0.0):
+    def _handleModulationAdded(self, mod: audioled.filtergraph.Modulation, niceness=0.0):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
@@ -851,7 +853,7 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleModulationRemoved(self, mod: audioled.filtergraph.Modulation, niceness = 0.0):
+    def _handleModulationRemoved(self, mod: audioled.filtergraph.Modulation, niceness=0.0):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
@@ -859,7 +861,7 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleModulationUpdate(self, mod: audioled.filtergraph.Modulation, updateParameters, niceness = 0.1):
+    def _handleModulationUpdate(self, mod: audioled.filtergraph.Modulation, updateParameters, niceness=0.1):
         """
         updates can come rapidly, default niceness 0.1
         """
@@ -870,7 +872,7 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleModulationSourceAdded(self, modSource: audioled.filtergraph.ModulationSourceNode, niceness = 0.0):
+    def _handleModulationSourceAdded(self, modSource: audioled.filtergraph.ModulationSourceNode, niceness=0.0):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
@@ -878,7 +880,7 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleModulationSourceRemoved(self, modSource: audioled.filtergraph.ModulationSourceNode, niceness = 0.0):
+    def _handleModulationSourceRemoved(self, modSource: audioled.filtergraph.ModulationSourceNode, niceness=0.0):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
@@ -886,7 +888,7 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleModulationSourceUpdate(self, modSource: audioled.filtergraph.ModulationSourceNode, updateParameters, niceness = 0.1):
+    def _handleModulationSourceUpdate(self, modSource: audioled.filtergraph.ModulationSourceNode, updateParameters, niceness=0.1):
         """
         updates can come rapidly, default niceness 0.1
         """
@@ -897,7 +899,7 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleConnectionAdded(self, con: audioled.filtergraph.Connection, niceness = 0.0):
+    def _handleConnectionAdded(self, con: audioled.filtergraph.Connection, niceness=0.0):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:
@@ -905,7 +907,7 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleConnectionRemoved(self, con: audioled.filtergraph.Connection, niceness = 0.0):
+    def _handleConnectionRemoved(self, con: audioled.filtergraph.Connection, niceness=0.0):
         self._handlerLock.acquire()
         time.sleep(niceness)
         try:

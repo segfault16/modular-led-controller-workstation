@@ -818,9 +818,10 @@ def strandTest(dev, num_pixels):
 def handleMidiIn(msg: mido.Message):
     global proj
     global midiController
+    global serverconfig
     for c in midiController:
         c = c  # type: midi_full.MidiProjectController
-        c.handleMidiMsg(msg, proj)
+        c.handleMidiMsg(msg, serverconfig, proj)
 
 def handleMidiOut(msg: mido.Message):
     global midiBluetooth

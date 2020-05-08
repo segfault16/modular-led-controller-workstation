@@ -96,8 +96,6 @@ class ServerConfiguration:
             self._reusableDevice = None
             self.getActiveProjectOrDefault().setDevice(self._createOrReuseOutputDevice())
         
-        
-
     def getConfiguration(self, key):
         if key in self._config:
             return self._config[key]
