@@ -8251,10 +8251,10 @@ vis-data@^6.5.1:
   resolved "https://registry.yarnpkg.com/vis-data/-/vis-data-6.5.1.tgz#cd11f8bbf4a17064559b7c75532c3d6f419ff290"
   integrity sha512-bOIG0REskXot0JbuAYLFRR61xf4ls+nIYNnZ7X04iq2y/Vrg896A/bfquQjhsERZipOmCgllAR0d58OGyo9s0g==
 
-vis-network@^7.6.1:
-  version "7.6.1"
-  resolved "https://registry.yarnpkg.com/vis-network/-/vis-network-7.6.1.tgz#0092f5acbefdac3cb3e3f0c30c05a5cfe6e69eb5"
-  integrity sha512-OOwAYR3tvhsUYCRLBgFfY7vPKCM8zsuQJlND3LP/uW1PtYfFEFSVEisny3Y7mv6YSrm6FTc1ejQRwin/0EdmlA==
+vis-network@^7.6.4:
+  version "7.6.4"
+  resolved "https://registry.yarnpkg.com/vis-network/-/vis-network-7.6.4.tgz#64d59f65072ce164e8abcdc520a2bab480673980"
+  integrity sha512-ywaigcV75m3SbZLeKeR1ZYfLeL88EraIdH0G6O6drr62TsosJ6p1HGWmgGy0YfGJ4DaEf/hnJ5JaQNzBpIRGbQ==
 
 vis-util@^4.0.0:
   version "4.0.0"

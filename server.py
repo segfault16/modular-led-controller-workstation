@@ -830,7 +830,10 @@ def handleMidiOut(msg: mido.Message):
 
 
 if __name__ == '__main__':
-    logger.info("Running MOLECOLE version {}".format(pkg_resources.get_distribution('molecole').version))
+    try:
+        logger.info("Running MOLECOLE version {}".format(pkg_resources.get_distribution('molecole').version))
+    except Exception:
+        logger.info("Running MOLECOLE")
     parser = runtimeconfiguration.commonRuntimeArgumentParser()
     # Adjust defaults from commonRuntimeArgumentParser
     parser.set_defaults(
