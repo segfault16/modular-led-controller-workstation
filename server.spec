@@ -5,7 +5,7 @@ block_cipher = None
 
 a = Analysis(['server.py'],
              binaries=[],
-             datas=[('resources', 'resources')],
+             datas=[('resources', 'resources'),('molecole.egg-info','molecole.egg-info')],
              hiddenimports=['pkg_resources.py2_warn'],
              hookspath=[],
              runtime_hooks=[],
