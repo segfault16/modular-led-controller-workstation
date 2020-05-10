@@ -20,6 +20,7 @@ import jsonpickle
 import numpy as np
 from flask import Flask, abort, jsonify, request, send_from_directory, redirect, send_file
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers import interval
 from werkzeug.serving import is_running_from_reloader
 
 from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project
@@ -153,7 +154,8 @@ def create_app(midiAdvertiseName=None):
         #     pass
 
     sched = BackgroundScheduler(daemon=True)
-    sched.add_job(store_configuration, 'interval', seconds=5)
+    trigger = interval.IntervalTrigger(seconds=5)
+    sched.add_job(store_configuration, trigger=trigger, id='store_config_job', replace_existing=True)
     # sched.add_job(check_midi, 'interval', seconds=1)
     sched.start()
 

@@ -12,6 +12,7 @@ verify_ssl = true
 flake8 = "*"
 yapf = "*"
 pbr = "*"
+pyinstaller = "*"
 
 [packages]
 numpy = "*"
