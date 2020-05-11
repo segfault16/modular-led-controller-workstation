@@ -739,7 +739,7 @@ class Shapes(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "Interpolation mode": "Choose the interpolation mode",
+                "inter": "Choose the interpolation mode",
                 "x1": "Lowest brightness",
                 "x2": "Highest brightness",
             }
