@@ -388,9 +388,7 @@ def create_app(midiAdvertiseName=None):
         if modDestinationId is not None:
             # for specific modulation destination".format(modDestinationId))
             mods = [mod for mod in mods if mod.targetNode.uid == modDestinationId]
-        app.logger.info("Encoding {}".format(mods))
         encVal = jsonpickle.encode(mods)
-        app.logger.info(encVal)
         return encVal
 
     @app.route('/slot/<int:slotId>/modulation', methods=['POST'])
@@ -835,7 +833,7 @@ if __name__ == '__main__':
     try:
         logger.info("Running MOLECOLE version {}".format(pkg_resources.get_distribution('molecole').version))
     except Exception:
-        logger.info("Running MOLECOLE")
+        logger.info("Running MOLECOLE development version")
     parser = runtimeconfiguration.commonRuntimeArgumentParser()
     # Adjust defaults from commonRuntimeArgumentParser
     parser.set_defaults(

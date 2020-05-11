@@ -1,0 +1,21 @@
+version: '2'
+tasks:
+  release:
+    vars:
+      VERSION_RAW: {sh: "pipenv run python setup.py --version"}
+      VERSION: {sh: "pipenv run python setup.py --version | grep -o -m 1 [0-9].[0-9].[0-9]"}
+    cmds:
+    - pipenv run python setup.py --version
+    - pipenv run python setup.py egg_info
+    - pipenv run pyupdater build --app-version={{.VERSION_RAW}} --archive-format=zip --pyinstaller-log-info mac.spec
+    - pipenv run pyupdater pkg --process --sign
+    
+  release-dev:
+    vars:
+      VERSION_RAW: {sh: "pipenv run python setup.py --version | grep -o -m 1 [0-9].[0-9].[0-9]"}
+    cmds:
+    - pipenv run python setup.py --version
+    - pipenv run python setup.py egg_info
+    - pipenv run pyupdater build --app-version={{.VERSION_RAW}} --archive-format=zip --pyinstaller-log-info mac.spec
+    - pipenv run pyupdater pkg --process --sign
+    
