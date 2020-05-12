@@ -93,7 +93,7 @@ class GlobalAudio():
             traceback.print_tb(e.__traceback__)
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
-        chunk = np.fromstring(in_data, np.float32).astype(np.float)
+        chunk = np.frombuffer(in_data, np.float32).astype(np.float)
         GlobalAudio.buffer = chunk
         return (None, pyaudio.paContinue)
 
