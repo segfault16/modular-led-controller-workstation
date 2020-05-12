@@ -205,7 +205,7 @@ class ServerThread(object):
         Raises TimeoutError """
         self._stopSignal = True
         self._thread.join(timeout=timeout)
-        if self._thread.isAlive():
+        if self._thread.is_alive():
             raise TimeoutError("thread.join timed out")
 
     def isAlive(self):
@@ -215,7 +215,7 @@ class ServerThread(object):
         """
         if self._thread is None:
             return False
-        if not self._thread.isAlive():
+        if not self._thread.is_alive():
             return False
         return True
 
