@@ -23,7 +23,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers import interval
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project
+from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project, version
 from audioled_controller import midi_full
 
 # configure logging here
@@ -830,10 +830,7 @@ def handleMidiOut(msg: mido.Message):
 
 
 if __name__ == '__main__':
-    try:
-        logger.info("Running MOLECOLE version {}".format(pkg_resources.get_distribution('molecole').version))
-    except Exception:
-        logger.info("Running MOLECOLE development version")
+    logger.info("Running MOLECOLE version {}".format(version.get_version()))
     parser = runtimeconfiguration.commonRuntimeArgumentParser()
     # Adjust defaults from commonRuntimeArgumentParser
     parser.set_defaults(
