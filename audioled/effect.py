@@ -58,7 +58,7 @@ class Effect(object):
         except AttributeError:
             self._outputBuffer = None
         # make sure all default values are set (basic backwards compatibility)
-        argspec = inspect.getargspec(self.__init__)
+        argspec = inspect.getfullargspec(self.__init__)
         if argspec.defaults is not None:
             argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
             for key in argsWithDefaults:
