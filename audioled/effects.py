@@ -10,7 +10,6 @@ import audioled.colors as colors
 from audioled.effect import Effect
 
 SHORT_NORMALIZE = 1.0 / 32768.0
-inter = ['linear', 'quadratic', 'cubic', 'sphere']
 
 
 class Shift(Effect):
@@ -707,10 +706,12 @@ class Shapes(Effect):
         return \
             "Shapes, yo!"
 
-    def __init__(self, x1=0, x2=100, inter='linear'):
+    def __init__(self, x0=0, x1=100, x2=0, x3=0, x4=0):
+        self.x0 = x0
         self.x1 = x1
         self.x2 = x2
-        self.inter = inter
+        self.x3 = x3
+        self.x4 = x4
         self.__initstate__()
 
     def __initstate__(self):
@@ -728,9 +729,11 @@ class Shapes(Effect):
         definition = {
             "parameters": OrderedDict([
                 # default, min, max, stepsize
-                ("inter", inter),
-                ("x1", [0, 0.0, 100.0, 1.0]),
-                ("x2", [100, 0.0, 100.0, 1.0]),
+                ("x0", [0, 0.0, 100.0, 1.0]),
+                ("x1", [100, 0.0, 100.0, 1.0]),
+                ("x2", [0, 0.0, 100.0, 1.0]),
+                ("x3", [0, 0.0, 100.0, 1.0]),
+                ("x4", [0, 0.0, 100.0, 1.0]),
             ])
         }
         return definition
@@ -739,19 +742,73 @@ class Shapes(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "inter": "Choose the interpolation mode",
-                "x1": "Lowest brightness",
-                "x2": "Highest brightness",
+                "x0": "point 0",
+                "x1": "point 1",
+                "x2": "point 2",
+                "x3": "point 3",
+                "x4": "point 4"
             }
         }
         return help
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        definition['parameters']['inter'] = [self.inter] + [x for x in inter if x != self.inter]
+        definition['parameters']['x0'][0] = self.x0
         definition['parameters']['x1'][0] = self.x1
         definition['parameters']['x2'][0] = self.x2
+        definition['parameters']['x3'][0] = self.x3
+        definition['parameters']['x4'][0] = self.x4
         return definition
+
+    # No point checking needed with fader input
+    #
+    # def check_points(A):
+    #     B = []
+    #     A = input("Enter integers in range 0 to 100. Points will be spread equally over total length. \
+    # Separator is <SPACE>.\n")
+    #     temp1 = A.split(' ')
+
+    #     for string in temp1:
+    #         if (string != '') and (string.isnumeric() is True):
+    #             if int(string) >= 0 and int(string) <= 100:
+    #                 B.append(int(string))
+
+    #     print('{} valid points have been found.'.format(len(B)))
+    #     return B
+
+    # Equally split the points over length
+    # not really needed with faders
+    def process_points(self, A, l):
+        B = []
+        if len(A) == 0:
+            B.append([0, 50])
+        elif len(A) == 1:
+            B.append([0, A[0]])
+        else:
+            delta_l = int(l / (len(A)-1))
+            for i in range(len(A)):
+                B.append([i * delta_l, A[i] / 100])
+        return B
+
+    # Get different slopes between points. Linear solving only.
+    def solve_points(self, A):
+        B = []
+        for i in range(int(len(A)-1)):
+            temp1 = np.array([[A[i][0], 1], [A[i+1][0], 1]])
+            temp2 = np.array([A[i][1], A[i+1][1]])
+            temp3 = np.linalg.solve(temp1, temp2)
+            B.append(temp3)
+        return B
+
+    # Calculate array for brightness
+    def create_Array(self, A, B):
+        C = []
+        count = 0
+        for i in range(int(len(A)-1)):
+            for j in range(A[i][0], A[i+1][0]):
+                C.append(round(B[i][0] * count + B[i][1], 4))
+                count += 1
+        return C
 
     def process(self):
         if self._inputBuffer is None or self._outputBuffer is None:
@@ -761,13 +818,12 @@ class Shapes(Effect):
             return
 
         y = self._inputBuffer[0]
+        
+        A = self.process_points([self.x0, self.x1, self.x2, self.x3, self.x4], len(y[0]))
+        B = self.solve_points(A)
+        C = self.create_Array(A, B)
 
-        a = np.array([[0, 1], [len(y[0]), 1]])
-        b = np.array([self.x1 / 100, self.x2 / 100])
-        slope = np.linalg.solve(a, b)
-
-        for i in range(len(y[0])):
-            for j in range(3):
-                y[j][i] = (slope[0] * i + slope[1]) * y[j][i]
+        for i in range(3):
+            y[i] = np.multiply(C, y[i])
 
         self._outputBuffer[0] = y
