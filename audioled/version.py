@@ -5,6 +5,12 @@ logger = logging.getLogger(__name__)
 _test_version = None
 def get_version():
     try:
+        if _test_version is not None:
+            return _test_version
+    except Exception:
+        pass
+    try:
+        
         v = pkg_resources.get_distribution('molecole').version
         split = v.split('.')
         if len(split) > 3:
@@ -15,4 +21,4 @@ def get_version():
         logger.error(e)
         if _test_version is not None:
             return _test_version
-        return "Undefined"
+    return "Undefined"

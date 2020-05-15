@@ -1,6 +1,17 @@
 version: '2'
 tasks:
+  clean:
+    desc: Clean directory
+    cmds:
+    - rm -rf pyu-data
+    - rm -rf molecole.egg-info
+
+  test:
+    cmds:
+    - pipenv run pytest tests
+    
   release:
+    desc: Create pyupdater release
     vars:
       VERSION_RAW: {sh: "pipenv run python setup.py --version"}
       VERSION: {sh: "pipenv run python setup.py --version | grep -o -m 1 [0-9].[0-9].[0-9]"}
@@ -11,6 +22,7 @@ tasks:
     - pipenv run pyupdater pkg --process --sign
     
   release-dev:
+    desc: Create pyupdater release using sanitized git version on non-tag git revs
     vars:
       VERSION_RAW: {sh: "pipenv run python setup.py --version | grep -o -m 1 [0-9].[0-9].[0-9]"}
     cmds:

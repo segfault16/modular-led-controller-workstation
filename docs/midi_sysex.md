@@ -54,7 +54,30 @@ followed by `0xf7` for Midi Sysex End.
 - Response ID: `0x00`, `0x00`
 - Data: Binary data encode of utf8 version string
 
+## Check update version
+### Request
+- Request ID: `0x00`, `0x11`
+
+### Response
+Update available:
+- Response ID: `0x00`, `0x11`
+- Data: Binary data encode of utf8 version string of available update version
+
+No update available:
+- Response ID: `0x00` `0x1F`
+
 ## Update server
+
+### Request
+- Request ID: `0x00`, `0x10`
+
+### Response
+
+Succeeded:
+- Response ID: `0x00` `0x10`
+
+No update available:
+- Response ID: `0x00` `0x1F`
 
 ## Get active project
 

@@ -1,7 +1,10 @@
-from audioled import modulation, project, serverconfiguration
+from audioled import modulation, project, serverconfiguration, version, client_config
 from audioled_controller import sysex_data
+
+from pyupdater.client import Client
 import mido
 import logging
+import os
 import pkg_resources
 import json
 logger = logging.getLogger(__name__)
@@ -33,10 +36,76 @@ def _ctrlToValue(ctrl, val):
     else:
         return {"controllerAmount": val}
 
+class PathAndUrlDownloader:
+
+    def __init__(self, callback, filename, urls, **kwargs):
+        self.filename = filename
+        self.urls = urls
+        self.hexdigest = kwargs.get("hexdigest")
+        self._callback = callback
+        logger.debug("Downloader for {}".format(filename))
+
+        self._data = None
+
+    def download_verify_return(self):
+        # Download the data from the endpoint and return
+        logger.info("Download request for {} received".format(self.filename))
+        if self._callback is not None:
+            self._data = self._callback(self.filename)
+        return self._data
+
+    def download_verify_write(self):
+        if self._data is None:
+            self._data = self.download_verify_return()
+        # Write the downloaded data to the current dir
+        logger.info("Write request for {} received".format(self.filename))
+        logger.info("Writing {} bytes to file {}".format(len(self._data), self.filename))
+        with open(self.filename, 'wb') as f:
+            f.write(self._data)
+
+def print_status_info(info):
+    total = info.get(u'total')
+    downloaded = info.get(u'downloaded')
+    status = info.get(u'status')
+    logger.info(status)
+
+class MidiProjectControllerOptions:
+    def __init__(self):
+        self.update_paths = None
+        self.client_config = None
+
 class MidiProjectController:
 
-    def __init__(self, callback=None):
+    def __init__(self, callback=None, options=None):
         self._sendMidiCallback = callback
+
+        self._update_paths = None
+        self._client_config = None
+        if options is not None:
+            self._update_paths = options.update_paths
+            self._client_config = options.client_config
+        # Client for pyupdate
+        if self._client_config is None:
+            self._client_config = client_config.ClientConfig()
+        self.client = Client(self._client_config, downloader=self.createDownloader)
+        self.client.add_progress_hook(print_status_info)
+
+        
+    def createDownloader(self, filename, urls, **kwargs):
+        logger.info("Create downloader for {}".format(filename))
+        d = PathAndUrlDownloader(self.downloadCallback, filename, urls)
+        return d
+
+    def downloadCallback(self, file):
+        logger.info("Callback! {}".format(file))
+        if self._update_paths is not None:
+            for updatePath in self._update_paths:
+                logger.info("Checking directory {}".format(updatePath))
+                path = os.path.join(updatePath, file)
+                if os.path.isfile(path):
+                    return open(path, "rb").read()
+        logger.error("{} not found".format(file))
+        return None
 
     def handleMidiMsg(self, msg: mido.Message, serverconfig: serverconfiguration.ServerConfiguration, proj: project.Project):
         # of type mido.Message
@@ -75,6 +144,50 @@ class MidiProjectController:
             if self._sendMidiCallback is not None:
                 metadata = serverconfig.getProjectMetadata(proj.id)
                 self._sendMidiCallback(self._createActiveProjectMsg(metadata))
+        elif data[0] == 0x00 and data[1] == 0x10:
+            # Update
+            self.client.refresh()
+            logger.info("Checking for update {}".format(version.get_version()))
+            app_update = self.client.update_check('Molecole', version.get_version())
+            if app_update is not None:
+                logger.info("Update {} available".format(app_update.current_version))
+                app_update.download()
+                logger.info("Update downloaded")
+                if app_update.is_downloaded():
+                    logger.debug("Extracting update")
+                    if app_update.extract():
+                        logger.debug("Extract succeeded")
+                    else:
+                        logger.debug("Extract not successful")
+                    # TODO: perform update
+            else:
+                logger.info("Update check returned no update")
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createUpdateNotAvailableMsg())
+        elif data[0] == 0x00 and data[1] == 0x11:
+            # Update check
+            self.client.refresh()
+            logger.info("Checking for update {}".format(version.get_version()))
+            app_update = self.client.update_check('Molecole', version.get_version())
+            if app_update is not None:
+                logger.info("Update {} available".format(app_update.version))
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createUpdateVersionAvailableMsg(app_update.version))
+            else:
+                logger.info("Update check returned no update")
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createUpdateNotAvailableMsg())
+
+    def _createUpdateVersionAvailableMsg(self, version):
+        
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x11] + sysex_data.encode(version)
+        return sendMsg
+
+    def _createUpdateNotAvailableMsg(self):
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x1F]
+        return sendMsg
     
     def _createActiveProjectMsg(self, metadata):
         sendMsg = mido.Message('sysex')
@@ -82,14 +195,9 @@ class MidiProjectController:
         return sendMsg
 
     def _createVersionMsg(self):
-        version = "UNDEFINED"
-        try:
-            version = pkg_resources.get_distribution('molecole').version
-        except Exception:
-            # TODO: Sometimes breaks in unittests?
-            pass
+        v = version.get_version()
         sendMsg = mido.Message('sysex')
-        sendMsg.data = [0x00, 0x00] + sysex_data.encode(version)
+        sendMsg.data = [0x00, 0x00] + sysex_data.encode(v)
         return sendMsg
 
     def _handleProgramChange(self, program, proj):
