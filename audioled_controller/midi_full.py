@@ -137,6 +137,7 @@ class MidiProjectController:
         
         if data[0] == 0x00 and data[1] == 0x00:
             # Version
+            logger.info("MIDI-BLE REQ Version")
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createVersionMsg())
         elif data[0] == 0x00 and data[1] == 0x01:
@@ -146,8 +147,9 @@ class MidiProjectController:
                 self._sendMidiCallback(self._createActiveProjectMsg(metadata))
         elif data[0] == 0x00 and data[1] == 0x10:
             # Update
+            logger.info("MIDI-BLE REQ Update")
+            logger.info("Checking for update, current version is {}".format(version.get_version()))
             self.client.refresh()
-            logger.info("Checking for update {}".format(version.get_version()))
             app_update = self.client.update_check('Molecole', version.get_version())
             if app_update is not None:
                 logger.info("Update {} available".format(app_update.current_version))
@@ -166,6 +168,7 @@ class MidiProjectController:
                     self._sendMidiCallback(self._createUpdateNotAvailableMsg())
         elif data[0] == 0x00 and data[1] == 0x11:
             # Update check
+            logger.info("MIDI-BLE REQ Update check")
             self.client.refresh()
             logger.info("Checking for update {}".format(version.get_version()))
             app_update = self.client.update_check('Molecole', version.get_version())
@@ -179,23 +182,27 @@ class MidiProjectController:
                     self._sendMidiCallback(self._createUpdateNotAvailableMsg())
 
     def _createUpdateVersionAvailableMsg(self, version):
-        
+        logger.info("MIDI-BLE RESPONSE Update to version {} available".format(version))
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x11] + sysex_data.encode(version)
         return sendMsg
 
     def _createUpdateNotAvailableMsg(self):
+        logger.info("MIDI-BLE RESPONSE No update available")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x1F]
         return sendMsg
     
     def _createActiveProjectMsg(self, metadata):
+        data = json.dumps(metadata)
+        logger.info("MIDI-BLE RESPONSE Active project {}".format(data))
         sendMsg = mido.Message('sysex')
-        sendMsg.data = [0x00, 0x01] + sysex_data.encode(json.dumps(metadata))
+        sendMsg.data = [0x00, 0x01] + sysex_data.encode(data)
         return sendMsg
 
     def _createVersionMsg(self):
         v = version.get_version()
+        logger.info("MIDI-BLE RESPONSE Current Version {}".format(v))
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x00] + sysex_data.encode(v)
         return sendMsg

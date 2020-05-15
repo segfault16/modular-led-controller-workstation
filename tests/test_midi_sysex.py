@@ -3,9 +3,21 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
 import unittest
-from audioled_controller import sysex_data
+import time
+from audioled_controller import sysex_data, midi_timestamp
 
 class TestMidiSysex(unittest.TestCase):
+    def test_midi_timestamp(self):
+        curTime = int(round(time.time() * 1000))
+        print("curtime: {}".format(curTime))
+        midiTime = midi_timestamp.toMidiTime(curTime)
+        print("midiTime: {}".format(midiTime))
+        sysTime = midi_timestamp.toSysTime(midiTime)
+        print("systime: {}".format(sysTime))
+        midiTimeAgain = midi_timestamp.toMidiTime(sysTime)
+        print("midiTimeAgain: {}".format(midiTimeAgain))
+        self.assertListEqual(midiTime, midiTimeAgain)
+
     def test_enc_0x00(self):
         to_enc = [0x00]
         enc = sysex_data.encode(to_enc)

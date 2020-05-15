@@ -826,6 +826,7 @@ def handleMidiIn(msg: mido.Message):
 def handleMidiOut(msg: mido.Message):
     global midiBluetooth
     if midiBluetooth is not None:
+        logger.info("Writing midi {}".format(msg))
         midiBluetooth.sendMidi(msg)
 
 

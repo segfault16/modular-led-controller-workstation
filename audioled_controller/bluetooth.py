@@ -4,7 +4,10 @@ import pybleno
 from pybleno import *
 import traceback
 import logging
+import time
 logger = logging.getLogger(__name__)
+
+from audioled_controller import midi_timestamp
 
 
 class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
@@ -34,6 +37,8 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         self._updateValueCallback = None
         self._isSysex = False
         self._writeBuffer = pybleno.array.array('B', [0] * 0)
+        self._lastTimestampMidi = None
+        self._lastTimestampMillis = None
           
     # def onReadRequest(self, offset, callback):
     #     if sys.platform == 'darwin':
@@ -91,6 +96,8 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
                 logger.error("Second MIDI-BLE byte not status")
                 return
 
+        self._lastTimestampMidi = [self._value[0], self._value[1]]
+        self._lastTimestampMillis = int(round(time.time() * 1000))
         logger.debug("Parsing {}".format([hex(c) for c in msg]))
 
         for id, inByte in enumerate(msg):
@@ -163,11 +170,11 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
             self._writeBuffer = self._value
 
         for msg in midiMsgs:
-            logger.info("message is: {}".format(msg))
+            logger.debug("Receiving midi message is: {} ({})".format(msg, msg.bytes()))
             if msg.type == 'program_change':
-                logger.info("is program change: {}".format(msg.program))
+                logger.debug("is program change: {}".format(msg.program))
             if msg.type == 'sysex':
-                logger.info("is sysex: {}".format(msg.data))
+                logger.debug("is sysex: {}".format(msg.data))
             if self._msgReceivedCallback is not None:
                 self._msgReceivedCallback(msg)
 
@@ -186,12 +193,26 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         if self._updateValueCallback is None:
             logger.debug("No subscription?")
             return
-        bytes = msg.bytes()
-        if msg.type != 'sysex' or True:
-            bytes =  [0x80, 0x80] + msg.bytes()
-
-        logger.debug("Writing {}".format([hex(c) for c in bytes]))
+        timestamp = [0x80, 0x80] # default timestamp
+        if self._lastTimestampMillis is not None and self._lastTimestampMidi is not None:
+            # Kind of synchronize to sender's time by taking the timestamp from incoming messages and adding the diff in local system time millis
+            curTime = int(round(time.time() * 1000))
+            diffTime = curTime - self._lastTimestampMillis
+            oldMidiTime = midi_timestamp.toSysTime(self._lastTimestampMidi)
+            newMidiTime = oldMidiTime + diffTime
+            timestamp = midi_timestamp.toMidiTime(newMidiTime)
+            # Apply status bytes
+            timestamp[0] = timestamp[0] | 0x80
+            timestamp[1] = timestamp[1] | 0x80
         
+
+        bytes =  timestamp + msg.bytes()
+        if msg.type == 'sysex':
+            # Last sysex byte must by preceded by timestamp
+            # Append timestamp
+            bytes = bytes[:-1] + [timestamp[1]] + [bytes[-1]]
+
+        logger.debug("Writing {} to MIDI-BLE".format([hex(c) for c in bytes]))
         self._updateValueCallback(bytes)
 
 
