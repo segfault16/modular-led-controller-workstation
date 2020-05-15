@@ -36,7 +36,7 @@ class ModulationSource(object):
         except AttributeError:
             self._t = 0
         # make sure all default values are set (basic backwards compatibility) # TODO: Duplicate code in effect?
-        argspec = inspect.getargspec(self.__init__)
+        argspec = inspect.getfullargspec(self.__init__)
         if argspec.defaults is not None:
             argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
             for key in argsWithDefaults:

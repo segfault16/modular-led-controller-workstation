@@ -489,7 +489,7 @@ def create_app(midiAdvertiseName=None):
         except RuntimeError:
             abort(403)
         class_ = getattr(importlib.import_module(module_name), class_name)
-        argspec = inspect.getargspec(class_.__init__)
+        argspec = inspect.getfullargspec(class_.__init__)
         if argspec.defaults is not None:
             argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
         else:

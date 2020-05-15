@@ -133,7 +133,7 @@ class Effect(object):
         return state
 
     def __setstate__(self, state):
-        argspec = inspect.getargspec(self.__init__)
+        argspec = inspect.getfullargspec(self.__init__)
         for k in list(state.keys()):
             if k not in argspec.args:
                 logger.info("Removing deprecated parameter {} from state of {}".format(k, self))
