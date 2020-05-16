@@ -55,10 +55,11 @@ followed by `0xf7` for Midi Sysex End.
 | RESP     | Update server                           | `0x00`, `0x10` |                                                                       | Update successful   |
 | RESP     | Update server                           | `0x00`, `0x10` |                                                                       | No update available |
 | REQ      | Get active project                      | `0x00`, `0x20` |                                                                       |                     |
-| RESP     | Get active project                      | `0x00`, `0x20` | Binary data encode of utf8 project uuid string                        |                     |
+| RESP     | Get active project                      | `0x00`, `0x20` | Binary data encode of utf8 active project metadata json               |                     |
 | REQ      | Get projects                            |                |                                                                       |                     |
 | REQ      | Activate project                        |                |                                                                       |                     |
 | REQ      | Export project                          |                |                                                                       |                     |
 | REQ      | Import project                          |                |                                                                       |                     |
+| REQ      | Get available scenes in project         |                |                                                                       |                     |
 | REQ      | Get active scene                        |                |                                                                       |                     |
 | REQ      | Get enabled controller for active scene |                |                                                                       |                     |
