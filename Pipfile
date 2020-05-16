@@ -13,7 +13,7 @@ flake8 = "*"
 yapf = "*"
 pbr = "*"
 pyinstaller = "*"
-pyupdater = "*"
+pyupdater = {editable = true, git = "https://github.com/segfault16/PyUpdater.git", ref = "3.1.2-pre"}
 pytest = "*"
 
 [packages]
