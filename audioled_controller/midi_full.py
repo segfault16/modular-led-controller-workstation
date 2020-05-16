@@ -140,7 +140,7 @@ class MidiProjectController:
             logger.info("MIDI-BLE REQ Version")
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createVersionMsg())
-        elif data[0] == 0x00 and data[1] == 0x01:
+        elif data[0] == 0x00 and data[1] == 0x20:
             # Active project metadata
             if self._sendMidiCallback is not None:
                 metadata = serverconfig.getProjectMetadata(proj.id)
@@ -197,7 +197,7 @@ class MidiProjectController:
         data = json.dumps(metadata)
         logger.info("MIDI-BLE RESPONSE Active project {}".format(data))
         sendMsg = mido.Message('sysex')
-        sendMsg.data = [0x00, 0x01] + sysex_data.encode(data)
+        sendMsg.data = [0x00, 0x20] + sysex_data.encode(data)
         return sendMsg
 
     def _createVersionMsg(self):

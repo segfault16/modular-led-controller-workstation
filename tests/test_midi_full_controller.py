@@ -67,7 +67,7 @@ def test_get_active_project():
     ctrl = midi_full.MidiProjectController(callback=f)
     # Get active project metadata
     testMsg = mido.Message('sysex')
-    testMsg.data = [0x00, 0x01]
+    testMsg.data = [0x00, 0x20]
     # Init in-memory config
     cfg = serverconfiguration.ServerConfiguration()
     proj = cfg.getActiveProjectOrDefault()
@@ -76,7 +76,7 @@ def test_get_active_project():
     retMsg = f.call_args[0][0]
     # Check response message ID
     assert retMsg.data[0] == 0x00
-    assert retMsg.data[1] == 0x01
+    assert retMsg.data[1] == 0x20
     # Decode data
     dec = sysex_data.decode(retMsg.data[2:])
     metadata = json.loads(bytes(dec))

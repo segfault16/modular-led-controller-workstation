@@ -44,60 +44,21 @@ will be encoded to:
 
 followed by `0xf7` for Midi Sysex End.
 
-## Get Version
-
-### Request
-- Request ID: `0x00`, `0x00` 
-- Data: ``
-
-### Response
-- Response ID: `0x00`, `0x00`
-- Data: Binary data encode of utf8 version string
-
-## Check update version
-### Request
-- Request ID: `0x00`, `0x11`
-
-### Response
-Update available:
-- Response ID: `0x00`, `0x11`
-- Data: Binary data encode of utf8 version string of available update version
-
-No update available:
-- Response ID: `0x00` `0x1F`
-
-## Update server
-
-### Request
-- Request ID: `0x00`, `0x10`
-
-### Response
-
-Succeeded:
-- Response ID: `0x00` `0x10`
-
-No update available:
-- Response ID: `0x00` `0x1F`
-
-## Get active project
-
-### Request
-- Request ID: `0x00`, `0x01`
-- Data: ``
-
-### Response
-
-- Response ID: `0x00`, `0x01`
-- Data: Binary data encode of utf8 project uuid string
-
-## Get projects
-
-## Activate project
-
-## Export project
-
-## Import project
-
-## Get active scene
-
-## Get enabled controller for active scene
+| REQ/RESP | Request name                            | ID             | Data                                                                  | Description         |
+| -------- | --------------------------------------- | -------------- | --------------------------------------------------------------------- | ------------------- |
+| REQ      | Get Version                             | `0x00`, `0x00` |                                                                       |                     |
+| RESP     | Get Version                             | `0x00`, `0x00` | Binary data encode of utf8 version string                             |                     |
+| REQ      | Check update Version                    | `0x00`, `0x11` |                                                                       |                     |
+| RESP     | Check update Version                    | `0x00`, `0x11` | Binary data encode of utf8 version string of available update version | Update available    |
+| RESP     | Check update Version                    | `0x00`, `0x1F` |                                                                       | No update available |
+| REQ      | Update server                           | `0x00`, `0x10` |                                                                       |                     |
+| RESP     | Update server                           | `0x00`, `0x10` |                                                                       | Update successful   |
+| RESP     | Update server                           | `0x00`, `0x10` |                                                                       | No update available |
+| REQ      | Get active project                      | `0x00`, `0x20` |                                                                       |                     |
+| RESP     | Get active project                      | `0x00`, `0x20` | Binary data encode of utf8 project uuid string                        |                     |
+| REQ      | Get projects                            |                |                                                                       |                     |
+| REQ      | Activate project                        |                |                                                                       |                     |
+| REQ      | Export project                          |                |                                                                       |                     |
+| REQ      | Import project                          |                |                                                                       |                     |
+| REQ      | Get active scene                        |                |                                                                       |                     |
+| REQ      | Get enabled controller for active scene |                |                                                                       |                     |
