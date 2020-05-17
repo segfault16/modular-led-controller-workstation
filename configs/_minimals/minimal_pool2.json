@@ -1,0 +1,54 @@
+{
+    "py/object": "audioled.filtergraph.FilterGraph",
+    "py/state": {
+        "_contentRoot": "/Users/gri/.ledserver/projects/5ec2abab38d04a79a027c83d0ad3def5",
+        "connections": [
+            {
+                "from_node_channel": 0,
+                "from_node_uid": "1fedcde81511441ab8ff7cd3ee949a7a",
+                "to_node_channel": 0,
+                "to_node_uid": "753838767887424bac2eeec8ac69452c",
+                "uid": "03b58af24e814fa5b94c526d705e4da9"
+            }
+        ],
+        "modulationSources": [],
+        "modulations": [],
+        "nodes": [
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.devices.LEDOutput",
+                        "py/state": {
+                            "brightness": 0.5
+                        }
+                    },
+                    "numInputChannels": 1,
+                    "numOutputChannels": 0,
+                    "uid": "753838767887424bac2eeec8ac69452c"
+                }
+            },
+            {
+                "py/object": "audioled.filtergraph.Node",
+                "py/state": {
+                    "effect": {
+                        "py/object": "audioled.generative.SwimmingPool2",
+                        "py/state": {
+                            "direction": "side2",
+                            "max_speed": 30,
+                            "num_waves": 30,
+                            "scale": 0.2,
+                            "wave_pool2": "all",
+                            "wavespread_high": 40,
+                            "wavespread_low": 10
+                        }
+                    },
+                    "numInputChannels": 1,
+                    "numOutputChannels": 1,
+                    "uid": "1fedcde81511441ab8ff7cd3ee949a7a"
+                }
+            }
+        ],
+        "recordTimings": true
+    }
+}

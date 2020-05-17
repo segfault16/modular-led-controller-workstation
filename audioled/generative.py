@@ -19,7 +19,11 @@ sortby = ['red', 'green', 'blue', 'brightness']
 sortbydefault = 'red'
 direction = ['side1', 'side2', 'random']
 direction_default = 'random'
-wave_pool2 = ['sin(x)', '1/x', '1/(x^2)', '1/(x^3)', 'const(x)', 'x', 'x^2', 'x^3', 'x * e^(-x)', 'all']
+wave_pool2 = ['sin(x)', '1/x', '1/x**2', '1/x**3', 'const(x)', 'x', 'x**2', 'x**3', 'x * e**(-x)',
+              '-sin(x)', '-1/x', '-1/x**2', '-1/x**3', '-const(x)', '-x', '-x**2', '-x**3', '-x * e**(-x)',
+              'all positive', 'all negative', 'all']
+wave_pool2_pos = ['sin(x)', '1/x', '1/x**2', '1/x**3', 'const(x)', 'x', 'x**2', 'x**3', 'x * e**(-x)']
+wave_pool2_neg = ['-sin(x)', '-1/x', '-1/x**2', '-1/x**3', '-const(x)', '-x', '-x**2', '-x**3', '-x * e**(-x)']
 wave_pool2_default = 'sin(x)'
 
 
@@ -155,7 +159,9 @@ class SwimmingPool2(Effect):
     @staticmethod
     def getEffectDescription():
         return \
-            "Generates a wave effect to look like the reflection on the bottom of a swimming pool."
+            """
+            Generates a wave effect to look like the reflection on the bottom of a swimming pool.
+            """
 
     def __init__(self,
                  num_waves=30,
@@ -242,23 +248,25 @@ class SwimmingPool2(Effect):
         return definition
 
     def createFunc(self, t, spread, wave_hight, speed, wave_form):
-        if wave_form == 'sin(x)':
+        # Added negatives. Flip will happen later. This is just to get the form.
+        # Symmetricals are for integrity and for selection in all negatives.
+        if wave_form == 'sin(x)' or wave_form == '-sin(x)':
             func = math.sin(math.pi / spread * t) * wave_hight
-        elif wave_form == '1/x':
+        elif wave_form == '1/x' or wave_form == '-1/x':
             func = spread / 2 / t * wave_hight
-        elif wave_form == '1/(x^2)':
+        elif wave_form == '1/x**2' or wave_form == '-1/x**2':
             func = spread / 2 / t**2 * wave_hight
-        elif wave_form == '1/(x^3)':
+        elif wave_form == '1/x**3' or wave_form == '-1/x**3':
             func = spread / 2 / t**3 * wave_hight
-        elif wave_form == 'const(x)':
+        elif wave_form == 'const(x)' or wave_form == '-const(x)':
             func = wave_hight
-        elif wave_form == 'x':
+        elif wave_form == 'x' or wave_form == '-x':
             func = t * wave_hight / spread
-        elif wave_form == 'x^2':
+        elif wave_form == 'x**2' or wave_form == '-x**2':
             func = t**2 * wave_hight / spread / 10
-        elif wave_form == 'x^3':
+        elif wave_form == 'x**3' or wave_form == '-x**3':
             func = t**3 * wave_hight / spread / 100
-        elif wave_form == 'x * e^(-x)':
+        elif wave_form == 'x * e**(-x)' or wave_form == '-x * e**(-x)':
             func = (0.5 / spread) * t * math.exp(-(0.2 / spread) * t) * wave_hight
         return func
 
@@ -269,13 +277,19 @@ class SwimmingPool2(Effect):
 
         # Select the type of waves
         if self.wave_pool2 == 'all':
-            wave_selector = random.choice(wave_pool2[:-1])
+            wave_selector = random.choice(wave_pool2[:-3])
+        elif self.wave_pool2 == 'all positive':
+            wave_selector = random.choice(wave_pool2_pos)
+        elif self.wave_pool2 == 'all negative':
+            wave_selector = random.choice(wave_pool2_neg)
         else:
             wave_selector = self.wave_pool2
 
         for i in range(1, _spread + 1):
             _CArray.append(self.createFunc(i, _spread, _wavehight, _speed, wave_selector))
-
+        # This is where the negative flip happens.
+        if wave_selector.startswith('-'):
+            _CArray = np.flip(_CArray)
         _output = np.zeros(self._num_pixels)
         _output[:len(_CArray)] = _CArray
         # Move somewhere

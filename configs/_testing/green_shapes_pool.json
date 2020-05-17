@@ -5,24 +5,24 @@
         "connections": [
             {
                 "from_node_channel": 0,
-                "from_node_uid": "2d3a3c56c8384f7ca3e1bd55084121cf",
+                "from_node_uid": "caf5e4c0e8d74d5a96ae51a94151f01d",
                 "to_node_channel": 0,
-                "to_node_uid": "8f33551fc3bb4330888c38b79899000b",
-                "uid": "347981023ad44f0c86dd77bb5f73e1a0"
+                "to_node_uid": "753838767887424bac2eeec8ac69452c",
+                "uid": "c894ea0026e1434f88f7f1cc0dc990ee"
             },
             {
                 "from_node_channel": 0,
-                "from_node_uid": "8f33551fc3bb4330888c38b79899000b",
+                "from_node_uid": "826b9ef8bd724d028d5b01f243ac9e75",
                 "to_node_channel": 0,
-                "to_node_uid": "d8a0832e87a04a2e8f05711813787c85",
-                "uid": "4379a77430f042d28df8b5dcadf46c0b"
+                "to_node_uid": "61d77c3918f44a0398793fcb3a7c490f",
+                "uid": "ac557ea2ab8146c0b5c90f4aceb7f012"
             },
             {
                 "from_node_channel": 0,
-                "from_node_uid": "d8a0832e87a04a2e8f05711813787c85",
+                "from_node_uid": "61d77c3918f44a0398793fcb3a7c490f",
                 "to_node_channel": 0,
-                "to_node_uid": "c236f45fbae841c7a3f1cbf5c92711fc",
-                "uid": "b490917d9c4a4d76873b4a7a9ce016fd"
+                "to_node_uid": "caf5e4c0e8d74d5a96ae51a94151f01d",
+                "uid": "520ba658a68747be8f56b7f2aa0d9d83"
             }
         ],
         "modulationSources": [],
@@ -39,7 +39,7 @@
                     },
                     "numInputChannels": 1,
                     "numOutputChannels": 0,
-                    "uid": "c236f45fbae841c7a3f1cbf5c92711fc"
+                    "uid": "753838767887424bac2eeec8ac69452c"
                 }
             },
             {
@@ -55,7 +55,7 @@
                     },
                     "numInputChannels": 0,
                     "numOutputChannels": 1,
-                    "uid": "2d3a3c56c8384f7ca3e1bd55084121cf"
+                    "uid": "826b9ef8bd724d028d5b01f243ac9e75"
                 }
             },
             {
@@ -65,29 +65,33 @@
                         "py/object": "audioled.effects.Shapes",
                         "py/state": {
                             "x0": 100,
-                            "x1": 70,
-                            "x2": 40,
-                            "x3": 20,
-                            "x4": 10
+                            "x1": 0,
+                            "x2": 100,
+                            "x3": 0,
+                            "x4": 100
                         }
                     },
                     "numInputChannels": 1,
                     "numOutputChannels": 1,
-                    "uid": "8f33551fc3bb4330888c38b79899000b"
+                    "uid": "caf5e4c0e8d74d5a96ae51a94151f01d"
                 }
             },
             {
                 "py/object": "audioled.filtergraph.Node",
                 "py/state": {
                     "effect": {
-                        "py/object": "audioled.effects.Flipping",
+                        "py/object": "audioled.generative.SwimmingPool",
                         "py/state": {
-                            "Flip": true
+                            "max_speed": 30,
+                            "num_waves": 30,
+                            "scale": 0.2,
+                            "wavespread_high": 70,
+                            "wavespread_low": 30
                         }
                     },
                     "numInputChannels": 1,
                     "numOutputChannels": 1,
-                    "uid": "d8a0832e87a04a2e8f05711813787c85"
+                    "uid": "61d77c3918f44a0398793fcb3a7c490f"
                 }
             }
         ],
