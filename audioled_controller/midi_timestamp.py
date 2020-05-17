@@ -8,7 +8,7 @@ def toSysTime(twoBytes):
 
 def toMidiTime(millis):
     newTime = (millis & 0x1FFF) << 1
-    twoBytes = [(newTime >> i & 0xff) for i in (8,0)]
-    twoBytes[0] = twoBytes[0] & 0x3F # Header and reserved bytes
+    twoBytes = [(newTime >> i & 0xff) for i in (8, 0)]
+    twoBytes[0] = twoBytes[0] & 0x3F  # Header and reserved bytes
     twoBytes[1] = twoBytes[1] >> 1
     return twoBytes

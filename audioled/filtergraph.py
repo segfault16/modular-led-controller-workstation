@@ -571,7 +571,6 @@ class FilterGraph(Updateable):
 
         return ctrlDict
                 
-
     def propagateNumPixels(self, num_pixels, num_rows=1):
         if self.getLEDOutput() is not None:
             self.getLEDOutput().effect.setNumOutputPixels(num_pixels)

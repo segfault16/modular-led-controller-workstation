@@ -78,4 +78,3 @@ class TestMidiSysex(unittest.TestCase):
         to_dec = [0x00, 0x21, 0x20]
         dec = sysex_data.decode(to_dec)
         self.assertListEqual(dec, [0x00, 0xA1])
-

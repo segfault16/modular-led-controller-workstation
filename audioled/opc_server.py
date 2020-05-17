@@ -150,7 +150,7 @@ class OPCMessage:
             self._set_selector_events_mask("w")
 
     def close(self):
-        self._debug("closing connection to".format(self.addr))
+        self._debug("closing connection to {}".format(self.addr))
         try:
             self.selector.unregister(self.sock)
         except Exception as e:

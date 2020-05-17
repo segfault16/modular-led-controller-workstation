@@ -488,7 +488,7 @@ class ServerConfiguration:
                         referencedConfigItem = config[referencedKey]
                         if len(referencedConfigItem) != 1 or referencedConfigItem[0]['device'] == 'VirtualOutput':
                             raise RuntimeError(
-                                "{} entry {} referenced device config must have one entry that is no VirtualOutput".format(
+                                "{} entry {} referenced device config {} must have one entry that is no VirtualOutput".format(
                                     configEntryName, key, deviceConfigItem['device.virtual.reference']))
                     # Make sure device.virtual.reference is non-cyclic
                     if deviceConfigItem['device'] == 'VirtualOutput' and deviceConfigItem['device.virtual.reference'] == key:

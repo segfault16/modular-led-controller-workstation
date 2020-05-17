@@ -1,14 +1,13 @@
 
 import mido
 import pybleno
-from pybleno import *
 import traceback
 import logging
 import time
-logger = logging.getLogger(__name__)
 
 from audioled_controller import midi_timestamp
 
+logger = logging.getLogger(__name__)
 
 class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
     def __init__(self, _msgReceivedCallback):
@@ -20,7 +19,7 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
                 # 'secure': ['read', 'write', 'writeWithoutResponse', 'notify'],
                 'value': None,
                 'descriptors': []
-                })
+            })
         except ImportError:
             url = 'https://github.com/Adam-Langley/pybleno'
             logger.error('Could not import the pybleno library')
@@ -39,7 +38,7 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         self._writeBuffer = pybleno.array.array('B', [0] * 0)
         self._lastTimestampMidi = None
         self._lastTimestampMillis = None
-          
+
     # def onReadRequest(self, offset, callback):
     #     if sys.platform == 'darwin':
     #     	output = subprocess.check_output("pmset -g batt", shell=True)
@@ -55,13 +54,18 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
     #         callback(Characteristic.RESULT_SUCCESS, array.array('B', [98]))
 
     def onReadRequest(self, offset, callback):
-        logger.debug('BluetoothMidiLELevelCharacteristic - %s - onReadRequest: value = %s' % (self['uuid'], [hex(c) for c in self._value]))
+        logger.debug("BluetoothMidiLELevelCharacteristic - {} - onReadRequest: value = {}".format(
+            self["uuid"],
+            [hex(c) for c in self._value]))
         callback(pybleno.Characteristic.RESULT_SUCCESS, self._value[offset:])
 
     def onWriteRequest(self, data, offset, withoutResponse, callback):
         self._value = data
         
-        logger.debug('BluetoothMidiLELevelCharacteristic - %s - onWriteRequest: value = %s (%s)' % (self['uuid'], [hex(c) for c in self._value], offset))
+        logger.debug("BluetoothMidiLELevelCharacteristic - {} - onWriteRequest: value = {} ({})".format(
+            self["uuid"],
+            [hex(c) for c in self._value],
+            offset))
         if self._value is None or len(self._value) <= 2:
             logger.error("Not enough bytes in MIDI-BLE message")
             return
@@ -160,7 +164,7 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         for m in msgs:
             logger.debug("Parsing message {}".format([hex(c) for c in m]))
             try:
-                midi = mido.Message.from_bytes(m[1:]) # Strip timestamp on parse
+                midi = mido.Message.from_bytes(m[1:])  # Strip timestamp on parse
                 midiMsgs.append(midi)
             except ValueError as e:
                 logger.error("Error decoding midi: {}".format(e))
@@ -178,24 +182,24 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
             if self._msgReceivedCallback is not None:
                 self._msgReceivedCallback(msg)
 
-
     def onSubscribe(self, maxValueSize, updateValueCallback):
         logger.debug('EchoCharacteristic - onSubscribe')
         
         self._updateValueCallback = updateValueCallback
 
     def onUnsubscribe(self):
-        logger.debug('EchoCharacteristic - onUnsubscribe');
+        logger.debug('EchoCharacteristic - onUnsubscribe')
         
         self._updateValueCallback = None
 
-    def sendMidi(self, msg : mido.Message):
+    def sendMidi(self, msg: mido.Message):
         if self._updateValueCallback is None:
             logger.debug("No subscription?")
             return
-        timestamp = [0x80, 0x80] # default timestamp
+        timestamp = [0x80, 0x80]  # default timestamp
         if self._lastTimestampMillis is not None and self._lastTimestampMidi is not None:
-            # Kind of synchronize to sender's time by taking the timestamp from incoming messages and adding the diff in local system time millis
+            # Kind of synchronize to sender's time by taking the timestamp from incoming messages and adding the diff in local
+            # system time millis
             curTime = int(round(time.time() * 1000))
             diffTime = curTime - self._lastTimestampMillis
             oldMidiTime = midi_timestamp.toSysTime(self._lastTimestampMidi)
@@ -205,8 +209,7 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
             timestamp[0] = timestamp[0] | 0x80
             timestamp[1] = timestamp[1] | 0x80
         
-
-        bytes =  timestamp + msg.bytes()
+        bytes = timestamp + msg.bytes()
         if msg.type == 'sysex':
             # Last sysex byte must by preceded by timestamp
             # Append timestamp
@@ -220,37 +223,23 @@ class BluetoothMidiLEService(pybleno.BlenoPrimaryService):
     def __init__(self, _msgReceivedCallback):
         self._characteristic = BluetoothMidiLELevelCharacteristic(_msgReceivedCallback)
         pybleno.BlenoPrimaryService.__init__(self, {
-          'uuid': '03b80e5a-ede8-4b33-a751-6ce34ec4c700',
-          'characteristics': [
-              self._characteristic
-          ],
+            'uuid': '03b80e5a-ede8-4b33-a751-6ce34ec4c700',
+            'characteristics': [
+                self._characteristic
+            ],
         })
 
 class MidiBluetoothService(object):
     def __init__(self, callback=None):
         self._callback = callback
         self.bleno = pybleno.Bleno()
-        self.primaryService = BluetoothMidiLEService(self._onMessageReceived);
+        self.primaryService = BluetoothMidiLEService(self._onMessageReceived)
         self.primaryServiceName = 'MOLECOLE Control'
 
         self.bleno.on('advertisingStart', self._onAdvertisingStart)
         self.bleno.on('stateChange', self._onStateChange)
         logging.info("Advertising Bluetooth Service")
         self.bleno.start()
-        # self.bleno.startAdvertising("MOLECOLE Control")
-
-        # logger.info( ('Hit <ENTER> to disconnect')
-
-        # if (sys.version_info > (3, 0)):
-        #     input()
-        # else:
-        #     raw_input()
-
-        # bleno.stopAdvertising()
-        # bleno.disconnect()
-
-        # logger.info( ('terminated.')
-        # sys.exit(1)
 
     def _onMessageReceived(self, msg: mido.Message):
         logger.debug("Received msg: {}".format(msg))
@@ -262,19 +251,19 @@ class MidiBluetoothService(object):
                 traceback.print_tb(e.__traceback__)
 
     def _onStateChange(self, state):
-        logger.debug('on -> stateChange: ' + state);
+        logger.debug('on -> stateChange: ' + state)
 
         if (state == 'poweredOn'):
-            self.bleno.startAdvertising(self.primaryServiceName, [self.primaryService.uuid]);
+            self.bleno.startAdvertising(self.primaryServiceName, [self.primaryService.uuid])
         else:
             self.bleno.stopAdvertising()
 
     def _onAdvertisingStart(self, error):
-        logger.debug('on -> advertisingStart: ' + ('error ' + error if error else 'success'));
+        logger.debug('on -> advertisingStart: ' + ('error ' + error if error else 'success'))
 
         if not error:
             def on_setServiceError(error):
-                logger.debug('setServices: %s' % ('error ' + error if error else 'success'))
+                logger.debug('setServices: {}}' % ('error ' + error if error else 'success'))
                 
             self.bleno.setServices([
                 self.primaryService

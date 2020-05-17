@@ -13,7 +13,6 @@ import traceback
 from timeit import default_timer as timer
 import logging
 import mido
-import pkg_resources
 from functools import wraps
 
 import jsonpickle

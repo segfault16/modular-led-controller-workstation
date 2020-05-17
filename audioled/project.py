@@ -18,6 +18,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
 def ensure_parent(func):
     @wraps(func)
     def inner(self, *args, **kwargs):
@@ -94,9 +95,11 @@ class UpdateMessage:
         self.dt = dt
         self.audioBuffer = audioBuffer
 
+
 class BrightnessMessage:
     def __init__(self, value):
         self.value = value
+
 
 class ShowMessage:
     def __init(self):
@@ -113,6 +116,7 @@ class ReplaceFiltergraphMessage:
         return "FiltergraphMessage - deviceId: {}, slotId: {}, filtergraph: {}".format(self.deviceId, self.slotId,
                                                                                        self.filtergraph)
 
+
 class UpdateModulationSourceValueMessage:
     def __init__(self, deviceMask, controller, newValue):
         self.controller = controller
@@ -120,8 +124,8 @@ class UpdateModulationSourceValueMessage:
         self.deviceMask = deviceMask
 
     def __str__(self):
-        return "UpdateModulationSourceValueMessage - deviceMask: {}, controller: {}, newValue: {}".format(self.deviceMask, self.controller,
-                                                                                       self.newValue)
+        return "UpdateModulationSourceValueMessage - deviceMask: {}, controller: {}, newValue: {}".format(
+            self.deviceMask, self.controller, self.newValue)
 
 
 class NodeMessage:
@@ -323,7 +327,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
     except Exception as e:
         traceback.print_exc()
         logger.error("filtergraph process {} exited due to: {}".format(os.getpid(), e))
-    except:
+    except:  # noqa E722
         logger.info("filtergraph process interrupted")
 
 
@@ -344,7 +348,7 @@ def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audio
     except Exception as e:
         traceback.print_exc()
         logger.info("process {} exited due to: {}".format(os.getpid(), e))
-    except:
+    except:  # noqa E722
         logger.info("process interrupted")
 
 
@@ -455,7 +459,7 @@ class Project(Updateable):
             try:
                 self._cur_t = self._cur_t + dt
                 self._sendUpdateCommand(dt)
-                if(self._cur_t - self._last_t > 1):
+                if (self._cur_t - self._last_t > 1):
                     # logger.debug("Updating preview device")
                     self._updatePreviewDevice(dt, event_loop)
                     self._last_t = self._cur_t
@@ -557,7 +561,7 @@ class Project(Updateable):
 
         # Update devices
         self._sendModulationSourceValueUpdateCommand(deviceMask, controller, newValue)
-    
+
     def getControllerModulations(self):
         # Iterate through active slots to aggregate
         mods = {}
@@ -576,7 +580,7 @@ class Project(Updateable):
     def setBrightness(self, value):
         # Brightness per device
         self._sendBrightnessCommand(value)
-        
+
     def _activeFiltergraphs(self):
         # Iterate through devices to find which filtergraphs are in slots of the active scene
         dIdx = 0
@@ -623,33 +627,33 @@ class Project(Updateable):
                     outputDevice = realDevice
             else:
                 oldPanelWrapper = device
-                
+
                 # Construct virtual output, TODO: Make sure device is realDevice...
                 realDevice = oldPanelWrapper.device
 
                 lock = mp.Lock()
                 array = mp.Array(ctypes.c_uint8, 3 * device.getNumPixels(), lock=lock)
                 virtualDevice = audioled.devices.VirtualOutput(device=realDevice,
-                                                        num_pixels=realDevice.getNumPixels(),
-                                                        shared_array=array,
-                                                        shared_lock=lock,
-                                                        num_rows=realDevice.getNumRows(),
-                                                        start_index=0)
+                                                               num_pixels=realDevice.getNumPixels(),
+                                                               shared_array=array,
+                                                               shared_lock=lock,
+                                                               num_rows=realDevice.getNumRows(),
+                                                               start_index=0)
 
                 oldPanelWrapper.setDevice(virtualDevice)
                 fgDevice = oldPanelWrapper
-            
+
         else:
             # New virtual output
             outputDevice = device
             lock = mp.Lock()
             array = mp.Array(ctypes.c_uint8, 3 * device.getNumPixels(), lock=lock)
             virtualDevice = audioled.devices.VirtualOutput(device=device,
-                                                    num_pixels=device.getNumPixels(),
-                                                    shared_array=array,
-                                                    shared_lock=lock,
-                                                    num_rows=device.getNumRows(),
-                                                    start_index=0)
+                                                           num_pixels=device.getNumPixels(),
+                                                           shared_array=array,
+                                                           shared_lock=lock,
+                                                           num_rows=device.getNumRows(),
+                                                           start_index=0)
             fgDevice = virtualDevice
             realDevice = device
 
@@ -892,7 +896,10 @@ class Project(Updateable):
         finally:
             self._handlerLock.release()
 
-    def _handleModulationSourceUpdate(self, modSource: audioled.filtergraph.ModulationSourceNode, updateParameters, niceness=0.1):
+    def _handleModulationSourceUpdate(self,
+                                      modSource: audioled.filtergraph.ModulationSourceNode,
+                                      updateParameters,
+                                      niceness=0.1):
         """
         updates can come rapidly, default niceness 0.1
         """
@@ -949,7 +956,8 @@ class Project(Updateable):
             if previewDevice is not None and activeFilterGraph.getLEDOutput() is not None:
                 if (previewDevice.getNumPixels() != activeFilterGraph.getLEDOutput().effect.getNumOutputPixels()
                         or previewDevice.getNumRows() != activeFilterGraph.getLEDOutput().effect.getNumOutputRows()):
-                    logger.info("propagating {} pixels on {} rows".format(previewDevice.getNumPixels(), previewDevice.getNumRows()))
+                    logger.info("propagating {} pixels on {} rows".format(previewDevice.getNumPixels(),
+                                                                          previewDevice.getNumRows()))
                     activeFilterGraph.propagateNumPixels(previewDevice.getNumPixels(), previewDevice.getNumRows())
             activeFilterGraph.update(dt, event_loop)
 
