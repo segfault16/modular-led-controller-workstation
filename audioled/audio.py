@@ -18,7 +18,7 @@ alogger = logging.getLogger(__name__ + ".libasound")
 # Kudos https://stackoverflow.com/questions/7088672/pyaudio-working-but-spits-out-error-messages-each-time
 # From alsa-lib Git 3fd4ab9be0db7c7430ebd258f2717a976381715d
 # $ grep -rn snd_lib_error_handler_t
-# include/error.h:59:typedef void (*snd_lib_error_handler_t)(const char *file, int line, const char *function, int err, const char *fmt, ...) /* __attribute__ ((format (printf, 5, 6))) */;
+# include/error.h:59:typedef void (*snd_lib_error_handler_t)(const char *file, int line, const char *function, int err, const char *fmt, ...) /* __attribute__ ((format (printf, 5, 6))) */;   # noqa E501
 # Define our error handler type
 ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p,)
 def py_error_handler(filename, line, function, err, fmt, *val):
@@ -46,7 +46,7 @@ try:
     asound = cdll.LoadLibrary('libasound.so')
     # Set error handler
     asound.snd_lib_error_set_handler(c_error_handler)
-except OSError as e:
+except OSError:
     pass
 except Exception as e:
     logger.error("Error setting logger for libasound: {}", e)

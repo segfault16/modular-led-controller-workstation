@@ -150,10 +150,11 @@ class SwimmingPool(Effect):
             if i == int(self.num_waves) - 1:
                 fact = (1.0 - self._rotate_counter / 30)
             if i < len(self._Wave) and i < len(self._WaveSpecSpeed):
-                step = sp.ndimage.interpolation.shift(self._Wave[i],
-                                                self._t * self._WaveSpecSpeed[i],
-                                                mode='wrap',
-                                                prefilter=True) * self.scale * fact
+                step = sp.ndimage.interpolation.shift(
+                    self._Wave[i],
+                    self._t * self._WaveSpecSpeed[i],
+                    mode='wrap',
+                    prefilter=True) * self.scale * fact
                 # step = np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=0) * self.scale * fact
                 all_waves += step
 
@@ -239,6 +240,7 @@ class MidiKeyboard(Effect):
             self._midi = mido.open_input()
             self.midiPort = self._midi.name
             logger.info("Not connected midi device {}".format(self.midiPort))
+            logger.error(e)
         self._on_notes = []
 
     def numInputChannels(self):

@@ -67,7 +67,7 @@ def print_status_info(info):
     total = info.get(u'total')
     downloaded = info.get(u'downloaded')
     status = info.get(u'status')
-    logger.info(status)
+    logger.info("{}: {} of {} downloaded".format(status, downloaded, total))
 
 class MidiProjectControllerOptions:
     def __init__(self):
