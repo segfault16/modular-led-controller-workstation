@@ -22,6 +22,8 @@ class Test_Effects(unittest.TestCase):
         childclasses = inheritors(effects.Effect)
         effectsWithMissingParameterDescription = []
         for _class in childclasses:
+            if _class.__name__ == 'MidiKeyboard':  # exclude midikeyboard
+                continue
             if 'parameters' in _class.getParameterDefinition():
                 parameters = _class.getParameterDefinition()['parameters']
                 try:
@@ -38,18 +40,19 @@ class Test_Effects(unittest.TestCase):
     def test_allEffectsUpdateAndProcessWithoutConnection(self):
         childclasses = inheritors(effects.Effect)
         for _class in childclasses:
-            if _class.__name__ != 'MidiKeyboard':  # exclude midikeyboard
-                instance = None
-                try:
-                    instance = _class()
-                except Exception as e:
-                    print("Error instanciating effect {}".format(_class.__name__))
-                    raise ValueError("Error instanciating effect {}: {}".format(_class.__name__, e)) from e
-                event_loop = asyncio.get_event_loop()
-                event_loop.run_until_complete(instance.update(0.01))
-                instance.process()
-            else:
-                print("Skipping {}".format(_class.__name__))
+            if _class.__name__ == 'MidiKeyboard':  # exclude midikeyboard
+                continue
+            instance = None
+            try:
+                instance = _class()
+            except Exception as e:
+                print("Error instanciating effect {}".format(_class.__name__))
+                raise ValueError("Error instanciating effect {}: {}".format(_class.__name__, e)) from e
+            event_loop = asyncio.get_event_loop()
+            event_loop.run_until_complete(instance.update(0.01))
+            instance.process()
+        else:
+            print("Skipping {}".format(_class.__name__))
 
 
 def inheritors(klass):
