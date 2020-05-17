@@ -104,11 +104,28 @@ class ServerConfiguration:
     def getFullConfiguration(self):
         return self._config
 
+    def getActiveProject(self):
+        """
+        Return active project or None
+        """
+        activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)
+        try:
+            activeProj = self.getProject(activeProjectUid)
+            return activeProj
+        except Exception as e:
+            logger.error("Error reading project {}: {}".format(activeProjectUid, e))
+        
+        return None
+    
     def getActiveProjectOrDefault(self):
+        """
+        Returns activate project or initializes a new one
+        """
         activeProjectUid = self.getConfiguration(CONFIG_ACTIVE_PROJECT)
         if activeProjectUid is None:
             logger.info("No active project ID. Initializing new default project")
-            activeProjectUid = self.initDefaultProject()
+            newProj = self.initDefaultProject()
+            activeProjectUid = newProj.id
             logger.info("Default project initialized: {}".format(activeProjectUid))
         try:
             activeProj = self.getProject(activeProjectUid)
@@ -121,6 +138,10 @@ class ServerConfiguration:
         return activeProj
 
     def initDefaultProject(self):
+        """
+        Initializes a new project
+        Returns project
+        """
         # Initialize default project
         proj = project.Project("Default project", "This is the default project.", self._createOrReuseOutputDevice())
         # Initialize filtergraph
@@ -134,18 +155,16 @@ class ServerConfiguration:
 
         proj.setFiltergraphForSlot(12, initial)
         proj.setFiltergraphForSlot(13, second)
-        proj.activateScene(12)
+        proj.activeSceneId = 12
         projectUid = uuid.uuid4().hex
         proj.id = projectUid
         self._projects[projectUid] = proj
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
-        self._config[CONFIG_ACTIVE_PROJECT] = projectUid
-        activeProjectUid = projectUid
-        return activeProjectUid
+        return proj
 
     def getProject(self, uid):
         if uid in self._projects:
-            proj = self._projects[uid]
+            proj = self._projects[uid]  # type: project.Project
             proj.setDevice(self._createOrReuseOutputDevice())
             proj.id = uid
             return proj
@@ -158,10 +177,18 @@ class ServerConfiguration:
             self._projectMetadatas.pop(uid)
 
     def activateProject(self, uid):
+        """
+        Activates project with the given uid
+        """
+        activeProj = self.getActiveProject()
+        if activeProj is not None:
+            activeProj.stopProcessing()
         proj = self.getProject(uid)
         if proj is not None:
             self._config[CONFIG_ACTIVE_PROJECT] = uid
-        return self.getActiveProjectOrDefault()
+        proj = self.getActiveProjectOrDefault()
+        proj.activate()
+        return proj
 
     def getProjectsMetadata(self):
         data = {}
@@ -182,6 +209,10 @@ class ServerConfiguration:
         return self.getProjectMetadata(projectUid)
 
     def importProject(self, json):
+        """
+        Import project and replace project id with new uuid
+        Returns project metadata after import
+        """
         # Generate new uid
         proj = jsonpickle.decode(json)
         if not isinstance(proj, project.Project):

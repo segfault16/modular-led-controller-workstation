@@ -61,8 +61,10 @@ followed by `0xf7` for Midi Sysex End.
 | REQ      | Activate project                        | `0x00`, `0x40` | Binary data encode of utf8 project id                                 |                     |
 | RESP     | Activate project                        | `0x00`, `0x40` |                                                                       | Successful          |
 | RESP     | Activate project                        | `0x00`, `0x4F` |                                                                       | Project not found   |
+| REQ      | Import project                          | `0x00`, `0x50` |                                                                       |                     |
+| RESP     | Import project                          | `0x00`, `0x50` |                                                                       | Successful          |
+| RESP     | Import project                          | `0x00`, `0x5F` |                                                                       | Error               |
 | REQ      | Export project                          |                |                                                                       |                     |
-| REQ      | Import project                          |                |                                                                       |                     |
 | REQ      | Get available scenes in project         |                |                                                                       |                     |
 | REQ      | Get active scene                        |                |                                                                       |                     |
 | REQ      | Get enabled controller for active scene |                |                                                                       |                     |

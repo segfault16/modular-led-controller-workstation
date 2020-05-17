@@ -396,6 +396,7 @@ class Project(Updateable):
         self._lock = mp.Lock()
         self._handlerLock = mp.Lock()
         self._processingEnabled = True
+        self._isActive = False
 
     def __cleanState__(self, stateDict):
         """
@@ -423,11 +424,6 @@ class Project(Updateable):
             # Initialize Project Callback
             if slot is not None:
                 slot._contentRoot = self._contentRoot
-        # Activate loaded scene
-        if self.activeSceneId is not None:
-            logger.debug("Active scene {} from setstate".format(self.activeSceneId))
-            # TODO: Needs to be revised?
-            self.activateScene(self.activeSceneId)
 
     def setResetControllerModulation(self, newValue):
         self._resetControllerModulation = newValue
@@ -439,10 +435,10 @@ class Project(Updateable):
         if self._devices == device._devices:
             return
         self._devices = device._devices
-        logger.info("Devices updated. Renewing active scene...")
-        self.stopProcessing()
-        if self.activeSceneId is not None:
-            self.activateScene(self.activeSceneId)
+        if self._isActive:
+            logger.info("Devices updated. Renewing active scene...")
+            self.stopProcessing()
+            self.activate()
 
     def update(self, dt, event_loop=asyncio.get_event_loop()):
         """Update active FilterGraph
@@ -496,6 +492,11 @@ class Project(Updateable):
             filterGraph._contentRoot = self._contentRoot
             self.slots[slotId] = filterGraph
 
+    def activate(self):
+        """Activates project with default scene"""
+        if self.activeSceneId is not None:
+            self.activateScene(self.activeSceneId)
+
     def activateScene(self, sceneId):
         """Activates a scene
 
@@ -546,6 +547,8 @@ class Project(Updateable):
             self._processingEnabled = True
             logger.debug("activate scene - releasing lock")
             self._lock.release()
+
+        self._isActive = True
 
     def updateModulationSourceValue(self, deviceMask, controller, newValue):
         # Update active filtergraphs to persist
@@ -748,6 +751,7 @@ class Project(Updateable):
             logger.debug("stopped processing - releasing lock")
             self._lock.release()
             self._processingEnabled = True
+        self._isActive = False
 
     def previewSlot(self, slotId):
         """

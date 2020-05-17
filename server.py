@@ -678,7 +678,8 @@ def create_app(midiAdvertiseName=None):
         except Exception as e:
             app.logger.error("Error opening project: {}".format(e))
             if serverconfig._activeProject is None:
-                serverconfig.initDefaultProject()
+                newProj = serverconfig.initDefaultProject()
+                serverconfig.activateProject(newProj.id)
                 abort(500, "Could not active project. No other project found. Initializing default.")
             else:
                 abort(500, "Project could not be activated. Reason: {}".format(e))
@@ -906,6 +907,7 @@ if __name__ == '__main__':
 
     # Initialize project
     proj = serverconfig.getActiveProjectOrDefault()
+    proj.activate()
 
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?

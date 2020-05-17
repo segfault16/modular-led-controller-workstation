@@ -195,8 +195,31 @@ class MidiProjectController:
             else:
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(self._createActivateProjNotFoundMsg())
+        elif data[0] == 0x00 and data[1] == 0x50:
+            # Import project
+            logger.info("MIDI-BLE REQ Import project")
+            projJson = str(bytes(sysex_data.decode(data[2:])), encoding='utf8')
+            try:
+                serverconfig.importProject(projJson)
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createImportProjSuccessfulMsg())
+            except Exception:
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createImportProjErrorMsg())
         else:
             logger.error("MIDI-BLE Unknown sysex {} {}".format(hex(data[0]), hex(data[1])))
+
+    def _createImportProjSuccessfulMsg(self):
+        logger.info("MIDI-BLE RESPONSE Import project - Successful")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x50]
+        return sendMsg
+
+    def _createImportProjErrorMsg(self):
+        logger.info("MIDI-BLE RESPONSE Import project - Error")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x5F]
+        return sendMsg
 
     def _createActivateProjSuccessfulMsg(self):
         logger.info("MIDI-BLE RESPONSE Activate project - Successful")
