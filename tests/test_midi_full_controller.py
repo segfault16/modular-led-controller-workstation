@@ -119,7 +119,7 @@ def test_get_projects():
     # Init in-memory config
     cfg = serverconfiguration.ServerConfiguration()
     proj = cfg.getActiveProjectOrDefault()
-    proj2 = cfg.initDefaultProject()
+    cfg.initDefaultProject()
     proj.stopProcessing()
     # Handle message
     ctrl.handleMidiMsg(testMsg, cfg, None)
@@ -219,3 +219,46 @@ def test_import_project_error():
     # Check response message ID
     assert retMsg.data[0] == 0x00
     assert retMsg.data[1] == 0x5F
+
+def test_export_project():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    proj = cfg.getActiveProjectOrDefault()
+    proj.stopProcessing()
+    # Get active project metadata
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x00, 0x60] + sysex_data.encode(proj.id)
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, proj)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x00
+    assert retMsg.data[1] == 0x60
+    # Decode data
+    dec = sysex_data.decode(retMsg.data[2:])
+    restoredProj = jsonpickle.loads(bytes(dec))  # type project.Project
+    assert restoredProj is not None
+    assert restoredProj.id == proj.id
+
+def test_export_project_not_found():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Get active project metadata
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x00, 0x60] + sysex_data.encode(bytes("blubb", encoding='utf8'))
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    proj = cfg.getActiveProjectOrDefault()
+    proj.stopProcessing()
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, proj)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x00
+    assert retMsg.data[1] == 0x6F

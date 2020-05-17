@@ -5,8 +5,8 @@ from pyupdater.client import Client
 import mido
 import logging
 import os
-import pkg_resources
 import json
+import jsonpickle
 logger = logging.getLogger(__name__)
 
 controllerMap = {
@@ -206,8 +206,32 @@ class MidiProjectController:
             except Exception:
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(self._createImportProjErrorMsg())
+        elif data[0] == 0x00 and data[1] == 0x60:
+            # Export project
+            projUid = str(bytes(sysex_data.decode(data[2:])), encoding='utf8')
+            logger.info("MIDI-BLE REQ Export project {}".format(projUid))
+            proj = serverconfig.getProject(projUid)
+            if proj is not None:
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createExportProjSuccessfulMsg(proj))
+            else:
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createExportProjNotFoundMsg())
         else:
             logger.error("MIDI-BLE Unknown sysex {} {}".format(hex(data[0]), hex(data[1])))
+
+    def _createExportProjSuccessfulMsg(self, proj):
+        logger.info("MIDI-BLE RESPONSE Export project - Successful")
+        projJson = jsonpickle.dumps(proj)
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x60] + sysex_data.encode(bytes(projJson, encoding='utf8'))
+        return sendMsg
+    
+    def _createExportProjNotFoundMsg(self):
+        logger.info("MIDI-BLE RESPONSE Export project - Not found")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x6F]
+        return sendMsg
 
     def _createImportProjSuccessfulMsg(self):
         logger.info("MIDI-BLE RESPONSE Import project - Successful")
