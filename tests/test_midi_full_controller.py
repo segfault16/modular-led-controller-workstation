@@ -2,16 +2,12 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
-import unittest
 from unittest import mock
-import pytest
 import mido
 import logging
 import json
 import os
-import gzip
-import pyupdater
-from audioled import serverconfiguration, version
+from audioled import serverconfiguration, version, project
 from audioled_controller import midi_full, sysex_data
 
 # Taken from pyupdater test repo
@@ -61,29 +57,6 @@ def test_get_version():
     version.split('.')
     assert len(version.split('.')) >= 3
 
-def test_get_active_project():
-    # Setup
-    f = mock.Mock()
-    ctrl = midi_full.MidiProjectController(callback=f)
-    # Get active project metadata
-    testMsg = mido.Message('sysex')
-    testMsg.data = [0x00, 0x20]
-    # Init in-memory config
-    cfg = serverconfiguration.ServerConfiguration()
-    proj = cfg.getActiveProjectOrDefault()
-    # Handle message
-    ctrl.handleMidiMsg(testMsg, cfg, proj)
-    retMsg = f.call_args[0][0]
-    # Check response message ID
-    assert retMsg.data[0] == 0x00
-    assert retMsg.data[1] == 0x20
-    # Decode data
-    dec = sysex_data.decode(retMsg.data[2:])
-    metadata = json.loads(bytes(dec))
-    assert metadata is not None
-    assert metadata['name'] == 'Default project'
-    proj.stopProcessing()
-
 def test_update_check_update_not_available(caplog, tmpdir):
     caplog.set_level(logging.DEBUG)
     logging.debug("UPDATE TEST")
@@ -110,3 +83,92 @@ def test_update_check_update_not_available(caplog, tmpdir):
         retMsg = f.call_args[0][0]
         assert retMsg.data[0] == 0x00
         assert retMsg.data[1] == 0x1F
+
+def test_get_active_project():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Get active project metadata
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x00, 0x20]
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    proj = cfg.getActiveProjectOrDefault()
+    proj.stopProcessing()
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, proj)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x00
+    assert retMsg.data[1] == 0x20
+    # Decode data
+    dec = sysex_data.decode(retMsg.data[2:])
+    metadata = json.loads(bytes(dec))
+    assert metadata is not None
+    assert metadata['name'] == 'Default project'
+
+def test_get_projects():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Get active project metadata
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x00, 0x30]
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    proj = cfg.getActiveProjectOrDefault()
+    proj.stopProcessing()
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, None)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x00
+    assert retMsg.data[1] == 0x30
+    # Decode data
+    dec = sysex_data.decode(retMsg.data[2:])
+    assert len(dec) > 0
+    metadata = json.loads(bytes(dec))
+    assert metadata is not None
+    # TODO: Adjust check
+    assert len(metadata.keys()) == 1
+
+def test_activate_project_successful():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    proj = cfg.getActiveProjectOrDefault()  # type: project.Project
+    proj.stopProcessing()
+    # Activate project
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x00, 0x40] + sysex_data.encode(bytes(proj.id, encoding='utf8'))
+    
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, proj)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x00
+    assert retMsg.data[1] == 0x40
+
+def test_activate_project_not_found():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Get active project metadata
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x00, 0x40] + sysex_data.encode(bytes("blubb", encoding='utf8'))
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    proj = cfg.getActiveProjectOrDefault()
+    proj.stopProcessing()
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, proj)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x00
+    assert retMsg.data[1] == 0x4F

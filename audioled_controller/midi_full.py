@@ -90,7 +90,6 @@ class MidiProjectController:
         self.client = Client(self._client_config, downloader=self.createDownloader)
         self.client.add_progress_hook(print_status_info)
 
-        
     def createDownloader(self, filename, urls, **kwargs):
         logger.info("Create downloader for {}".format(filename))
         d = PathAndUrlDownloader(self.downloadCallback, filename, urls)
@@ -140,11 +139,6 @@ class MidiProjectController:
             logger.info("MIDI-BLE REQ Version")
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createVersionMsg())
-        elif data[0] == 0x00 and data[1] == 0x20:
-            # Active project metadata
-            if self._sendMidiCallback is not None:
-                metadata = serverconfig.getProjectMetadata(proj.id)
-                self._sendMidiCallback(self._createActiveProjectMsg(metadata))
         elif data[0] == 0x00 and data[1] == 0x10:
             # Update
             logger.info("MIDI-BLE REQ Update")
@@ -180,6 +174,41 @@ class MidiProjectController:
                 logger.info("Update check returned no update")
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(self._createUpdateNotAvailableMsg())
+        elif data[0] == 0x00 and data[1] == 0x20:
+            # Active project metadata
+            if self._sendMidiCallback is not None:
+                metadata = serverconfig.getProjectMetadata(proj.id)
+                self._sendMidiCallback(self._createActiveProjectMsg(metadata))
+        elif data[0] == 0x00 and data[1] == 0x30:
+            # Get projects
+            if self._sendMidiCallback is not None:
+                metadata = serverconfig.getProjectsMetadata()
+                self._sendMidiCallback(self._createProjectsMsg(metadata))
+        elif data[0] == 0x00 and data[1] == 0x40:
+            # Activate project
+            projUid = str(bytes(sysex_data.decode(data[2:])), encoding='utf8')
+            logger.info("MIDI-BLE REQ Activate project {}".format(projUid))
+            proj = serverconfig.getProject(projUid)
+            if proj is not None:
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createActivateProjSuccessfulMsg())
+            else:
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createActivateProjNotFoundMsg())
+        else:
+            logger.error("MIDI-BLE Unknown sysex {} {}".format(hex(data[0]), hex(data[1])))
+
+    def _createActivateProjSuccessfulMsg(self):
+        logger.info("MIDI-BLE RESPONSE Activate project - Successful")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x40]
+        return sendMsg
+    
+    def _createActivateProjNotFoundMsg(self):
+        logger.info("MIDI-BLE RESPONSE Activate project - Project not found")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x4F]
+        return sendMsg
 
     def _createUpdateVersionAvailableMsg(self, version):
         logger.info("MIDI-BLE RESPONSE Update to version {} available".format(version))
@@ -198,6 +227,13 @@ class MidiProjectController:
         logger.info("MIDI-BLE RESPONSE Active project {}".format(data))
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x20] + sysex_data.encode(data)
+        return sendMsg
+
+    def _createProjectsMsg(self, metadata):
+        data = json.dumps(metadata)
+        logger.info("MIDI-BLE RESPONSE project metadata: {}".format(data))
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x30] + sysex_data.encode(data)
         return sendMsg
 
     def _createVersionMsg(self):

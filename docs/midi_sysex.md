@@ -56,8 +56,11 @@ followed by `0xf7` for Midi Sysex End.
 | RESP     | Update server                           | `0x00`, `0x10` |                                                                       | No update available |
 | REQ      | Get active project                      | `0x00`, `0x20` |                                                                       |                     |
 | RESP     | Get active project                      | `0x00`, `0x20` | Binary data encode of utf8 active project metadata json               |                     |
-| REQ      | Get projects                            |                |                                                                       |                     |
-| REQ      | Activate project                        |                |                                                                       |                     |
+| REQ      | Get projects                            | `0x00`, `0x30` |                                                                       |                     |
+| RESP     | Get projects                            | `0x00`, `0x30` | Binary data encode of utf8 projects metadata json                     |                     |
+| REQ      | Activate project                        | `0x00`, `0x40` | Binary data encode of utf8 project id                                 |                     |
+| RESP     | Activate project                        | `0x00`, `0x40` |                                                                       | Successful          |
+| RESP     | Activate project                        | `0x00`, `0x4F` |                                                                       | Project not found   |
 | REQ      | Export project                          |                |                                                                       |                     |
 | REQ      | Import project                          |                |                                                                       |                     |
 | REQ      | Get available scenes in project         |                |                                                                       |                     |
