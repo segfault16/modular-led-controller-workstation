@@ -704,7 +704,10 @@ class Shapes(Effect):
     @staticmethod
     def getEffectDescription():
         return \
-            "Shapes, yo!"
+            """
+            Shapes, yo! Brightness controlled by 5 faders below.
+            Intervals are split equally over length. Interpolation mode: linear.
+            """
 
     def __init__(self, x0=0, x1=100, x2=0, x3=0, x4=0):
         self.x0 = x0
@@ -801,13 +804,15 @@ class Shapes(Effect):
         return B
 
     # Calculate array for brightness
-    def create_Array(self, A, B):
+    def create_Array(self, A, B, l):
         C = []
         count = 0
         for i in range(int(len(A)-1)):
             for j in range(A[i][0], A[i+1][0]):
                 C.append(round(B[i][0] * count + B[i][1], 4))
                 count += 1
+        while len(C) < l:
+            C.append(C[-1])
         return C
 
     def process(self):
@@ -818,10 +823,10 @@ class Shapes(Effect):
             return
 
         y = self._inputBuffer[0]
-        
+
         A = self.process_points([self.x0, self.x1, self.x2, self.x3, self.x4], len(y[0]))
         B = self.solve_points(A)
-        C = self.create_Array(A, B)
+        C = self.create_Array(A, B, len(y[0]))
 
         for i in range(3):
             y[i] = np.multiply(C, y[i])
