@@ -34,6 +34,7 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         self._msgReceivedCallback = _msgReceivedCallback
         self._value = pybleno.array.array('B', [0] * 0)
         self._updateValueCallback = None
+        self._maxValueSize = None
         self._isSysex = False
         self._writeBuffer = pybleno.array.array('B', [0] * 0)
         self._lastTimestampMidi = None
@@ -183,12 +184,14 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
                 self._msgReceivedCallback(msg)
 
     def onSubscribe(self, maxValueSize, updateValueCallback):
-        logger.debug('EchoCharacteristic - onSubscribe')
-        
+        logger.debug("EchoCharacteristic - onSubscribe, maxValueSize: {}".format(maxValueSize))
+        logger.info("MIDI-BLE max value size: {}".format(maxValueSize))
+
+        self._maxValueSize = maxValueSize
         self._updateValueCallback = updateValueCallback
 
     def onUnsubscribe(self):
-        logger.debug('EchoCharacteristic - onUnsubscribe')
+        logger.debug("EchoCharacteristic - onUnsubscribe")
         
         self._updateValueCallback = None
 
@@ -211,12 +214,44 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         
         bytes = timestamp + msg.bytes()
         if msg.type == 'sysex':
+            if bytes[-1] != 0xF7:
+                logger.debug("Missing sysex end byte")
+                bytes = bytes + [0xF7]
             # Last sysex byte must by preceded by timestamp
             # Append timestamp
             bytes = bytes[:-1] + [timestamp[1]] + [bytes[-1]]
 
-        logger.debug("Writing {} to MIDI-BLE".format([hex(c) for c in bytes]))
-        self._updateValueCallback(bytes)
+        
+        splitMsg = []
+        if self._maxValueSize is not None and len(bytes) > self._maxValueSize:
+            # logger.debug("split {}".format([hex(c) for c in bytes]))
+            splitMsg = self._splitSysexBytes(bytes, self._maxValueSize)
+        else:
+            splitMsg = [bytes]
+
+        for msg in splitMsg:
+            # time.sleep(0.01)
+            logger.debug("Writing {} to MIDI-BLE".format([hex(c) for c in msg]))
+            self._updateValueCallback(msg)
+    
+    def _splitSysexBytes(self, bytes, maxValueSize):
+        if len(bytes) < 2:
+            logger.error("Cannot split small length..")
+            return [bytes]
+        if len(bytes) < maxValueSize:
+            return [bytes]
+        
+        # Non-trivial: Split and add header
+        header = bytes[0:1]
+        ret = []
+        while len(bytes) > maxValueSize:
+            ret.append(bytes[0:maxValueSize-1])
+            bytes = header + bytes[maxValueSize-1:]
+        if len(bytes) > 0:
+            ret.append(bytes)
+        return ret
+
+
 
 
 class BluetoothMidiLEService(pybleno.BlenoPrimaryService):
@@ -251,7 +286,7 @@ class MidiBluetoothService(object):
                 traceback.print_tb(e.__traceback__)
 
     def _onStateChange(self, state):
-        logger.debug('on -> stateChange: ' + state)
+        logger.debug("on -> stateChange: ".format(state))
 
         if (state == 'poweredOn'):
             self.bleno.startAdvertising(self.primaryServiceName, [self.primaryService.uuid])
@@ -259,11 +294,11 @@ class MidiBluetoothService(object):
             self.bleno.stopAdvertising()
 
     def _onAdvertisingStart(self, error):
-        logger.debug('on -> advertisingStart: ' + ('error ' + error if error else 'success'))
+        logger.debug("on -> advertisingStart: {}".format('error ' + error if error else 'success'))
 
         if not error:
             def on_setServiceError(error):
-                logger.debug('setServices: {}}' % ('error ' + error if error else 'success'))
+                logger.debug("setServices: {}".format('error ' + error if error else 'success'))
                 
             self.bleno.setServices([
                 self.primaryService

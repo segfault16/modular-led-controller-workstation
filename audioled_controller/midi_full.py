@@ -133,6 +133,8 @@ class MidiProjectController:
         if len(data) < 2:
             logger.error("Sysex message too short")
             return
+
+        # logger.info("MIDI-BLE REQ!")
         
         if data[0] == 0x00 and data[1] == 0x00:
             # Version
@@ -208,7 +210,9 @@ class MidiProjectController:
                     self._sendMidiCallback(self._createImportProjErrorMsg())
         elif data[0] == 0x00 and data[1] == 0x60:
             # Export project
-            projUid = str(bytes(sysex_data.decode(data[2:])), encoding='utf8')
+            byteArr = bytes(sysex_data.decode(data[2:]))
+            logger.debug("Decoded {} to {}".format([hex(c) for c in data[2:]], byteArr))
+            projUid = str(byteArr, encoding='utf8')
             logger.info("MIDI-BLE REQ Export project {}".format(projUid))
             proj = serverconfig.getProject(projUid)
             if proj is not None:
