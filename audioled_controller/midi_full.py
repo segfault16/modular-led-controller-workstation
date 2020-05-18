@@ -7,6 +7,7 @@ import logging
 import os
 import json
 import jsonpickle
+import zlib
 logger = logging.getLogger(__name__)
 
 controllerMap = {
@@ -227,8 +228,9 @@ class MidiProjectController:
     def _createExportProjSuccessfulMsg(self, proj):
         logger.info("MIDI-BLE RESPONSE Export project - Successful")
         projJson = jsonpickle.dumps(proj)
+        projGzip = zlib.compress(bytes(projJson, encoding='utf8'))
         sendMsg = mido.Message('sysex')
-        sendMsg.data = [0x00, 0x60] + sysex_data.encode(bytes(projJson, encoding='utf8'))
+        sendMsg.data = [0x00, 0x60] + sysex_data.encode(projGzip)
         return sendMsg
     
     def _createExportProjNotFoundMsg(self):

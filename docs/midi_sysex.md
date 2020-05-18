@@ -65,7 +65,7 @@ followed by `0xf7` for Midi Sysex End.
 | RESP     | Import project                          | `0x00`, `0x50` |                                                                       | Successful          |
 | RESP     | Import project                          | `0x00`, `0x5F` |                                                                       | Error               |
 | REQ      | Export project                          | `0x00`, `0x60` |                                                                       |                     |
-| RESP     | Export project                          | `0x00`, `0x60` | Binary data encode of utf8 project json                               |                     |
+| RESP     | Export project                          | `0x00`, `0x60` | Binary data encode of utf8 project json compressed with zlib          |                     |
 | RESP     | Export project                          | `0x00`, `0x6F` |                                                                       | Project not found   |
 | REQ      | Get available scenes in project         |                |                                                                       |                     |
 | REQ      | Get active scene                        |                |                                                                       |                     |
