@@ -8,6 +8,7 @@ import logging
 import json
 import jsonpickle
 import os
+import zlib
 from audioled import serverconfiguration, version, project
 from audioled_controller import midi_full, sysex_data
 
@@ -42,6 +43,7 @@ def test_get_version():
     # Setup
     f = mock.Mock()
     ctrl = midi_full.MidiProjectController(callback=f)
+    version._test_version = "1.0.0"
     # Get Version messsage
     testMsg = mido.Message('sysex')
     testMsg.data = [0x00, 0x00]
@@ -53,10 +55,9 @@ def test_get_version():
     assert retMsg.data[1] == 0x00
     # Decode data
     dec = sysex_data.decode(retMsg.data[2:])
-    version = str(bytes(dec), encoding='utf8')
+    v = str(bytes(dec), encoding='utf8')
     # Check is version string
-    version.split('.')
-    assert len(version.split('.')) >= 3
+    assert len(v.split('.')) >= 3
 
 def test_update_check_update_not_available(caplog, tmpdir):
     caplog.set_level(logging.DEBUG)
@@ -240,7 +241,8 @@ def test_export_project():
     assert retMsg.data[1] == 0x60
     # Decode data
     dec = sysex_data.decode(retMsg.data[2:])
-    restoredProj = jsonpickle.loads(bytes(dec))  # type project.Project
+    dec = zlib.decompress(bytes(dec))
+    restoredProj = jsonpickle.loads(dec)  # type project.Project
     assert restoredProj is not None
     assert restoredProj.id == proj.id
 
