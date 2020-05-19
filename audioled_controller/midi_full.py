@@ -237,9 +237,22 @@ class MidiProjectController:
             metadata = proj.getSceneMetadata(proj.activeSceneId)
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createActiveSceneMetadataMsg(metadata))
+        elif data[0] == 0x01 and data[1] == 0x02:
+            # Get scenes metadata
+            logger.info("MIDI-BLE REQ Get scenes")
+            proj = serverconfig.getActiveProjectOrDefault()
+            metadata = proj.sceneMetadata
+            if self._sendMidiCallback is not None:
+                self._sendMidiCallback(self._createScenesMetadataMsg(metadata))
         else:
             logger.error("MIDI-BLE Unknown sysex {} {}".format(hex(data[0]), hex(data[1])))
         
+    def _createScenesMetadataMsg(self, metadata):
+        logger.info("MIDI-BLE RESPONSE Get scenes metadata {}".format(metadata))
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x01, 0x02] + sysex_data.encode(json.dumps(metadata))
+        return sendMsg
+
     def _createActiveSceneMetadataMsg(self, metadata):
         logger.info("MIDI-BLE RESPONSE Get active scene metadata {}".format(metadata))
         sendMsg = mido.Message('sysex')
