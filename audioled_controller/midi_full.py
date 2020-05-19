@@ -224,8 +224,21 @@ class MidiProjectController:
             else:
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(self._createExportProjNotFoundMsg())
+        elif data[0] == 0x01 and data[1] == 0x00:
+            # Get active scene ID
+            logger.info("MIDI-BLE REQ Active scene index")
+            sceneId = serverconfig.getActiveProjectOrDefault().activeSceneId
+            if self._sendMidiCallback is not None:
+                self._sendMidiCallback(self._createGetActiveSceneIdMsg(sceneId))
+
         else:
             logger.error("MIDI-BLE Unknown sysex {} {}".format(hex(data[0]), hex(data[1])))
+        
+    def _createGetActiveSceneIdMsg(self, sceneId: int):
+        logger.info("MIDI-BLE RESPONSE Get active scene id {}".format(sceneId))
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x01, 0x00] + sysex_data.encode("{}".format(sceneId))
+        return sendMsg
 
     def _createExportProjSuccessfulMsg(self, proj):
         logger.info("MIDI-BLE RESPONSE Export project - Successful")

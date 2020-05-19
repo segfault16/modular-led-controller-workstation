@@ -266,3 +266,27 @@ def test_export_project_not_found():
     # Check response message ID
     assert retMsg.data[0] == 0x00
     assert retMsg.data[1] == 0x6F
+
+def test_get_active_scene_id_successful():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    proj = cfg.getActiveProjectOrDefault()  # type: project.Project
+    proj.stopProcessing()
+    # Activate project
+    testMsg = mido.Message('sysex')
+    
+    testMsg.data = [0x01, 0x00]
+    
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, proj)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x01
+    assert retMsg.data[1] == 0x00
+    data = sysex_data.decode(retMsg.data[2:])
+    data = bytes(data)
+    assert data == bytes("12", encoding='utf8')
