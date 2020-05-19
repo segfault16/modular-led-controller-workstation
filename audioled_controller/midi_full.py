@@ -201,7 +201,9 @@ class MidiProjectController:
         elif data[0] == 0x00 and data[1] == 0x50:
             # Import project
             logger.info("MIDI-BLE REQ Import project")
-            projJson = str(bytes(sysex_data.decode(data[2:])), encoding='utf8')
+            dec = sysex_data.decode(data[2:])
+            projGzip = zlib.decompress(bytes(dec))
+            projJson = str(projGzip, encoding='utf8')
             try:
                 serverconfig.importProject(projJson)
                 if self._sendMidiCallback is not None:

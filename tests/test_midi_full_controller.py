@@ -186,11 +186,12 @@ def test_import_project_successful():
     proj.stopProcessing()
     assert len(cfg.getProjectsMetadata().keys()) == 1
     proj.id = "testproj"
-    projJson = jsonpickle.encode(proj)
+    projJson = jsonpickle.dumps(proj)
     print(projJson)
+    projGzip = zlib.compress(bytes(projJson, encoding='utf8'))
     # Get active project metadata
     testMsg = mido.Message('sysex')
-    testMsg.data = [0x00, 0x50] + sysex_data.encode(bytes(projJson, encoding='utf8'))
+    testMsg.data = [0x00, 0x50] + sysex_data.encode(bytes(projGzip))
     # Handle message
     ctrl.handleMidiMsg(testMsg, cfg, proj)
     assert f.call_count == 1
@@ -211,7 +212,8 @@ def test_import_project_error():
     # Activate project
     testMsg = mido.Message('sysex')
     invalidJson = jsonpickle.encode(testMsg)
-    testMsg.data = [0x00, 0x50] + sysex_data.encode(bytes(invalidJson, encoding='utf8'))
+    gzip = zlib.compress(bytes(invalidJson, encoding='utf8'))
+    testMsg.data = [0x00, 0x50] + sysex_data.encode(bytes(gzip))
     
     # Handle message
     ctrl.handleMidiMsg(testMsg, cfg, proj)

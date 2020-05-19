@@ -208,7 +208,7 @@ class ServerConfiguration:
         self._projectMetadatas[projectUid] = self._metadataForProject(proj, projectUid)
         return self.getProjectMetadata(projectUid)
 
-    def importProject(self, json):
+    def importProject(self, json: str):
         """
         Import project and replace project id with new uuid
         Returns project metadata after import

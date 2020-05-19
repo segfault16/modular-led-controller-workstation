@@ -61,7 +61,7 @@ followed by `0xf7` for Midi Sysex End.
 | REQ      | Activate project                        | `0x00`, `0x40` | Binary data encode of utf8 project id                                 |                     |
 | RESP     | Activate project                        | `0x00`, `0x40` |                                                                       | Successful          |
 | RESP     | Activate project                        | `0x00`, `0x4F` |                                                                       | Project not found   |
-| REQ      | Import project                          | `0x00`, `0x50` |                                                                       |                     |
+| REQ      | Import project                          | `0x00`, `0x50` | Binary data encode of utf8 project json compressed with zlib          |                     |
 | RESP     | Import project                          | `0x00`, `0x50` |                                                                       | Successful          |
 | RESP     | Import project                          | `0x00`, `0x5F` |                                                                       | Error               |
 | REQ      | Export project                          | `0x00`, `0x60` |                                                                       |                     |
