@@ -379,7 +379,7 @@ class Project(Updateable):
         try:
             self.outputSlotMatrix
         except AttributeError:
-            self.outputSlotMatrix = {}
+            pass  # Don't care, deprecated
         try:
             self.activeSceneId
         except AttributeError:
@@ -388,6 +388,10 @@ class Project(Updateable):
             self.previewSlotId
         except AttributeError:
             self.previewSlotId = 0
+        try:
+            self.sceneMetadata
+        except AttributeError:
+            self.sceneMetadata = None
         self._previewDevice = None  # type: audioled.devices.LEDController
         self._previewDeviceIndex = 0
         self._contentRoot = None
@@ -401,6 +405,12 @@ class Project(Updateable):
         self._handlerLock = mp.Lock()
         self._processingEnabled = True
         self._isActive = False
+        if self.sceneMetadata is None and self.outputSlotMatrix is not None:
+            self._convertSlotMatrixToScene(self.outputSlotMatrix)
+        elif self.sceneMetadata is None and self._outputSlotMatrix is not None:
+            self._convertSlotMatrixToScene(self._outputSlotMatrix)
+        if self.outputSlotMatrix is not None:
+            self.outputSlotMatrix = None
 
     def __cleanState__(self, stateDict):
         """
@@ -526,16 +536,7 @@ class Project(Updateable):
             dIdx = 0
             for device in self._devices:
                 # Get slot Id associated with this device
-                try:
-                    slotId = self.outputSlotMatrix[str(dIdx)][str(sceneId)]
-                except Exception:
-                    # Backwards compatibility: Init with slotId = sceneId
-                    if str(dIdx) not in self.outputSlotMatrix:
-                        self.outputSlotMatrix[str(dIdx)] = {}
-                    if sceneId not in self.outputSlotMatrix[str(dIdx)]:
-                        self.outputSlotMatrix[str(dIdx)][str(sceneId)] = sceneId
-                    slotId = sceneId
-
+                slotId = self._getSlotForDevice(dIdx, sceneId, create=True)
                 # Get filtergraph
                 filterGraph = self.getSlot(slotId)
                 if self._resetControllerModulation:
@@ -580,128 +581,6 @@ class Project(Updateable):
     def setBrightness(self, value):
         # Brightness per device
         self._sendBrightnessCommand(value)
-
-    def _activeFiltergraphs(self):
-        # Iterate through devices to find which filtergraphs are in slots of the active scene
-        dIdx = 0
-        sceneId = self.activeSceneId
-        for device in self._devices:
-            # Get slot Id associated with this device
-            try:
-                slotId = self.outputSlotMatrix[str(dIdx)][str(sceneId)]
-            except Exception:
-                # Backwards compatibility: Init with slotId = sceneId
-                if str(dIdx) not in self.outputSlotMatrix:
-                    self.outputSlotMatrix[str(dIdx)] = {}
-                if sceneId not in self.outputSlotMatrix[str(dIdx)]:
-                    self.outputSlotMatrix[str(dIdx)][str(sceneId)] = sceneId
-                slotId = sceneId
-
-            # Get filtergraph
-            dIdx = dIdx + 1
-            yield self.getSlot(slotId)
-
-    def _createOrUpdateProcess(self, dIdx, device, slotId, filterGraph):
-        if dIdx in self._filtergraphProcesses:
-            # Send command
-            self._sendReplaceFiltergraphCommand(dIdx, slotId, filterGraph)
-            return
-        # Create device
-        outputDevice = None
-        virtualDevice = None
-        fgDevice = None
-        if isinstance(device, audioled.devices.VirtualOutput):
-            # Reuse virtual output, construct output process if not already present
-            virtualDevice = device
-            realDevice = virtualDevice.device
-            fgDevice = device
-            if realDevice not in self._outputProcesses:
-                outputDevice = realDevice
-            pass
-        elif isinstance(device, audioled.devices.PanelWrapper):
-            if isinstance(device.device, audioled.devices.VirtualOutput):
-                fgDevice = device  # PanelWrapper
-                virtualDevice = fgDevice.device  # VirtualDevice
-                realDevice = virtualDevice.device  # Select real device in virtualoutput
-                if realDevice not in self._outputProcesses:
-                    outputDevice = realDevice
-            else:
-                oldPanelWrapper = device
-
-                # Construct virtual output, TODO: Make sure device is realDevice...
-                realDevice = oldPanelWrapper.device
-
-                lock = mp.Lock()
-                array = mp.Array(ctypes.c_uint8, 3 * device.getNumPixels(), lock=lock)
-                virtualDevice = audioled.devices.VirtualOutput(device=realDevice,
-                                                               num_pixels=realDevice.getNumPixels(),
-                                                               shared_array=array,
-                                                               shared_lock=lock,
-                                                               num_rows=realDevice.getNumRows(),
-                                                               start_index=0)
-
-                oldPanelWrapper.setDevice(virtualDevice)
-                fgDevice = oldPanelWrapper
-
-        else:
-            # New virtual output
-            outputDevice = device
-            lock = mp.Lock()
-            array = mp.Array(ctypes.c_uint8, 3 * device.getNumPixels(), lock=lock)
-            virtualDevice = audioled.devices.VirtualOutput(device=device,
-                                                           num_pixels=device.getNumPixels(),
-                                                           shared_array=array,
-                                                           shared_lock=lock,
-                                                           num_rows=device.getNumRows(),
-                                                           start_index=0)
-            fgDevice = virtualDevice
-            realDevice = device
-
-        # Start filtergraph process
-        successful = False
-        sleepfact = 1.
-        while not successful:
-            q = self._publishQueue.register()
-            p = mp.Process(target=worker, args=(q, filterGraph, fgDevice, dIdx, slotId))
-            p.start()
-            # Process sometimes doesn't start...
-            q.put(123)
-            time.sleep(sleepfact * 0.1)
-            if not q._unfinished_tasks._semlock._is_zero():
-                logger.warning("Process didn't respond in time!")
-                self._publishQueue.unregister(q)
-                p.join(sleepfact * 0.1)
-                if p.is_alive():
-                    p.terminate()
-            else:
-                successful = True
-            sleepfact = 2. * sleepfact
-        self._filtergraphProcesses[dIdx] = p
-        logger.debug('Started process for device {} with device {}'.format(dIdx, fgDevice))
-
-        # Start output process
-        sleepfact = 1.
-        if outputDevice is not None:
-            outSuccessful = False
-            while not outSuccessful:
-                q = self._showQueue.register()
-                p = mp.Process(target=output, args=(q, outputDevice, virtualDevice))
-                p.start()
-                # Make sure process starts
-                q.put("test")
-                time.sleep(sleepfact * 0.1)
-                if not q._unfinished_tasks._semlock._is_zero():
-                    logger.warning("Output process didn't respond in time!")
-                    self._showQueue.unregister(p)
-                    p.join(sleepfact * 0.1)
-                    if p.is_alive():
-                        p.terminate()
-                else:
-                    outSuccessful = True
-                    q.put("first")
-                sleepfact = 2. * sleepfact
-            self._outputProcesses[outputDevice] = p
-            logger.info("Started output process for device {}".format(outputDevice))
 
     def stopProcessing(self):
         logger.info('Stop processing')
@@ -808,19 +687,207 @@ class Project(Updateable):
         return fg
 
     def getSceneMatrix(self):
+        # SlotMatrix contains dict mapping deviceId to slot for scene
+        # e.g. "0": {"1": 12} mapping slot 12 to device 0 of scene 1
         numDevices = len(self._devices)
         retMatrix = {}
         for i in range(0, numDevices):
-            if i in self.outputSlotMatrix:
-                retMatrix[i] = self.outputSlotMatrix[i]
-            if '%s' % i in self.outputSlotMatrix:
-                retMatrix[i] = self.outputSlotMatrix['%s' % i]
+            dIdx = str(i)
+            retMatrix[dIdx] = {}
+            for j in range(0, 127):
+                sceneId = str(j)
+                slotId = self._getSlotForDevice(dIdx, sceneId, create=False)
+                if slotId is not None:
+                    retMatrix[dIdx][sceneId] = slotId
         return retMatrix
 
-    def setSceneMatrix(self, value):
-        for key, val in value.items():
-            self.outputSlotMatrix[key] = val
+    def setSceneMatrix(self, slotMatrix):
+        # SlotMatrix contains dict mapping deviceId to slot for scene
+        # e.g. "0": {"1": 12} mapping slot 12 to device 0 of scene 1
+        for k, v in slotMatrix.items():
+            dIdx = k
+            if not isinstance(v, dict):
+                continue
+            v = v  # type: dict
+            for sceneId, slotId in v.items():
+                self._setSlotForDevice(dIdx, sceneId, slotId)
         self.activateScene(self.activeSceneId)
+
+    def _convertSlotMatrixToScene(self, slotMatrix):
+        # SlotMatrix contains dict mapping deviceId to slot for scene
+        # e.g. "0": {"1": 12} mapping slot 12 to device 0 of scene 1
+
+        # SceneMetadata contains dict of scene Id metadata:
+        # "1": {
+        #    "name": "",
+        #    "output": {
+        #       "0": {
+        #           "refSlot": 12,
+        #           "filtergraph": null // TODO project without slots could be added this way
+        #       }
+        #    }
+        # }
+
+        outputsForScene = {}
+
+        for k, v in slotMatrix.items():
+            dIdx = k
+            if not isinstance(v, dict):
+                logger.debug("Skipping item {} in slot matrix to scene conversion".format(v))
+                continue
+            v = v  # type: dict
+            for sceneId, slot in v.items():
+                if sceneId not in outputsForScene:
+                    outputsForScene[sceneId] = {}
+                if dIdx not in outputsForScene[sceneId]:
+                    outputsForScene[sceneId][dIdx] = {}
+                outputsForScene[sceneId][dIdx]["refSlot"] = slot
+        
+        sceneMeta = {}
+        for sceneId in outputsForScene.keys():
+            sceneMeta[sceneId] = {"name": "Unnamed scene", "output": outputsForScene[sceneId]}
+        
+        logger.info("Converted slot matrix to scene meta: {}".format(sceneMeta))
+        self.sceneMetadata = sceneMeta
+
+    def _setSlotForDevice(self, dIdx, sceneId, slotId):
+        if isinstance(slotId, str):
+            slotId = int(slotId)
+        if sceneId not in self.sceneMetadata:
+            raise KeyError("{} not found".format(sceneId))
+        if dIdx not in self.sceneMetadata[sceneId]:
+            self.sceneMetadata[sceneId]["output"][dIdx] = {"refSlot": None}
+        self.sceneMetadata[sceneId]["output"][dIdx]["refSlot"] = slotId
+
+    def _getSlotForDevice(self, dIdx, sceneId, create=False):
+        if not isinstance(sceneId, str):
+            sceneId = str(sceneId)
+        if sceneId not in self.sceneMetadata:
+            if create:
+                logger.info("Backwards compatibility: Init scene {}".format(sceneId))
+                self.sceneMetadata[sceneId] = {"name": "Unnamed scene", "output": {}}
+            else:
+                return None
+        outputs = self.sceneMetadata[sceneId]["output"]
+        if str(dIdx) not in outputs and create:
+            outputs[str(dIdx)] = {}
+            outputs[str(dIdx)]["refSlot"] = int(sceneId)
+            logger.info("Backwards compatibility: Init with slotId = sceneId")
+            self.sceneMetadata[sceneId]["output"] = outputs
+        return self.sceneMetadata[sceneId]["output"][str(dIdx)]["refSlot"]
+
+    def _activeFiltergraphs(self):
+        # Iterate through devices to find which filtergraphs are in slots of the active scene
+        dIdx = 0
+        sceneId = self.activeSceneId
+        for device in self._devices:
+            # Get slot Id associated with this device
+            slotId = self._getSlotForDevice(dIdx, sceneId)
+            # Get filtergraph
+            dIdx = dIdx + 1
+            yield self.getSlot(slotId)
+
+    def _createOrUpdateProcess(self, dIdx, device, slotId, filterGraph):
+        if dIdx in self._filtergraphProcesses:
+            # Send command
+            self._sendReplaceFiltergraphCommand(dIdx, slotId, filterGraph)
+            return
+        # Create device
+        outputDevice = None
+        virtualDevice = None
+        fgDevice = None
+        if isinstance(device, audioled.devices.VirtualOutput):
+            # Reuse virtual output, construct output process if not already present
+            virtualDevice = device
+            realDevice = virtualDevice.device
+            fgDevice = device
+            if realDevice not in self._outputProcesses:
+                outputDevice = realDevice
+            pass
+        elif isinstance(device, audioled.devices.PanelWrapper):
+            if isinstance(device.device, audioled.devices.VirtualOutput):
+                fgDevice = device  # PanelWrapper
+                virtualDevice = fgDevice.device  # VirtualDevice
+                realDevice = virtualDevice.device  # Select real device in virtualoutput
+                if realDevice not in self._outputProcesses:
+                    outputDevice = realDevice
+            else:
+                oldPanelWrapper = device
+
+                # Construct virtual output, TODO: Make sure device is realDevice...
+                realDevice = oldPanelWrapper.device
+
+                lock = mp.Lock()
+                array = mp.Array(ctypes.c_uint8, 3 * device.getNumPixels(), lock=lock)
+                virtualDevice = audioled.devices.VirtualOutput(device=realDevice,
+                                                               num_pixels=realDevice.getNumPixels(),
+                                                               shared_array=array,
+                                                               shared_lock=lock,
+                                                               num_rows=realDevice.getNumRows(),
+                                                               start_index=0)
+
+                oldPanelWrapper.setDevice(virtualDevice)
+                fgDevice = oldPanelWrapper
+
+        else:
+            # New virtual output
+            outputDevice = device
+            lock = mp.Lock()
+            array = mp.Array(ctypes.c_uint8, 3 * device.getNumPixels(), lock=lock)
+            virtualDevice = audioled.devices.VirtualOutput(device=device,
+                                                           num_pixels=device.getNumPixels(),
+                                                           shared_array=array,
+                                                           shared_lock=lock,
+                                                           num_rows=device.getNumRows(),
+                                                           start_index=0)
+            fgDevice = virtualDevice
+            realDevice = device
+
+        # Start filtergraph process
+        successful = False
+        sleepfact = 1.
+        while not successful:
+            q = self._publishQueue.register()
+            p = mp.Process(target=worker, args=(q, filterGraph, fgDevice, dIdx, slotId))
+            p.start()
+            # Process sometimes doesn't start...
+            q.put(123)
+            time.sleep(sleepfact * 0.1)
+            if not q._unfinished_tasks._semlock._is_zero():
+                logger.warning("Process didn't respond in time!")
+                self._publishQueue.unregister(q)
+                p.join(sleepfact * 0.1)
+                if p.is_alive():
+                    p.terminate()
+            else:
+                successful = True
+            sleepfact = 2. * sleepfact
+        self._filtergraphProcesses[dIdx] = p
+        logger.debug('Started process for device {} with device {}'.format(dIdx, fgDevice))
+
+        # Start output process
+        sleepfact = 1.
+        if outputDevice is not None:
+            outSuccessful = False
+            while not outSuccessful:
+                q = self._showQueue.register()
+                p = mp.Process(target=output, args=(q, outputDevice, virtualDevice))
+                p.start()
+                # Make sure process starts
+                q.put("test")
+                time.sleep(sleepfact * 0.1)
+                if not q._unfinished_tasks._semlock._is_zero():
+                    logger.warning("Output process didn't respond in time!")
+                    self._showQueue.unregister(p)
+                    p.join(sleepfact * 0.1)
+                    if p.is_alive():
+                        p.terminate()
+                else:
+                    outSuccessful = True
+                    q.put("first")
+                sleepfact = 2. * sleepfact
+            self._outputProcesses[outputDevice] = p
+            logger.info("Started output process for device {}".format(outputDevice))
 
     def _sendBrightnessCommand(self, value):
         self._showQueue.publish(BrightnessMessage(value))
