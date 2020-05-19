@@ -73,4 +73,5 @@ followed by `0xf7` for Midi Sysex End.
 | RESP     | Get active scene                        | `0x01`, `0x10` | Binary data encode of utf8 active scene metadata json                 |                     |
 | REQ      | Get scenes                              | `0x01`, `0x20` |                                                                       |                     |
 | RESP     | Get scenes                              | `0x01`, `0x20` | Binary data encode of utf8 scene metadata json                        |                     |
-| REQ      | Get enabled controller for active scene |                |                                                                       |                     |
+| REQ      | Get enabled controller for active scene | `0x01`, `0x30` |                                                                       |                     |
+| RESP     | Get enabled controller for active scene | `0x01`, `0x30` | Binary data encode of utf8 json dict controller -> True/False         |                     |

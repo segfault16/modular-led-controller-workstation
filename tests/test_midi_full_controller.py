@@ -9,7 +9,7 @@ import json
 import jsonpickle
 import os
 import zlib
-from audioled import serverconfiguration, version, project
+from audioled import serverconfiguration, version, project, modulation
 from audioled_controller import midi_full, sysex_data
 
 # Taken from pyupdater test repo
@@ -339,3 +339,30 @@ def test_get_scenes():
     metadata = json.loads(bytes(dec))
     assert metadata is not None
     assert len(metadata.keys()) == 1
+
+def test_get_enabled_controllers():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Get active project metadata
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x01, 0x03]
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    proj = cfg.getActiveProjectOrDefault()
+    proj.activate()  # Needs to be activated
+    proj.stopProcessing()
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, proj)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x01
+    assert retMsg.data[1] == 0x03
+    # Decode data
+    dec = sysex_data.decode(retMsg.data[2:])
+    metadata = json.loads(bytes(dec))
+    assert metadata is not None
+    assert len(metadata.keys()) == len(modulation.allController)
+    for k, v in metadata.items():
+        assert v == False

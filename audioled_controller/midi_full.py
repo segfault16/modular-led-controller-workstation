@@ -244,9 +244,33 @@ class MidiProjectController:
             metadata = proj.sceneMetadata
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createScenesMetadataMsg(metadata))
+        elif data[0] == 0x01 and data[1] == 0x03:
+            # Get enabled controllers for active scene
+            logger.info("MIDI-BLE REQ Get controller for active scene")
+            proj = serverconfig.getActiveProjectOrDefault()
+            if self._sendMidiCallback is not None:
+                self._sendMidiCallback(self._createEnabledControllersMsg(proj))
         else:
             logger.error("MIDI-BLE Unknown sysex {} {}".format(hex(data[0]), hex(data[1])))
         
+    def _createEnabledControllersMsg(self, proj):
+        status = proj.getController()
+        controllerEnabled = {}
+        for controller in modulation.allController:
+            if controller in inverseControllerMap:
+                controllerEnabled[inverseControllerMap[controller]] = False
+
+        logger.info("Status: {}".format(status.keys()))
+        for controller in status.keys():
+            if controller in inverseControllerMap:
+                controllerEnabled[inverseControllerMap[controller]] = True
+
+        logger.info("MIDI-BLE RESPONSE Enabled controllers for active scene: {}".format(controllerEnabled))
+        
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x01, 0x03] + sysex_data.encode(json.dumps(controllerEnabled))
+        return sendMsg
+
     def _createScenesMetadataMsg(self, metadata):
         logger.info("MIDI-BLE RESPONSE Get scenes metadata {}".format(metadata))
         sendMsg = mido.Message('sysex')
@@ -355,7 +379,11 @@ class MidiProjectController:
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(sendMsg)
 
-        # TODO: Send sysex for available controller
+        # Send enabled controllers via sysex
+        if self._sendMidiCallback is not None:
+            self._sendMidiCallback(self._createEnabledControllersMsg(proj))
+
+        # TODO: Remove
         status = proj.getController()
         controllerEnabled = {}
         for controller in modulation.allController:
@@ -366,18 +394,7 @@ class MidiProjectController:
         for controller in status.keys():
             if controller in inverseControllerMap:
                 controllerEnabled[inverseControllerMap[controller]] = True
-        # Create midi message from map
-        # TODO: Problem with receiving sysex in JUCE?
-        # [StartOfExclusive, ID of vendor (non-commercial in this case), ... data ]
-        if True:
-            sysexData = [0xF0, 0x7D]
-            for controllerNumber, enabled in controllerEnabled.items():
-                sysexData += [controllerNumber, (0 if not enabled else 1)]
-            sysexData += [0xF7]  # End of exclusive
-            logger.info("Sending sysex {}".format(sysexData))
-            sysexMsg = mido.Message.from_bytes(sysexData)
-            if self._sendMidiCallback is not None:
-                self._sendMidiCallback(sysexMsg)
+
         # Version using note on / note off commands
         for controllerNumber, enabled in controllerEnabled.items():
             msg = None
