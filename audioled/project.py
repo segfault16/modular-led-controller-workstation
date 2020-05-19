@@ -701,6 +701,13 @@ class Project(Updateable):
                     retMatrix[dIdx][sceneId] = slotId
         return retMatrix
 
+    def getSceneMetadata(self, sceneId):
+        if not isinstance(sceneId, str):
+            sceneId = str(sceneId)
+        if sceneId not in self.sceneMetadata:
+            raise KeyError("{} not found".format(sceneId))
+        return self.sceneMetadata[sceneId]
+
     def setSceneMatrix(self, slotMatrix):
         # SlotMatrix contains dict mapping deviceId to slot for scene
         # e.g. "0": {"1": 12} mapping slot 12 to device 0 of scene 1

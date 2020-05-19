@@ -68,8 +68,10 @@ followed by `0xf7` for Midi Sysex End.
 | RESP     | Export project                          | `0x00`, `0x60` | Binary data encode of utf8 project json compressed with zlib          |                     |
 | RESP     | Export project                          | `0x00`, `0x6F` |                                                                       | Project not found   |
 | REQ      | Get active scene ID                     | `0x01`, `0x00` |                                                                       |                     |
-| RESP     | Get active scene ID                     | `0x01`, `0x00` | Binary data encode of active scene ID                                 |                     |
+| RESP     | Get active scene ID                     | `0x01`, `0x00` | Binary data encode of active scene ID string                          |                     |
 | REQ      | Get active scene                        | `0x01`, `0x10` |                                                                       |                     |
-| RESP     | Get active scene                        | `0x01`, `0x10` |                                                                       |                     |
-| REQ      | Get available scenes in project         |                |                                                                       |                     |
+| RESP     | Get active scene                        | `0x01`, `0x10` | Binary data encode of active scene metadata json                      |                     |
+| REQ      | Get available scenes in project         | `0x01`, `0x20` |                                                                       |                     |
+| RESP     | Get available scenes in project         | `0x01`, `0x20` | Binary data encode of string of list of available scene ids           |                     |
+| REQ      | Get scene                               |                |                                                                       |                     |
 | REQ      | Get enabled controller for active scene |                |                                                                       |                     |

@@ -277,7 +277,6 @@ def test_get_active_scene_id_successful():
     proj.stopProcessing()
     # Activate project
     testMsg = mido.Message('sysex')
-    
     testMsg.data = [0x01, 0x00]
     
     # Handle message
@@ -290,3 +289,28 @@ def test_get_active_scene_id_successful():
     data = sysex_data.decode(retMsg.data[2:])
     data = bytes(data)
     assert data == bytes("12", encoding='utf8')
+
+def test_get_active_scene():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Get active project metadata
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x01, 0x01]
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    proj = cfg.getActiveProjectOrDefault()
+    proj.activate()  # Needs to be activated
+    proj.stopProcessing()
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, proj)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x01
+    assert retMsg.data[1] == 0x01
+    # Decode data
+    dec = sysex_data.decode(retMsg.data[2:])
+    metadata = json.loads(bytes(dec))
+    assert metadata is not None
+    assert metadata['name'] == 'Unnamed scene'

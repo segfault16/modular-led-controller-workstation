@@ -127,6 +127,7 @@ class ServerConfiguration:
             newProj = self.initDefaultProject()
             activeProjectUid = newProj.id
             logger.info("Default project initialized: {}".format(activeProjectUid))
+            self.setConfiguration({CONFIG_ACTIVE_PROJECT: activeProjectUid})
         try:
             activeProj = self.getProject(activeProjectUid)
         except Exception as e:
