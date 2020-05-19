@@ -383,30 +383,6 @@ class MidiProjectController:
         if self._sendMidiCallback is not None:
             self._sendMidiCallback(self._createEnabledControllersMsg(proj))
 
-        # TODO: Remove
-        status = proj.getController()
-        controllerEnabled = {}
-        for controller in modulation.allController:
-            if controller in inverseControllerMap:
-                controllerEnabled[inverseControllerMap[controller]] = False
-
-        logger.info("Status: {}".format(status.keys()))
-        for controller in status.keys():
-            if controller in inverseControllerMap:
-                controllerEnabled[inverseControllerMap[controller]] = True
-
-        # Version using note on / note off commands
-        for controllerNumber, enabled in controllerEnabled.items():
-            msg = None
-            if enabled:
-                msg = mido.Message('note_on')
-            else:
-                msg = mido.Message('note_off')
-            msg.channel = 1
-            msg.note = controllerNumber
-            if self._sendMidiCallback is not None:
-                self._sendMidiCallback(msg)
-
         # TODO: Send brightness
         # brightness = proj.getBrightness() # TODO: Implement
         # sendMsg = mido.Message('control_change')
