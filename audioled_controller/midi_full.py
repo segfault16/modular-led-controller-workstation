@@ -9,6 +9,8 @@ import json
 import jsonpickle
 import zlib
 import glob
+import sys
+import threading
 logger = logging.getLogger(__name__)
 
 controllerMap = {
@@ -83,6 +85,7 @@ class MidiProjectController:
 
         self._update_paths = None
         self._client_config = None
+        self._isUpdating = False
         if options is not None:
             self._update_paths = options.update_paths
             self._client_config = options.client_config
@@ -155,23 +158,21 @@ class MidiProjectController:
             self._update_paths = self._getUpdatePaths(updatePath)
             logger.info("Scanning {}".format(self._update_paths))
 
-            self.client.refresh()
-            app_update = self.client.update_check('Molecole', version.get_version())
-            if app_update is not None:
-                logger.info("Update {} available".format(app_update.current_version))
-                app_update.download()
-                logger.info("Update downloaded")
-                if app_update.is_downloaded():
-                    logger.debug("Extracting update")
-                    if app_update.extract():
-                        logger.debug("Extract succeeded")
-                    else:
-                        logger.debug("Extract not successful")
-                    # TODO: perform update
+            if not self._isUpdating:
+                self._isUpdating = True
+                self.client.refresh()
+                app_update = self.client.update_check('Molecole', version.get_version())
+                if app_update is not None:
+                    logger.info("Update {} available".format(app_update.current_version))
+                    threading.Thread(target=self._updateApp, args=[app_update]).start()
+                else:
+                    self._isUpdating = False
+                    logger.info("Update check returned no update")
+                    if self._sendMidiCallback is not None:
+                        self._sendMidiCallback(self._createUpdateNotAvailableMsg())
             else:
-                logger.info("Update check returned no update")
                 if self._sendMidiCallback is not None:
-                    self._sendMidiCallback(self._createUpdateNotAvailableMsg())
+                    self._sendMidiCallback(self._createUpdateBusyMsg())
         elif data[0] == 0x00 and data[1] == 0x11:
             # Update check
             logger.info("MIDI-BLE REQ Update check")
@@ -181,17 +182,22 @@ class MidiProjectController:
             self._update_paths = self._getUpdatePaths(updatePath)
             logger.info("Scanning {}".format(self._update_paths))
 
-            self.client.refresh()
-            logger.info("Checking for update {}".format(version.get_version()))
-            app_update = self.client.update_check('Molecole', version.get_version())
-            if app_update is not None:
-                logger.info("Update {} available".format(app_update.version))
-                if self._sendMidiCallback is not None:
-                    self._sendMidiCallback(self._createUpdateVersionAvailableMsg(app_update.version))
+            if not self._isUpdating:
+                self._isUpdating = True
+                self.client.refresh()
+                app_update = self.client.update_check('Molecole', version.get_version())
+                self._isUpdating = False
+                if app_update is not None:
+                    logger.info("Update {} available".format(app_update.version))
+                    if self._sendMidiCallback is not None:
+                        self._sendMidiCallback(self._createUpdateVersionAvailableMsg(app_update.version))
+                else:
+                    logger.info("Update check returned no update")
+                    if self._sendMidiCallback is not None:
+                        self._sendMidiCallback(self._createUpdateNotAvailableMsg())
             else:
-                logger.info("Update check returned no update")
                 if self._sendMidiCallback is not None:
-                    self._sendMidiCallback(self._createUpdateNotAvailableMsg())
+                    self._sendMidiCallback(self._createUpdateBusyMsg())
         elif data[0] == 0x00 and data[1] == 0x20:
             # Active project metadata
             if self._sendMidiCallback is not None:
@@ -267,7 +273,28 @@ class MidiProjectController:
                 self._sendMidiCallback(self._createEnabledControllersMsg(proj))
         else:
             logger.error("MIDI-BLE Unknown sysex {} {}".format(hex(data[0]), hex(data[1])))
-        
+    
+    def _updateApp(self, app_update):
+        try:
+            logger.debug("Starting download in background")
+            app_update.download()
+            logger.info("Update downloaded")
+            if app_update.is_downloaded():
+                if not getattr(sys, 'frozen', False):
+                    logger.info("Not running from executable. Extract only")
+                    logger.debug("Extracting update")
+                    if app_update.extract():
+                        logger.debug("Extract succeeded")
+                    else:
+                        logger.debug("Extract not successful")
+                    logger.debug("Extract done")
+                else:
+                    logger.info("Extracting and restarting...")
+                    #app_update.extract_restart()
+            logger.debug("End of update")
+        finally:
+            self._isUpdating = False
+
     def _createEnabledControllersMsg(self, proj):
         status = proj.getController()
         controllerEnabled = {}
@@ -352,6 +379,12 @@ class MidiProjectController:
         logger.info("MIDI-BLE RESPONSE No update available")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x1F]
+        return sendMsg
+
+    def _createUpdateBusyMsg(self):
+        logger.info("MIDI-BLE RESPONSE Update or update check running. I'm busy.")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x1E]
         return sendMsg
     
     def _createActiveProjectMsg(self, metadata):

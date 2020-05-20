@@ -6,6 +6,7 @@ import importlib
 import inspect
 import json
 import os.path
+import sys
 import threading
 import time
 import multiprocessing
@@ -40,14 +41,17 @@ def record_factory(*args, **kwargs):
         record.sthreadName = record.threadName
     return record
 
-
 logging.setLogRecordFactory(record_factory)
-logging.basicConfig(level=logging.INFO,
-                    format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
+logging.debug("Global debug log enabled")
+# Adjust loglevels 
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
-logging.getLogger('audioled').setLevel(logging.DEBUG)
-logging.getLogger('root').setLevel(logging.DEBUG)
+logging.getLogger('audioled').setLevel(logging.INFO)
+logging.getLogger('audioled_controller').setLevel(logging.DEBUG)
+logging.getLogger('audioled_controller.bluetooth').setLevel(logging.INFO)
+logging.getLogger('root').setLevel(logging.INFO)
 logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO)  # Silence!
+logging.getLogger('pyupdater').setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
@@ -923,9 +927,9 @@ if __name__ == '__main__':
             logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
             logger.error(e)
             logger.debug("Bluetooth error", exc_info=1)
-        
     app = create_app(midiAdvertiseName)
     app.run(debug=False, host="0.0.0.0", port=args.port)
+    
     logger.info("End of server main")
     proj.stopProcessing()
     stop_signal = True

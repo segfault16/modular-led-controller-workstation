@@ -50,10 +50,12 @@ followed by `0xf7` for Midi Sysex End.
 | RESP     | Get Version                             | `0x00`, `0x00` | Binary data encode of utf8 version string                             |                     |
 | REQ      | Check update Version                    | `0x00`, `0x11` |                                                                       |                     |
 | RESP     | Check update Version                    | `0x00`, `0x11` | Binary data encode of utf8 version string of available update version | Update available    |
+| RESP     | Check update Version                    | `0x00`, `0x1E` |                                                                       | Busy, try later     |
 | RESP     | Check update Version                    | `0x00`, `0x1F` |                                                                       | No update available |
 | REQ      | Update server                           | `0x00`, `0x10` |                                                                       |                     |
 | RESP     | Update server                           | `0x00`, `0x10` |                                                                       | Update successful   |
-| RESP     | Update server                           | `0x00`, `0x10` |                                                                       | No update available |
+| RESP     | Update server                           | `0x00`, `0x1E` |                                                                       | Busy, try later     |
+| RESP     | Update server                           | `0x00`, `0x1F` |                                                                       | No update available |
 | REQ      | Get active project                      | `0x00`, `0x20` |                                                                       |                     |
 | RESP     | Get active project                      | `0x00`, `0x20` | Binary data encode of utf8 active project metadata json               |                     |
 | REQ      | Get projects                            | `0x00`, `0x30` |                                                                       |                     |
