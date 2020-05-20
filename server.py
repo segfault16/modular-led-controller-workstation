@@ -14,6 +14,7 @@ import traceback
 from timeit import default_timer as timer
 import logging
 import mido
+import signal
 from functools import wraps
 
 import jsonpickle
@@ -46,7 +47,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(relativeCr
 logging.debug("Global debug log enabled")
 # Adjust loglevels 
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
-logging.getLogger('audioled').setLevel(logging.INFO)
+logging.getLogger('audioled').setLevel(logging.DEBUG)
 logging.getLogger('audioled_controller').setLevel(logging.DEBUG)
 logging.getLogger('audioled_controller.bluetooth').setLevel(logging.INFO)
 logging.getLogger('root').setLevel(logging.INFO)
@@ -92,8 +93,28 @@ count = 0
 
 preview_lock = multiprocessing.Lock()
 
+stop_lock = multiprocessing.Lock()
+
 midiController = []
 midiBluetooth = None  # type: audioled_controller.bluetooth.BluetoothMidiLELevelCharacteristic # noqa: F821
+
+# def signal_handler(sig, frame):
+#     global stop_lock
+#     stop_lock.acquire()
+#     print("Received stop signal")
+#     global stop_signal
+
+#     if stop_signal is True:
+#         print("Already exiting")
+#         return
+#     stop_signal = True
+#     global serverconfig
+#     proj = serverconfig.getActiveProject()
+#     if proj is not None:
+#         proj.stopProcessing()
+#     stop_lock.release()
+#     sys.exit(0)
+
 
 
 def lock_preview(fn):
@@ -163,19 +184,38 @@ def create_app(midiAdvertiseName=None):
     sched.start()
 
     def interrupt():
+        global stop_lock
+        global stop_signal
+        stop_signal = True
+        stop_lock.acquire()
         app.logger.info('cancelling LED thread')
         global ledThread
         global proj
         # stop_signal = True
         try:
-            proj.stopProcessing()
             ledThread.join()
-        except RuntimeError as e:
+        except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
-            pass
 
-        sched.shutdown()
-        app.logger.debug('Background scheduler shutdown')
+        try:
+            proj.stopProcessing()
+        except Exception as e:
+            app.logger.error("LED thread cancelled: {}".format(e))
+
+        try:
+            sched.shutdown()
+            app.logger.debug('Background scheduler shutdown')
+        except Exception as e:
+            app.logger.error("LED thread cancelled: {}".format(e))
+
+        stop_lock.release()
+
+
+    def sigStop(sig, frame):
+        print("Interrupt")
+        interrupt()
+        print("Return from interrupt")
+        sys.exit(1)
 
     @app.after_request
     def add_header(response):
@@ -742,6 +782,8 @@ def create_app(midiAdvertiseName=None):
         global count
         global record_timings
         dt = 0
+        if stop_signal:
+            return
         try:
             with dataLock:
                 last_time = current_time
@@ -751,7 +793,6 @@ def create_app(midiAdvertiseName=None):
                 if event_loop is None:
                     event_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(event_loop)
-
                 proj.update(dt, event_loop)
                 proj.process()
                 # clear errors (if any have occured in the current run, we wouldn't reach this)
@@ -799,6 +840,8 @@ def create_app(midiAdvertiseName=None):
         startLEDThread()
     # When you kill Flask (SIGTERM), clear the trigger for the next thread
     atexit.register(interrupt)
+    signal.signal(signal.SIGINT, sigStop)
+    signal.signal(signal.SIGUSR1, sigStop)
     return app
 
 

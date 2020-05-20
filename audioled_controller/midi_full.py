@@ -11,6 +11,7 @@ import zlib
 import glob
 import sys
 import threading
+import signal
 logger = logging.getLogger(__name__)
 
 controllerMap = {
@@ -290,8 +291,11 @@ class MidiProjectController:
                     logger.debug("Extract done")
                 else:
                     logger.info("Extracting and restarting...")
-                    #app_update.extract_restart()
+                    app_update.extract_overwrite()
+                    logger.info("Extracting done. Killing server")
+                    os.kill(os.getpid(), signal.SIGUSR1)
             logger.debug("End of update")
+            
         finally:
             self._isUpdating = False
 

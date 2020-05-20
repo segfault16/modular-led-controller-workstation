@@ -461,7 +461,7 @@ class Project(Updateable):
             dt {[float]} -- Time since last update
         """
         # logger.info("project: update")
-        if self._processingEnabled:
+        if self._processingEnabled and self._isActive:
             aquired = self._lock.acquire(block=True, timeout=0)
             if not aquired:
                 logger.info("Skipping update, couldn't acquire lock")
@@ -483,11 +483,13 @@ class Project(Updateable):
                 self._sendShowCommand()
 
             except TimeoutError:
-                logger.error("Update timeout. Forcing reset")
-                self.stopProcessing()
-                if self.activeSceneId is not None:
-                    logger.debug("No scene active. Activating.")
-                    self.activateScene(self.activeSceneId)
+                if self._processingEnabled and self._isActive:
+                    logger.error("Update timeout. Forcing reset")
+                    self._lock.release()
+                    self.stopProcessing()
+                    if self.activeSceneId is not None:
+                        logger.info("No scene active. Activating.")
+                        self.activateScene(self.activeSceneId)
             else:
                 self._lock.release()
         else:
@@ -597,13 +599,15 @@ class Project(Updateable):
                     p.join(0.1)
                     if p.is_alive():
                         p.terminate()
-                self._lock.release()
             finally:
                 self._filtergraphProcesses = {}
                 self._outputProcesses = {}
                 self._publishQueue = None
                 self._showQueue = None
                 self._processingEnabled = True
+                self._lock.release()
+            self._isActive = False
+            logger.warning("Force shutdown complete")
             return
         # Normal shutdown
         try:
