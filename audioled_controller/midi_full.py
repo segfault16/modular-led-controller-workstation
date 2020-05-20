@@ -8,6 +8,7 @@ import os
 import json
 import jsonpickle
 import zlib
+import glob
 logger = logging.getLogger(__name__)
 
 controllerMap = {
@@ -100,10 +101,13 @@ class MidiProjectController:
         logger.info("Callback! {}".format(file))
         if self._update_paths is not None:
             for updatePath in self._update_paths:
-                logger.info("Checking directory {}".format(updatePath))
-                path = os.path.join(updatePath, file)
-                if os.path.isfile(path):
-                    return open(path, "rb").read()
+                for p in glob.iglob(updatePath):
+                    if os.path.isdir(p):
+                        logger.info("Checking directory {}/{}".format(p, file))
+                        path = os.path.join(p, file)
+                        if os.path.isfile(path):
+                            logger.info("Downloading from path {}".format(path))
+                            return open(path, "rb").read()
         logger.error("{} not found".format(file))
         return None
 
@@ -146,6 +150,11 @@ class MidiProjectController:
             # Update
             logger.info("MIDI-BLE REQ Update")
             logger.info("Checking for update, current version is {}".format(version.get_version()))
+            updatePath = serverconfig.getConfiguration(serverconfiguration.CONFIG_UPDATER_AUTOCHECK_PATH)
+            logger.info("Scanning configuration for local directories {}".format(updatePath))
+            self._update_paths = self._getUpdatePaths(updatePath)
+            logger.info("Scanning {}".format(self._update_paths))
+
             self.client.refresh()
             app_update = self.client.update_check('Molecole', version.get_version())
             if app_update is not None:
@@ -166,6 +175,12 @@ class MidiProjectController:
         elif data[0] == 0x00 and data[1] == 0x11:
             # Update check
             logger.info("MIDI-BLE REQ Update check")
+            logger.info("Checking for update, current version is {}".format(version.get_version()))
+            updatePath = serverconfig.getConfiguration(serverconfiguration.CONFIG_UPDATER_AUTOCHECK_PATH)
+            logger.info("Scanning configuration for local directories {}".format(updatePath))
+            self._update_paths = self._getUpdatePaths(updatePath)
+            logger.info("Scanning {}".format(self._update_paths))
+
             self.client.refresh()
             logger.info("Checking for update {}".format(version.get_version()))
             app_update = self.client.update_check('Molecole', version.get_version())
@@ -359,6 +374,14 @@ class MidiProjectController:
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x00] + sysex_data.encode(v)
         return sendMsg
+
+    def _getUpdatePaths(self, paths: str):
+        if ',' in paths:
+            paths = paths.split(',')
+        else:
+            paths = [paths]
+        return paths
+
 
     def _handleProgramChange(self, program, proj):
         proj.activateScene(program)

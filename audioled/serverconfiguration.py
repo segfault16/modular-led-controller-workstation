@@ -23,11 +23,14 @@ CONFIG_DEVICE_PANEL_MAPPING = 'device.panel.mapping'
 CONFIG_ACTIVE_DEVICE_CONFIGURATION = 'active_device_config'
 CONFIG_DEVICE_CONFIGS = 'device_configs'
 CONFIG_RESET_CONTROLLER_MODULATION = 'reset_controller_modulation'
+CONFIG_UPDATER_AUTOCHECK_PATH = 'updater_autocheck_path'
+CONFIG_ADVERTISE_BLUETOOTH = 'advertise_bluetooth'
+CONFIG_ADVERTISE_BLUETOOTH_NAME = 'advertise_bluetooth_name'
 
 allowed_configs = [
     CONFIG_NUM_PIXELS, CONFIG_NUM_ROWS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_AUDIO_DEVICE_INDEX,
     CONFIG_ACTIVE_PROJECT, CONFIG_DEVICE_PANEL_MAPPING, CONFIG_ACTIVE_DEVICE_CONFIGURATION, CONFIG_DEVICE_CONFIGS,
-    CONFIG_RESET_CONTROLLER_MODULATION
+    CONFIG_RESET_CONTROLLER_MODULATION, CONFIG_UPDATER_AUTOCHECK_PATH, CONFIG_ADVERTISE_BLUETOOTH
 ]
 
 allowed_devices = [
@@ -45,6 +48,9 @@ class ServerConfiguration:
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
         self._config[CONFIG_DEVICE_PANEL_MAPPING] = ''
         self._config[CONFIG_RESET_CONTROLLER_MODULATION] = False
+        self._config[CONFIG_UPDATER_AUTOCHECK_PATH] = ""
+        self._config[CONFIG_ADVERTISE_BLUETOOTH] = True
+        self._config[CONFIG_ADVERTISE_BLUETOOTH_NAME] = "MOLECOLE Control"
         self._projects = {}
         self._projectMetadatas = {}
         self._activeProject = None
@@ -56,7 +62,8 @@ class ServerConfiguration:
             # CONFIG_NUM_ROWS: [1, 1, 100, 1],
             # CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
             CONFIG_RESET_CONTROLLER_MODULATION: False,
-            CONFIG_ACTIVE_DEVICE_CONFIGURATION: list(self.getConfiguration(CONFIG_DEVICE_CONFIGS).keys())
+            CONFIG_ACTIVE_DEVICE_CONFIGURATION: list(self.getConfiguration(CONFIG_DEVICE_CONFIGS).keys()),
+            CONFIG_UPDATER_AUTOCHECK_PATH: ""
         }
 
     def setConfiguration(self, dict):

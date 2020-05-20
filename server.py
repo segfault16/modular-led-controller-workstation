@@ -826,7 +826,7 @@ def handleMidiIn(msg: mido.Message):
 def handleMidiOut(msg: mido.Message):
     global midiBluetooth
     if midiBluetooth is not None:
-        logger.info("Writing midi {}".format(msg))
+        logger.debug("Writing midi {}".format(msg))
         midiBluetooth.sendMidi(msg)
 
 
@@ -911,17 +911,18 @@ if __name__ == '__main__':
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
-    logger.debug("Adding bluetooth server to the mix")
-    midiAdvertiseName = None
-    try:
-        from audioled_controller import bluetooth
-        fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
-        midiController.append(fullMidiController)
-        midiBluetooth = bluetooth.MidiBluetoothService(callback=handleMidiIn)
-    except Exception as e:
-        logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
-        logger.error(e)
-        logger.debug("Bluetooth error", exc_info=1)
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH):
+        logger.debug("Adding bluetooth server to the mix")
+        midiAdvertiseName = serverconfig.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH_NAME)
+        try:
+            from audioled_controller import bluetooth
+            fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
+            midiController.append(fullMidiController)
+            midiBluetooth = bluetooth.MidiBluetoothService(callback=handleMidiIn)
+        except Exception as e:
+            logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
+            logger.error(e)
+            logger.debug("Bluetooth error", exc_info=1)
         
     app = create_app(midiAdvertiseName)
     app.run(debug=False, host="0.0.0.0", port=args.port)

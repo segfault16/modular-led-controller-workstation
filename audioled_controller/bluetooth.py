@@ -265,15 +265,17 @@ class BluetoothMidiLEService(pybleno.BlenoPrimaryService):
         })
 
 class MidiBluetoothService(object):
-    def __init__(self, callback=None):
+    def __init__(self, callback=None, advertiseName='MOLECOLE Control'):
         self._callback = callback
         self.bleno = pybleno.Bleno()
         self.primaryService = BluetoothMidiLEService(self._onMessageReceived)
-        self.primaryServiceName = 'MOLECOLE Control'
+        if advertiseName is None or advertiseName == "":
+            advertiseName = 'MOLECOLE Control'
+        self.primaryServiceName = advertiseName
 
         self.bleno.on('advertisingStart', self._onAdvertisingStart)
         self.bleno.on('stateChange', self._onStateChange)
-        logging.info("Advertising Bluetooth Service")
+        logging.info("Advertising Bluetooth Service '{}'".format(advertiseName))
         self.bleno.start()
 
     def _onMessageReceived(self, msg: mido.Message):
