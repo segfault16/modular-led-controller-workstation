@@ -2,6 +2,8 @@ from audioled.effect import Effect
 from collections import OrderedDict
 import numpy as np
 
+import logging
+logger = logging.getLogger(__name__)
 
 class MakeSquare(Effect):
     """MakeSquare takes a 1d pixel array and fills the panel by the following pattern:
@@ -84,7 +86,7 @@ class MakeSquare(Effect):
 
     def _genMapMask(self, num_pixels, num_rows, displacement, input_displacement):
         num_cols = int(num_pixels / num_rows)
-        print("Generating map mask for {}x{} pixels".format(num_cols, num_rows))
+        logger.info("Generating map mask for {}x{} pixels".format(num_cols, num_rows))
         dp = int(displacement * num_cols)
         mapMask = np.array([[[0, self._indexFor(i, j + dp, num_rows, num_cols, input_displacement)]
                              for i, j in np.ndindex(num_rows, num_cols)],
@@ -227,7 +229,7 @@ def next_dir_possible(cur_dir, cur_row, cur_col, visited, pref_dir, allowed_row_
         if r < allowed_row_range[0] or r > allowed_row_range[1]:
             continue
         # found new direction
-        print("next dir: {}, preference {}".format(pref_dir[i], i))
+        # print("next dir: {}, preference {}".format(pref_dir[i], i))
         return pref_dir[i]
     raise RuntimeError("Cannot determine new direction!")
 

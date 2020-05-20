@@ -1,4 +1,6 @@
 import inspect
+import logging
+logger = logging.getLogger(__name__)
 
 
 class PixelBuffer(object):
@@ -56,12 +58,12 @@ class Effect(object):
         except AttributeError:
             self._outputBuffer = None
         # make sure all default values are set (basic backwards compatibility)
-        argspec = inspect.getargspec(self.__init__)
+        argspec = inspect.getfullargspec(self.__init__)
         if argspec.defaults is not None:
             argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
             for key in argsWithDefaults:
                 if key not in self.__dict__:
-                    print("Backwards compatibility: Adding default value {}={}".format(key, argsWithDefaults[key]))
+                    logger.info("Backwards compatibility: Adding default value {}={}".format(key, argsWithDefaults[key]))
                     self.__dict__[key] = argsWithDefaults[key]
 
     def numOutputChannels(self):
@@ -131,10 +133,10 @@ class Effect(object):
         return state
 
     def __setstate__(self, state):
-        argspec = inspect.getargspec(self.__init__)
+        argspec = inspect.getfullargspec(self.__init__)
         for k in list(state.keys()):
             if k not in argspec.args:
-                print("Removing deprecated parameter {} from state of {}".format(k, self))
+                logger.info("Removing deprecated parameter {} from state of {}".format(k, self))
                 state.pop(k)
         self.__dict__.update(state)
         self.__initstate__()
@@ -162,7 +164,7 @@ class Effect(object):
                 state['~' + paramId] = origVal
 
         adjustedValue = origVal + (maxP - minP) * offset
-        # print("orig: {}, adjusted: {}".format(origVal, adjustedValue))
+        # logger.info("orig: {}, adjusted: {}".format(origVal, adjustedValue))
         # ensure we stay inside max and min
         adjustedValue = min(maxP, adjustedValue)
         adjustedValue = max(minP, adjustedValue)
@@ -179,6 +181,12 @@ class Effect(object):
         for k in list(self.__dict__.keys()):
             if k.startswith('@'):
                 self.__dict__.pop(k)
+
+    def getOriginalParameterValue(self, paramId):
+        origVal = self.__dict__.get('~' + paramId, None)
+        if origVal is not None:
+            return origVal
+        return self.__dict__.get(paramId, None)
 
     def getParameter(self):
         """Get parameter values and range definition
@@ -198,7 +206,7 @@ class Effect(object):
         for k in state.keys():
             val = state[k]
             definition['parameters'][k][0] = val
-        print(definition)
+        logger.info(definition)
         return definition
 
     @staticmethod

@@ -26,6 +26,8 @@ Recommended use:
 """
 
 import socket
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Client(object):
@@ -57,7 +59,7 @@ class Client(object):
 
     def _debug(self, m):
         if self.verbose:
-            print('    %s' % str(m))
+            logger.info('    %s' % str(m))
 
     def _ensure_connected(self):
         """Set up a connection if one doesn't already exist.
@@ -141,7 +143,7 @@ class Client(object):
             self._socket.sendall(message)
         except socket.error as e:
             self._debug('put_pixels: connection lost.  could not send pixels.')
-            print("Error on sending pixel data to FadeCandy Server: {}".format(e))
+            logger.error("Error on sending pixel data to FadeCandy Server: {}".format(e))
             self._socket = None
             return False
 

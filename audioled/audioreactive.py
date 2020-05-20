@@ -14,6 +14,9 @@ import audioled.dsp as dsp
 from audioled.effects import Effect
 import audioled.effect as effect
 
+import logging
+logger = logging.getLogger(__name__)
+
 # TODO: Adjustable Frequency for Bass and Melody
 # TODO: Single Band version
 class Spectrum(Effect):
@@ -460,7 +463,7 @@ class MovingLight(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("speed", [10.0, 1.0, 200.0, 1.0]),
-                ("dim_time", [1.0, 0.01, 10.0, 0.01]),
+                ("dim_time", [1.0, 0.001, 10.0, 0.001]),
                 ("lowcut_hz", [50.0, 0.0, 8000.0, 1.0]),
                 ("highcut_hz", [100.0, 0.0, 8000.0, 1.0]),
                 ("peak_filter", [1.0, 0.0, 10.0, .01]),
@@ -766,10 +769,10 @@ class FallingStars(Effect):
             controlArray.append(oneStarArray)
         return controlArray
 
-    def starControl(self, prob, peak):
+    def starControl(self, prob, intensity):
         for i in range(int(self.max_spawns)):
             if random.random() <= prob:
-                self.spawnStar(peak)
+                self.spawnStar(intensity)
         outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray, self._peakArray)
         return np.sum(outputArray, axis=0)
 
@@ -800,11 +803,22 @@ class FallingStars(Effect):
 
         # adjust probability according to peak of audio
         peak = np.max(y) * 1.0
+        maxpeak = 1
         try:
             peak = peak**self.peak_filter
+            maxpeak = maxpeak**self.peak_filter
         except Exception:
             peak = peak
-        prob = min(self.probability + peak, 1.0)
+            maxpeak = peak
+        def jrange(value0To1, minRange, maxRange):
+            value0To1 = min(max(value0To1, 0), 1)
+            return (maxRange-minRange)*value0To1 + minRange
+        def jvalue(minRange, maxRange, value):
+            if maxRange - minRange == 0:
+                return 0
+            return (value - minRange) / (maxRange - minRange)
+        prob = min(jvalue(0, maxpeak, self.probability) + peak, 1.0)
+        # logger.debug("spawn start {}".format(prob))
         if self._outputBuffer is not None:
             self._output = np.multiply(
                 color,
@@ -890,10 +904,10 @@ class Oscilloscope(Effect):
         cur_fps = 1.0 / dt
         if cur_fps > self.speed_fps:
             # Return to exit
-            # print("Met t= {}".format(self._t))
+            # logger.info("Met t= {}".format(self._t))
             return
 
-        # print("Process")
+        # logger.info("Process")
 
         # Init color input
         cols = int(self._num_pixels / self._num_rows)

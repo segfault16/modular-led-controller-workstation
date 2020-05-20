@@ -6,9 +6,50 @@ from collections import OrderedDict
 
 import numpy as np
 import pyaudio
+from ctypes import cdll, CFUNCTYPE, c_char_p, c_int
 
 from audioled.effects import Effect
 from audioled.effect import AudioBuffer
+
+import logging
+logger = logging.getLogger(__name__)
+alogger = logging.getLogger(__name__ + ".libasound")
+
+# Kudos https://stackoverflow.com/questions/7088672/pyaudio-working-but-spits-out-error-messages-each-time
+# From alsa-lib Git 3fd4ab9be0db7c7430ebd258f2717a976381715d
+# $ grep -rn snd_lib_error_handler_t
+# include/error.h:59:typedef void (*snd_lib_error_handler_t)(const char *file, int line, const char *function, int err, const char *fmt, ...) /* __attribute__ ((format (printf, 5, 6))) */;   # noqa E501
+# Define our error handler type
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p,)
+def py_error_handler(filename, line, function, err, fmt, *val):
+    formatted = None
+    if len(val) > 0:
+        try:
+            import StringIO
+
+            def sprintf(buf, fmt, *args):
+                buf.write(fmt % args)
+
+            buf = StringIO.StringIO()
+            sprintf(buf, fmt, val)
+            formatted = buf.getvalue()
+            alogger.debug("{}:{} {} {} ({})".format(filename, line, function, formatted, *val))
+        except Exception:
+            alogger.debug("Problem formatting libalsa message {}, arguments: {}".format(fmt, val))
+    else:
+        alogger.debug("{}:{} {} {}".format(filename, line, function, fmt))
+
+
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+
+try:
+    asound = cdll.LoadLibrary('libasound.so')
+    # Set error handler
+    asound.snd_lib_error_set_handler(c_error_handler)
+except OSError:
+    pass
+except Exception as e:
+    logger.error("Error setting logger for libasound: {}", e)
 
 
 def print_audio_devices():
@@ -48,11 +89,11 @@ class GlobalAudio():
         try:
             self.global_stream, GlobalAudio.sample_rate = self.stream_audio(device_index, chunk_rate, num_channels)
         except Exception as e:
-            print("!!! Fatal error in audio device !!!")
+            logger.error("!!! Fatal error in audio device !!!")
             traceback.print_tb(e.__traceback__)
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
-        chunk = np.fromstring(in_data, np.float32).astype(np.float)
+        chunk = np.frombuffer(in_data, np.float32).astype(np.float)
         GlobalAudio.buffer = chunk
         return (None, pyaudio.paContinue)
 
@@ -69,7 +110,7 @@ class GlobalAudio():
         p = pyaudio.PyAudio()
         defaults = p.get_default_host_api_info()
 
-        print("Using audio device {}".format(device_index))
+        logger.info("Using audio device {}".format(device_index))
         device_info = p.get_device_info_by_index(device_index)
 
         if device_info['maxInputChannels'] == 0:
@@ -88,7 +129,7 @@ class GlobalAudio():
                             frames_per_buffer=chunk_length,
                             stream_callback=self._audio_callback)
             stream.start_stream()
-            print("Started stream on device {}, fs: {}, chunk_length: {}".format(device_index, frameRate, chunk_length))
+            logger.info("Started stream on device {}, fs: {}, chunk_length: {}".format(device_index, frameRate, chunk_length))
             GlobalAudio.buffer = np.zeros(chunk_length)
         except OSError as e:
             if retry == 5:
@@ -96,7 +137,7 @@ class GlobalAudio():
                 err += 'Check your operating system\'s audio device configuration. '
                 err += 'Audio device information: \n'
                 err += str(device_info)
-                print(err)
+                logger.error(err)
                 raise e
             time.sleep(retry)
             return self._open_input_stream(chunk_length, device_index=device_index, channels=channels, retry=retry + 1)
@@ -104,10 +145,10 @@ class GlobalAudio():
 
     def stream_audio(self, device_index=None, chunk_rate=60, channels=1):
         if device_index == -1:
-            print("Audio device disabled by device_index -1.")
+            logger.info("Audio device disabled by device_index -1.")
             return None, None
         if device_index is None:
-            print("No device_index for audio given. Using default.")
+            logger.info("No device_index for audio given. Using default.")
             p = pyaudio.PyAudio()
             defaults = p.get_default_host_api_info()
             p.terminate()
@@ -145,7 +186,7 @@ class AudioInput(Effect):
         self._outBuffer = []
         self._autogain_perc = None
         self._cur_gain = 1.0
-        print("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
+        logger.debug("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
 
     def numOutputChannels(self):
         return self.num_channels
@@ -223,10 +264,11 @@ class AudioInput(Effect):
                 self._cur_gain = 1. / maxVal
             elif self._cur_gain < self.autogain_max:
                 self._cur_gain = min(self.autogain_max, self._cur_gain * self._autogain_perc)
-            # print("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
+            # logger.info("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
         for i in range(0, self.num_channels):
             # layout for multiple channel is interleaved:
             # 00 01 .. 0n 10 11 .. 1n
             self._outBuffer[i].audio = self._cur_gain * self._buffer[i::self.num_channels]
+            # TODO: Calculate audio stats per channel: peak, rms, FFT buckets for remote display
             self._outputBuffer[i] = self._outBuffer[i]
-            # print("{}: {}".format(i, self._outputBuffer[i]))
+            # logger.info("{}: {}".format(i, self._outputBuffer[i]))

@@ -11,6 +11,10 @@ verify_ssl = true
 [dev-packages]
 flake8 = "*"
 yapf = "*"
+pbr = "*"
+pyinstaller = "*"
+pyupdater = {editable = true, git = "https://github.com/segfault16/PyUpdater.git", ref = "3.1.2-pre"}
+pytest = "*"
 
 [packages]
 numpy = "*"
@@ -23,6 +27,7 @@ apscheduler = "*"
 pillow = "*"
 rpi-ws281x = {version = "*",sys_platform = "== 'linux'"}
 pyaudio = {editable = true,git = "https://github.com/segfault16/pyAudio.git"}
+pybleno = "*"
 
 [requires]
 python_version = "3.7"

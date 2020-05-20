@@ -6,19 +6,65 @@ import importlib
 import inspect
 import json
 import os.path
+import sys
 import threading
 import time
 import multiprocessing
 import traceback
 from timeit import default_timer as timer
+import logging
+import mido
+import signal
+from functools import wraps
 
 import jsonpickle
 import numpy as np
 from flask import Flask, abort, jsonify, request, send_from_directory, redirect, send_file
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers import interval
 from werkzeug.serving import is_running_from_reloader
 
-from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project
+from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project, version
+from audioled_controller import midi_full
+
+# configure logging here
+orig_factory = logging.getLogRecordFactory()
+
+
+def record_factory(*args, **kwargs):
+    record = orig_factory(*args, **kwargs)
+    record.sname = record.name[-10:] if len(record.name) > 10 else record.name
+    if record.threadName and len(record.threadName) > 10:
+        record.sthreadName = record.threadName[:10]
+    elif not record.threadName:
+        record.sthreadName = ""
+    else:
+        record.sthreadName = record.threadName
+    return record
+
+logging.setLogRecordFactory(record_factory)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
+logging.debug("Global debug log enabled")
+# Adjust loglevels 
+logging.getLogger('apscheduler').setLevel(logging.ERROR)
+logging.getLogger('audioled').setLevel(logging.DEBUG)
+logging.getLogger('audioled_controller').setLevel(logging.DEBUG)
+logging.getLogger('audioled_controller.bluetooth').setLevel(logging.INFO)
+logging.getLogger('root').setLevel(logging.INFO)
+logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO)  # Silence!
+logging.getLogger('pyupdater').setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+libnames = ['audioled_controller.bluetooth']
+for libname in libnames:
+    try:
+        lib = __import__(libname)
+    except Exception as e:
+        logger.error("Import for bluetooth failed. {}".format(e))
+        logger.debug("Error importing bluetooth", exc_info=1)
+    else:
+        globals()[libname] = lib
 
 proj = None  # type: project.Project
 default_values = {}
@@ -45,13 +91,59 @@ count = 0
 # def home():
 #     return app.send_static_file('index.html')
 
+preview_lock = multiprocessing.Lock()
+
+stop_lock = multiprocessing.Lock()
+
+midiController = []
+midiBluetooth = None  # type: audioled_controller.bluetooth.BluetoothMidiLELevelCharacteristic # noqa: F821
+
+# def signal_handler(sig, frame):
+#     global stop_lock
+#     stop_lock.acquire()
+#     print("Received stop signal")
+#     global stop_signal
+
+#     if stop_signal is True:
+#         print("Already exiting")
+#         return
+#     stop_signal = True
+#     global serverconfig
+#     proj = serverconfig.getActiveProject()
+#     if proj is not None:
+#         proj.stopProcessing()
+#     stop_lock.release()
+#     sys.exit(0)
+
+
+
+def lock_preview(fn):
+    @wraps(fn)
+    def wrapper(*arg, **kwarg):
+        print("Wrapped {} {}".format(arg, kwarg))
+        result = None
+        try:
+            preview_lock.acquire()
+            result = fn(*arg, **kwarg)
+        except Exception as e:
+            print(e)
+        finally:
+            preview_lock.release()
+        return result
+
+    return wrapper
+
 
 def multiprocessing_func(sc):
     sc.store()
 
 
-def create_app():
+def create_app(midiAdvertiseName=None):
+    logger.info("Creating app")
     app = Flask(__name__)
+    logger.debug("App created")
+
+    advName = midiAdvertiseName
 
     def store_configuration():
         try:
@@ -63,26 +155,67 @@ def create_app():
             serverconfig.updateMd5HashFromFiles()
             serverconfig.postStore()
         except Exception:
-            print("ERROR on storing configuration")
+            app.logger.error("ERROR on storing configuration")
+
+    def check_midi():
+        app.logger.info("Checking midi configuration {}".format(advName))
+        # global midi
+        # if midi is None:
+        #     try:
+        #         import mido
+        #     except ImportError as e:
+        #         logger.error('Unable to import the mido library')
+        #         logger.error('You can install this library with `pip install mido`')
+        #     try:
+        #         for name in mido.get_input_names():
+        #             logger.info("Checking device {}".format(name))
+        #             if name == advName:
+        #                 midi = mido.open_input(advName)
+        #                 logger.info("Connected to midi device {}".format(advName))
+        #     except OSError as e:
+        #         midi = mido.open_input()
+        #         logger.info("Not connected midi device {}".format(advName))
+        #     pass
 
     sched = BackgroundScheduler(daemon=True)
-    sched.add_job(store_configuration, 'interval', seconds=5)
+    trigger = interval.IntervalTrigger(seconds=5)
+    sched.add_job(store_configuration, trigger=trigger, id='store_config_job', replace_existing=True)
+    # sched.add_job(check_midi, 'interval', seconds=1)
     sched.start()
 
     def interrupt():
-        print('cancelling LED thread')
+        global stop_lock
+        global stop_signal
+        stop_signal = True
+        stop_lock.acquire()
+        app.logger.info('cancelling LED thread')
         global ledThread
         global proj
         # stop_signal = True
         try:
-            proj.stopProcessing()
             ledThread.join()
-        except RuntimeError:
-            pass
+        except Exception as e:
+            app.logger.error("LED thread cancelled: {}".format(e))
 
-        print('LED thread cancelled')
-        sched.shutdown()
-        print('Background scheduler shutdown')
+        try:
+            proj.stopProcessing()
+        except Exception as e:
+            app.logger.error("LED thread cancelled: {}".format(e))
+
+        try:
+            sched.shutdown()
+            app.logger.debug('Background scheduler shutdown')
+        except Exception as e:
+            app.logger.error("LED thread cancelled: {}".format(e))
+
+        stop_lock.release()
+
+
+    def sigStop(sig, frame):
+        print("Interrupt")
+        interrupt()
+        print("Return from interrupt")
+        sys.exit(1)
 
     @app.after_request
     def add_header(response):
@@ -98,16 +231,18 @@ def create_app():
         return send_from_directory('resources', path)
 
     @app.route('/slot/<int:slotId>/nodes', methods=['GET'])
+    # @lock_preview
     def slot_slotId_nodes_get(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         nodes = [node for node in fg.getNodes()]
         return jsonpickle.encode(nodes)
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['GET'])
+    # @lock_preview
     def slot_slotId_node_uid_get(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return jsonpickle.encode(node)
@@ -115,9 +250,10 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['DELETE'])
+    @lock_preview
     def slot_slotId_node_uid_delete(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             fg.removeEffectNode(node.uid)
@@ -126,22 +262,24 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>', methods=['PUT'])
+    @lock_preview
     def slot_slotId_node_uid_update(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         try:
-            print(request.json)
+            app.logger.debug(request.json)
             node = fg.updateNodeParameter(nodeUid, request.json)
             return jsonpickle.encode(node)
         except StopIteration:
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>/parameterDefinition', methods=['GET'])
+    # @lock_preview
     def slot_slotId_node_uid_parameter_get(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(node.effect.getParameterDefinition())
@@ -149,9 +287,10 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>/modulateableParameters', methods=['GET'])
+    # @lock_preview
     def slot_slotId_node_uid_parameterModulations_get(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(node.effect.getModulateableParameters())
@@ -159,9 +298,11 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node/<nodeUid>/effect', methods=['GET'])
+    # @lock_preview
     def node_uid_effectname_get(slotId, nodeUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        print("Getting slot {}".format(slotId))
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             node = next(node for node in fg.getNodes() if node.uid == nodeUid)
             return json.dumps(getFullClassName(node.effect))
@@ -169,14 +310,15 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/node', methods=['POST'])
+    @lock_preview
     def slot_slotId_node_post(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         full_class_name = request.json[0]
         parameters = request.json[1]
-        print(parameters)
+        app.logger.debug(parameters)
         module_name, class_name = None, None
         try:
             module_name, class_name = getModuleAndClassName(full_class_name)
@@ -186,24 +328,26 @@ def create_app():
         instance = class_(**parameters)
         node = None
         if module_name == 'audioled.modulation':
-            print("Adding modulation source")
+            app.logger.info("Adding modulation source")
             node = fg.addModulationSource(instance)
         else:
-            print("Adding effect node")
+            app.logger.info("Adding effect node")
             node = fg.addEffectNode(instance)
         return jsonpickle.encode(node)
 
     @app.route('/slot/<int:slotId>/connections', methods=['GET'])
+    # @lock_preview
     def slot_slotId_connections_get(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         connections = [con for con in fg.getConnections()]
         return jsonpickle.encode(connections)
 
     @app.route('/slot/<int:slotId>/connection', methods=['POST'])
+    @lock_preview
     def slot_slotId_connection_post(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         json = request.json
@@ -217,9 +361,10 @@ def create_app():
         return jsonpickle.encode(connection)
 
     @app.route('/slot/<int:slotId>/connection/<connectionUid>', methods=['DELETE'])
+    @lock_preview
     def slot_slotId_connection_uid_delete(slotId, connectionUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             connection = next(connection for connection in fg.getConnections() if connection.uid == connectionUid)
             fg.removeConnection(connection.uid)
@@ -228,16 +373,18 @@ def create_app():
             abort(404, "Node not found")
 
     @app.route('/slot/<int:slotId>/modulationSources', methods=['GET'])
+    # @lock_preview
     def slot_slotId_modulationSources_get(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         mods = [mod for mod in fg.getModulationSources()]
         return jsonpickle.encode(mods)
 
     @app.route('/slot/<int:slotId>/modulationSource/<modulationSourceUid>', methods=['DELETE'])
+    @lock_preview
     def slot_slotId_modulationSourceUid_delete(slotId, modulationSourceUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             mod = next(mod for mod in fg.getModulationSources() if mod.uid == modulationSourceUid)
             fg.removeModulationSource(mod.uid)
@@ -246,22 +393,24 @@ def create_app():
             abort(404, "Modulation Source not found")
 
     @app.route('/slot/<int:slotId>/modulationSource/<modulationUid>', methods=['PUT'])
+    @lock_preview
     def slot_slotId_modulationSourceUid_update(slotId, modulationUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         try:
-            print(request.json)
+            app.logger.debug(request.json)
             mod = fg.updateModulationSourceParameter(modulationUid, request.json)
             return jsonpickle.encode(mod)
         except StopIteration:
             abort(404, "Modulation not found")
 
     @app.route('/slot/<int:slotId>/modulationSource/<modulationSourceUid>', methods=['GET'])
+    # @lock_preview
     def slot_slotId_modulationSourceUid_get(slotId, modulationSourceUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             mod = next(mod for mod in fg.getModulationSources() if mod.uid == modulationSourceUid)
             return jsonpickle.encode(mod)
@@ -269,9 +418,10 @@ def create_app():
             abort(404, "Modulation Source not found")
 
     @app.route('/slot/<int:slotId>/modulations', methods=['GET'])
+    # @lock_preview
     def slot_slotId_modulations_get(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         modSourceId = request.args.get('modulationSourceUid', None)
         modDestinationId = request.args.get('modulationDestinationUid', None)
         mods = [mod for mod in fg.getModulations()]
@@ -281,13 +431,14 @@ def create_app():
         if modDestinationId is not None:
             # for specific modulation destination".format(modDestinationId))
             mods = [mod for mod in mods if mod.targetNode.uid == modDestinationId]
-
-        return jsonpickle.encode(mods)
+        encVal = jsonpickle.encode(mods)
+        return encVal
 
     @app.route('/slot/<int:slotId>/modulation', methods=['POST'])
+    @lock_preview
     def slot_slotId_modulation_post(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         json = request.json
@@ -295,9 +446,10 @@ def create_app():
         return jsonpickle.encode(newMod)
 
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['GET'])
+    # @lock_preview
     def slot_slotId_modulationUid_get(slotId, modulationUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             mod = next(mod for mod in fg.getModulations() if mod.uid == modulationUid)
             return jsonpickle.encode(mod)
@@ -305,22 +457,24 @@ def create_app():
             abort(404, "Modulation not found")
 
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['PUT'])
+    @lock_preview
     def slot_slotId_modulationUid_update(slotId, modulationUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         if not request.json:
             abort(400)
         try:
-            print(request.json)
+            app.logger.debug(request.json)
             mod = fg.updateModulationParameter(modulationUid, request.json)
             return jsonpickle.encode(mod)
         except StopIteration:
             abort(404, "Modulation not found")
 
     @app.route('/slot/<int:slotId>/modulation/<modulationUid>', methods=['DELETE'])
+    @lock_preview
     def slot_slotId_modulationUid_delete(slotId, modulationUid):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         try:
             mod = next(mod for mod in fg.getModulations() if mod.uid == modulationUid)
             if mod is not None:
@@ -332,9 +486,10 @@ def create_app():
             abort(404, "Modulation not found")
 
     @app.route('/slot/<int:slotId>/configuration', methods=['GET'])
+    # @lock_preview
     def slot_slotId_configuration_get(slotId):
         global proj
-        fg = proj.getSlot(slotId)  # type: filtergraph.FilterGraph
+        fg = proj.previewSlot(slotId)  # type: filtergraph.FilterGraph
         config = jsonpickle.encode(fg)
         return config
 
@@ -377,7 +532,7 @@ def create_app():
         except RuntimeError:
             abort(403)
         class_ = getattr(importlib.import_module(module_name), class_name)
-        argspec = inspect.getargspec(class_.__init__)
+        argspec = inspect.getfullargspec(class_.__init__)
         if argspec.defaults is not None:
             argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
         else:
@@ -387,7 +542,7 @@ def create_app():
             result.update({key: None for key in argspec.args[1:len(argspec.args) - len(argspec.defaults)]})  # 1 removes self
 
         result.update({key: default_values[key] for key in default_values if key in result})
-        print(result)
+        app.logger.debug(result)
         return jsonify(result)
 
     @app.route('/effect/<full_class_name>/parameter', methods=['GET'])
@@ -450,7 +605,7 @@ def create_app():
         if not request.json:
             abort(400)
         value = request.json['slot']
-        # print("Activating slot {}".format(value))
+        app.logger.info("Activating scene {}".format(value))
         proj.activateScene(value)
         # proj.previewSlot(value)
         return "OK"
@@ -458,9 +613,9 @@ def create_app():
     @app.route('/project/activeScene', methods=['GET'])
     def project_activeSlot_get():
         global proj
-        print(proj.outputSlotMatrix)
+        app.logger.debug(proj.outputSlotMatrix)
         return jsonify({
-            'activeSlot': proj.activeSlotId,
+            'activeSlot': proj.previewSlotId,  # TODO: Change in FE
             'activeScene': proj.activeSceneId,
         })
 
@@ -470,16 +625,18 @@ def create_app():
         if not request.json:
             abort(400)
         value = request.json
-        print(value)
+        app.logger.debug(value)
         proj.setSceneMatrix(value)
         return "OK"
 
     @app.route('/project/activateSlot', methods=['POST'])
+    # @lock_preview
     def project_activateSlot_post():
         global proj
         if not request.json:
             abort(400)
         value = request.json['slot']
+        app.logger.info("Activating slot {}".format(value))
         proj.previewSlot(value)
         return "OK"
 
@@ -500,17 +657,17 @@ def create_app():
         global serverconfig
         global proj
         if 'file' not in request.files:
-            print("No file in request")
+            app.logger.warn("No file in request")
             abort(400)
         file = request.files['file']
         if file.filename == '':
-            print("File has no filename")
+            app.logger.warn("File has no filename")
             abort(400)
         if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ['gif']:
-            print("Adding asset to proj {}".format(proj.id))
+            app.logger.info("Adding asset to proj {}".format(proj.id))
             filename = serverconfig.addProjectAsset(proj.id, file)
             return jsonify({'filename': filename})
-        print("Unknown content for asset: {}".format(file.filename))
+        app.logger.error("Unknown content for asset: {}".format(file.filename))
         abort(400)
 
     @app.route('/projects', methods=['GET'])
@@ -541,7 +698,7 @@ def create_app():
         global serverconfig
         proj = serverconfig.getProject(uid)
         if proj is not None:
-            print("Exporting project {}".format(uid))
+            app.logger.info("Exporting project {}".format(uid))
             return jsonpickle.encode(proj)
         abort(404)
 
@@ -558,13 +715,14 @@ def create_app():
         if not request.json:
             abort(400)
         uid = request.json['project']
-        print("Activating project {}".format(uid))
+        app.logger.info("Activating project {}".format(uid))
         try:
             proj = serverconfig.activateProject(uid)
         except Exception as e:
-            print("Error opening project: {}".format(e))
+            app.logger.error("Error opening project: {}".format(e))
             if serverconfig._activeProject is None:
-                serverconfig.initDefaultProject()
+                newProj = serverconfig.initDefaultProject()
+                serverconfig.activateProject(newProj.id)
                 abort(500, "Could not active project. No other project found. Initializing default.")
             else:
                 abort(500, "Project could not be activated. Reason: {}".format(e))
@@ -586,17 +744,17 @@ def create_app():
         try:
             serverconfig.setConfiguration(request.json)
         except RuntimeError as e:
-            print("ERROR updating configuration: {}".format(e))
+            app.logger.error("ERROR updating configuration: {}".format(e))
             abort(400, str(e))
         return jsonify(serverconfig.getFullConfiguration())
 
     @app.route('/remote/brightness', methods=['POST'])
     def remote_brightness_post():
-        global device
+        global proj
         value = int(request.args.get('value'))
         floatVal = float(value / 100)
-        print("Setting brightness: {}".format(floatVal))
-        device.setBrightness(floatVal)
+        app.logger.info("Setting brightness: {}".format(floatVal))
+        proj.setBrightness(floatVal)
         return "OK"
 
     @app.route('/remote/favorites/<id>', methods=['POST'])
@@ -606,10 +764,10 @@ def create_app():
         if os.path.isfile(filename):
             with open(filename, "r") as f:
                 fg = jsonpickle.decode(f.read())
-                proj.setFiltergraphForSlot(proj.activeSlotId, fg)
+                proj.setFiltergraphForSlot(proj.previewSlotId, fg)
                 return "OK"
         else:
-            print("Favorite not found: {}".format(filename))
+            app.logger.info("Favorite not found: {}".format(filename))
 
         abort(404)
 
@@ -624,6 +782,8 @@ def create_app():
         global count
         global record_timings
         dt = 0
+        if stop_signal:
+            return
         try:
             with dataLock:
                 last_time = current_time
@@ -633,7 +793,6 @@ def create_app():
                 if event_loop is None:
                     event_loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(event_loop)
-
                 proj.update(dt, event_loop)
                 proj.process()
                 # clear errors (if any have occured in the current run, we wouldn't reach this)
@@ -641,13 +800,13 @@ def create_app():
 
         except filtergraph.NodeException as ne:
             if count == 100:
-                print("NodeError in {}: {}".format(ne.node.effect, ne))
-                print("Skipping next 100 errors...")
+                app.logger.error("NodeError in {}: {}".format(ne.node.effect, ne))
+                app.logger.info("Skipping next 100 errors...")
                 count = 0
             errors.clear()
             errors.append(ne)
         except Exception as e:
-            print("Unknown error: {}".format(e))
+            app.logger.error("Unknown error: {}".format(e))
             traceback.print_tb(e.__traceback__)
         finally:
             # Set the next thread to happen
@@ -655,10 +814,10 @@ def create_app():
             timeToWait = max(POOL_TIME, 0.01 - real_process_time)
             if count == 100:
                 if record_timings:
-                    proj.getSlot(proj.activeSlotId).printProcessTimings()
-                    proj.getSlot(proj.activeSlotId).printUpdateTimings()
-                    print("Process time: {}".format(real_process_time))
-                    print("Waiting {}".format(timeToWait))
+                    # proj.previewSlot(proj.activeSlotId).printProcessTimings() # TODO:
+                    # proj.previewSlot(proj.activeSlotId).printUpdateTimings() # TODO:
+                    app.logger.info("Process time: {}".format(real_process_time))
+                    app.logger.info("Waiting {}".format(timeToWait))
                 count = 0
             if not stop_signal:
                 ledThread = threading.Timer(timeToWait, processLED, ())
@@ -672,7 +831,7 @@ def create_app():
         # Create your thread
         current_time = timer()
         ledThread = threading.Timer(POOL_TIME, processLED, ())
-        print('starting LED thread')
+        app.logger.info('starting LED thread')
         ledThread.start()
 
     # Initiate
@@ -681,6 +840,8 @@ def create_app():
         startLEDThread()
     # When you kill Flask (SIGTERM), clear the trigger for the next thread
     atexit.register(interrupt)
+    signal.signal(signal.SIGINT, sigStop)
+    signal.signal(signal.SIGUSR1, sigStop)
     return app
 
 
@@ -701,8 +862,23 @@ def strandTest(dev, num_pixels):
         t = t + dt
         time.sleep(dt)
 
+def handleMidiIn(msg: mido.Message):
+    global proj
+    global midiController
+    global serverconfig
+    for c in midiController:
+        c = c  # type: midi_full.MidiProjectController
+        c.handleMidiMsg(msg, serverconfig, proj)
+
+def handleMidiOut(msg: mido.Message):
+    global midiBluetooth
+    if midiBluetooth is not None:
+        logger.debug("Writing midi {}".format(msg))
+        midiBluetooth.sendMidi(msg)
+
 
 if __name__ == '__main__':
+    logger.info("Running MOLECOLE version {}".format(version.get_version()))
     parser = runtimeconfiguration.commonRuntimeArgumentParser()
     # Adjust defaults from commonRuntimeArgumentParser
     parser.set_defaults(
@@ -713,7 +889,7 @@ if __name__ == '__main__':
     runtimeconfiguration.addServerRuntimeArguments(parser)
 
     # print audio information
-    print("The following audio devices are available:")
+    logger.info("The following audio devices are available:")
     audio.print_audio_devices()
 
     args = parser.parse_args()
@@ -724,13 +900,13 @@ if __name__ == '__main__':
         config_location = os.path.join(args.config_location, '.ledserver')
 
     if args.no_conf:
-        print("Using in-memory configuration")
+        logger.info("Using in-memory configuration")
         serverconfig = serverconfiguration.ServerConfiguration()
     else:
-        print("Using configuration from {}".format(config_location))
+        logger.info("Using configuration from {}".format(config_location))
         serverconfig = serverconfiguration.PersistentConfiguration(config_location, args.no_store)
 
-    print("Applying arguments")
+    logger.info("Applying arguments")
 
     # Update num pixels
     if args.num_pixels is not None:
@@ -763,7 +939,7 @@ if __name__ == '__main__':
 
     # Audio
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
-        print("Overriding Audio device with device index {}".format(
+        logger.info("Overriding Audio device with device index {}".format(
             serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
         audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
         # Initialize global audio
@@ -777,13 +953,26 @@ if __name__ == '__main__':
 
     # Initialize project
     proj = serverconfig.getActiveProjectOrDefault()
+    proj.activate()
 
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
-
-    app = create_app()
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH):
+        logger.debug("Adding bluetooth server to the mix")
+        midiAdvertiseName = serverconfig.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH_NAME)
+        try:
+            from audioled_controller import bluetooth
+            fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
+            midiController.append(fullMidiController)
+            midiBluetooth = bluetooth.MidiBluetoothService(callback=handleMidiIn)
+        except Exception as e:
+            logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
+            logger.error(e)
+            logger.debug("Bluetooth error", exc_info=1)
+    app = create_app(midiAdvertiseName)
     app.run(debug=False, host="0.0.0.0", port=args.port)
-    print("End of server main")
+    
+    logger.info("End of server main")
     proj.stopProcessing()
     stop_signal = True
