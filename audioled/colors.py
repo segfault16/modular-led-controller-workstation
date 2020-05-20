@@ -9,6 +9,9 @@ from PIL import Image
 
 from audioled.effect import Effect
 
+import logging
+logger = logging.getLogger(__name__)
+
 blend_modes = ['lightenOnly', 'darkenOnly', 'addition', 'multiply', 'screen', 'overlay', 'softLight']
 blend_mode_default = 'lightenOnly'
 

@@ -13,6 +13,9 @@ from audioled.effect import Effect
 
 from PIL import Image, ImageOps
 
+import logging
+logger = logging.getLogger(__name__)
+
 wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
 wave_mode_default = 'sin'
 sortby = ['red', 'green', 'blue', 'brightness']
@@ -34,12 +37,13 @@ class SwimmingPool(Effect):
         return \
             "Generates a wave effect to look like the reflection on the bottom of a swimming pool."
 
-    def __init__(self, num_waves=30, scale=0.2, wavespread_low=30, wavespread_high=70, max_speed=30):
+    def __init__(self, num_waves=30, scale=0.2, wavespread_low=30, wavespread_high=70, max_speed=30, min_speed=10):
         self.num_waves = num_waves
         self.scale = scale
         self.wavespread_low = wavespread_low
         self.wavespread_high = wavespread_high
         self.max_speed = max_speed
+        self.min_speed = min_speed
         self.__initstate__()
 
     def __initstate__(self):
@@ -61,6 +65,7 @@ class SwimmingPool(Effect):
                 ("wavespread_low", [30, 1, 100, 1]),
                 ("wavespread_high", [70, 50, 150, 1]),
                 ("max_speed", [30, 1, 200, 1]),
+                ("min_speed", [30, 1, 200, 1]),
             ])
         }
         return definition
@@ -73,7 +78,8 @@ class SwimmingPool(Effect):
                 "scale": "Scales the brightness of the waves.",
                 "wavespread_low": "Minimal spread of the randomly generated waves.",
                 "wavespread_high": "Maximum spread of the randomly generated waves.",
-                "max_speed": "Maximum movement speed of the waves."
+                "max_speed": "Maximum movement speed of the waves.",
+                "min_speed": "Minimum movement speed of the waves."
             }
         }
         return help
@@ -91,8 +97,9 @@ class SwimmingPool(Effect):
         return _output.clip(0.0, 255.0)
 
     def _CreateWaves(self, num_waves, wavespread_low=10, wavespread_high=50, max_speed=30):
+        num_waves = int(num_waves)
         _WaveArray = []
-        _wavespread = np.random.randint(wavespread_low, wavespread_high, num_waves)
+        _wavespread = np.random.randint(int(wavespread_low), int(wavespread_high), num_waves)
         _WaveArraySpecSpeed = np.random.randint(-max_speed, max_speed, num_waves)
         _WaveArraySpecHeight = np.random.rand(num_waves)
         for i in range(0, num_waves):
@@ -114,7 +121,7 @@ class SwimmingPool(Effect):
             self._Wave = None
             self._WaveSpecSpeed = None
 
-        if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < self.num_waves:
+        if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < int(self.num_waves):
 
             self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low, self.wavespread_high,
                                                                 self.max_speed)
@@ -123,7 +130,11 @@ class SwimmingPool(Effect):
         if self._rotate_counter > 30:
             self._Wave = np.roll(self._Wave, 1, axis=0)
             self._WaveSpecSpeed = np.roll(self._WaveSpecSpeed, 1)
-            speed = np.random.randint(-self.max_speed, self.max_speed)
+            if self.max_speed > self.min_speed:
+                speed = np.random.randint(self.min_speed, self.max_speed)
+            else:
+                speed = np.random.randint(-self.max_speed, self.max_speed)
+            speed = speed * (-1 if np.random.randint(2) == 0 else 1)
             spread = np.random.randint(self.wavespread_low, self.wavespread_high)
             height = np.random.rand()
             wave = self._SinArray(spread, height)
@@ -140,14 +151,19 @@ class SwimmingPool(Effect):
             color = self._inputBuffer[0]
 
         all_waves = np.zeros(self._num_pixels)
-        for i in range(0, self.num_waves):
+        for i in range(0, int(self.num_waves)):
             fact = 1.0
             if i == 0:
                 fact = (self._rotate_counter / 30)
-            if i == self.num_waves - 1:
+            if i == int(self.num_waves) - 1:
                 fact = (1.0 - self._rotate_counter / 30)
             if i < len(self._Wave) and i < len(self._WaveSpecSpeed):
-                step = np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=0) * self.scale * fact
+                step = sp.ndimage.interpolation.shift(
+                    self._Wave[i],
+                    self._t * self._WaveSpecSpeed[i],
+                    mode='wrap',
+                    prefilter=True) * self.scale * fact
+                # step = np.roll(self._Wave[i], int(self._t * self._WaveSpecSpeed[i]), axis=0) * self.scale * fact
                 all_waves += step
 
         self._outputBuffer[0] = np.multiply(color, all_waves).clip(0, 255.0)
@@ -429,8 +445,8 @@ class MidiKeyboard(Effect):
         try:
             import mido
         except ImportError as e:
-            print('Unable to import the mido library')
-            print('You can install this library with `pip install mido`')
+            logger.error('Unable to import the mido library')
+            logger.error('You can install this library with `pip install mido`')
             raise e
         try:
             self._midi.close()
@@ -438,10 +454,11 @@ class MidiKeyboard(Effect):
             pass
         try:
             self._midi = mido.open_input(self.midiPort)
-        except OSError:
+        except OSError as e:
             self._midi = mido.open_input()
             self.midiPort = self._midi.name
-            print(self.midiPort)
+            logger.info("Not connected midi device {}".format(self.midiPort))
+            logger.error(e)
         self._on_notes = []
 
     def numInputChannels(self):
@@ -456,11 +473,11 @@ class MidiKeyboard(Effect):
             import mido
             return mido.get_input_names()
         except ImportError:
-            print('Unable to import the mido library')
-            print('You can install this library with `pip install mido`')
+            logger.error('Unable to import the mido library')
+            logger.error('You can install this library with `pip install mido`')
             return []
         except Exception:
-            print("Error while getting midi inputs")
+            logger.error("Error while getting midi inputs")
             return []
 
     @staticmethod
@@ -1475,7 +1492,7 @@ class GIFPlayer(Effect):
         try:
             self._gif = Image.open(adjustedFile)
         except Exception:
-            print("Cannot open file {}".format(adjustedFile))
+            logger.error("Cannot open file {}".format(adjustedFile))
 
     async def update(self, dt):
         await super().update(dt)

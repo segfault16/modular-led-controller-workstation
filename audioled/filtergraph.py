@@ -4,10 +4,14 @@ import traceback
 import jsonpickle
 from timeit import default_timer as timer
 from typing import List
+import logging
 
 from audioled import modulation
 from audioled import devices
 from audioled import effect
+from audioled import colors
+
+logger = logging.getLogger(__name__)
 
 
 class NodeException(Exception):
@@ -16,6 +20,7 @@ class NodeException(Exception):
         self.error = error
         self.message = message
         super(NodeException, self).__init__(message)
+
 
 class Node(object):
     def __init__(self, effect):
@@ -98,9 +103,9 @@ class Connection(object):
         state['to_node_channel'] = self.toChannel
         state['uid'] = self.uid
         return state
-    
+
     def __setstate__(self, dict):
-        print("Not pickable")
+        logger.info("Not pickable")
 
 
 class ModulationSourceNode(object):
@@ -164,6 +169,34 @@ class Modulation(object):
         newOffset = curOffset + newOffset
         self.targetEffect.setParameterOffset(self.targetParameter, self.targetEffect.getParameterDefinition(), newOffset)
         self._lastValue = curValue
+
+
+class ColorChannelModulation(Modulation):
+    def propagate(self):
+        if self.modulationSource is None or self.targetEffect is None:
+            return
+        extColorCtrl = None
+        if isinstance(self.modulationSource.modulator, modulation.ExternalColourAController):
+            extColorCtrl = self.modulationSource.modulator
+        elif isinstance(self.modulationSource.modulator, modulation.ExternalColourBController):
+            extColorCtrl = self.modulationSource.modulator
+
+        if extColorCtrl is None:
+            logger.debug("Could not find external colour controller {}".format(self.modulationSource.modulator))
+            return
+
+        extColorCtrl = extColorCtrl  # type: modulation.ExternalColourAController
+        amount = extColorCtrl.getValue()
+        colorValue = extColorCtrl.getValue(self.targetParameter)  # r, g, b values
+        # Propagate change
+        # calculate and propagate new offset for this parameter
+        if isinstance(self.targetEffect, colors.StaticRGBColor):
+            rgbEffect = self.targetEffect  # type: colors.StaticRGBColor
+            old = rgbEffect.getOriginalParameterValue(self.targetParameter)
+            if colorValue is not None:
+                newOffset = old - colorValue
+                newOffset = amount * self.amount * newOffset  # multiply with amount from modulationsource and modulation
+                rgbEffect.setParameterOffset(self.targetParameter, rgbEffect.getParameterDefinition(), -newOffset / 255.0)
 
 
 class Timing(object):
@@ -230,7 +263,7 @@ class FilterGraph(Updateable):
         Keyword Arguments:
             event_loop {[type]} -- Optional event loop to process (default: {asyncio.get_event_loop()})
         """
-        
+
         if self._outputNode is None:
             # Pass the update, since no num_pixels can be provided to the effects
             return
@@ -296,19 +329,19 @@ class FilterGraph(Updateable):
 
     def printUpdateTimings(self):
         if self._updateTimings is None:
-            print("No metrics collected")
+            logger.info("No metrics collected")
             return
-        print("Update timings:")
+        logger.info("Update timings:")
         for key, val in self._updateTimings.items():
-            print("{0:30s}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(key[0:30], val._min, val._max, val._avg))
+            logger.info("{0:30s}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(key[0:30], val._min, val._max, val._avg))
 
     def printProcessTimings(self):
         if self._processTimings is None:
-            print("No metrics collected")
+            logger.info("No metrics collected")
             return
-        print("Process timings:")
+        logger.info("Process timings:")
         for key, val in self._processTimings.items():
-            print("{0:30s}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(
+            logger.info("{0:30s}: min {1:1.8f}, max {2:1.8f}, avg {3:1.8f}".format(
                 str(key.effect)[0:30], val._min, val._max, val._avg))
 
     def addEffectNode(self, effectToAdd: effect.Effect):
@@ -341,10 +374,12 @@ class FilterGraph(Updateable):
         """
         node = next(node for node in self.__filterNodes if node.uid == nodeUid)
         effectToRemove = node.effect
-        
+
         # Remove connections
-        connections = [con for con in self.__filterConnections if con.fromNode.effect == effectToRemove
-                       or con.toNode.effect == effectToRemove]
+        connections = [
+            con for con in self.__filterConnections
+            if con.fromNode.effect == effectToRemove or con.toNode.effect == effectToRemove
+        ]
         for con in connections:
             self.__filterConnections.remove(con)
             if self._onConnectionRemoved is not None:
@@ -403,7 +438,7 @@ class FilterGraph(Updateable):
                 self._onConnectionRemoved(con)
             con.toNode._incomingConnections.remove(con)
         else:
-            print("Could not remove connection {}".format(conUid))
+            logger.info("Could not remove connection {}".format(conUid))
 
     def getLEDOutput(self):
         return self._outputNode
@@ -441,12 +476,51 @@ class FilterGraph(Updateable):
         """
         modSource = next(modSource for modSource in self.__modulationsources if modSource.uid == modSourceUid)
         targetNode = next(node for node in self.__filterNodes if node.uid == targetNodeUid)
-        newMod = Modulation(modSource, amount, inverted, targetNode, targetParam)
-        newMod.uid = uuid.uuid4().hex
-        self.__modulations.append(newMod)
-        if self._onModulationAdded is not None:
-            self._onModulationAdded(newMod)
-        return newMod
+        newMod = None
+        logger.debug("Modulation is {}".format(modSource.modulator))
+        if (isinstance(modSource.modulator, modulation.ExternalColourAController)
+                or isinstance(modSource.modulator, modulation.ExternalColourBController)):
+            if targetParam is None:
+                logger.debug("Add colour modulations")
+
+                newModR = ColorChannelModulation(modSource, 1., False, targetNode, "r")
+                newModR.uid = uuid.uuid4().hex
+                self.__modulations.append(newModR)
+                if self._onModulationAdded is not None:
+                    self._onModulationAdded(newModR)
+
+                newModG = ColorChannelModulation(modSource, 1., False, targetNode, "g")
+                newModG.uid = uuid.uuid4().hex
+                self.__modulations.append(newModG)
+                if self._onModulationAdded is not None:
+                    self._onModulationAdded(newModG)
+
+                newModB = ColorChannelModulation(modSource, 1., False, targetNode, "b")
+                newModB.uid = uuid.uuid4().hex
+                self.__modulations.append(newModB)
+                if self._onModulationAdded is not None:
+                    self._onModulationAdded(newModB)
+
+                # TODO: Return value used somewhere?
+                return newModR
+            else:
+                logger.debug("Restore colour modulation")
+                newMod = ColorChannelModulation(modSource, amount, inverted, targetNode, targetParam)
+                newMod.uid = uuid.uuid4().hex
+                self.__modulations.append(newMod)
+                if self._onModulationAdded is not None:
+                    self._onModulationAdded(newMod)
+                return newMod
+
+            # newMod = ColorModulation(modSource, targetNode)
+        else:
+            logger.debug("Add linear modulation")
+            newMod = Modulation(modSource, amount, inverted, targetNode, targetParam)
+            newMod.uid = uuid.uuid4().hex
+            self.__modulations.append(newMod)
+            if self._onModulationAdded is not None:
+                self._onModulationAdded(newMod)
+            return newMod
 
     def removeModulation(self, modUid):
         """Removes a modulation driven by a modulationSource
@@ -462,6 +536,41 @@ class FilterGraph(Updateable):
             if self._onModulationRemoved is not None:
                 self._onModulationRemoved(mod)
 
+    def resetControllerModulations(self):
+        """Resets modulations to their initial value ()
+        """
+        for modSource in self.__modulationsources:
+            modSource.modulator.resetControllerModulation()
+
+    def getControllerModulations(self):
+        """Returns aggregated modulation values per controller as dictionary
+        """
+        ctrlValDict = {}
+        for modSource in self.__modulationsources:
+            for controller in modulation.allController:
+                amount = modSource.modulator.getControllerModulation(controller)
+                if amount is not None:
+                    ctrlValDict[controller] = amount
+                r = modSource.modulator.getControllerModulation(controller, "r")
+                if r is not None and controller.endswith("_r"):
+                    ctrlValDict[controller] = r
+                g = modSource.modulator.getControllerModulation(controller, "g")
+                if g is not None and controller.endswith("_g"):
+                    ctrlValDict[controller] = g
+                b = modSource.modulator.getControllerModulation(controller, "b")
+                if b is not None and controller.endswith("_b"):
+                    ctrlValDict[controller] = b
+        return ctrlValDict
+    
+    def getController(self):
+        ctrlDict = {}
+        for modSource in self.__modulationsources:
+            for controller in modulation.allController:
+                if modSource.modulator.isControlledBy(controller):
+                    ctrlDict[controller] = True
+
+        return ctrlDict
+                
     def propagateNumPixels(self, num_pixels, num_rows=1):
         if self.getLEDOutput() is not None:
             self.getLEDOutput().effect.setNumOutputPixels(num_pixels)
@@ -476,23 +585,31 @@ class FilterGraph(Updateable):
 
     def getModulationSources(self):
         return self.__modulationsources
-    
+
     def getModulations(self):
         return self.__modulations
 
     def updateNodeParameter(self, nodeUid, updateParameters):
         node = next(node for node in self.__filterNodes if node.uid == nodeUid)
         node.effect.updateParameter(updateParameters)
-        print(jsonpickle.encode(node.effect))
+        logger.info(jsonpickle.encode(node.effect))
         if self._onNodeUpdate is not None:
             self._onNodeUpdate(node, updateParameters)
         return node
 
+    def updateModulationSourceValue(self, modCtrl, newValue):
+        logger.debug("({})Updating mod source value for {}".format(self, modCtrl))
+        for mod in self.__modulationsources:
+            if mod.modulator.isControlledBy(modCtrl):
+                logger.debug("Updating mod source value")
+                mod.modulator.updateParameter(newValue)
+
     def updateModulationSourceParameter(self, modSourceUid, updateParameters):
-        mod = next(mod for mod in self.__modulationsources
-                   if mod.uid == modSourceUid)  # type: ModulationSourceNode
+        mod = next(mod for mod in self.__modulationsources if mod.uid == modSourceUid)  # type: ModulationSourceNode
         mod.modulator.updateParameter(updateParameters)
+        logger.debug("({})Updating mod source: {}".format(self, modSourceUid))
         if self._onModulationSourceUpdate is not None:
+            logger.debug("Firing: {}".format(modSourceUid))
             self._onModulationSourceUpdate(mod, updateParameters)
         return mod
 
@@ -506,7 +623,7 @@ class FilterGraph(Updateable):
     def _updateProcessOrder(self):
         processOrder = []
         if self._outputNode is None:
-            print("No output node")
+            # logger.debug("No output node")
             return
 
         unprocessedNodes = self.__filterNodes.copy()
@@ -553,7 +670,7 @@ class FilterGraph(Updateable):
         for node in reversed(processOrder):
             # find connections to the current node
             inputConnections = [con for con in self.__filterConnections if con.toNode == node]
-            # print("{} input connections found for node {}".format(len(inputConnections), node.effect))
+            # logger.info("{} input connections found for node {}".format(len(inputConnections), node.effect))
             for con in inputConnections:
                 num_pixels = node.effect.getNumInputPixels(con.toChannel)
                 num_rows = node.effect.getNumInputRows(con.toChannel)
@@ -616,30 +733,38 @@ class FilterGraph(Updateable):
 
     def __setstate__(self, state):
         self.__init__()
-        if '_contentRoot' in state:
-            self._contentRoot = state['_contentRoot']
-        if 'recordTimings' in state:
-            self.recordTimings = state['recordTimings']
-        if 'nodes' in state:
-            nodes = state['nodes']
-            for node in nodes:
-                newnode = self.addEffectNode(node.effect)
-                newnode.uid = node.uid
-        if 'connections' in state:
-            connections = state['connections']
-            for con in connections:
-                fromChannel = con['from_node_channel']
-                toChannel = con['to_node_channel']
-                newcon = self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
-                newcon.uid = con['uid']
-        if 'modulationSources' in state:
-            modSources = state['modulationSources']
-            for mod in modSources:
-                newModSource = self.addModulationSource(mod.modulator)
-                newModSource.uid = mod.uid
-        if 'modulations' in state:
-            mods = state['modulations']
-            for mod in mods:
-                newMod = self.addModulation(mod['modulation_source_uid'], mod['target_node_uid'], mod['target_param'],
-                                            mod['amount'], mod['inverted'])
-                newMod.uid = mod['uid']
+        logger.debug("Restoring filtergraph")
+        try:
+            if '_contentRoot' in state:
+                self._contentRoot = state['_contentRoot']
+            if 'recordTimings' in state:
+                self.recordTimings = state['recordTimings']
+            if 'nodes' in state:
+                nodes = state['nodes']
+                for node in nodes:
+                    newnode = self.addEffectNode(node.effect)
+                    newnode.uid = node.uid
+            if 'connections' in state:
+                connections = state['connections']
+                for con in connections:
+                    fromChannel = con['from_node_channel']
+                    toChannel = con['to_node_channel']
+                    newcon = self.addNodeConnection(con['from_node_uid'], fromChannel, con['to_node_uid'], toChannel)
+                    newcon.uid = con['uid']
+            if 'modulationSources' in state:
+                modSources = state['modulationSources']
+                for mod in modSources:
+                    newModSource = self.addModulationSource(mod.modulator)
+                    newModSource.uid = mod.uid
+            if 'modulations' in state:
+                mods = state['modulations']
+                for mod in mods:
+                    try:
+                        newMod = self.addModulation(mod['modulation_source_uid'], mod['target_node_uid'], mod['target_param'],
+                                                    mod['amount'], mod['inverted'])
+                        newMod.uid = mod['uid']
+                    except Exception as e:
+                        logger.error("Error restoring filtergraph modulation: {}".format(e))
+        except Exception as e:
+            logger.error("Error restoring filtergraph: {}".format(e))
+        logger.debug("Successfully restored filtergraph")

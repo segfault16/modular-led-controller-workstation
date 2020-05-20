@@ -87,13 +87,7 @@ class EditProjectPage extends Component {
     console.log("play note", midiNumber)
     localStorage.setItem(EDIT_ACTIVE_NOTE, midiNumber);
     if (this.state.switchLED) {
-      FilterGraphService.activateScene(midiNumber).then(res => 
-        {
-          console.log(res)
-          res.json['toString']
-          FilterGraphService.activateSlot()
-        }
-        ).then(res =>
+      FilterGraphService.activateScene(midiNumber).then(res =>
         FilterGraphService.getSceneMatrix()).then(
           res => {
             console.log(res)

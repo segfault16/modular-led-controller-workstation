@@ -5,12 +5,27 @@ from collections import OrderedDict
 import math
 import inspect
 
+import logging
+logger = logging.getLogger(__name__)
+
+CTRL_MODULATION = 'Modulation'
+CTRL_SPEED = 'Speed'
+CTRL_INTENSITY = 'Intensity'
+CTRL_BRIGHTNESS = 'Brightness'  # Not available on purpose, handled globally
+CTRL_PRIMARY_COLOR_R = 'PrimaryColor_r'
+CTRL_PRIMARY_COLOR_G = 'PrimaryColor_g'
+CTRL_PRIMARY_COLOR_B = 'PrimaryColor_b'
+CTRL_SECONDARY_COLOR_R = 'SecondaryColor_r'
+CTRL_SECONDARY_COLOR_G = 'SecondaryColor_g'
+CTRL_SECONDARY_COLOR_B = 'SecondaryColor_b'
+availableController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY]
+allController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY, CTRL_PRIMARY_COLOR_R, CTRL_PRIMARY_COLOR_G, CTRL_PRIMARY_COLOR_B, CTRL_SECONDARY_COLOR_R, CTRL_SECONDARY_COLOR_G, CTRL_SECONDARY_COLOR_B]
 
 class ModulationSource(object):
     """
     Base class for ModulationSource
 
-    ModulationSource have a number of parameters
+    ModulationSource have a number of parameters. Basically same as effect baseclass
     """
     def __init__(self):
         self.__initstate__()
@@ -20,13 +35,13 @@ class ModulationSource(object):
             self._t
         except AttributeError:
             self._t = 0
-        # make sure all default values are set (basic backwards compatibility)
-        argspec = inspect.getargspec(self.__init__)
+        # make sure all default values are set (basic backwards compatibility) # TODO: Duplicate code in effect?
+        argspec = inspect.getfullargspec(self.__init__)
         if argspec.defaults is not None:
             argsWithDefaults = dict(zip(argspec.args[-len(argspec.defaults):], argspec.defaults))
             for key in argsWithDefaults:
                 if key not in self.__dict__:
-                    print("Backwards compatibility: Adding default value {}={}".format(key, argsWithDefaults[key]))
+                    logger.info("Backwards compatibility: Adding default value {}={}".format(key, argsWithDefaults[key]))
                     self.__dict__[key] = argsWithDefaults[key]
 
     def __cleanState__(self, stateDict):
@@ -72,8 +87,18 @@ class ModulationSource(object):
 
     def getParameter(self):
         definition = self.getParameterDefinition()
-        print(definition)
+        logger.info(definition)
         return definition
+
+    def isControlledBy(self, controller):
+        return False
+
+    def resetControllerModulation(self):
+        pass
+
+    def getControllerModulation(self, controller, param = None):
+        if self.isControlledBy(controller):
+            return self.getValue(param)
 
     @staticmethod
     def getParameterDefinition():
@@ -88,9 +113,29 @@ class ModulationSource(object):
         return ""
 
 
-class ExternalLinearController(ModulationSource):
+# TODO: Shouldn't show up
+class ExternalColourController(ModulationSource):
     def __init__(self, amount=.0):
         self.amount = amount
+
+    def __initstate__(self):
+        super().__initstate__()
+        try:
+            self.r
+        except AttributeError:
+            self.r = None
+        try:
+            self.g
+        except AttributeError:
+            self.g = None
+        try:
+            self.b
+        except AttributeError:
+            self.b = None
+        try:
+            self.controllerAmount
+        except AttributeError:
+            self.controllerAmount = None
 
     @staticmethod
     def getParameterDefinition():
@@ -104,15 +149,120 @@ class ExternalLinearController(ModulationSource):
 
     @staticmethod
     def getParameterHelp():
+        help = {"parameters": {"amount": "Global scale of the controller."}}
+        return help
+
+    def update(self, dt):
+        """
+        Update timing, can be used to precalculate stuff that doesn't depend on input values
+        """
+        super().update(dt)
+
+    def updateParameter(self, stateDict):
+        super().updateParameter(stateDict)
+        if 'amount' in stateDict:
+            # Reset remote controller value
+            self.resetControllerModulation()
+
+    def getValue(self, param=None):
+        if not isinstance(self.amount, float) and not isinstance(self.amount, int):
+            self.amount = 0.
+
+        if param is None:
+            if self.controllerAmount is None:
+                return self.amount
+            return self.controllerAmount
+
+        if param in self.__dict__:
+            return self.__dict__[param]
+
+        return None
+
+    def resetControllerModulation(self):
+        self.controllerAmount = None
+
+
+class ExternalColourAController(ExternalColourController):
+    def __init__(self, amount=0.):
+        super().__init__(amount)
+
+    def isControlledBy(self, controller):
+        return controller == CTRL_PRIMARY_COLOR_R or controller == CTRL_PRIMARY_COLOR_G or controller == CTRL_PRIMARY_COLOR_B
+
+
+class ExternalColourBController(ExternalColourController):
+    def __init__(self, amount=0.):
+        super().__init__(amount)
+
+    def isControlledBy(self, controller):
+        return controller == CTRL_SECONDARY_COLOR_R or controller == CTRL_SECONDARY_COLOR_G or controller == CTRL_SECONDARY_COLOR_B
+
+
+class ExternalLinearController(ModulationSource):
+    def __init__(self, amount=.0, controller=None):
+        self.amount = amount
+        self.controller = controller
+
+    def __initstate__(self):
+        super().__initstate__()
+        try:
+            self.controllerAmount
+        except AttributeError:
+            self.controllerAmount = None
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("amount", [1.0, .0, 1.0, .001]),
+                ("controller", availableController)
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
         help = {
             "parameters": {
                 "amount": "Global scale of the controller.",
+                "controller": "Which remote controller will control this modulation."
             }
         }
         return help
 
-    def getValue(self):
-        return self.amount
+    def updateParameter(self, stateDict):
+        super().updateParameter(stateDict)
+        if 'amount' in stateDict:
+            # Reset remote controller value
+            self.resetControllerModulation()
+
+    def getValue(self, param=None):
+        if not isinstance(self.amount, float) and not isinstance(self.amount, int):
+            self.amount = 0.
+
+        if param is None:
+            try:
+                self.controllerAmount
+            except AttributeError:
+                self.controllerAmount = None
+            if self.controllerAmount is None:
+                return self.amount
+            return self.controllerAmount
+
+        if param in self.__dict__:
+            return self.__dict__[param]
+
+        return None
+
+    def isControlledBy(self, controller):
+        if self.controller is not None and self.controller == controller:
+            return True
+        return False
+
+    def resetControllerModulation(self):
+        self.controllerAmount = None
 
 
 class SineLFO(ModulationSource):

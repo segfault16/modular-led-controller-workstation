@@ -8,6 +8,8 @@ import time
 import numpy as np
 import multiprocessing
 from audioled.effect import Effect
+import logging
+logger = logging.getLogger(__name__)
 
 _GAMMA_TABLE = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6,
@@ -64,7 +66,7 @@ class LEDController:
         self.num_rows = num_rows
 
     def shutdown(self):
-        print("Shutting down device")
+        logger.debug("Shutting down device")
 
     def show(self, pixels):
         """Set LED pixels to the values given in the array
@@ -101,9 +103,9 @@ class LEDController:
         pixels[0][0] = 255
         pixels[1][1] = 255
         pixels[2][2] = 255
-        print('Starting LED strip test.')
-        print('Press CTRL+C to stop the test at any time.')
-        print('You should see a scrolling red, green, and blue pixel.')
+        logger.info('Starting LED strip test.')
+        logger.info('Press CTRL+C to stop the test at any time.')
+        logger.info('You should see a scrolling red, green, and blue pixel.')
         while True:
             self.show(pixels)
             pixels = np.roll(pixels, 1, axis=1)
@@ -163,10 +165,10 @@ class FadeCandy(LEDController):
         import audioled.opc
         self.client = audioled.opc.Client(server)
         if self.client.can_connect():
-            print('Successfully connected to FadeCandy server.')
+            logger.info('Successfully connected to FadeCandy server.')
         else:
-            print('Could not connect to FadeCandy server.')
-            print('Ensure that fcserver is running and try again.')
+            logger.error('Could not connect to FadeCandy server.')
+            logger.error('Ensure that fcserver is running and try again.')
 
     def show(self, pixels):
         if pixels is None:
@@ -181,8 +183,8 @@ class BlinkStick(LEDController):
         try:
             from blinkstick import blinkstick
         except ImportError as e:
-            print('Unable to import the blinkstick library')
-            print('You can install this library with `pip install blinkstick`')
+            logger.error('Unable to import the blinkstick library')
+            logger.error('You can install this library with `pip install blinkstick`')
             raise e
         self.stick = blinkstick.find_first()
 
@@ -236,7 +238,7 @@ class RaspberryPi(LEDController):
             DMA (direct memory access) channel used to drive PWM signals.
             If you aren't sure, try 5.
         """
-        print('construct')
+        logger.debug('Creating RaspberryPi LED device')
         self.pin = pin
         self.freq_hz = freq
         self.dma = dma
@@ -247,7 +249,7 @@ class RaspberryPi(LEDController):
     def __initstate__(self):
         try:
             import rpi_ws281x
-            print('init')
+            logger.debug('Initializing RaspberryPI LED device')
             self._strip = rpi_ws281x.PixelStrip(num=self.num_pixels,
                                                 pin=self.pin,
                                                 freq_hz=self.freq_hz,
@@ -257,12 +259,12 @@ class RaspberryPi(LEDController):
             self._strip.begin()
         except ImportError:
             url = 'learn.adafruit.com/neopixels-on-raspberry-pi/software'
-            print('Could not import the neopixel library')
-            print('For installation instructions, see {}'.format(url))
-            print('If running on RaspberryPi, please install.')
-            print('------------------------------------------')
-            print('Otherwise rely on dependency injection')
-            print('Disconnecting Device.')
+            logger.error('Could not import the neopixel library')
+            logger.error('For installation instructions, see {}'.format(url))
+            logger.error('If running on RaspberryPi, please install.')
+            logger.error('------------------------------------------')
+            logger.error('Otherwise rely on dependency injection')
+            logger.error('Disconnecting Device.')
 
     def __cleanState__(self, stateDict):
         """
@@ -331,8 +333,8 @@ class DotStar(LEDController):
             import apa102
         except ImportError as e:
             url = 'https://github.com/tinue/APA102_Pi'
-            print('Could not import the apa102 library')
-            print('For installation instructions, see {}'.format(url))
+            logger.error('Could not import the apa102 library')
+            logger.error('For installation instructions, see {}'.format(url))
             raise e
         self._strip = apa102.APA102(numLEDs=num_pixels, globalBrightness=brightness)  # Initialize the strip
         led_data = np.array(self._strip.leds, dtype=np.uint8)
@@ -428,7 +430,7 @@ class VirtualOutput(LEDController):
         self.num_rows = num_rows
 
     def show(self, pixels):
-        # print("propagating virtual from {} to {}".format(self.start_index, (self.start_index+self.num_pixels)))
+        # logger.debug("propagating virtual from {} to {}".format(self.start_index, (self.start_index+self.num_pixels)))
         npArray = np.ctypeslib.as_array(self._shared_array.get_obj()).reshape(3, -1)
         npArray[:, self.start_index:self.start_index+self.num_pixels] = pixels
 

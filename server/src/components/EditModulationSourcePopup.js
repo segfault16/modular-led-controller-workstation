@@ -131,14 +131,34 @@ class EditModulationSourcePopup extends React.Component {
     handleParameterChange = (value, parameter) => {
         let newState = Object.assign({}, this.state);    //creating copy of object
         newState.config.values[parameter] = value;
-        FilterGraphService.updateModulationSource(this.props.slot, this.props.modulationUid, { [parameter]: value })
+        if (this._modSrcParamChangeReq && this._modSrcParamChangeCtrl) {
+            // Abort previous request
+            this._modSrcParamChangeCtrl.abort()
+            this._modSrcParamChangeReq = null
+        }
+        // New request with new AbortController
+        this._modSrcParamChangeCtrl = new AbortController()
+        this._modSrcParamChangeReq = FilterGraphService.updateModulationSource(this.props.slot, this.props.modulationUid, { [parameter]: value }, this._modSrcParamChangeCtrl.signal)
+        this._modSrcParamChangeReq.then(res => {
+            this._modSrcParamChangeReq = null;
+        }).catch((reason) => reason.name == "AbortError" ? null : console.error(reason));
         this.setState(newState);
     };
 
     handleModulationValueChange = (value, modUid) => {
         let newState = Object.assign({}, this.state);
         newState.modulations[modUid]['value'] = value;
-        FilterGraphService.updateModulation(this.props.slot, modUid, {'amount': value})
+        if (this._modValueChangeReq && this._modValueChangeCtrl) {
+            // Abort previous request
+            this._modValueChangeCtrl.abort()
+            this._modValueChangeReq = null
+        }
+        // New request with new AbortController
+        this._modValueChangeCtrl = new AbortController()
+        this._modValueChangeReq = FilterGraphService.updateModulation(this.props.slot, modUid, {'amount': value}, this._modValueChangeCtrl.signal)
+        this._modValueChangeReq.then(res => {
+            this._modValueChangeReq = null;
+        }).catch((reason) => reason.name == "AbortError" ? null : console.error(reason));
         this.setState(newState);
     }
     handleModulationInvertChange = (value, modUid) => {

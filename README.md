@@ -28,7 +28,7 @@ The works in this project is based on [https://github.com/scottlawsonbc/audio-re
 MOLECOLE requires at least Python 3.7 and uses [pipenv](https://github.com/pypa/pipenv) to manage dependencies.
 
 - Get pipenv
-- Run `pipenv install`
+- Run `pipenv install -d`
 - If pyaudio fails to install, make sure to `brew install portaudio`
 - If it still fails to install, use `pipenv shell` and execute `pip install --global-option='build_ext' --global-option='-I/usr/local/include' --global-option='-L/usr/local/lib' pyaudio`. Exit and `pipenv install` should then succeed
 

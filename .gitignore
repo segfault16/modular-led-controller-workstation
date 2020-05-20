@@ -6,7 +6,7 @@ ehthumbs.db
 Desktop.ini
 
 # Package build output
-audioled.egg-info/
+molecole.egg-info/
 build/
 dist/
 
@@ -62,3 +62,7 @@ Temporary Items
 *node_modules
 .cache
 *.code-workspace
+
+# Pyupdater 
+.pyupdater
+pyu-data

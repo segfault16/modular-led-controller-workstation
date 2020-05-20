@@ -6371,7 +6371,7 @@ promzard@^0.3.0:
   dependencies:
     read "1"
 
-prop-types@^15.5.10, prop-types@^15.6.2, prop-types@^15.7.2:
+prop-types@^15.6.2, prop-types@^15.7.2:
   version "15.7.2"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.7.2.tgz#52c41e75b8c87e72b9d9360e0206b99dcbffa6c5"
   integrity sha512-8QQikdH7//R2vurIJSutZ1smHYTcLpRWEOlHnzcWHmBYrOGUysKwSsrC89BCiFj3CbrfJ/nXFdJepOVrY1GCHQ==
@@ -6585,16 +6585,6 @@ react-double-scrollbar@0.0.15:
   resolved "https://registry.yarnpkg.com/react-double-scrollbar/-/react-double-scrollbar-0.0.15.tgz#e915ab8cb3b959877075f49436debfdb04288fe4"
   integrity sha1-6RWrjLO5WYdwdfSUNt6/2wQoj+Q=
 
-react-graph-vis@^1.0.5:
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/react-graph-vis/-/react-graph-vis-1.0.5.tgz#4aee3130db73a69a577a99e30a9126bd0e6d59cd"
-  integrity sha512-y7+eHcwj7GryRoY+ZawwsDmS8OMeJ8Gpzmzejqwz+T2qg6IYTk1bod42H5g3J2zzHcPaqAZpwxZG3d3YB4nBwQ==
-  dependencies:
-    lodash "^4.17.15"
-    prop-types "^15.5.10"
-    uuid "^2.0.1"
-    vis-network "^5.1.1"
-
 react-is@^16.6.0, react-is@^16.7.0, react-is@^16.8.0, react-is@^16.8.1, react-is@^16.8.6, react-is@^16.9.0:
   version "16.13.1"
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
@@ -6651,7 +6641,7 @@ react-router-dom@^5.1.2:
     tiny-invariant "^1.0.2"
     tiny-warning "^1.0.0"
 
-react-router@5.1.2:
+react-router@5.1.2, react-router@^5.1.2:
   version "5.1.2"
   resolved "https://registry.yarnpkg.com/react-router/-/react-router-5.1.2.tgz#6ea51d789cb36a6be1ba5f7c0d48dd9e817d3418"
   integrity sha512-yjEuMFy1ONK246B+rsa0cUam5OeAQ8pyclRDgpxuSCrAlJ1qN9uZ5IgyKC7gQg0w8OM50NXHEegPh/ks9YuR2A==
@@ -8205,11 +8195,6 @@ utils-merge@1.0.1:
   resolved "https://registry.yarnpkg.com/utils-merge/-/utils-merge-1.0.1.tgz#9f95710f50a267947b2ccc124741c1028427e713"
   integrity sha1-n5VxD1CiZ5R7LMwSR0HBAoQn5xM=
 
-uuid@^2.0.1:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/uuid/-/uuid-2.0.3.tgz#67e2e863797215530dff318e5bf9dcebfd47b21a"
-  integrity sha1-Z+LoY3lyFVMN/zGOW/nc6/1Hsho=
-
 uuid@^3.0.1, uuid@^3.3.2, uuid@^3.3.3:
   version "3.4.0"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.4.0.tgz#b23e4358afa8a202fe7a100af1f5f883f02007ee"
@@ -8261,10 +8246,20 @@ verror@1.10.0:
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
 
-vis-network@6.4.4, vis-network@^5.1.1:
-  version "6.4.4"
-  resolved "https://registry.yarnpkg.com/vis-network/-/vis-network-6.4.4.tgz#dc62e12333b4172d437db3a6bbe6c67a98e6ec9c"
-  integrity sha512-YTMTOmQ2uVsKX3zHvDdXFX/a5VLuVEkOsyBnWrPx1omf3SiB8jm0LhDIqiWEZQE6YGPeEW8jaODw2Y1UQaLRdQ==
+vis-data@^6.5.1:
+  version "6.5.1"
+  resolved "https://registry.yarnpkg.com/vis-data/-/vis-data-6.5.1.tgz#cd11f8bbf4a17064559b7c75532c3d6f419ff290"
+  integrity sha512-bOIG0REskXot0JbuAYLFRR61xf4ls+nIYNnZ7X04iq2y/Vrg896A/bfquQjhsERZipOmCgllAR0d58OGyo9s0g==
+
+vis-network@^7.6.4:
+  version "7.6.4"
+  resolved "https://registry.yarnpkg.com/vis-network/-/vis-network-7.6.4.tgz#64d59f65072ce164e8abcdc520a2bab480673980"
+  integrity sha512-ywaigcV75m3SbZLeKeR1ZYfLeL88EraIdH0G6O6drr62TsosJ6p1HGWmgGy0YfGJ4DaEf/hnJ5JaQNzBpIRGbQ==
+
+vis-util@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/vis-util/-/vis-util-4.0.0.tgz#a9900cffb0bbcef3ce88d5834f82b03808101e10"
+  integrity sha512-HLInh9yhJe3AH8I9tgWna304jYABa47Y9kO4M0QKtgSLnVgz7xK0952HFCeGMBJWMXr9XXWporoz/XqND15ukQ==
 
 vm-browserify@^1.0.1:
   version "1.1.2"
