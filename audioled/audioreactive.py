@@ -780,6 +780,15 @@ class FallingStars(Effect):
         await super().update(dt)
 
     def process(self):
+        def jrange(value0To1, minRange, maxRange):
+            value0To1 = min(max(value0To1, 0), 1)
+            return (maxRange-minRange)*value0To1 + minRange
+
+        def jvalue(minRange, maxRange, value):
+            if maxRange - minRange == 0:
+                return 0
+            return (value - minRange) / (maxRange - minRange)
+            
         if self._inputBuffer is None or self._outputBuffer is None:
             return
         if not self._inputBufferValid(0, buffer_type=effect.AudioBuffer.__name__):
@@ -810,13 +819,6 @@ class FallingStars(Effect):
         except Exception:
             peak = peak
             maxpeak = peak
-        def jrange(value0To1, minRange, maxRange):
-            value0To1 = min(max(value0To1, 0), 1)
-            return (maxRange-minRange)*value0To1 + minRange
-        def jvalue(minRange, maxRange, value):
-            if maxRange - minRange == 0:
-                return 0
-            return (value - minRange) / (maxRange - minRange)
         prob = min(jvalue(0, maxpeak, self.probability) + peak, 1.0)
         # logger.debug("spawn start {}".format(prob))
         if self._outputBuffer is not None:

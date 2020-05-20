@@ -2,6 +2,7 @@ from __future__ import (absolute_import, division, print_function, unicode_liter
 
 import time
 import traceback
+import io
 from collections import OrderedDict
 
 import numpy as np
@@ -25,12 +26,11 @@ def py_error_handler(filename, line, function, err, fmt, *val):
     formatted = None
     if len(val) > 0:
         try:
-            import StringIO
 
             def sprintf(buf, fmt, *args):
                 buf.write(fmt % args)
 
-            buf = StringIO.StringIO()
+            buf = io.StringIO()
             sprintf(buf, fmt, val)
             formatted = buf.getvalue()
             alogger.debug("{}:{} {} {} ({})".format(filename, line, function, formatted, *val))

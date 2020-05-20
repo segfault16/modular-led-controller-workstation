@@ -19,7 +19,17 @@ CTRL_SECONDARY_COLOR_R = 'SecondaryColor_r'
 CTRL_SECONDARY_COLOR_G = 'SecondaryColor_g'
 CTRL_SECONDARY_COLOR_B = 'SecondaryColor_b'
 availableController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY]
-allController = [CTRL_MODULATION, CTRL_SPEED, CTRL_INTENSITY, CTRL_PRIMARY_COLOR_R, CTRL_PRIMARY_COLOR_G, CTRL_PRIMARY_COLOR_B, CTRL_SECONDARY_COLOR_R, CTRL_SECONDARY_COLOR_G, CTRL_SECONDARY_COLOR_B]
+allController = [
+    CTRL_MODULATION,
+    CTRL_SPEED,
+    CTRL_INTENSITY,
+    CTRL_PRIMARY_COLOR_R,
+    CTRL_PRIMARY_COLOR_G,
+    CTRL_PRIMARY_COLOR_B,
+    CTRL_SECONDARY_COLOR_R,
+    CTRL_SECONDARY_COLOR_G,
+    CTRL_SECONDARY_COLOR_B
+]
 
 class ModulationSource(object):
     """
@@ -96,7 +106,7 @@ class ModulationSource(object):
     def resetControllerModulation(self):
         pass
 
-    def getControllerModulation(self, controller, param = None):
+    def getControllerModulation(self, controller, param=None):
         if self.isControlledBy(controller):
             return self.getValue(param)
 
@@ -195,7 +205,9 @@ class ExternalColourBController(ExternalColourController):
         super().__init__(amount)
 
     def isControlledBy(self, controller):
-        return controller == CTRL_SECONDARY_COLOR_R or controller == CTRL_SECONDARY_COLOR_G or controller == CTRL_SECONDARY_COLOR_B
+        return (controller == CTRL_SECONDARY_COLOR_R
+                or controller == CTRL_SECONDARY_COLOR_G
+                or controller == CTRL_SECONDARY_COLOR_B)
 
 
 class ExternalLinearController(ModulationSource):
