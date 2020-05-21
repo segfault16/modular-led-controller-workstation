@@ -81,7 +81,7 @@
                             "max_speed": 30,
                             "num_waves": 30,
                             "scale": 0.2,
-                            "wave_pool2": "sin(x)",
+                            "waveshape": "sin(x)",
                             "wavespread_high": 70,
                             "wavespread_low": 30
                         }

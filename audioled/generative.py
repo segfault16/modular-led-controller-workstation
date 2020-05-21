@@ -233,6 +233,7 @@ class SwimmingPool2(Effect):
                 ("wavespread_low", [30, 1, 100, 1]),
                 ("wavespread_high", [70, 2, 150, 1]),
                 ("max_speed", [30, 1, 200, 1]),
+                ("min_speed", [30, 1, 200, 1]),
                 ("direction", direction),
                 ("waveshape", waveshape),
             ])

@@ -38,7 +38,7 @@
                             "max_speed": 30,
                             "num_waves": 30,
                             "scale": 0.2,
-                            "wave_pool2": "all",
+                            "waveshape": "all",
                             "wavespread_high": 40,
                             "wavespread_low": 10
                         }
