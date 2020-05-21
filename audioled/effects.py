@@ -646,7 +646,7 @@ class Flipping(Effect):
     @staticmethod
     def getEffectDescription():
         return \
-            "Flipping output. Useful for multi-outputs."
+            "Effect that reverses the order of pixels."
 
     def __init__(self, Flip=True):
         self.Flip = Flip
