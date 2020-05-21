@@ -91,9 +91,13 @@ class PublishQueue(object):
 
 
 class UpdateMessage:
-    def __init__(self, dt, audioBuffer):
+    def __init__(self, dt, audioBuffer, chunkRate, globalAutogainEnabled, globalAutogainMaxGain, globalAutogainTime):
         self.dt = dt
         self.audioBuffer = audioBuffer
+        self.chunkRate = chunkRate
+        self.globalAutogainEnabled = globalAutogainEnabled
+        self.globalAutogainMaxGain = globalAutogainMaxGain
+        self.globalAutogainTime = globalAutogainTime
 
 
 class BrightnessMessage:
@@ -184,6 +188,10 @@ def worker_process_updateMessage(filtergraph: FilterGraph, outputDevice: audiole
 
     # TODO: Hack to propagate audio?
     audioled.audio.GlobalAudio.buffer = audioBuffer
+    audioled.audio.GlobalAudio.chunk_rate = message.chunkRate
+    audioled.audio.GlobalAudio.global_autogain_enabled = message.globalAutogainEnabled
+    audioled.audio.GlobalAudio.global_autogain_maxgain = message.globalAutogainMaxGain
+    audioled.audio.GlobalAudio.global_autogain_time = message.globalAutogainTime
 
     # Update Filtergraph
     filtergraph.update(dt, event_loop)
@@ -1008,7 +1016,15 @@ class Project(Updateable):
         if self._publishQueue is None:
             logger.info("No publish queue. Possibly exiting")
             return
-        self._publishQueue.publish(UpdateMessage(dt, audioled.audio.GlobalAudio.buffer))
+        self._publishQueue.publish(
+            UpdateMessage(
+                dt,
+                audioled.audio.GlobalAudio.buffer,
+                audioled.audio.GlobalAudio.chunk_rate,
+                audioled.audio.GlobalAudio.global_autogain_enabled,
+                audioled.audio.GlobalAudio.global_autogain_maxgain,
+                audioled.audio.GlobalAudio.global_autogain_time,
+            ))
 
     def _sendShowCommand(self):
         if self._showQueue is None:

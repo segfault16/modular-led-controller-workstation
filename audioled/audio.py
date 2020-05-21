@@ -81,6 +81,9 @@ class GlobalAudio():
     buffer = None
     chunk_rate = None
     sample_rate = None
+    global_autogain_enabled = False
+    global_autogain_maxgain = 1.
+    global_autogain_time = 30.
 
     def __init__(self, device_index=None, chunk_rate=60, num_channels=1):
         GlobalAudio.device_index = device_index
@@ -173,20 +176,41 @@ class AudioInput(Effect):
             "Audio input captures audio from your device and " \
             "makes each channel available as an output. "
 
-    def __init__(self, num_channels=2, autogain_max=10.0, autogain=False, autogain_time=10.0):
+    def __init__(self, num_channels=2, autogain_max=10.0, autogain=False, autogain_time=10.0, override_global_autogain=False):
         self.num_channels = num_channels
         self.autogain_max = autogain_max
         self.autogain = autogain
         self.autogain_time = autogain_time
+        self.override_global_autogain = override_global_autogain
         self.__initstate__()
 
     def __initstate__(self):
         super(AudioInput, self).__initstate__()
+        try:
+            self.override_global_autogain
+        except AttributeError:
+            self.override_global_autogain = False
         self._buffer = []
         self._outBuffer = []
         self._autogain_perc = None
         self._cur_gain = 1.0
-        logger.debug("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
+        # Defaults
+        self._autogain_max = GlobalAudio.global_autogain_maxgain
+        self._autogain_time = GlobalAudio.global_autogain_time
+        self._autogain = GlobalAudio.global_autogain_enabled
+        print("GLOBAL {}".format(GlobalAudio.global_autogain_enabled))
+        # Override with local settings
+        if self.override_global_autogain:
+            self._autogain_max = self.autogain_max
+            self._autogain_time = self.autogain_time
+            self._autogain = self.autogain
+
+        logger.info("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
+
+    def updateParameter(self, stateDict):
+        super(AudioInput, self).updateParameter(stateDict)
+        # Reset state
+        self.__initstate__()
 
     def numOutputChannels(self):
         return self.num_channels
@@ -201,6 +225,7 @@ class AudioInput(Effect):
             OrderedDict([
                 # default, min, max, stepsize
                 ("num_channels", [2, 1, 100, 1]),
+                ("override_global_autogain", False),
                 ("autogain", False),
                 ("autogain_max", [1.0, 0.01, 50.0, 0.01]),
                 ("autogain_time", [30.0, 1.0, 100.0, 0.1]),
@@ -217,6 +242,7 @@ class AudioInput(Effect):
         help = {
             "parameters": {
                 "num_channels": "Number of input channels of the audio device.",
+                "override_global_autogain": "Override global autogain settings",
                 "autogain":
                 "Automatically adjust the gain of the input channels.\nThe input signal will be scaled up to 'autogain_max', "
                     "gain will be reduced if the audio signal would clip.",
@@ -235,11 +261,11 @@ class AudioInput(Effect):
             # increase cur_gain by percentage
             # we want to get to self.autogain_max in approx. self.autogain_time seconds
             min_value = 1.0
-            if self.autogain_max > 0:
-                min_value = 1. / self.autogain_max  # the minimum input value we want to bring to 1.0
+            if self._autogain_max > 0:
+                min_value = 1. / self._autogain_max  # the minimum input value we want to bring to 1.0
             else:
                 min_value = 1. / 0.01
-            N = GlobalAudio.chunk_rate * self.autogain_time  # N = chunks_per_second * autogain_time
+            N = GlobalAudio.chunk_rate * self._autogain_time  # N = chunks_per_second * _autogain_time
             # min_value * (perc)^N = 1.0?
             # perc = root(1.0 / min_value, N) = (1./min_value)**(1/N)
             self._autogain_perc = (1.0 / min_value)**float(1 / N)
@@ -256,14 +282,15 @@ class AudioInput(Effect):
             raise RuntimeError("No audio signal. Audio device might be not present or disabled.")
         if len(self._buffer) <= 0:
             return
-        if self.autogain:
+        if self._autogain:
+            
             # determine max value -> in range 0,1
             maxVal = np.max(self._buffer)
             if maxVal * self._cur_gain > 1:
                 # reset cur_gain to prevent clipping
                 self._cur_gain = 1. / maxVal
-            elif self._cur_gain < self.autogain_max:
-                self._cur_gain = min(self.autogain_max, self._cur_gain * self._autogain_perc)
+            elif self._cur_gain < self._autogain_max:
+                self._cur_gain = min(self._autogain_max, self._cur_gain * self._autogain_perc)
             # logger.info("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
         for i in range(0, self.num_channels):
             # layout for multiple channel is interleaved:
