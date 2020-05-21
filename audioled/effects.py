@@ -638,3 +638,200 @@ class Swing(Effect):
         config = self.displacement * math.sin(self._t * self.swingspeed)
 
         self._outputBuffer[0] = sp.ndimage.interpolation.shift(pixels, [0, config], mode='wrap', prefilter=True)
+
+
+class Flipping(Effect):
+    """Effect that flips output array."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Effect that reverses the order of pixels."
+
+    def __init__(self, Flip=True):
+        self.Flip = Flip
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(Flipping, self).__initstate__()
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                ("Flip", True),
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "Flip": "Activate the Flip."
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['Flip'] = self.Flip
+        return definition
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = None
+            return
+
+        pixels = self._inputBuffer[0]
+
+        if self.Flip is True:
+            pixels[0] = np.flip(pixels[0], 0)
+            pixels[1] = np.flip(pixels[1], 0)
+            pixels[2] = np.flip(pixels[2], 0)
+
+        self._outputBuffer[0] = pixels
+
+
+class Shapes(Effect):
+    @staticmethod
+    def getEffectDescription():
+        return \
+            """
+            Shapes, yo! Brightness controlled by 5 faders below.
+            Intervals are split equally over length. Interpolation mode: linear.
+            """
+
+    def __init__(self, x0=0, x1=100, x2=0, x3=0, x4=0):
+        self.x0 = x0
+        self.x1 = x1
+        self.x2 = x2
+        self.x3 = x3
+        self.x4 = x4
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(Shapes, self).__initstate__()
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters": OrderedDict([
+                # default, min, max, stepsize
+                ("x0", [0, 0.0, 100.0, 1.0]),
+                ("x1", [100, 0.0, 100.0, 1.0]),
+                ("x2", [0, 0.0, 100.0, 1.0]),
+                ("x3", [0, 0.0, 100.0, 1.0]),
+                ("x4", [0, 0.0, 100.0, 1.0]),
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {
+            "parameters": {
+                "x0": "point 0",
+                "x1": "point 1",
+                "x2": "point 2",
+                "x3": "point 3",
+                "x4": "point 4"
+            }
+        }
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['x0'][0] = self.x0
+        definition['parameters']['x1'][0] = self.x1
+        definition['parameters']['x2'][0] = self.x2
+        definition['parameters']['x3'][0] = self.x3
+        definition['parameters']['x4'][0] = self.x4
+        return definition
+
+    # No point checking needed with fader input
+    #
+    # def check_points(A):
+    #     B = []
+    #     A = input("Enter integers in range 0 to 100. Points will be spread equally over total length. \
+    # Separator is <SPACE>.\n")
+    #     temp1 = A.split(' ')
+
+    #     for string in temp1:
+    #         if (string != '') and (string.isnumeric() is True):
+    #             if int(string) >= 0 and int(string) <= 100:
+    #                 B.append(int(string))
+
+    #     print('{} valid points have been found.'.format(len(B)))
+    #     return B
+
+    # Equally split the points over length
+    # not really needed with faders
+    def _processPoints(self, A, length):
+        B = []
+        if len(A) == 0:
+            B.append([0, 50])
+        elif len(A) == 1:
+            B.append([0, A[0]])
+        else:
+            delta_l = int(length / (len(A)-1))
+            for i in range(len(A)):
+                B.append([i * delta_l, A[i] / 100])
+        return B
+
+    # Get different slopes between points. Linear solving only.
+    def _solvePoints(self, A):
+        B = []
+        for i in range(int(len(A)-1)):
+            temp1 = np.array([[A[i][0], 1], [A[i+1][0], 1]])
+            temp2 = np.array([A[i][1], A[i+1][1]])
+            temp3 = np.linalg.solve(temp1, temp2)
+            B.append(temp3)
+        return B
+
+    # Calculate array for brightness
+    def _createArray(self, A, B, length):
+        C = []
+        count = 0
+        for i in range(int(len(A)-1)):
+            for j in range(A[i][0], A[i+1][0]):
+                C.append(round(B[i][0] * count + B[i][1], 4))
+                count += 1
+        while len(C) < length:
+            C.append(C[-1])
+        return C
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if not self._inputBufferValid(0):
+            self._outputBuffer[0] = None
+            return
+
+        y = self._inputBuffer[0]
+
+        A = self._processPoints([self.x0, self.x1, self.x2, self.x3, self.x4], len(y[0]))
+        B = self._solvePoints(A)
+        C = self._createArray(A, B, len(y[0]))
+
+        for i in range(3):
+            y[i] = np.multiply(C, y[i])
+
+        self._outputBuffer[0] = y

@@ -42,10 +42,13 @@ def record_factory(*args, **kwargs):
         record.sthreadName = record.threadName
     return record
 
+
 logging.setLogRecordFactory(record_factory)
-logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
+logging.basicConfig(stream=sys.stdout,
+                    level=logging.INFO,
+                    format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
 logging.debug("Global debug log enabled")
-# Adjust loglevels 
+# Adjust loglevels
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
 logging.getLogger('audioled').setLevel(logging.DEBUG)
 logging.getLogger('audioled_controller').setLevel(logging.DEBUG)
@@ -97,25 +100,6 @@ stop_lock = multiprocessing.Lock()
 
 midiController = []
 midiBluetooth = None  # type: audioled_controller.bluetooth.BluetoothMidiLELevelCharacteristic # noqa: F821
-
-# def signal_handler(sig, frame):
-#     global stop_lock
-#     stop_lock.acquire()
-#     print("Received stop signal")
-#     global stop_signal
-
-#     if stop_signal is True:
-#         print("Already exiting")
-#         return
-#     stop_signal = True
-#     global serverconfig
-#     proj = serverconfig.getActiveProject()
-#     if proj is not None:
-#         proj.stopProcessing()
-#     stop_lock.release()
-#     sys.exit(0)
-
-
 
 def lock_preview(fn):
     @wraps(fn)
@@ -207,9 +191,7 @@ def create_app(midiAdvertiseName=None):
             app.logger.debug('Background scheduler shutdown')
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
-
         stop_lock.release()
-
 
     def sigStop(sig, frame):
         print("Interrupt")

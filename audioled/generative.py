@@ -20,30 +20,75 @@ wave_modes = ['sin', 'sawtooth', 'sawtooth_reversed', 'square']
 wave_mode_default = 'sin'
 sortby = ['red', 'green', 'blue', 'brightness']
 sortbydefault = 'red'
+direction = ['side1', 'side2', 'random']
+direction_default = 'random'
+waveshape = ['sin(x)', '1/x', '1/x**2', '1/x**3', 'const(x)', 'x', 'x**2', 'x**3', 'x * e**(-x)',
+              '-sin(x)', '-1/x', '-1/x**2', '-1/x**3', '-const(x)', '-x', '-x**2', '-x**3', '-x * e**(-x)',
+              'all positive', 'all negative', 'all']
+waveshape_pos = ['sin(x)', '1/x', '1/x**2', '1/x**3', 'const(x)', 'x', 'x**2', 'x**3', 'x * e**(-x)']
+waveshape_neg = ['-sin(x)', '-1/x', '-1/x**2', '-1/x**3', '-const(x)', '-x', '-x**2', '-x**3', '-x * e**(-x)']
+waveshape_default = 'sin(x)'
 
 
 class SwimmingPool(Effect):
     """Generates a wave effect to look like the reflection on the bottom of a swimming pool."""
+
     @staticmethod
     def getEffectDescription():
         return \
-            "Generates a wave effect to look like the reflection on the bottom of a swimming pool."
+            """
+            Generates a wave effect to look like the reflection on the bottom of a swimming pool.
+            """
 
-    def __init__(self, num_waves=30, scale=0.2, wavespread_low=30, wavespread_high=70, max_speed=30, min_speed=10):
+    def __init__(self,
+                 num_waves=30,
+                 scale=0.2,
+                 wavespread_low=30,
+                 wavespread_high=70,
+                 max_speed=30,
+                 min_speed=10,
+                 direction=direction_default,
+                 waveshape=waveshape_default):
         self.num_waves = num_waves
         self.scale = scale
         self.wavespread_low = wavespread_low
         self.wavespread_high = wavespread_high
         self.max_speed = max_speed
         self.min_speed = min_speed
+        self.direction = direction
+        self.waveshape = waveshape
         self.__initstate__()
 
     def __initstate__(self):
         # state
-        self._pixel_state = None
-        self._Wave = None
-        self._WaveSpecSpeed = None
-        self._rotate_counter = 0
+        try:
+            self.direction
+        except AttributeError:
+            self.direction = direction_default
+        try:
+            self.waveshape
+        except AttributeError:
+            self.waveshape = waveshape_default
+        try:
+            self._pixel_state
+        except AttributeError:
+            self._pixel_state = None
+        try:
+            self._last_t
+        except AttributeError:
+            self._last_t = 0.0
+        try:
+            self._Wave
+        except AttributeError:
+            self._Wave = None
+        try:
+            self._WaveSpecSpeed
+        except AttributeError:
+            self._WaveSpecSpeed = None
+        try:
+            self._rotate_counter
+        except AttributeError:
+            self._rotate_counter = 0
         super(SwimmingPool, self).__initstate__()
 
     @staticmethod
@@ -55,9 +100,11 @@ class SwimmingPool(Effect):
                 ("num_waves", [30, 1, 100, 1]),
                 ("scale", [0.2, 0.01, 1.0, 0.01]),
                 ("wavespread_low", [30, 1, 100, 1]),
-                ("wavespread_high", [70, 50, 150, 1]),
+                ("wavespread_high", [70, 2, 150, 1]),
                 ("max_speed", [30, 1, 200, 1]),
                 ("min_speed", [30, 1, 200, 1]),
+                ("direction", direction),
+                ("waveshape", waveshape),
             ])
         }
         return definition
@@ -71,31 +118,79 @@ class SwimmingPool(Effect):
                 "wavespread_low": "Minimal spread of the randomly generated waves.",
                 "wavespread_high": "Maximum spread of the randomly generated waves.",
                 "max_speed": "Maximum movement speed of the waves.",
-                "min_speed": "Minimum movement speed of the waves."
+                "min_speed": "Minimum movement speed of the waves.",
+                "direction": "Select a direction or random behavior.",
+                "waveshape": "Select type of waves to spawn."
             }
         }
         return help
 
-    def _SinArray(self, _spread, _wavehight):
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['num_waves'][0] = self.num_waves
+        definition['parameters']['scale'][0] = self.scale
+        definition['parameters']['wavespread_low'][0] = self.wavespread_low
+        definition['parameters']['wavespread_high'][0] = self.wavespread_high
+        definition['parameters']['max_speed'][0] = self.max_speed
+        definition['parameters']['min_speed'][0] = self.min_speed
+        definition['parameters']['direction'] = [self.direction] + [x for x in direction if x != self.direction]
+        definition['parameters']['waveshape'] = [self.waveshape] + [x for x in waveshape if x != self.waveshape]
+        return definition
+
+    def _createWaveform(self, spread, wave_hight, speed, wave_form):
+        # Added negatives. Flip will happen later. This is just to get the form.
+        # Symmetricals are for integrity and for selection in all negatives.
+        if wave_form == 'sin(x)' or wave_form == '-sin(x)':
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [math.sin(math.pi / spread * i) * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
+        elif wave_form == '1/x' or wave_form == '-1/x':
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [spread / 2 / i * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
+        elif wave_form == '1/x**2' or wave_form == '-1/x**2':
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [spread / 2 / i**2 * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
+        elif wave_form == '1/x**3' or wave_form == '-1/x**3':
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [spread / 2 / i**3 * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
+        elif wave_form == 'const(x)' or wave_form == '-const(x)':
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
+        elif wave_form == 'x' or wave_form == '-x':
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [i * wave_hight / spread for i in range(1, spread + 1)] + [0, 0], sigma=3))
+        elif wave_form == 'x**2' or wave_form == '-x**2':
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [i**2 * wave_hight / spread / 10 for i in range(1, spread + 1)] + [0, 0], sigma=3))
+        elif wave_form == 'x**3' or wave_form == '-x**3':
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [i**3 * wave_hight / spread / 100 for i in range(1, spread + 1)] + [0, 0], sigma=3))
+        elif wave_form == 'x * e**(-x)' or wave_form == '-x * e**(-x)':
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [(0.5 / spread) * i * math.exp(-(0.2 / spread) * i) * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
+        # Default
+        return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [math.sin(math.pi / spread * i) * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
+
+    def _createWave(self, _spread, _wavehight, _speed):
         # Create array for a single wave
-        _CArray = []
+        _CArray = np.empty(0)
         _spread = min(int(self._num_pixels / 2) - 1, _spread)
-        for i in range(-_spread, _spread + 1):
-            _CArray.append(math.sin((math.pi / _spread) * i) * _wavehight)
+
+        # Select the type of waves
+        if self.waveshape == 'all':
+            wave_selector = random.choice(waveshape[:-3])
+        elif self.waveshape == 'all positive':
+            wave_selector = random.choice(waveshape_pos)
+        elif self.waveshape == 'all negative':
+            wave_selector = random.choice(waveshape_neg)
+        else:
+            wave_selector = self.waveshape
+        _CArray = self._createWaveform(_spread, _wavehight, _speed, wave_selector)
+        if wave_selector.startswith('-'):
+            _CArray = np.flip(_CArray)
         _output = np.zeros(self._num_pixels)
         _output[:len(_CArray)] = _CArray
         # Move somewhere
         _output = np.roll(_output, np.random.randint(0, self._num_pixels), axis=0)
         return _output.clip(0.0, 255.0)
 
-    def _CreateWaves(self, num_waves, wavespread_low=10, wavespread_high=50, max_speed=30):
-        num_waves = int(num_waves)
+    def _initWaves(self, num_waves, wavespread_low=50, wavespread_high=100, max_speed=30):
         _WaveArray = []
-        _wavespread = np.random.randint(int(wavespread_low), int(wavespread_high), num_waves)
+        _wavespread = np.random.randint(wavespread_low, wavespread_high, num_waves)
         _WaveArraySpecSpeed = np.random.randint(-max_speed, max_speed, num_waves)
         _WaveArraySpecHeight = np.random.rand(num_waves)
         for i in range(0, num_waves):
-            _WaveArray.append(self._SinArray(_wavespread[i], _WaveArraySpecHeight[i]))
+            _WaveArray.append(self._createWave(_wavespread[i], _WaveArraySpecHeight[i], _WaveArraySpecSpeed[i]))
         return _WaveArray, _WaveArraySpecSpeed
 
     def numInputChannels(self):
@@ -113,10 +208,10 @@ class SwimmingPool(Effect):
             self._Wave = None
             self._WaveSpecSpeed = None
 
-        if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < int(self.num_waves):
+        if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < self.num_waves:
 
-            self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low, self.wavespread_high,
-                                                                self.max_speed)
+            self._Wave, self._WaveSpecSpeed = self._initWaves(self.num_waves, self.wavespread_low,
+                                                                self.wavespread_high, self.max_speed)
         # Rotate waves
         self._rotate_counter += 1
         if self._rotate_counter > 30:
@@ -125,11 +220,14 @@ class SwimmingPool(Effect):
             if self.max_speed > self.min_speed:
                 speed = np.random.randint(self.min_speed, self.max_speed)
             else:
-                speed = np.random.randint(-self.max_speed, self.max_speed)
-            speed = speed * (-1 if np.random.randint(2) == 0 else 1)
+                speed = np.random.randint(0, self.max_speed)
+            if self.direction == 'side1':
+                speed = speed * -1
+            elif self.direction == 'random':
+                speed = speed * random.choice([-1, 1])
             spread = np.random.randint(self.wavespread_low, self.wavespread_high)
             height = np.random.rand()
-            wave = self._SinArray(spread, height)
+            wave = self._createWave(spread, height, speed)
             self._Wave[0] = wave
             self._WaveSpecSpeed[0] = speed
             self._rotate_counter = 0
@@ -143,13 +241,14 @@ class SwimmingPool(Effect):
             color = self._inputBuffer[0]
 
         all_waves = np.zeros(self._num_pixels)
-        for i in range(0, int(self.num_waves)):
+        for i in range(0, self.num_waves):
             fact = 1.0
             if i == 0:
                 fact = (self._rotate_counter / 30)
-            if i == int(self.num_waves) - 1:
+            if i == self.num_waves - 1:
                 fact = (1.0 - self._rotate_counter / 30)
             if i < len(self._Wave) and i < len(self._WaveSpecSpeed):
+                
                 step = sp.ndimage.interpolation.shift(
                     self._Wave[i],
                     self._t * self._WaveSpecSpeed[i],
@@ -546,7 +645,7 @@ class FallingStars(Effect):
         return controlArray
 
     def starControl(self, prob):
-        for i in range(int(self.max_spawns)):
+        for _ in range(int(self.max_spawns)):
             if random.random() <= prob:
                 self.spawnStar()
         outputArray = self.allStars(self._t, self.dim_speed, self.thickness, self._t0Array, self._spawnArray)
@@ -763,7 +862,7 @@ class RandomPendulums(Effect):
             self._lightflip = []
             self._offset = []
             self._swingspeed = []
-            for i in range(self.num_pendulums):
+            for _ in range(self.num_pendulums):
                 rSpread = int(random.randint(2, 10) / 300 * self._num_pixels)
                 self._spread.append(rSpread / 300)
                 self._location.append(random.randint(0, self._num_pixels - rSpread - 1) / 300)
@@ -852,6 +951,85 @@ class StaticBlob(Effect):
             if (location + i) >= 0 and (location + i) < self._num_pixels:
                 blobArray[location + i] = math.cos((math.pi / spread) * i)
         return blobArray.clip(0.0, 255.0)
+
+    def numInputChannels(self):
+        return 1
+
+    def numOutputChannels(self):
+        return 1
+
+    def process(self):
+        if self._inputBuffer is None or self._outputBuffer is None:
+            return
+        if self._inputBufferValid(0):
+            color = self._inputBuffer[0]
+        else:
+            # default: all white
+            color = np.ones(self._num_pixels) * np.array([[255.0], [255.0], [255.0]])
+        self._output = np.multiply(color, self.createBlob(self.spread, self.location) * np.array([[1.0], [1.0], [1.0]]))
+
+        self._outputBuffer[0] = self._output.clip(0.0, 255.0)
+
+
+class StaticWave(Effect):
+    """Generates a wave of light. Mostly for testing purposes."""
+
+    @staticmethod
+    def getEffectDescription():
+        return \
+            "Generates a wave of light. Mostly for testing purposes."
+
+    def __init__(self, spread=0.3, location=0.5):
+        self.spread = spread
+        self.location = location
+        self.__initstate__()
+
+    def __initstate__(self):
+        # state
+        super(StaticWave, self).__initstate__()
+
+    def __setstate__(self, state):
+        # Backwards compatibility from absolute -> relative sizes
+        if 'spread' in state and state['spread'] > 1:
+            state['spread'] = state['spread'] / 300 / 2
+        if 'location' in state and state['location'] > 1:
+            state['location'] = state['location'] / 300
+        return super().__setstate__(state)
+
+    @staticmethod
+    def getParameterDefinition():
+        definition = {
+            "parameters":
+            OrderedDict([
+                # default, min, max, stepsize
+                ("location", [0.5, 0, 1, 0.01]),
+                ("spread", [1, 0.01, 1, 0.01]),
+            ])
+        }
+        return definition
+
+    @staticmethod
+    def getParameterHelp():
+        help = {"parameters": {"location": "Location where the wave is created.", "spread": "Spreading of the wave."}}
+        return help
+
+    def getParameter(self):
+        definition = self.getParameterDefinition()
+        definition['parameters']['location'][0] = self.location
+        definition['parameters']['spread'][0] = self.spread
+        return definition
+
+    def createBlob(self, spread_rel, location_rel):
+        waveArray = np.zeros(self._num_pixels)
+
+        # convert relative to absolute values
+        spread = max(int(spread_rel * self._num_pixels), 1)
+        location = int(location_rel * self._num_pixels)
+        for i in range(1, spread + 1):
+            # make sure we are in bounds of array
+            if (location + i) >= 0 and (location + i) < self._num_pixels:
+                waveArray[location + i] = spread / 20 / (i + 1)
+        return waveArray.clip(0.0, 255.0)
 
     def numInputChannels(self):
         return 1
@@ -985,6 +1163,7 @@ class GenerateWaves(Effect):
 
 
 class Sorting(Effect):
+    # TODO sort like the color wheel
     """Effect for sorting an input by color or brightness."""
     @staticmethod
     def getEffectDescription():

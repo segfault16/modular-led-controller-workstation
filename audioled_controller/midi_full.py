@@ -143,8 +143,6 @@ class MidiProjectController:
             logger.error("Sysex message too short")
             return
 
-        # logger.info("MIDI-BLE REQ!")
-        
         if data[0] == 0x00 and data[1] == 0x00:
             # Version
             logger.info("MIDI-BLE REQ Version")
@@ -418,7 +416,6 @@ class MidiProjectController:
         else:
             paths = [paths]
         return paths
-
 
     def _handleProgramChange(self, program, proj):
         proj.activateScene(program)

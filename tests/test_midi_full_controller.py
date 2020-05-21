@@ -365,4 +365,4 @@ def test_get_enabled_controllers():
     assert metadata is not None
     assert len(metadata.keys()) == len(modulation.allController)
     for k, v in metadata.items():
-        assert v == False
+        assert not v
