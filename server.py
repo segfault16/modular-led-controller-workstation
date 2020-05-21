@@ -177,16 +177,21 @@ def create_app(midiAdvertiseName=None):
         global proj
         # stop_signal = True
         try:
-            ledThread.join()
+            app.logger.warning("Shutting down LED Thread")
+            ledThread.join(2)
+            app.logger.warning("Shutdown LED Thread complete")
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
 
         try:
+            app.logger.warning("Stopping processing of current project")
             proj.stopProcessing()
+            app.logger.warning("Project stopped")
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
 
         try:
+            app.logger.warning("Shutting down background scheduler")
             sched.shutdown()
             app.logger.debug('Background scheduler shutdown')
         except Exception as e:
@@ -928,6 +933,14 @@ if __name__ == '__main__':
         globalAudio = audio.GlobalAudio(serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX))
     else:
         globalAudio = audio.GlobalAudio()
+    
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_ENABLED) is not None:
+        audio.GlobalAudio.global_autogain_enabled = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_ENABLED)
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_MAXGAIN) is not None:
+        audio.GlobalAudio.global_autogain_maxgain = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_MAXGAIN)
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_TIME) is not None:
+        audio.GlobalAudio.global_autogain_time = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_TIME)
+    
 
     # strand test
     if args.strand:
