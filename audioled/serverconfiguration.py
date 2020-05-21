@@ -1,4 +1,4 @@
-from audioled import project, configs, devices
+from audioled import project, configs, devices, audio
 import uuid
 import jsonpickle
 import json
@@ -123,6 +123,13 @@ class ServerConfiguration:
             logger.info("Renewing device")
             self._reusableDevice = None
             self.getActiveProjectOrDefault().setDevice(self._createOrReuseOutputDevice())
+        
+        if key == CONFIG_AUDIO_AUTOADJUST_ENABLED:
+            audio.GlobalAudio.global_autogain_enabled = bool(value)
+        if key == CONFIG_AUDIO_AUTOADJUST_MAXGAIN:
+            audio.GlobalAudio.global_autogain_maxgain = float(value)
+        if key == CONFIG_AUDIO_AUTOADJUST_TIME:
+            audio.GlobalAudio.global_autogain_time = float(value)
         
     def getConfiguration(self, key):
         if key in self._config:

@@ -194,16 +194,7 @@ class AudioInput(Effect):
         self._outBuffer = []
         self._autogain_perc = None
         self._cur_gain = 1.0
-        # Defaults
-        self._autogain_max = GlobalAudio.global_autogain_maxgain
-        self._autogain_time = GlobalAudio.global_autogain_time
-        self._autogain = GlobalAudio.global_autogain_enabled
-        print("GLOBAL {}".format(GlobalAudio.global_autogain_enabled))
-        # Override with local settings
-        if self.override_global_autogain:
-            self._autogain_max = self.autogain_max
-            self._autogain_time = self.autogain_time
-            self._autogain = self.autogain
+
 
         logger.info("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
 
@@ -257,6 +248,15 @@ class AudioInput(Effect):
 
     async def update(self, dt):
         await super(AudioInput, self).update(dt)
+        # Defaults
+        self._autogain_max = GlobalAudio.global_autogain_maxgain
+        self._autogain_time = GlobalAudio.global_autogain_time
+        self._autogain = GlobalAudio.global_autogain_enabled
+        # Override with local settings
+        if self.override_global_autogain:
+            self._autogain_max = self.autogain_max
+            self._autogain_time = self.autogain_time
+            self._autogain = self.autogain
         if self._autogain_perc is None and GlobalAudio.chunk_rate is not None:
             # increase cur_gain by percentage
             # we want to get to self.autogain_max in approx. self.autogain_time seconds
