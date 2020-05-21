@@ -784,20 +784,20 @@ class Shapes(Effect):
 
     # Equally split the points over length
     # not really needed with faders
-    def process_points(self, A, l):
+    def _processPoints(self, A, length):
         B = []
         if len(A) == 0:
             B.append([0, 50])
         elif len(A) == 1:
             B.append([0, A[0]])
         else:
-            delta_l = int(l / (len(A)-1))
+            delta_l = int(length / (len(A)-1))
             for i in range(len(A)):
                 B.append([i * delta_l, A[i] / 100])
         return B
 
     # Get different slopes between points. Linear solving only.
-    def solve_points(self, A):
+    def _solvePoints(self, A):
         B = []
         for i in range(int(len(A)-1)):
             temp1 = np.array([[A[i][0], 1], [A[i+1][0], 1]])
@@ -807,14 +807,14 @@ class Shapes(Effect):
         return B
 
     # Calculate array for brightness
-    def create_Array(self, A, B, l):
+    def _createArray(self, A, B, length):
         C = []
         count = 0
         for i in range(int(len(A)-1)):
             for j in range(A[i][0], A[i+1][0]):
                 C.append(round(B[i][0] * count + B[i][1], 4))
                 count += 1
-        while len(C) < l:
+        while len(C) < length:
             C.append(C[-1])
         return C
 
@@ -827,9 +827,9 @@ class Shapes(Effect):
 
         y = self._inputBuffer[0]
 
-        A = self.process_points([self.x0, self.x1, self.x2, self.x3, self.x4], len(y[0]))
-        B = self.solve_points(A)
-        C = self.create_Array(A, B, len(y[0]))
+        A = self._processPoints([self.x0, self.x1, self.x2, self.x3, self.x4], len(y[0]))
+        B = self._solvePoints(A)
+        C = self._createArray(A, B, len(y[0]))
 
         for i in range(3):
             y[i] = np.multiply(C, y[i])
