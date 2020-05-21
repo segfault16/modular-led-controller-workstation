@@ -69,6 +69,9 @@ followed by `0xf7` for Midi Sysex End.
 | REQ      | Export project                          | `0x00`, `0x60` |                                                                       |                     |
 | RESP     | Export project                          | `0x00`, `0x60` | Binary data encode of utf8 project json compressed with zlib          |                     |
 | RESP     | Export project                          | `0x00`, `0x6F` |                                                                       | Project not found   |
+| REQ      | Delete project                          | `0x00`, `0x70` | Binary data encode of utf8 project id                                 |                     |
+| RESP     | Delete project                          | `0x00`, `0x70` |                                                                       | Successful          |
+| RESP     | Delete project                          | `0x00`, `0x7F` |                                                                       | Project not found   |
 | REQ      | Get active scene ID                     | `0x01`, `0x00` |                                                                       |                     |
 | RESP     | Get active scene ID                     | `0x01`, `0x00` | Binary data encode of utf8 active scene ID string                     |                     |
 | REQ      | Get active scene                        | `0x01`, `0x10` |                                                                       |                     |

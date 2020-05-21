@@ -244,6 +244,18 @@ class MidiProjectController:
             else:
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(self._createExportProjNotFoundMsg())
+        elif data[0] == 0x00 and data[1] == 0x70:
+            # Activate project
+            projUid = str(bytes(sysex_data.decode(data[2:])), encoding='utf8')
+            logger.info("MIDI-BLE REQ Delete project {}".format(projUid))
+            proj = serverconfig.getProject(projUid)
+            if proj is not None:
+                serverconfig.deleteProject(projUid)
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._deleteProjSuccessfulMsg())
+            else:
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._deleteProjNotFoundMsg())
         elif data[0] == 0x01 and data[1] == 0x00:
             # Get active scene ID
             logger.info("MIDI-BLE REQ Active scene index")
@@ -345,6 +357,18 @@ class MidiProjectController:
         logger.info("MIDI-BLE RESPONSE Export project - Not found")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x6F]
+        return sendMsg
+
+    def _deleteProjSuccessfulMsg(self):
+        logger.info("MIDI-BLE RESPONSE Delete project - Successful")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x70]
+        return sendMsg
+    
+    def _deleteProjNotFoundMsg(self):
+        logger.info("MIDI-BLE RESPONSE Delete project - Not found")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x7F]
         return sendMsg
 
     def _createImportProjSuccessfulMsg(self):
