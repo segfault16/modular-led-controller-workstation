@@ -85,19 +85,20 @@ class GlobalAudio():
     global_autogain_maxgain = 1.
     global_autogain_time = 30.
 
-    def __init__(self, device_index=None, chunk_rate=60, num_channels=1):
+    def __init__(self, device_index=None, chunk_rate=60, num_channels=None):
         GlobalAudio.device_index = device_index
         GlobalAudio.chunk_rate = chunk_rate
-        self.num_channels = num_channels
+        self.num_channels = 1
         try:
-            self.global_stream, GlobalAudio.sample_rate = self.stream_audio(device_index, chunk_rate, num_channels)
+            self.global_stream, GlobalAudio.sample_rate, self.num_channels = self.stream_audio(device_index, chunk_rate, num_channels)
         except Exception as e:
             logger.error("!!! Fatal error in audio device !!!")
+            logger.error(e)
             traceback.print_tb(e.__traceback__)
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
         chunk = np.frombuffer(in_data, np.float32).astype(np.float)
-        GlobalAudio.buffer = chunk
+        GlobalAudio.buffer = np.array([chunk[i::self.num_channels] for i in range(self.num_channels)])
         return (None, pyaudio.paContinue)
 
     def _open_input_stream(self, chunk_length, device_index=None, channels=1, retry=0):
@@ -132,8 +133,8 @@ class GlobalAudio():
                             frames_per_buffer=chunk_length,
                             stream_callback=self._audio_callback)
             stream.start_stream()
-            logger.info("Started stream on device {}, fs: {}, chunk_length: {}".format(device_index, frameRate, chunk_length))
-            GlobalAudio.buffer = np.zeros(chunk_length)
+            logger.info("Started stream on device {}, fs: {}, chunk_length: {}, channels: {}".format(device_index, frameRate, chunk_length, channels))
+            GlobalAudio.buffer = np.zeros((chunk_length, channels))
         except OSError as e:
             if retry == 5:
                 err = 'Error occurred while attempting to open audio device. '
@@ -144,9 +145,9 @@ class GlobalAudio():
                 raise e
             time.sleep(retry)
             return self._open_input_stream(chunk_length, device_index=device_index, channels=channels, retry=retry + 1)
-        return stream, int(device_info['defaultSampleRate'])
+        return stream, int(device_info['defaultSampleRate']), channels
 
-    def stream_audio(self, device_index=None, chunk_rate=60, channels=1):
+    def stream_audio(self, device_index=None, chunk_rate=60, channels=None):
         if device_index == -1:
             logger.info("Audio device disabled by device_index -1.")
             return None, None
@@ -164,6 +165,11 @@ class GlobalAudio():
         p = pyaudio.PyAudio()
         device_info = p.get_device_info_by_index(device_index)
         samplerate = int(device_info['defaultSampleRate'])
+        available_channels = int(device_info['maxInputChannels'])
+        if channels is None:
+            channels = available_channels
+        else:
+            channels = min(channels, available_channels)
 
         chunk_length = int(samplerate // chunk_rate)
         return self._open_input_stream(chunk_length, device_index=device_index, channels=channels)
@@ -295,7 +301,7 @@ class AudioInput(Effect):
         for i in range(0, self.num_channels):
             # layout for multiple channel is interleaved:
             # 00 01 .. 0n 10 11 .. 1n
-            self._outBuffer[i].audio = self._cur_gain * self._buffer[i::self.num_channels]
+            self._outBuffer[i].audio = self._cur_gain * self._buffer[i]
             # TODO: Calculate audio stats per channel: peak, rms, FFT buckets for remote display
             self._outputBuffer[i] = self._outBuffer[i]
-            # logger.info("{}: {}".format(i, self._outputBuffer[i]))
+            # logger.info("{}: {}".format(i, np.max(self._outputBuffer[i].audio)))
