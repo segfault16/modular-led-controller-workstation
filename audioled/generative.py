@@ -267,25 +267,25 @@ class SwimmingPool2(Effect):
         # Added negatives. Flip will happen later. This is just to get the form.
         # Symmetricals are for integrity and for selection in all negatives.
         if wave_form == 'sin(x)' or wave_form == '-sin(x)':
-            return np.asarray([math.sin(math.pi / spread * i) * wave_hight for i in range(1, spread + 1)])
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [math.sin(math.pi / spread * i) * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
         elif wave_form == '1/x' or wave_form == '-1/x':
-            return np.asarray([spread / 2 / i * wave_hight for i in range(1, spread + 1)])
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [spread / 2 / i * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
         elif wave_form == '1/x**2' or wave_form == '-1/x**2':
-            return np.asarray([spread / 2 / i**2 * wave_hight for i in range(1, spread + 1)])
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [spread / 2 / i**2 * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
         elif wave_form == '1/x**3' or wave_form == '-1/x**3':
-            return np.asarray([spread / 2 / i**3 * wave_hight for i in range(1, spread + 1)])
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [spread / 2 / i**3 * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
         elif wave_form == 'const(x)' or wave_form == '-const(x)':
-            return np.asarray([wave_hight for i in range(1, spread + 1)])
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
         elif wave_form == 'x' or wave_form == '-x':
-            return np.asarray([i * wave_hight / spread for i in range(1, spread + 1)])
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [i * wave_hight / spread for i in range(1, spread + 1)] + [0, 0], sigma=3))
         elif wave_form == 'x**2' or wave_form == '-x**2':
-            return np.asarray([i**2 * wave_hight / spread / 10 for i in range(1, spread + 1)])
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [i**2 * wave_hight / spread / 10 for i in range(1, spread + 1)] + [0, 0], sigma=3))
         elif wave_form == 'x**3' or wave_form == '-x**3':
-            return np.asarray([i**3 * wave_hight / spread / 100 for i in range(1, spread + 1)])
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [i**3 * wave_hight / spread / 100 for i in range(1, spread + 1)] + [0, 0], sigma=3))
         elif wave_form == 'x * e**(-x)' or wave_form == '-x * e**(-x)':
-            return np.asarray([(0.5 / spread) * i * math.exp(-(0.2 / spread) * i) * wave_hight for i in range(1, spread + 1)])
+            return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [(0.5 / spread) * i * math.exp(-(0.2 / spread) * i) * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
         # Default
-        return np.asarray([math.sin(math.pi / spread * i) * wave_hight for i in range(1, spread + 1)])
+        return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [math.sin(math.pi / spread * i) * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
 
 
     def _SinArray(self, _spread, _wavehight, _speed):
@@ -377,7 +377,7 @@ class SwimmingPool2(Effect):
             if i < len(self._Wave) and i < len(self._WaveSpecSpeed):
                 
                 step = sp.ndimage.interpolation.shift(
-                    sp.ndimage.gaussian_filter(self._Wave[i], sigma=3),
+                    self._Wave[i],
                     self._t * self._WaveSpecSpeed[i],
                     mode='wrap',
                     prefilter=True) * self.scale * fact
