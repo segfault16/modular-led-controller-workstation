@@ -185,6 +185,7 @@ class SwimmingPool2(Effect):
                  wavespread_low=30,
                  wavespread_high=70,
                  max_speed=30,
+                 min_speed=10,
                  direction=direction_default,
                  waveshape=waveshape_default):
         self.num_waves = num_waves
@@ -192,6 +193,7 @@ class SwimmingPool2(Effect):
         self.wavespread_low = wavespread_low
         self.wavespread_high = wavespread_high
         self.max_speed = max_speed
+        self.min_speed = min_speed
         self.direction = direction
         self.waveshape = waveshape
         self.__initstate__()
@@ -246,6 +248,7 @@ class SwimmingPool2(Effect):
                 "wavespread_low": "Minimal spread of the randomly generated waves.",
                 "wavespread_high": "Maximum spread of the randomly generated waves.",
                 "max_speed": "Maximum movement speed of the waves.",
+                "min_speed": "Minimum movement speed of the waves.",
                 "direction": "Select a direction or random behavior.",
                 "waveshape": "Select type of waves to spawn."
             }
@@ -259,11 +262,12 @@ class SwimmingPool2(Effect):
         definition['parameters']['wavespread_low'][0] = self.wavespread_low
         definition['parameters']['wavespread_high'][0] = self.wavespread_high
         definition['parameters']['max_speed'][0] = self.max_speed
+        definition['parameters']['min_speed'][0] = self.min_speed
         definition['parameters']['direction'] = [self.direction] + [x for x in direction if x != self.direction]
         definition['parameters']['waveshape'] = [self.waveshape] + [x for x in waveshape if x != self.waveshape]
         return definition
 
-    def createFunc(self, spread, wave_hight, speed, wave_form):
+    def _createWaveform(self, spread, wave_hight, speed, wave_form):
         # Added negatives. Flip will happen later. This is just to get the form.
         # Symmetricals are for integrity and for selection in all negatives.
         if wave_form == 'sin(x)' or wave_form == '-sin(x)':
@@ -287,7 +291,6 @@ class SwimmingPool2(Effect):
         # Default
         return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [math.sin(math.pi / spread * i) * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
 
-
     def _SinArray(self, _spread, _wavehight, _speed):
         # Create array for a single wave
         _CArray = np.empty(0)
@@ -302,10 +305,7 @@ class SwimmingPool2(Effect):
             wave_selector = random.choice(waveshape_neg)
         else:
             wave_selector = self.waveshape
-        _CArray = self.createFunc(_spread, _wavehight, _speed, wave_selector)
-        # for i in range(1, _spread + 1):
-        #     _CArray.append(self.createFunc(i, _spread, _wavehight, _speed, wave_selector))
-        # This is where the negative flip happens.
+        _CArray = self._createWaveform(_spread, _wavehight, _speed, wave_selector)
         if wave_selector.startswith('-'):
             _CArray = np.flip(_CArray)
         _output = np.zeros(self._num_pixels)
@@ -317,7 +317,7 @@ class SwimmingPool2(Effect):
     def _CreateWaves(self, num_waves, wavespread_low=50, wavespread_high=100, max_speed=30):
         _WaveArray = []
         _wavespread = np.random.randint(wavespread_low, wavespread_high, num_waves)
-        _WaveArraySpecSpeed = np.random.randint(0, max_speed, num_waves)
+        _WaveArraySpecSpeed = np.random.randint(-max_speed, max_speed, num_waves)
         _WaveArraySpecHeight = np.random.rand(num_waves)
         for i in range(0, num_waves):
             _WaveArray.append(self._SinArray(_wavespread[i], _WaveArraySpecHeight[i], _WaveArraySpecSpeed[i]))
@@ -347,7 +347,10 @@ class SwimmingPool2(Effect):
         if self._rotate_counter > 30:
             self._Wave = np.roll(self._Wave, 1, axis=0)
             self._WaveSpecSpeed = np.roll(self._WaveSpecSpeed, 1)
-            speed = np.random.randint(0, self.max_speed)
+            if self.max_speed > self.min_speed:
+                speed = np.random.randint(self.min_speed, self.max_speed)
+            else:
+                speed = np.random.randint(0, self.max_speed)
             if self.direction == 'side1':
                 speed = speed * -1
             elif self.direction == 'random':
