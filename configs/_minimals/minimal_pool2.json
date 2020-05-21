@@ -32,7 +32,7 @@
                 "py/object": "audioled.filtergraph.Node",
                 "py/state": {
                     "effect": {
-                        "py/object": "audioled.generative.SwimmingPool2",
+                        "py/object": "audioled.generative.SwimmingPool",
                         "py/state": {
                             "direction": "side2",
                             "max_speed": 30,
