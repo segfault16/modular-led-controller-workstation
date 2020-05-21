@@ -256,6 +256,26 @@ class MidiProjectController:
             else:
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(self._deleteProjNotFoundMsg())
+        elif data[0] == 0x02 and data[1] == 0x00:
+            # Get server configuration
+            logger.info("MIDI-BLE REQ Get server configuration")
+            config = serverconfig.getFullConfiguration()
+            if self._sendMidiCallback is not None:
+                self._sendMidiCallback(self._createGetServerConfigMsg(config))
+        elif data[0] == 0x02 and data[1] == 0x10:
+            # Update server configuration
+            logger.info("MIDI-BLE REQ Update server configuration")
+            dec = sysex_data.decode(data[2:])
+            configGzip = zlib.decompress(bytes(dec))
+            configJson = str(configGzip, encoding='utf8')
+            config = json.loads(configJson)
+            try:
+                serverconfig.setConfiguration(config)
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createUpdateServerConfigSuccessfulMsg())
+            except Exception:
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createUpdateServerConfigErrorMsg())
         elif data[0] == 0x01 and data[1] == 0x00:
             # Get active scene ID
             logger.info("MIDI-BLE REQ Active scene index")
@@ -284,7 +304,27 @@ class MidiProjectController:
                 self._sendMidiCallback(self._createEnabledControllersMsg(proj))
         else:
             logger.error("MIDI-BLE Unknown sysex {} {}".format(hex(data[0]), hex(data[1])))
-    
+
+    def _createGetServerConfigMsg(self, config: dict):
+        logger.info("MIDI-BLE RESPONSE Get server config - Successful")
+        json = jsonpickle.dumps(config)
+        gzip = zlib.compress(bytes(json, encoding='utf8'))
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x02, 0x00] + sysex_data.encode(gzip)
+        return sendMsg
+
+    def _createUpdateServerConfigSuccessfulMsg(self):
+        logger.info("MIDI-BLE RESPONSE Update server config - Successful")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x02, 0x10]
+        return sendMsg
+
+    def _createUpdateServerConfigErrorMsg(self):
+        logger.info("MIDI-BLE RESPONSE Update server config - Successful")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x02, 0x1F]
+        return sendMsg
+
     def _updateApp(self, app_update):
         try:
             logger.debug("Starting download in background")

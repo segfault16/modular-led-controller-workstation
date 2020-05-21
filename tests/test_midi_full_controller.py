@@ -404,3 +404,51 @@ def test_delete_project_not_found():
     # Check response message ID
     assert retMsg.data[0] == 0x00
     assert retMsg.data[1] == 0x7F
+
+def test_get_server_config():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    # Get active project metadata
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x02, 0x00]
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, None)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x02
+    assert retMsg.data[1] == 0x00
+    # Decode data
+    dec = sysex_data.decode(retMsg.data[2:])
+    dec = zlib.decompress(bytes(dec))
+    j_dict = json.loads(dec)
+    assert j_dict is not None
+    print(j_dict)
+    assert j_dict["advertise_bluetooth"] == True
+
+def test_update_server_config():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    # Init in-memory config
+    cfg = serverconfiguration.ServerConfiguration()
+    assert cfg.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH)
+    # Get active project metadata
+    j_dict = json.dumps({"advertise_bluetooth": False})
+    gzip = zlib.compress(bytes(j_dict, encoding='utf8'))
+
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x02, 0x10] + sysex_data.encode(bytes(gzip))
+
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, cfg, None)
+    assert f.call_count == 1
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x02
+    assert retMsg.data[1] == 0x10
+    
+    assert not cfg.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH)
