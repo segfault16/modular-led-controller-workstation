@@ -161,7 +161,7 @@ class SwimmingPool(Effect):
         # Default
         return np.asarray(sp.ndimage.gaussian_filter([0, 0] + [math.sin(math.pi / spread * i) * wave_hight for i in range(1, spread + 1)] + [0, 0], sigma=3))
 
-    def _SinArray(self, _spread, _wavehight, _speed):
+    def _createWave(self, _spread, _wavehight, _speed):
         # Create array for a single wave
         _CArray = np.empty(0)
         _spread = min(int(self._num_pixels / 2) - 1, _spread)
@@ -184,13 +184,13 @@ class SwimmingPool(Effect):
         _output = np.roll(_output, np.random.randint(0, self._num_pixels), axis=0)
         return _output.clip(0.0, 255.0)
 
-    def _CreateWaves(self, num_waves, wavespread_low=50, wavespread_high=100, max_speed=30):
+    def _initWaves(self, num_waves, wavespread_low=50, wavespread_high=100, max_speed=30):
         _WaveArray = []
         _wavespread = np.random.randint(wavespread_low, wavespread_high, num_waves)
         _WaveArraySpecSpeed = np.random.randint(-max_speed, max_speed, num_waves)
         _WaveArraySpecHeight = np.random.rand(num_waves)
         for i in range(0, num_waves):
-            _WaveArray.append(self._SinArray(_wavespread[i], _WaveArraySpecHeight[i], _WaveArraySpecSpeed[i]))
+            _WaveArray.append(self._createWave(_wavespread[i], _WaveArraySpecHeight[i], _WaveArraySpecSpeed[i]))
         return _WaveArray, _WaveArraySpecSpeed
 
     def numInputChannels(self):
@@ -210,7 +210,7 @@ class SwimmingPool(Effect):
 
         if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < self.num_waves:
 
-            self._Wave, self._WaveSpecSpeed = self._CreateWaves(self.num_waves, self.wavespread_low,
+            self._Wave, self._WaveSpecSpeed = self._initWaves(self.num_waves, self.wavespread_low,
                                                                 self.wavespread_high, self.max_speed)
         # Rotate waves
         self._rotate_counter += 1
@@ -227,7 +227,7 @@ class SwimmingPool(Effect):
                 speed = speed * random.choice([-1, 1])
             spread = np.random.randint(self.wavespread_low, self.wavespread_high)
             height = np.random.rand()
-            wave = self._SinArray(spread, height, speed)
+            wave = self._createWave(spread, height, speed)
             self._Wave[0] = wave
             self._WaveSpecSpeed[0] = speed
             self._rotate_counter = 0
