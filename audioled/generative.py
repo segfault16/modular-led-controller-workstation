@@ -263,32 +263,34 @@ class SwimmingPool2(Effect):
         definition['parameters']['wave_pool2'] = [self.wave_pool2] + [x for x in wave_pool2 if x != self.wave_pool2]
         return definition
 
-    def createFunc(self, t, spread, wave_hight, speed, wave_form):
+    def createFunc(self, spread, wave_hight, speed, wave_form):
         # Added negatives. Flip will happen later. This is just to get the form.
         # Symmetricals are for integrity and for selection in all negatives.
         if wave_form == 'sin(x)' or wave_form == '-sin(x)':
-            func = math.sin(math.pi / spread * t) * wave_hight
+            return np.asarray([math.sin(math.pi / spread * i) * wave_hight for i in range(1, spread + 1)])
         elif wave_form == '1/x' or wave_form == '-1/x':
-            func = spread / 2 / t * wave_hight
+            return np.asarray([spread / 2 / i * wave_hight for i in range(1, spread + 1)])
         elif wave_form == '1/x**2' or wave_form == '-1/x**2':
-            func = spread / 2 / t**2 * wave_hight
+            return np.asarray([spread / 2 / i**2 * wave_hight for i in range(1, spread + 1)])
         elif wave_form == '1/x**3' or wave_form == '-1/x**3':
-            func = spread / 2 / t**3 * wave_hight
+            return np.asarray([spread / 2 / i**3 * wave_hight for i in range(1, spread + 1)])
         elif wave_form == 'const(x)' or wave_form == '-const(x)':
-            func = wave_hight
+            return np.asarray([wave_hight for i in range(1, spread + 1)])
         elif wave_form == 'x' or wave_form == '-x':
-            func = t * wave_hight / spread
+            return np.asarray([i * wave_hight / spread for i in range(1, spread + 1)])
         elif wave_form == 'x**2' or wave_form == '-x**2':
-            func = t**2 * wave_hight / spread / 10
+            return np.asarray([i**2 * wave_hight / spread / 10 for i in range(1, spread + 1)])
         elif wave_form == 'x**3' or wave_form == '-x**3':
-            func = t**3 * wave_hight / spread / 100
+            return np.asarray([i**3 * wave_hight / spread / 100 for i in range(1, spread + 1)])
         elif wave_form == 'x * e**(-x)' or wave_form == '-x * e**(-x)':
-            func = (0.5 / spread) * t * math.exp(-(0.2 / spread) * t) * wave_hight
-        return func
+            return np.asarray([(0.5 / spread) * i * math.exp(-(0.2 / spread) * i) * wave_hight for i in range(1, spread + 1)])
+        # Default
+        return np.asarray([math.sin(math.pi / spread * i) * wave_hight for i in range(1, spread + 1)])
+
 
     def _SinArray(self, _spread, _wavehight, _speed):
         # Create array for a single wave
-        _CArray = []
+        _CArray = np.empty(0)
         _spread = min(int(self._num_pixels / 2) - 1, _spread)
 
         # Select the type of waves
@@ -300,9 +302,9 @@ class SwimmingPool2(Effect):
             wave_selector = random.choice(wave_pool2_neg)
         else:
             wave_selector = self.wave_pool2
-
-        for i in range(1, _spread + 1):
-            _CArray.append(self.createFunc(i, _spread, _wavehight, _speed, wave_selector))
+        _CArray = self.createFunc(_spread, _wavehight, _speed, wave_selector)
+        # for i in range(1, _spread + 1):
+        #     _CArray.append(self.createFunc(i, _spread, _wavehight, _speed, wave_selector))
         # This is where the negative flip happens.
         if wave_selector.startswith('-'):
             _CArray = np.flip(_CArray)
@@ -373,8 +375,9 @@ class SwimmingPool2(Effect):
             if i == self.num_waves - 1:
                 fact = (1.0 - self._rotate_counter / 30)
             if i < len(self._Wave) and i < len(self._WaveSpecSpeed):
+                
                 step = sp.ndimage.interpolation.shift(
-                    self._Wave[i],
+                    sp.ndimage.gaussian_filter(self._Wave[i], sigma=3),
                     self._t * self._WaveSpecSpeed[i],
                     mode='wrap',
                     prefilter=True) * self.scale * fact
