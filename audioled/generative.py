@@ -22,12 +22,12 @@ sortby = ['red', 'green', 'blue', 'brightness']
 sortbydefault = 'red'
 direction = ['side1', 'side2', 'random']
 direction_default = 'random'
-wave_pool2 = ['sin(x)', '1/x', '1/x**2', '1/x**3', 'const(x)', 'x', 'x**2', 'x**3', 'x * e**(-x)',
+waveshape = ['sin(x)', '1/x', '1/x**2', '1/x**3', 'const(x)', 'x', 'x**2', 'x**3', 'x * e**(-x)',
               '-sin(x)', '-1/x', '-1/x**2', '-1/x**3', '-const(x)', '-x', '-x**2', '-x**3', '-x * e**(-x)',
               'all positive', 'all negative', 'all']
-wave_pool2_pos = ['sin(x)', '1/x', '1/x**2', '1/x**3', 'const(x)', 'x', 'x**2', 'x**3', 'x * e**(-x)']
-wave_pool2_neg = ['-sin(x)', '-1/x', '-1/x**2', '-1/x**3', '-const(x)', '-x', '-x**2', '-x**3', '-x * e**(-x)']
-wave_pool2_default = 'sin(x)'
+waveshape_pos = ['sin(x)', '1/x', '1/x**2', '1/x**3', 'const(x)', 'x', 'x**2', 'x**3', 'x * e**(-x)']
+waveshape_neg = ['-sin(x)', '-1/x', '-1/x**2', '-1/x**3', '-const(x)', '-x', '-x**2', '-x**3', '-x * e**(-x)']
+waveshape_default = 'sin(x)'
 
 
 class SwimmingPool(Effect):
@@ -186,14 +186,14 @@ class SwimmingPool2(Effect):
                  wavespread_high=70,
                  max_speed=30,
                  direction=direction_default,
-                 wave_pool2=wave_pool2_default):
+                 waveshape=waveshape_default):
         self.num_waves = num_waves
         self.scale = scale
         self.wavespread_low = wavespread_low
         self.wavespread_high = wavespread_high
         self.max_speed = max_speed
         self.direction = direction
-        self.wave_pool2 = wave_pool2
+        self.waveshape = waveshape
         self.__initstate__()
 
     def __initstate__(self):
@@ -232,7 +232,7 @@ class SwimmingPool2(Effect):
                 ("wavespread_high", [70, 2, 150, 1]),
                 ("max_speed", [30, 1, 200, 1]),
                 ("direction", direction),
-                ("wave_pool2", wave_pool2),
+                ("waveshape", waveshape),
             ])
         }
         return definition
@@ -247,7 +247,7 @@ class SwimmingPool2(Effect):
                 "wavespread_high": "Maximum spread of the randomly generated waves.",
                 "max_speed": "Maximum movement speed of the waves.",
                 "direction": "Select a direction or random behavior.",
-                "wave_pool2": "Select type of waves to spawn."
+                "waveshape": "Select type of waves to spawn."
             }
         }
         return help
@@ -260,7 +260,7 @@ class SwimmingPool2(Effect):
         definition['parameters']['wavespread_high'][0] = self.wavespread_high
         definition['parameters']['max_speed'][0] = self.max_speed
         definition['parameters']['direction'] = [self.direction] + [x for x in direction if x != self.direction]
-        definition['parameters']['wave_pool2'] = [self.wave_pool2] + [x for x in wave_pool2 if x != self.wave_pool2]
+        definition['parameters']['waveshape'] = [self.waveshape] + [x for x in waveshape if x != self.waveshape]
         return definition
 
     def createFunc(self, spread, wave_hight, speed, wave_form):
@@ -294,14 +294,14 @@ class SwimmingPool2(Effect):
         _spread = min(int(self._num_pixels / 2) - 1, _spread)
 
         # Select the type of waves
-        if self.wave_pool2 == 'all':
-            wave_selector = random.choice(wave_pool2[:-3])
-        elif self.wave_pool2 == 'all positive':
-            wave_selector = random.choice(wave_pool2_pos)
-        elif self.wave_pool2 == 'all negative':
-            wave_selector = random.choice(wave_pool2_neg)
+        if self.waveshape == 'all':
+            wave_selector = random.choice(waveshape[:-3])
+        elif self.waveshape == 'all positive':
+            wave_selector = random.choice(waveshape_pos)
+        elif self.waveshape == 'all negative':
+            wave_selector = random.choice(waveshape_neg)
         else:
-            wave_selector = self.wave_pool2
+            wave_selector = self.waveshape
         _CArray = self.createFunc(_spread, _wavehight, _speed, wave_selector)
         # for i in range(1, _spread + 1):
         #     _CArray.append(self.createFunc(i, _spread, _wavehight, _speed, wave_selector))
