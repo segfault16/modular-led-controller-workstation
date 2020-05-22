@@ -21,11 +21,11 @@ See https://github.com/jgarff/rpi_ws281x
 ## Install dependencies 
 
 ```
-sudo apt-get install python3-pip # to install pip3 on Raspbian Lite
+sudo apt-get install python3-pip -y # to install pip3 on Raspbian Lite
 sudo pip3 install pipenv # install pipenv
-sudo apt-get install libjpeg8-dev # For pillow
-sudo apt-get install portaudio19-dev # For pyaudio
-sudo apt-get install libatlas-base-dev # For numpy
+sudo apt-get install libjpeg8-dev -y # For pillow
+sudo apt-get install portaudio19-dev -y # For pyaudio
+sudo apt-get install libatlas-base-dev -y # For numpy
 sudo pipenv install
 ```
 
