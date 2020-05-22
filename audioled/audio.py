@@ -203,7 +203,7 @@ class AudioInput(Effect):
         self._autogain_perc = None
         self._cur_gain = 1.0
 
-        logger.info("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
+        logger.debug("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
 
     def updateParameter(self, stateDict):
         super(AudioInput, self).updateParameter(stateDict)

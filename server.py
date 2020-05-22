@@ -50,7 +50,7 @@ logging.basicConfig(stream=sys.stdout,
 logging.debug("Global debug log enabled")
 # Adjust loglevels
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
-logging.getLogger('audioled').setLevel(logging.DEBUG)
+logging.getLogger('audioled').setLevel(logging.INFO)
 logging.getLogger('audioled_controller').setLevel(logging.DEBUG)
 logging.getLogger('audioled_controller.bluetooth').setLevel(logging.INFO)
 logging.getLogger('root').setLevel(logging.INFO)
@@ -871,7 +871,7 @@ if __name__ == '__main__':
         logger.info("Using configuration from {}".format(config_location))
         serverconfig = serverconfiguration.PersistentConfiguration(config_location, args.no_store)
 
-    logger.info("Applying arguments")
+    logger.info("Applying arguments {}".format(args))
 
     # Update num pixels
     if args.num_pixels is not None:

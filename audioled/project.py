@@ -318,6 +318,8 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     if dMask & message.deviceMask:
                         logger.debug("Device mask match for device {}".format(deviceId))
                         filtergraph.updateModulationSourceValue(message.controller, message.newValue)
+                elif isinstance(message, str) and message == "check_is_processing":
+                    logger.info("process {} responding".format(os.getpid()))
                 else:
                     logger.warning("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
@@ -880,7 +882,7 @@ class Project(Updateable):
             p = mp.Process(target=worker, args=(q, filterGraph, fgDevice, dIdx, slotId))
             p.start()
             # Process sometimes doesn't start...
-            q.put(123)
+            q.put("check_is_processing")
             time.sleep(sleepfact * 0.1)
             if not q._unfinished_tasks._semlock._is_zero():
                 logger.warning("Process didn't respond in time!")
@@ -903,7 +905,7 @@ class Project(Updateable):
                 p = mp.Process(target=output, args=(q, outputDevice, virtualDevice))
                 p.start()
                 # Make sure process starts
-                q.put("test")
+                q.put("check_is_processing")
                 time.sleep(sleepfact * 0.1)
                 if not q._unfinished_tasks._semlock._is_zero():
                     logger.warning("Output process didn't respond in time!")
