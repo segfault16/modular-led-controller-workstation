@@ -18,6 +18,7 @@ CONFIG_NUM_ROWS = 'num_rows'
 CONFIG_DEVICE = 'device'
 CONFIG_DEVICE_CANDY_SERVER = 'device.candy.server'
 CONFIG_AUDIO_DEVICE_INDEX = 'audio.device_index'
+CONFIG_AUDIO_MAX_CHANNELS = 'audio.max_channels'
 CONFIG_AUDIO_AUTOADJUST_ENABLED = 'audio.autoadjust.enabled'
 CONFIG_AUDIO_AUTOADJUST_MAXGAIN = 'audio.autoadjust.max_gain'
 CONFIG_AUDIO_AUTOADJUST_TIME = 'audio.autoadjust.time'
@@ -36,6 +37,7 @@ allowed_configs = [
     CONFIG_DEVICE,
     CONFIG_DEVICE_CANDY_SERVER,
     CONFIG_AUDIO_DEVICE_INDEX,
+    CONFIG_AUDIO_MAX_CHANNELS,
     CONFIG_AUDIO_AUTOADJUST_ENABLED,
     CONFIG_AUDIO_AUTOADJUST_MAXGAIN,
     CONFIG_AUDIO_AUTOADJUST_TIME,
@@ -63,12 +65,17 @@ class ServerConfiguration:
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
         self._config[CONFIG_DEVICE_PANEL_MAPPING] = ''
         self._config[CONFIG_RESET_CONTROLLER_MODULATION] = False
+        # Pyupdater
         self._config[CONFIG_UPDATER_AUTOCHECK_PATH] = ""
+        # Bluetooth
         self._config[CONFIG_ADVERTISE_BLUETOOTH] = True
         self._config[CONFIG_ADVERTISE_BLUETOOTH_NAME] = "MOLECOLE Control"
+        # Audio
+        self._config[CONFIG_AUDIO_MAX_CHANNELS] = 2
         self._config[CONFIG_AUDIO_AUTOADJUST_ENABLED] = False
         self._config[CONFIG_AUDIO_AUTOADJUST_MAXGAIN] = 1.
         self._config[CONFIG_AUDIO_AUTOADJUST_TIME] = 30.
+
         self._projects = {}
         self._projectMetadatas = {}
         self._activeProject = None
@@ -82,6 +89,7 @@ class ServerConfiguration:
             CONFIG_RESET_CONTROLLER_MODULATION: False,
             CONFIG_ACTIVE_DEVICE_CONFIGURATION: list(self.getConfiguration(CONFIG_DEVICE_CONFIGS).keys()),
             CONFIG_UPDATER_AUTOCHECK_PATH: "",
+            CONFIG_AUDIO_MAX_CHANNELS: [2, 1, 24, 1],
             CONFIG_AUDIO_AUTOADJUST_ENABLED: False,
             CONFIG_AUDIO_AUTOADJUST_MAXGAIN: [1.0, 0.01, 50.0, 0.01],
             CONFIG_AUDIO_AUTOADJUST_TIME: [30.0, 1.0, 100.0, 0.1]
@@ -123,7 +131,8 @@ class ServerConfiguration:
             logger.info("Renewing device")
             self._reusableDevice = None
             self.getActiveProjectOrDefault().setDevice(self._createOrReuseOutputDevice())
-        
+        if key == CONFIG_AUDIO_MAX_CHANNELS:
+            logger.warning("Number of audio channels changed. Restart required!")
         if key == CONFIG_AUDIO_AUTOADJUST_ENABLED:
             audio.GlobalAudio.global_autogain_enabled = bool(value)
         if key == CONFIG_AUDIO_AUTOADJUST_MAXGAIN:

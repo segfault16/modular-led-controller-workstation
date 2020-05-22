@@ -925,14 +925,18 @@ if __name__ == '__main__':
     # Adjust from configuration
 
     # Audio
+    maxChannels = 2
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_MAX_CHANNELS) is not None:
+        maxChannels = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_MAX_CHANNELS)
+
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
         logger.info("Overriding Audio device with device index {}".format(
             serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
         audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
         # Initialize global audio
-        globalAudio = audio.GlobalAudio(serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX))
+        globalAudio = audio.GlobalAudio(serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX), num_channels=maxChannels)
     else:
-        globalAudio = audio.GlobalAudio()
+        globalAudio = audio.GlobalAudio(num_channels=maxChannels)
     
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_ENABLED) is not None:
         audio.GlobalAudio.global_autogain_enabled = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_ENABLED)

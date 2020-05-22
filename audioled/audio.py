@@ -98,6 +98,8 @@ class GlobalAudio():
 
     def _audio_callback(self, in_data, frame_count, time_info, status):
         chunk = np.frombuffer(in_data, np.float32).astype(np.float)
+        # layout for multiple channel is interleaved:
+        # 00 01 .. 0n 10 11 .. 1n
         GlobalAudio.buffer = np.array([chunk[i::self.num_channels] for i in range(self.num_channels)])
         return (None, pyaudio.paContinue)
 
@@ -299,10 +301,9 @@ class AudioInput(Effect):
             logger.info("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
         else:
             self._cur_gain = 1
+        maxChannels = len(self._buffer)
         for i in range(0, self.num_channels):
-            # layout for multiple channel is interleaved:
-            # 00 01 .. 0n 10 11 .. 1n
-            self._outBuffer[i].audio = self._cur_gain * self._buffer[i]
+            self._outBuffer[i].audio = self._cur_gain * self._buffer[i%maxChannels]
             # TODO: Calculate audio stats per channel: peak, rms, FFT buckets for remote display
             self._outputBuffer[i] = self._outBuffer[i]
             # logger.info("{}: {}".format(i, np.max(self._outputBuffer[i].audio)))
