@@ -172,7 +172,9 @@ export const VisGraphLayout = {
       var nodeLevels = []
       edges.filter(e => e.from === n.id).forEach(e => {
         var toNode = nodes.find(t => t.id === e.to)
-        nodeLevels.push(toNode.level)
+        if (toNode != null) {
+          nodeLevels.push(toNode.level)
+        }
       })
 
       var sum, avg = 0;

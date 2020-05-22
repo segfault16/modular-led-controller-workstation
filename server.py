@@ -50,14 +50,14 @@ logging.basicConfig(stream=sys.stdout,
 logging.debug("Global debug log enabled")
 # Adjust loglevels
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
-logging.getLogger('audioled').setLevel(logging.DEBUG)
+logging.getLogger('audioled').setLevel(logging.INFO)
 logging.getLogger('audioled_controller').setLevel(logging.DEBUG)
 logging.getLogger('audioled_controller.bluetooth').setLevel(logging.INFO)
 logging.getLogger('root').setLevel(logging.INFO)
 logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO)  # Silence!
 logging.getLogger('pyupdater').setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 libnames = ['audioled_controller.bluetooth']
 for libname in libnames:
@@ -122,12 +122,10 @@ def multiprocessing_func(sc):
     sc.store()
 
 
-def create_app(midiAdvertiseName=None):
+def create_app():
     logger.info("Creating app")
     app = Flask(__name__)
     logger.debug("App created")
-
-    advName = midiAdvertiseName
 
     def store_configuration():
         try:
@@ -140,26 +138,6 @@ def create_app(midiAdvertiseName=None):
             serverconfig.postStore()
         except Exception:
             app.logger.error("ERROR on storing configuration")
-
-    def check_midi():
-        app.logger.info("Checking midi configuration {}".format(advName))
-        # global midi
-        # if midi is None:
-        #     try:
-        #         import mido
-        #     except ImportError as e:
-        #         logger.error('Unable to import the mido library')
-        #         logger.error('You can install this library with `pip install mido`')
-        #     try:
-        #         for name in mido.get_input_names():
-        #             logger.info("Checking device {}".format(name))
-        #             if name == advName:
-        #                 midi = mido.open_input(advName)
-        #                 logger.info("Connected to midi device {}".format(advName))
-        #     except OSError as e:
-        #         midi = mido.open_input()
-        #         logger.info("Not connected midi device {}".format(advName))
-        #     pass
 
     sched = BackgroundScheduler(daemon=True)
     trigger = interval.IntervalTrigger(seconds=5)
@@ -177,17 +155,22 @@ def create_app(midiAdvertiseName=None):
         global proj
         # stop_signal = True
         try:
-            ledThread.join()
+            app.logger.warning("Shutting down LED Thread")
+            ledThread.join(2)
+            app.logger.warning("Shutdown LED Thread complete")
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
 
         try:
+            app.logger.warning("Stopping processing of current project")
             proj.stopProcessing()
+            app.logger.warning("Project stopped")
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
 
         try:
-            sched.shutdown()
+            app.logger.warning("Shutting down background scheduler")
+            sched.shutdown(2)
             app.logger.debug('Background scheduler shutdown')
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
@@ -888,7 +871,7 @@ if __name__ == '__main__':
         logger.info("Using configuration from {}".format(config_location))
         serverconfig = serverconfiguration.PersistentConfiguration(config_location, args.no_store)
 
-    logger.info("Applying arguments")
+    logger.info("Applying arguments {}".format(args))
 
     # Update num pixels
     if args.num_pixels is not None:
@@ -920,14 +903,26 @@ if __name__ == '__main__':
     # Adjust from configuration
 
     # Audio
+    maxChannels = 2
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_MAX_CHANNELS) is not None:
+        maxChannels = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_MAX_CHANNELS)
+
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX) is not None:
         logger.info("Overriding Audio device with device index {}".format(
             serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
         audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
         # Initialize global audio
-        globalAudio = audio.GlobalAudio(serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX))
+        globalAudio = audio.GlobalAudio(serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX), num_channels=maxChannels)
     else:
-        globalAudio = audio.GlobalAudio()
+        globalAudio = audio.GlobalAudio(num_channels=maxChannels)
+    
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_ENABLED) is not None:
+        audio.GlobalAudio.global_autogain_enabled = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_ENABLED)
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_MAXGAIN) is not None:
+        audio.GlobalAudio.global_autogain_maxgain = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_MAXGAIN)
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_TIME) is not None:
+        audio.GlobalAudio.global_autogain_time = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_TIME)
+    
 
     # strand test
     if args.strand:
@@ -940,6 +935,7 @@ if __name__ == '__main__':
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
+    
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH):
         logger.debug("Adding bluetooth server to the mix")
         midiAdvertiseName = serverconfig.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH_NAME)
@@ -952,9 +948,13 @@ if __name__ == '__main__':
             logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
             logger.error(e)
             logger.debug("Bluetooth error", exc_info=1)
-    app = create_app(midiAdvertiseName)
-    app.run(debug=False, host="0.0.0.0", port=args.port)
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_SERVER_EXPOSE):
+        app = create_app()
+        app.run(debug=False, host="0.0.0.0", port=args.port)
+    else:
+        app = create_app()
+        app.run(debug=False, host="localhost", port=args.port)
     
-    logger.info("End of server main")
     proj.stopProcessing()
     stop_signal = True
+    logger.info("App shut down")

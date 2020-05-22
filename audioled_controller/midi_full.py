@@ -1,4 +1,4 @@
-from audioled import modulation, project, serverconfiguration, version, client_config
+from audioled import modulation, project, serverconfiguration, version, client_config, dsp, audio
 from audioled_controller import sysex_data
 
 from pyupdater.client import Client
@@ -12,6 +12,8 @@ import glob
 import sys
 import threading
 import signal
+from collections.abc import Iterable   # drop `.abc` with Python 2.7 or lower
+
 logger = logging.getLogger(__name__)
 
 controllerMap = {
@@ -244,6 +246,18 @@ class MidiProjectController:
             else:
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(self._createExportProjNotFoundMsg())
+        elif data[0] == 0x00 and data[1] == 0x70:
+            # Activate project
+            projUid = str(bytes(sysex_data.decode(data[2:])), encoding='utf8')
+            logger.info("MIDI-BLE REQ Delete project {}".format(projUid))
+            proj = serverconfig.getProject(projUid)
+            if proj is not None:
+                serverconfig.deleteProject(projUid)
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._deleteProjSuccessfulMsg())
+            else:
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._deleteProjNotFoundMsg())
         elif data[0] == 0x01 and data[1] == 0x00:
             # Get active scene ID
             logger.info("MIDI-BLE REQ Active scene index")
@@ -270,9 +284,68 @@ class MidiProjectController:
             proj = serverconfig.getActiveProjectOrDefault()
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createEnabledControllersMsg(proj))
+        elif data[0] == 0x02 and data[1] == 0x00:
+            # Get server configuration
+            logger.info("MIDI-BLE REQ Get server configuration")
+            config = serverconfig.getFullConfiguration()
+            if self._sendMidiCallback is not None:
+                self._sendMidiCallback(self._createGetServerConfigMsg(config))
+        elif data[0] == 0x02 and data[1] == 0x10:
+            # Update server configuration
+            logger.info("MIDI-BLE REQ Update server configuration")
+            dec = sysex_data.decode(data[2:])
+            configGzip = zlib.decompress(bytes(dec))
+            configJson = str(configGzip, encoding='utf8')
+            config = json.loads(configJson)
+            try:
+                serverconfig.setConfiguration(config)
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createUpdateServerConfigSuccessfulMsg())
+            except Exception:
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createUpdateServerConfigErrorMsg())
+        elif data[0] == 0x02 and data[1] == 0x20:
+            logger.info("MIDI-BLE REQ Audio rms")
+            rms = {"0": "NO_BUFFER"}
+            if audio.GlobalAudio.buffer is not None:
+                if isinstance(audio.GlobalAudio.buffer, Iterable):
+                    numChannels = len(audio.GlobalAudio.buffer)
+
+                    for i in range(numChannels):
+                        rmsFromChannel = dsp.rms(audio.GlobalAudio.buffer[i])
+                        rms[str(i)] = rmsFromChannel
+                else:
+                    logger.debug("audio.GlobalAudio.buffer not iterateable")
+            if self._sendMidiCallback is not None:
+                self._sendMidiCallback(self._createAudioRMSMsg(json.dumps(rms)))
         else:
             logger.error("MIDI-BLE Unknown sysex {} {}".format(hex(data[0]), hex(data[1])))
-    
+
+    def _createAudioRMSMsg(self, rms):
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x02, 0x20] + sysex_data.encode("{}".format(rms))
+        return sendMsg
+
+    def _createGetServerConfigMsg(self, config: dict):
+        logger.info("MIDI-BLE RESPONSE Get server config - Successful")
+        json = jsonpickle.dumps(config)
+        gzip = zlib.compress(bytes(json, encoding='utf8'))
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x02, 0x00] + sysex_data.encode(gzip)
+        return sendMsg
+
+    def _createUpdateServerConfigSuccessfulMsg(self):
+        logger.info("MIDI-BLE RESPONSE Update server config - Successful")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x02, 0x10]
+        return sendMsg
+
+    def _createUpdateServerConfigErrorMsg(self):
+        logger.info("MIDI-BLE RESPONSE Update server config - Successful")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x02, 0x1F]
+        return sendMsg
+
     def _updateApp(self, app_update):
         try:
             logger.debug("Starting download in background")
@@ -345,6 +418,18 @@ class MidiProjectController:
         logger.info("MIDI-BLE RESPONSE Export project - Not found")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x6F]
+        return sendMsg
+
+    def _deleteProjSuccessfulMsg(self):
+        logger.info("MIDI-BLE RESPONSE Delete project - Successful")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x70]
+        return sendMsg
+    
+    def _deleteProjNotFoundMsg(self):
+        logger.info("MIDI-BLE RESPONSE Delete project - Not found")
+        sendMsg = mido.Message('sysex')
+        sendMsg.data = [0x00, 0x7F]
         return sendMsg
 
     def _createImportProjSuccessfulMsg(self):

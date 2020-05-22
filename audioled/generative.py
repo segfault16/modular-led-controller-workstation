@@ -185,6 +185,10 @@ class SwimmingPool(Effect):
         return _output.clip(0.0, 255.0)
 
     def _initWaves(self, num_waves, wavespread_low=50, wavespread_high=100, max_speed=30):
+        wavespread_low = int(wavespread_low)
+        wavespread_high = int(wavespread_high)
+        num_waves = int(num_waves)
+        max_speed = int(max_speed)
         _WaveArray = []
         _wavespread = np.random.randint(wavespread_low, wavespread_high, num_waves)
         _WaveArraySpecSpeed = np.random.randint(-max_speed, max_speed, num_waves)
@@ -208,8 +212,7 @@ class SwimmingPool(Effect):
             self._Wave = None
             self._WaveSpecSpeed = None
 
-        if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < self.num_waves:
-
+        if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < int(self.num_waves):
             self._Wave, self._WaveSpecSpeed = self._initWaves(self.num_waves, self.wavespread_low,
                                                                 self.wavespread_high, self.max_speed)
         # Rotate waves
@@ -241,7 +244,7 @@ class SwimmingPool(Effect):
             color = self._inputBuffer[0]
 
         all_waves = np.zeros(self._num_pixels)
-        for i in range(0, self.num_waves):
+        for i in range(0, int(self.num_waves)):
             fact = 1.0
             if i == 0:
                 fact = (self._rotate_counter / 30)

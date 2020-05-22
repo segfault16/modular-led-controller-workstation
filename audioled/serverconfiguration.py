@@ -1,4 +1,4 @@
-from audioled import project, configs, devices
+from audioled import project, configs, devices, audio
 import uuid
 import jsonpickle
 import json
@@ -13,11 +13,16 @@ from audioled.devices import MultiOutputWrapper
 import logging
 logger = logging.getLogger(__name__)
 
+CONFIG_SERVER_EXPOSE = 'server.expose'
 CONFIG_NUM_PIXELS = 'num_pixels'
 CONFIG_NUM_ROWS = 'num_rows'
 CONFIG_DEVICE = 'device'
 CONFIG_DEVICE_CANDY_SERVER = 'device.candy.server'
 CONFIG_AUDIO_DEVICE_INDEX = 'audio.device_index'
+CONFIG_AUDIO_MAX_CHANNELS = 'audio.max_channels'
+CONFIG_AUDIO_AUTOADJUST_ENABLED = 'audio.autoadjust.enabled'
+CONFIG_AUDIO_AUTOADJUST_MAXGAIN = 'audio.autoadjust.max_gain'
+CONFIG_AUDIO_AUTOADJUST_TIME = 'audio.autoadjust.time'
 CONFIG_ACTIVE_PROJECT = 'active_project'
 CONFIG_DEVICE_PANEL_MAPPING = 'device.panel.mapping'
 CONFIG_ACTIVE_DEVICE_CONFIGURATION = 'active_device_config'
@@ -28,9 +33,23 @@ CONFIG_ADVERTISE_BLUETOOTH = 'advertise_bluetooth'
 CONFIG_ADVERTISE_BLUETOOTH_NAME = 'advertise_bluetooth_name'
 
 allowed_configs = [
-    CONFIG_NUM_PIXELS, CONFIG_NUM_ROWS, CONFIG_DEVICE, CONFIG_DEVICE_CANDY_SERVER, CONFIG_AUDIO_DEVICE_INDEX,
-    CONFIG_ACTIVE_PROJECT, CONFIG_DEVICE_PANEL_MAPPING, CONFIG_ACTIVE_DEVICE_CONFIGURATION, CONFIG_DEVICE_CONFIGS,
-    CONFIG_RESET_CONTROLLER_MODULATION, CONFIG_UPDATER_AUTOCHECK_PATH, CONFIG_ADVERTISE_BLUETOOTH
+    CONFIG_SERVER_EXPOSE,
+    CONFIG_NUM_PIXELS,
+    CONFIG_NUM_ROWS,
+    CONFIG_DEVICE,
+    CONFIG_DEVICE_CANDY_SERVER,
+    CONFIG_AUDIO_DEVICE_INDEX,
+    CONFIG_AUDIO_MAX_CHANNELS,
+    CONFIG_AUDIO_AUTOADJUST_ENABLED,
+    CONFIG_AUDIO_AUTOADJUST_MAXGAIN,
+    CONFIG_AUDIO_AUTOADJUST_TIME,
+    CONFIG_ACTIVE_PROJECT,
+    CONFIG_DEVICE_PANEL_MAPPING,
+    CONFIG_ACTIVE_DEVICE_CONFIGURATION,
+    CONFIG_DEVICE_CONFIGS,
+    CONFIG_RESET_CONTROLLER_MODULATION,
+    CONFIG_UPDATER_AUTOCHECK_PATH,
+    CONFIG_ADVERTISE_BLUETOOTH
 ]
 
 allowed_devices = [
@@ -42,15 +61,25 @@ class ServerConfiguration:
     def __init__(self):
         self._config = {}
         # Init default values
+        self._config[CONFIG_SERVER_EXPOSE] = True
+        # Devices
         self._config[CONFIG_NUM_PIXELS] = 300
         self._config[CONFIG_NUM_ROWS] = 1
         self._config[CONFIG_DEVICE] = 'FadeCandy'
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
         self._config[CONFIG_DEVICE_PANEL_MAPPING] = ''
         self._config[CONFIG_RESET_CONTROLLER_MODULATION] = False
+        # Pyupdater
         self._config[CONFIG_UPDATER_AUTOCHECK_PATH] = ""
+        # Bluetooth
         self._config[CONFIG_ADVERTISE_BLUETOOTH] = True
         self._config[CONFIG_ADVERTISE_BLUETOOTH_NAME] = "MOLECOLE Control"
+        # Audio
+        self._config[CONFIG_AUDIO_MAX_CHANNELS] = 2
+        self._config[CONFIG_AUDIO_AUTOADJUST_ENABLED] = False
+        self._config[CONFIG_AUDIO_AUTOADJUST_MAXGAIN] = 1.
+        self._config[CONFIG_AUDIO_AUTOADJUST_TIME] = 30.
+
         self._projects = {}
         self._projectMetadatas = {}
         self._activeProject = None
@@ -61,9 +90,14 @@ class ServerConfiguration:
             # CONFIG_NUM_PIXELS: [300, 1, 2000, 1],
             # CONFIG_NUM_ROWS: [1, 1, 100, 1],
             # CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
+            CONFIG_SERVER_EXPOSE: True,
             CONFIG_RESET_CONTROLLER_MODULATION: False,
             CONFIG_ACTIVE_DEVICE_CONFIGURATION: list(self.getConfiguration(CONFIG_DEVICE_CONFIGS).keys()),
-            CONFIG_UPDATER_AUTOCHECK_PATH: ""
+            CONFIG_UPDATER_AUTOCHECK_PATH: "",
+            CONFIG_AUDIO_MAX_CHANNELS: [2, 1, 24, 1],
+            CONFIG_AUDIO_AUTOADJUST_ENABLED: False,
+            CONFIG_AUDIO_AUTOADJUST_MAXGAIN: [1.0, 0.01, 50.0, 0.01],
+            CONFIG_AUDIO_AUTOADJUST_TIME: [30.0, 1.0, 100.0, 0.1]
         }
 
     def setConfiguration(self, dict):
@@ -102,6 +136,14 @@ class ServerConfiguration:
             logger.info("Renewing device")
             self._reusableDevice = None
             self.getActiveProjectOrDefault().setDevice(self._createOrReuseOutputDevice())
+        if key == CONFIG_AUDIO_MAX_CHANNELS:
+            logger.warning("Number of audio channels changed. Restart required!")
+        if key == CONFIG_AUDIO_AUTOADJUST_ENABLED:
+            audio.GlobalAudio.global_autogain_enabled = bool(value)
+        if key == CONFIG_AUDIO_AUTOADJUST_MAXGAIN:
+            audio.GlobalAudio.global_autogain_maxgain = float(value)
+        if key == CONFIG_AUDIO_AUTOADJUST_TIME:
+            audio.GlobalAudio.global_autogain_time = float(value)
         
     def getConfiguration(self, key):
         if key in self._config:
@@ -711,7 +753,11 @@ class PersistentConfiguration(ServerConfiguration):
 
     def _readProjectMetadata(self, filepath, fallbackUid):
         with open(filepath, "r", encoding='utf-8') as fc:
-            projData = json.loads(fc.read())
+            try:
+                projData = json.loads(fc.read())
+            except Exception as e:
+                logger.error("Error reading project {}: {}".format(filepath, e))
+                return None
             p = projData.get("py/state")
             if not p:
                 raise RuntimeError("Not a project")

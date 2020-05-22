@@ -217,6 +217,7 @@ def preprocess(audio, fs, fmax, n_overlaps):
 def rms(normalized_sample_points):
     N = len(normalized_sample_points)
     sum_squares = sum(s**2 for s in normalized_sample_points)
+    # TODO: Why N/2???
     return math.sqrt(sum_squares / (N / 2))
 
 

@@ -11,6 +11,7 @@ import traceback
 import ctypes
 import logging
 import threading
+import signal
 
 import os
 from functools import wraps
@@ -91,9 +92,13 @@ class PublishQueue(object):
 
 
 class UpdateMessage:
-    def __init__(self, dt, audioBuffer):
+    def __init__(self, dt, audioBuffer, chunkRate, globalAutogainEnabled, globalAutogainMaxGain, globalAutogainTime):
         self.dt = dt
         self.audioBuffer = audioBuffer
+        self.chunkRate = chunkRate
+        self.globalAutogainEnabled = globalAutogainEnabled
+        self.globalAutogainMaxGain = globalAutogainMaxGain
+        self.globalAutogainTime = globalAutogainTime
 
 
 class BrightnessMessage:
@@ -184,6 +189,10 @@ def worker_process_updateMessage(filtergraph: FilterGraph, outputDevice: audiole
 
     # TODO: Hack to propagate audio?
     audioled.audio.GlobalAudio.buffer = audioBuffer
+    audioled.audio.GlobalAudio.chunk_rate = message.chunkRate
+    audioled.audio.GlobalAudio.global_autogain_enabled = message.globalAutogainEnabled
+    audioled.audio.GlobalAudio.global_autogain_maxgain = message.globalAutogainMaxGain
+    audioled.audio.GlobalAudio.global_autogain_time = message.globalAutogainTime
 
     # Update Filtergraph
     filtergraph.update(dt, event_loop)
@@ -278,6 +287,8 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
         slotId {int} -- [description]
     """
     try:
+        # Ignore sigint, needs to be handled inside parent and process must be joined
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         threading.current_thread().name = 'WorkerThread'
         logger.info("filtergraph process {} start".format(os.getpid()))
         event_loop = asyncio.new_event_loop()
@@ -307,6 +318,8 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
                     if dMask & message.deviceMask:
                         logger.debug("Device mask match for device {}".format(deviceId))
                         filtergraph.updateModulationSourceValue(message.controller, message.newValue)
+                elif isinstance(message, str) and message == "check_is_processing":
+                    logger.info("process {} responding".format(os.getpid()))
                 else:
                     logger.warning("Message not supported: {}".format(message))
             except audioled.filtergraph.NodeException:
@@ -333,6 +346,8 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
 
 def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audioled.devices.VirtualOutput):
     try:
+        # Ignore sigint, needs to be handled inside parent and process must be joined
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         threading.current_thread().name = 'OutputThread'
         logger.info("output process {} start".format(os.getpid()))
         for message in iter(q.get, None):
@@ -782,8 +797,13 @@ class Project(Updateable):
         outputs = self.sceneMetadata[sceneId]["output"]
         if str(dIdx) not in outputs and create:
             outputs[str(dIdx)] = {}
-            outputs[str(dIdx)]["refSlot"] = int(sceneId)
-            logger.info("Backwards compatibility: Init with slotId = sceneId")
+            if str(0) in outputs and "refSlo" in outputs[str(0)]:
+                logger.info("Upgrading slot for device {} to {} compatibility: Init with slotId = sceneId".format(dIdx, outputs[str(0)]["refSlot"]))
+                outputs[str(dIdx)]["refSlot"] = outputs[str(0)]["refSlot"]
+            else:
+                logger.warning("Backwards compatibility: Init with slotId = sceneId")
+                outputs[str(dIdx)]["refSlot"] = int(sceneId)
+            
             self.sceneMetadata[sceneId]["output"] = outputs
         return self.sceneMetadata[sceneId]["output"][str(dIdx)]["refSlot"]
 
@@ -862,7 +882,7 @@ class Project(Updateable):
             p = mp.Process(target=worker, args=(q, filterGraph, fgDevice, dIdx, slotId))
             p.start()
             # Process sometimes doesn't start...
-            q.put(123)
+            q.put("check_is_processing")
             time.sleep(sleepfact * 0.1)
             if not q._unfinished_tasks._semlock._is_zero():
                 logger.warning("Process didn't respond in time!")
@@ -885,7 +905,7 @@ class Project(Updateable):
                 p = mp.Process(target=output, args=(q, outputDevice, virtualDevice))
                 p.start()
                 # Make sure process starts
-                q.put("test")
+                q.put("check_is_processing")
                 time.sleep(sleepfact * 0.1)
                 if not q._unfinished_tasks._semlock._is_zero():
                     logger.warning("Output process didn't respond in time!")
@@ -1008,7 +1028,15 @@ class Project(Updateable):
         if self._publishQueue is None:
             logger.info("No publish queue. Possibly exiting")
             return
-        self._publishQueue.publish(UpdateMessage(dt, audioled.audio.GlobalAudio.buffer))
+        self._publishQueue.publish(
+            UpdateMessage(
+                dt,
+                audioled.audio.GlobalAudio.buffer,
+                audioled.audio.GlobalAudio.chunk_rate,
+                audioled.audio.GlobalAudio.global_autogain_enabled,
+                audioled.audio.GlobalAudio.global_autogain_maxgain,
+                audioled.audio.GlobalAudio.global_autogain_time,
+            ))
 
     def _sendShowCommand(self):
         if self._showQueue is None:
