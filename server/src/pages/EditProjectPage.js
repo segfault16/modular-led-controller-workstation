@@ -175,7 +175,7 @@ class EditProjectPage extends Component {
       // sqrVariant = "contained"
     }
     return (
-      <Button variant={sqrVariant} color={sqrColor} style={sqrStyle} onClick={() => this.handleSlotMatrixChanged(rowIdx, colIdx)}></Button>
+      <Button key={"rowIdx" + rowIdx + "colIdx" + colIdx} variant={sqrVariant} color={sqrColor} style={sqrStyle} onClick={() => this.handleSlotMatrixChanged(rowIdx, colIdx)}></Button>
     )
   }
 
@@ -184,7 +184,7 @@ class EditProjectPage extends Component {
     for (var i = 0; i < numCols; i++) {
       cols.push(this.domCreateSquare(rowIdx, startIndex + i));
     }
-    return <div>{cols}</div>;
+    return <div key={"rowIdx" + rowIdx}>{cols}</div>;
   }
 
   domCreateSlotMatrix = (numRows, numCols, startIndex=0) => {
