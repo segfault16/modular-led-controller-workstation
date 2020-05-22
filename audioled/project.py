@@ -797,7 +797,7 @@ class Project(Updateable):
         outputs = self.sceneMetadata[sceneId]["output"]
         if str(dIdx) not in outputs and create:
             outputs[str(dIdx)] = {}
-            if str(0) in outputs:
+            if str(0) in outputs and "refSlo" in outputs[str(0)]:
                 logger.info("Upgrading slot for device {} to {} compatibility: Init with slotId = sceneId".format(dIdx, outputs[str(0)]["refSlot"]))
                 outputs[str(dIdx)]["refSlot"] = outputs[str(0)]["refSlot"]
             else:
