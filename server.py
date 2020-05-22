@@ -968,6 +968,6 @@ if __name__ == '__main__':
     app = create_app(midiAdvertiseName)
     app.run(debug=False, host="0.0.0.0", port=args.port)
     
-    logger.info("End of server main")
     proj.stopProcessing()
     stop_signal = True
+    logger.info("App shut down")

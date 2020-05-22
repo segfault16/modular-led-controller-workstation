@@ -11,6 +11,7 @@ import traceback
 import ctypes
 import logging
 import threading
+import signal
 
 import os
 from functools import wraps
@@ -286,6 +287,8 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
         slotId {int} -- [description]
     """
     try:
+        # Ignore sigint, needs to be handled inside parent and process must be joined
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         threading.current_thread().name = 'WorkerThread'
         logger.info("filtergraph process {} start".format(os.getpid()))
         event_loop = asyncio.new_event_loop()
@@ -341,6 +344,8 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
 
 def output(q, outputDevice: audioled.devices.LEDController, virtualDevice: audioled.devices.VirtualOutput):
     try:
+        # Ignore sigint, needs to be handled inside parent and process must be joined
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         threading.current_thread().name = 'OutputThread'
         logger.info("output process {} start".format(os.getpid()))
         for message in iter(q.get, None):
