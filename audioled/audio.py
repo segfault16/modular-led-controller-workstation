@@ -201,7 +201,6 @@ class AudioInput(Effect):
         self._autogain_perc = None
         self._cur_gain = 1.0
 
-
         logger.info("Virtual audio input created. {} {}".format(GlobalAudio.device_index, GlobalAudio.chunk_rate))
 
     def updateParameter(self, stateDict):
@@ -297,7 +296,9 @@ class AudioInput(Effect):
                 self._cur_gain = 1. / maxVal
             elif self._cur_gain < self._autogain_max:
                 self._cur_gain = min(self._autogain_max, self._cur_gain * self._autogain_perc)
-            # logger.info("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
+            logger.info("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
+        else:
+            self._cur_gain = 1
         for i in range(0, self.num_channels):
             # layout for multiple channel is interleaved:
             # 00 01 .. 0n 10 11 .. 1n
