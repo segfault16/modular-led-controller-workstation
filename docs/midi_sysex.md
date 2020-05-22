@@ -85,3 +85,5 @@ followed by `0xf7` for Midi Sysex End.
 | REQ      | Update server configuration             | `0x02`, `0x10` | Binary data encode of utf8 server config json compressed with zlib    |                     |
 | RESP     | Update server configuration             | `0x02`, `0x10` |                                                                       | Successful          |
 | RESP     | Update server configuration             | `0x02`, `0x1F` |                                                                       | Error               |
+| REQ      | Get audio rms                           | `0x02`, `0x20` |                                                                       |                     |
+| RESP     | Get audio rms                           | `0x02`, `0x20` | Binary data encode of uft8 json dict channel -> rms of last chunk     |                     |

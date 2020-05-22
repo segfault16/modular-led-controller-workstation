@@ -8,8 +8,9 @@ import logging
 import json
 import jsonpickle
 import os
+import numpy as np
 import zlib
-from audioled import serverconfiguration, version, project, modulation
+from audioled import serverconfiguration, version, project, modulation, audio
 from audioled_controller import midi_full, sysex_data
 
 # Taken from pyupdater test repo
@@ -452,3 +453,25 @@ def test_update_server_config():
     assert retMsg.data[1] == 0x10
     
     assert not cfg.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH)
+
+def test_get_audio_rms():
+    # Setup
+    f = mock.Mock()
+    ctrl = midi_full.MidiProjectController(callback=f)
+    num_channels = 2
+    chunk = [1 for _ in range(20)]
+    audio.GlobalAudio.buffer = np.array([chunk[i::num_channels] for i in range(num_channels)])
+    print(audio.GlobalAudio.buffer)
+    # Get Version messsage
+    testMsg = mido.Message('sysex')
+    testMsg.data = [0x02, 0x20]
+    # Handle message
+    ctrl.handleMidiMsg(testMsg, None, None)
+    retMsg = f.call_args[0][0]
+    # Check response message ID
+    assert retMsg.data[0] == 0x02
+    assert retMsg.data[1] == 0x20
+    # Decode data
+    dec = sysex_data.decode(retMsg.data[2:])
+    v = json.loads(str(bytes(dec), encoding='utf8'))
+    assert "0" in v
