@@ -122,12 +122,10 @@ def multiprocessing_func(sc):
     sc.store()
 
 
-def create_app(midiAdvertiseName=None):
+def create_app():
     logger.info("Creating app")
     app = Flask(__name__)
     logger.debug("App created")
-
-    advName = midiAdvertiseName
 
     def store_configuration():
         try:
@@ -140,26 +138,6 @@ def create_app(midiAdvertiseName=None):
             serverconfig.postStore()
         except Exception:
             app.logger.error("ERROR on storing configuration")
-
-    def check_midi():
-        app.logger.info("Checking midi configuration {}".format(advName))
-        # global midi
-        # if midi is None:
-        #     try:
-        #         import mido
-        #     except ImportError as e:
-        #         logger.error('Unable to import the mido library')
-        #         logger.error('You can install this library with `pip install mido`')
-        #     try:
-        #         for name in mido.get_input_names():
-        #             logger.info("Checking device {}".format(name))
-        #             if name == advName:
-        #                 midi = mido.open_input(advName)
-        #                 logger.info("Connected to midi device {}".format(advName))
-        #     except OSError as e:
-        #         midi = mido.open_input()
-        #         logger.info("Not connected midi device {}".format(advName))
-        #     pass
 
     sched = BackgroundScheduler(daemon=True)
     trigger = interval.IntervalTrigger(seconds=5)
@@ -957,6 +935,7 @@ if __name__ == '__main__':
     # Init defaults
     default_values['fs'] = 48000  # ToDo: How to provide fs information to downstream effects?
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
+    
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH):
         logger.debug("Adding bluetooth server to the mix")
         midiAdvertiseName = serverconfig.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH_NAME)
@@ -969,8 +948,12 @@ if __name__ == '__main__':
             logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
             logger.error(e)
             logger.debug("Bluetooth error", exc_info=1)
-    app = create_app(midiAdvertiseName)
-    app.run(debug=False, host="0.0.0.0", port=args.port)
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_SERVER_EXPOSE):
+        app = create_app()
+        app.run(debug=False, host="0.0.0.0", port=args.port)
+    else:
+        app = create_app()
+        app.run(debug=False, host="localhost", port=args.port)
     
     proj.stopProcessing()
     stop_signal = True

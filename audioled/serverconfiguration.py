@@ -13,6 +13,7 @@ from audioled.devices import MultiOutputWrapper
 import logging
 logger = logging.getLogger(__name__)
 
+CONFIG_SERVER_EXPOSE = 'server.expose'
 CONFIG_NUM_PIXELS = 'num_pixels'
 CONFIG_NUM_ROWS = 'num_rows'
 CONFIG_DEVICE = 'device'
@@ -32,6 +33,7 @@ CONFIG_ADVERTISE_BLUETOOTH = 'advertise_bluetooth'
 CONFIG_ADVERTISE_BLUETOOTH_NAME = 'advertise_bluetooth_name'
 
 allowed_configs = [
+    CONFIG_SERVER_EXPOSE,
     CONFIG_NUM_PIXELS,
     CONFIG_NUM_ROWS,
     CONFIG_DEVICE,
@@ -59,6 +61,8 @@ class ServerConfiguration:
     def __init__(self):
         self._config = {}
         # Init default values
+        self._config[CONFIG_SERVER_EXPOSE] = True
+        # Devices
         self._config[CONFIG_NUM_PIXELS] = 300
         self._config[CONFIG_NUM_ROWS] = 1
         self._config[CONFIG_DEVICE] = 'FadeCandy'
@@ -86,6 +90,7 @@ class ServerConfiguration:
             # CONFIG_NUM_PIXELS: [300, 1, 2000, 1],
             # CONFIG_NUM_ROWS: [1, 1, 100, 1],
             # CONFIG_DEVICE: ['FadeCandy', 'RaspberryPi'],
+            CONFIG_SERVER_EXPOSE: True,
             CONFIG_RESET_CONTROLLER_MODULATION: False,
             CONFIG_ACTIVE_DEVICE_CONFIGURATION: list(self.getConfiguration(CONFIG_DEVICE_CONFIGS).keys()),
             CONFIG_UPDATER_AUTOCHECK_PATH: "",
