@@ -795,8 +795,13 @@ class Project(Updateable):
         outputs = self.sceneMetadata[sceneId]["output"]
         if str(dIdx) not in outputs and create:
             outputs[str(dIdx)] = {}
-            outputs[str(dIdx)]["refSlot"] = int(sceneId)
-            logger.info("Backwards compatibility: Init with slotId = sceneId")
+            if str(0) in outputs:
+                logger.info("Upgrading slot for device {} to {} compatibility: Init with slotId = sceneId".format(dIdx, outputs[str(0)]["refSlot"]))
+                outputs[str(dIdx)]["refSlot"] = outputs[str(0)]["refSlot"]
+            else:
+                logger.warning("Backwards compatibility: Init with slotId = sceneId")
+                outputs[str(dIdx)]["refSlot"] = int(sceneId)
+            
             self.sceneMetadata[sceneId]["output"] = outputs
         return self.sceneMetadata[sceneId]["output"][str(dIdx)]["refSlot"]
 
