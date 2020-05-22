@@ -753,7 +753,11 @@ class PersistentConfiguration(ServerConfiguration):
 
     def _readProjectMetadata(self, filepath, fallbackUid):
         with open(filepath, "r", encoding='utf-8') as fc:
-            projData = json.loads(fc.read())
+            try:
+                projData = json.loads(fc.read())
+            except Exception as e:
+                logger.error("Error reading project {}: {}".format(filepath, e))
+                return None
             p = projData.get("py/state")
             if not p:
                 raise RuntimeError("Not a project")

@@ -57,7 +57,7 @@ logging.getLogger('root').setLevel(logging.INFO)
 logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO)  # Silence!
 logging.getLogger('pyupdater').setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 libnames = ['audioled_controller.bluetooth']
 for libname in libnames:
@@ -170,7 +170,7 @@ def create_app():
 
         try:
             app.logger.warning("Shutting down background scheduler")
-            sched.shutdown()
+            sched.shutdown(2)
             app.logger.debug('Background scheduler shutdown')
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
