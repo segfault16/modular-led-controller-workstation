@@ -185,7 +185,8 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
 
     def onSubscribe(self, maxValueSize, updateValueCallback):
         logger.debug("EchoCharacteristic - onSubscribe, maxValueSize: {}".format(maxValueSize))
-        logger.info("MIDI-BLE max value size: {}".format(maxValueSize))
+        maxValueSize = min(maxValueSize, 100)  # Problems with large value sizes...
+        logger.info("MIDI-BLE device connected. Max value size: {}".format(maxValueSize))
 
         self._maxValueSize = maxValueSize
         self._updateValueCallback = updateValueCallback
@@ -194,6 +195,14 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         logger.debug("EchoCharacteristic - onUnsubscribe")
         
         self._updateValueCallback = None
+
+    def onNotify(self):
+        logger.debug("EchoCharacteristic - onNotify")
+        pass
+
+    def onIndicate(self):
+        logger.debug("EchoCharacteristic - onIndicate")
+        pass
 
     def sendMidi(self, msg: mido.Message):
         if self._updateValueCallback is None:
@@ -275,9 +284,25 @@ class MidiBluetoothService(object):
 
         self.bleno.on('advertisingStart', self._onAdvertisingStart)
         self.bleno.on('stateChange', self._onStateChange)
+        # self.bleno.on('platform', self.onPlatform)
+        # self.bleno.on('addressChange', self.onAddressChange)
+        # self.bleno.on('advertisingStop', self.onAdvertisingStop)
+        # self.bleno.on('servicesSet', self.onServicesSet)
+        # self.bleno.on('accept', self.onAccept)
+        # self.bleno.on('mtuChange', self.onMtuChange)
+        self.bleno.on('disconnect', self._onDisconnect)
+
+        # self.bleno.on('rssiUpdate', self.onRssiUpdate)
         logging.info("Advertising Bluetooth Service '{}'".format(advertiseName))
         self.bleno.start()
+    
+    def shutdown(self):
+        self.bleno.stopAdvertising()
+        self.bleno.disconnect()
 
+    def _onDisconnect(self, clientAddress):
+        logging.debug("{} disconnected".format(clientAddress))
+        
     def _onMessageReceived(self, msg: mido.Message):
         logger.debug("Received msg: {}".format(msg))
         if self._callback is not None:
@@ -288,7 +313,7 @@ class MidiBluetoothService(object):
                 traceback.print_tb(e.__traceback__)
 
     def _onStateChange(self, state):
-        logger.debug("on -> stateChange: ".format(state))
+        logger.debug("on -> stateChange: {}".format(state))
 
         if (state == 'poweredOn'):
             self.bleno.startAdvertising(self.primaryServiceName, [self.primaryService.uuid])
@@ -297,7 +322,8 @@ class MidiBluetoothService(object):
 
     def _onAdvertisingStart(self, error):
         logger.debug("on -> advertisingStart: {}".format('error ' + error if error else 'success'))
-
+        if error:
+            logger.error("Error advertising Bluetooth: {}".format(error))
         if not error:
             def on_setServiceError(error):
                 logger.debug("setServices: {}".format('error ' + error if error else 'success'))

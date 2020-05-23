@@ -37,6 +37,12 @@ class Node(object):
         self._inputBuffer = [None for i in range(0, inChannels)]
         self._incomingConnections = []
 
+        if self.effect is None:
+            logger.error("Node {} has no effect".format(self.uid))
+            return
+        if not isinstance(self.effect, effect.Effect):
+            logger.error("Node {} content {} is not an effect class".format(self.uid, self.effect))
+            return
         self.effect.setOutputBuffer(self._outputBuffer)
         self.effect.setInputBuffer(self._inputBuffer)
 
