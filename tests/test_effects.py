@@ -40,7 +40,7 @@ class Test_Effects(unittest.TestCase):
     def test_allEffectsUpdateAndProcessWithoutConnection(self):
         childclasses = inheritors(effects.Effect)
         for _class in childclasses:
-            if _class.__name__ == 'MidiKeyboard':  # exclude midikeyboard
+            if _class.__name__ == 'MidiKeyboard' or _class.__name__ == 'MockEffect':  # exclude midikeyboard
                 continue
             instance = None
             try:

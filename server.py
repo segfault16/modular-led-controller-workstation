@@ -52,7 +52,7 @@ logging.debug("Global debug log enabled")
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
 logging.getLogger('audioled').setLevel(logging.INFO)
 logging.getLogger('audioled_controller').setLevel(logging.DEBUG)
-logging.getLogger('audioled_controller.bluetooth').setLevel(logging.INFO)
+logging.getLogger('audioled_controller.bluetooth').setLevel(logging.DEBUG)
 logging.getLogger('root').setLevel(logging.INFO)
 logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO)  # Silence!
 logging.getLogger('pyupdater').setLevel(logging.DEBUG)
@@ -155,6 +155,9 @@ def create_app():
         app.logger.info('cancelling LED thread')
         global ledThread
         global proj
+        global midiBluetooth
+        if midiBluetooth is not None:
+            midiBluetooth.shutdown()
         # stop_signal = True
         try:
             app.logger.warning("Shutting down LED Thread")
@@ -172,7 +175,9 @@ def create_app():
 
         try:
             app.logger.warning("Shutting down background scheduler")
-            sched.shutdown(2)
+            # TODO: This contains a thread join and blocks
+            sched._thread.join(2)
+            sched.shutdown(wait=False)
             app.logger.debug('Background scheduler shutdown')
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))

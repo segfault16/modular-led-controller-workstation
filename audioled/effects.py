@@ -108,6 +108,10 @@ class Append(Effect):
     def numOutputChannels(self):
         return 1
 
+    def updateParameter(self, stateDict):
+        super(Append, self).updateParameter(stateDict)
+        self.__initstate__()
+
     @staticmethod
     def getParameterDefinition():
         definition = {

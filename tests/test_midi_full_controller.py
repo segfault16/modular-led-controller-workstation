@@ -297,7 +297,7 @@ def test_get_active_scene():
     ctrl = midi_full.MidiProjectController(callback=f)
     # Get active project metadata
     testMsg = mido.Message('sysex')
-    testMsg.data = [0x01, 0x01]
+    testMsg.data = [0x01, 0x10]
     # Init in-memory config
     cfg = serverconfiguration.ServerConfiguration()
     proj = cfg.getActiveProjectOrDefault()
@@ -309,7 +309,7 @@ def test_get_active_scene():
     retMsg = f.call_args[0][0]
     # Check response message ID
     assert retMsg.data[0] == 0x01
-    assert retMsg.data[1] == 0x01
+    assert retMsg.data[1] == 0x10
     # Decode data
     dec = sysex_data.decode(retMsg.data[2:])
     metadata = json.loads(bytes(dec))
@@ -322,7 +322,7 @@ def test_get_scenes():
     ctrl = midi_full.MidiProjectController(callback=f)
     # Get active project metadata
     testMsg = mido.Message('sysex')
-    testMsg.data = [0x01, 0x02]
+    testMsg.data = [0x01, 0x20]
     # Init in-memory config
     cfg = serverconfiguration.ServerConfiguration()
     proj = cfg.getActiveProjectOrDefault()
@@ -334,7 +334,7 @@ def test_get_scenes():
     retMsg = f.call_args[0][0]
     # Check response message ID
     assert retMsg.data[0] == 0x01
-    assert retMsg.data[1] == 0x02
+    assert retMsg.data[1] == 0x20
     # Decode data
     dec = sysex_data.decode(retMsg.data[2:])
     metadata = json.loads(bytes(dec))
@@ -347,7 +347,7 @@ def test_get_enabled_controllers():
     ctrl = midi_full.MidiProjectController(callback=f)
     # Get active project metadata
     testMsg = mido.Message('sysex')
-    testMsg.data = [0x01, 0x03]
+    testMsg.data = [0x01, 0x30]
     # Init in-memory config
     cfg = serverconfiguration.ServerConfiguration()
     proj = cfg.getActiveProjectOrDefault()
@@ -359,7 +359,7 @@ def test_get_enabled_controllers():
     retMsg = f.call_args[0][0]
     # Check response message ID
     assert retMsg.data[0] == 0x01
-    assert retMsg.data[1] == 0x03
+    assert retMsg.data[1] == 0x30
     # Decode data
     dec = sysex_data.decode(retMsg.data[2:])
     metadata = json.loads(bytes(dec))

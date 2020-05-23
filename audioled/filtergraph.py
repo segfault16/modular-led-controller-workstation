@@ -26,27 +26,29 @@ class Node(object):
     def __init__(self, effect):
         self.effect = effect  # type: effect.Effect
         self.uid = None
-        # TODO: Improve consistency with numInputChannels and numOutputChannels
-        self.numInputChannels = 0
-        self.numOutputChannels = 0
         self.__initstate__()
-        self.numInputChannels = self.effect.numInputChannels()
-        self.numOutputChannels = self.effect.numOutputChannels()
 
     def __initstate__(self):
 
-        self.effect.numOutputChannels()
+        outChannels = self._numOutputChannels()
+        inChannels = self._numInputChannels()
 
-        self._outputBuffer = [None for i in range(0, self.effect.numOutputChannels())]
-        self._inputBuffer = [None for i in range(0, self.effect.numInputChannels())]
+        self._outputBuffer = [None for i in range(0, outChannels)]
+        self._inputBuffer = [None for i in range(0, inChannels)]
         self._incomingConnections = []
 
+        if self.effect is None:
+            logger.error("Node {} has no effect".format(self.uid))
+            return
+        if not isinstance(self.effect, effect.Effect):
+            logger.error("Node {} content {} is not an effect class".format(self.uid, self.effect))
+            return
         self.effect.setOutputBuffer(self._outputBuffer)
         self.effect.setInputBuffer(self._inputBuffer)
 
     def process(self):
         # reset input buffer
-        for i in range(self.numInputChannels):
+        for i in range(self._numInputChannels()):
             self._inputBuffer[i] = None
         # propagate values
         for con in self._incomingConnections:
@@ -80,12 +82,25 @@ class Node(object):
         """
         state = self.__dict__.copy()
         self.__cleanState__(state)
+        # TODO: Needed for web UI..
+        state['numInputChannels'] = self._numInputChannels()
+        state['numOutputChannels'] = self._numOutputChannels()
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.__initstate__()
-
+    
+    def _numInputChannels(self):
+        if self.effect is None or not isinstance(self.effect, effect.Effect):
+            return 0
+        return self.effect.numInputChannels()
+    
+    def _numOutputChannels(self):
+        if self.effect is None or not isinstance(self.effect, effect.Effect):
+            return 0
+        return self.effect.numOutputChannels()
+    
 
 class Connection(object):
     def __init__(self, from_node, from_channel, to_node, to_channel):
