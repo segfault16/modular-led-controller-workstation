@@ -284,6 +284,11 @@ class MidiProjectController:
             proj = serverconfig.getActiveProjectOrDefault()
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createEnabledControllersMsg(proj))
+        elif data[0] == 0x01 and data[1] == 0x40:
+            # Request controller values for active project
+            logger.info("MIDI-BLE REQ Get controller for active scene")
+            proj = serverconfig.getActiveProjectOrDefault()
+            self._sendControllerStatus(proj)
         elif data[0] == 0x02 and data[1] == 0x00:
             # Get server configuration
             logger.info("MIDI-BLE REQ Get server configuration")
@@ -495,16 +500,7 @@ class MidiProjectController:
         sendMsg.data = [0x00, 0x00] + sysex_data.encode(v)
         return sendMsg
 
-    def _getUpdatePaths(self, paths: str):
-        if ',' in paths:
-            paths = paths.split(',')
-        else:
-            paths = [paths]
-        return paths
-
-    def _handleProgramChange(self, program, proj):
-        proj.activateScene(program)
-
+    def _sendControllerStatus(self, proj):
         # Send current midi controller status
         status = proj.getControllerModulations()
         for controller, v in status.items():
@@ -520,6 +516,18 @@ class MidiProjectController:
                     sendMsg.value = int(v * 127)
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(sendMsg)
+
+    def _getUpdatePaths(self, paths: str):
+        if ',' in paths:
+            paths = paths.split(',')
+        else:
+            paths = [paths]
+        return paths
+
+    def _handleProgramChange(self, program, proj):
+        proj.activateScene(program)
+
+        self._sendControllerStatus(proj)
 
         # Send enabled controllers via sysex
         if self._sendMidiCallback is not None:

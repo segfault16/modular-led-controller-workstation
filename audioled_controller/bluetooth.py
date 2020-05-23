@@ -59,6 +59,7 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
             self["uuid"],
             [hex(c) for c in self._value]))
         callback(pybleno.Characteristic.RESULT_SUCCESS, self._value[offset:])
+        self._value = pybleno.array.array('B', [0] * 0)
 
     def onWriteRequest(self, data, offset, withoutResponse, callback):
         self._value = data
@@ -185,7 +186,7 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
 
     def onSubscribe(self, maxValueSize, updateValueCallback):
         logger.debug("EchoCharacteristic - onSubscribe, maxValueSize: {}".format(maxValueSize))
-        maxValueSize = min(maxValueSize, 100)  # Problems with large value sizes...
+        maxValueSize = min(maxValueSize, 100)  # Problems with large value sizes... Should be enough
         logger.info("MIDI-BLE device connected. Max value size: {}".format(maxValueSize))
 
         self._maxValueSize = maxValueSize
