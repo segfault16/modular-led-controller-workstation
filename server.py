@@ -149,7 +149,9 @@ def create_app():
         global stop_lock
         global stop_signal
         stop_signal = True
+        app.logger.debug("Waiting for stop lock")
         stop_lock.acquire()
+        app.logger.debug("Interrupt")
         app.logger.info('cancelling LED thread')
         global ledThread
         global proj
@@ -175,11 +177,10 @@ def create_app():
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
         stop_lock.release()
+        app.logger.debug("stop lock released")
 
     def sigStop(sig, frame):
-        print("Interrupt")
         interrupt()
-        print("Return from interrupt")
         sys.exit(1)
 
     @app.after_request
