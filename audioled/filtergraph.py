@@ -76,6 +76,9 @@ class Node(object):
         """
         state = self.__dict__.copy()
         self.__cleanState__(state)
+        # TODO: Needed for web UI..
+        state['numInputChannels'] = self._numInputChannels()
+        state['numOutputChannels'] = self._numOutputChannels()
         return state
 
     def __setstate__(self, state):
