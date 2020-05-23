@@ -264,21 +264,21 @@ class MidiProjectController:
             sceneId = serverconfig.getActiveProjectOrDefault().activeSceneId
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createGetActiveSceneIdMsg(sceneId))
-        elif data[0] == 0x01 and data[1] == 0x01:
+        elif data[0] == 0x01 and data[1] == 0x10:
             # Get active scene metadata
             logger.info("MIDI-BLE REQ Get active scene metadata")
             proj = serverconfig.getActiveProjectOrDefault()
             metadata = proj.getSceneMetadata(proj.activeSceneId)
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createActiveSceneMetadataMsg(metadata))
-        elif data[0] == 0x01 and data[1] == 0x02:
+        elif data[0] == 0x01 and data[1] == 0x20:
             # Get scenes metadata
             logger.info("MIDI-BLE REQ Get scenes")
             proj = serverconfig.getActiveProjectOrDefault()
             metadata = proj.sceneMetadata
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createScenesMetadataMsg(metadata))
-        elif data[0] == 0x01 and data[1] == 0x03:
+        elif data[0] == 0x01 and data[1] == 0x30:
             # Get enabled controllers for active scene
             logger.info("MIDI-BLE REQ Get controller for active scene")
             proj = serverconfig.getActiveProjectOrDefault()
@@ -385,19 +385,19 @@ class MidiProjectController:
         logger.info("MIDI-BLE RESPONSE Enabled controllers for active scene: {}".format(controllerEnabled))
         
         sendMsg = mido.Message('sysex')
-        sendMsg.data = [0x01, 0x03] + sysex_data.encode(json.dumps(controllerEnabled))
+        sendMsg.data = [0x01, 0x30] + sysex_data.encode(json.dumps(controllerEnabled))
         return sendMsg
 
     def _createScenesMetadataMsg(self, metadata):
         logger.info("MIDI-BLE RESPONSE Get scenes metadata {}".format(metadata))
         sendMsg = mido.Message('sysex')
-        sendMsg.data = [0x01, 0x02] + sysex_data.encode(json.dumps(metadata))
+        sendMsg.data = [0x01, 0x20] + sysex_data.encode(json.dumps(metadata))
         return sendMsg
 
     def _createActiveSceneMetadataMsg(self, metadata):
         logger.info("MIDI-BLE RESPONSE Get active scene metadata {}".format(metadata))
         sendMsg = mido.Message('sysex')
-        sendMsg.data = [0x01, 0x01] + sysex_data.encode(json.dumps(metadata))
+        sendMsg.data = [0x01, 0x10] + sysex_data.encode(json.dumps(metadata))
         return sendMsg
 
     def _createGetActiveSceneIdMsg(self, sceneId: int):
