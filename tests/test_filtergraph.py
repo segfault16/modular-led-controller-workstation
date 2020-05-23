@@ -3,7 +3,7 @@ from __future__ import division
 from __future__ import unicode_literals
 from __future__ import absolute_import
 import unittest
-from audioled import filtergraph, devices
+from audioled import filtergraph, devices, effect
 
 
 class Test_FilterGraph(unittest.TestCase):
@@ -131,12 +131,17 @@ class Test_FilterGraph(unittest.TestCase):
         self.assertEqual(n2._outputBuffer[1], 'test')
 
 
-class MockEffect(object):
+class MockEffect(effect.Effect):
     def __init__(self, outputValue=None):
         self._outputBuffer = None
         self._inputBuffer = None
         self._num_pixels = None
         self.outputValue = outputValue
+        super().__initstate__()
+
+    @staticmethod
+    def getEffectDescription():
+        return "Mock effect"
 
     def numOutputChannels(self):
         return 5
@@ -144,23 +149,23 @@ class MockEffect(object):
     def numInputChannels(self):
         return 5
 
-    def setOutputBuffer(self, buffer):
-        self._outputBuffer = buffer
+    # def setOutputBuffer(self, buffer):
+    #     self._outputBuffer = buffer
 
-    def setInputBuffer(self, buffer):
-        self._inputBuffer = buffer
+    # def setInputBuffer(self, buffer):
+    #     self._inputBuffer = buffer
 
-    def setNumOutputPixels(self, num_pixels):
-        self._num_pixels = num_pixels
+    # def setNumOutputPixels(self, num_pixels):
+    #     self._num_pixels = num_pixels
 
-    def getNumInputPixels(self, channel):
-        return self._num_pixels
+    # def getNumInputPixels(self, channel):
+    #     return self._num_pixels
 
-    def getNumInputRows(self, channel):
-        return 1
+    # def getNumInputRows(self, channel):
+    #     return 1
 
-    def setNumOutputRows(self, rows):
-        pass
+    # def setNumOutputRows(self, rows):
+    #     pass
 
     def process(self):
         self._outputBuffer[0] = 0
