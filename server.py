@@ -120,7 +120,9 @@ def lock_preview(fn):
 
 
 def multiprocessing_func(sc):
-    sc.store()
+    global stop_signal
+    if not stop_signal:
+        sc.store()
 
 
 def create_app():
@@ -129,11 +131,15 @@ def create_app():
     logger.debug("App created")
 
     def store_configuration():
+        if stop_signal:
+            return
         try:
             global serverconfig
             p = multiprocessing.Process(target=multiprocessing_func, args=(serverconfig, ))
             p.start()
-            p.join(5) # TODO: Handle timeout?
+            p.join(30)
+            if p.is_alive():
+                app.logger.warning("Storing configuration took too long")
             # Update MD5 hashes from file, since data was written in separate process
             serverconfig.updateMd5HashFromFiles()
             serverconfig.postStore()
@@ -163,6 +169,9 @@ def create_app():
         try:
             app.logger.warning("Shutting down LED Thread")
             ledThread.join(2)
+            if ledThread.is_alive():
+                logger.warning("LED thread not joined. Terminating")
+                ledThread.terminate()
             app.logger.warning("Shutdown LED Thread complete")
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
@@ -177,9 +186,9 @@ def create_app():
         try:
             app.logger.warning("Shutting down background scheduler")
             # TODO: This contains a thread join and blocks
-            sched._thread.join(2)
-            sched.shutdown(wait=False)
-            app.logger.debug('Background scheduler shutdown')
+            # sched._thread.join(2)
+            sched.shutdown(wait=True)
+            app.logger.warning('Background scheduler shutdown')
         except Exception as e:
             app.logger.error("LED thread cancelled: {}".format(e))
         stop_lock.release()
