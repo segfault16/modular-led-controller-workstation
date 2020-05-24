@@ -577,7 +577,8 @@ def create_app():
             abort(400)
         value = request.json['slot']
         app.logger.info("Activating scene {}".format(value))
-        proj.activateScene(value)
+        if proj.activeSceneId != value:
+            proj.activateScene(value)
         # proj.previewSlot(value)
         return "OK"
 
