@@ -51,6 +51,7 @@ logging.debug("Global debug log enabled")
 # Adjust loglevels
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
 logging.getLogger('audioled').setLevel(logging.INFO)
+logging.getLogger('audioled.audio').setLevel(logging.INFO)
 logging.getLogger('audioled_controller').setLevel(logging.DEBUG)
 logging.getLogger('audioled_controller.bluetooth').setLevel(logging.DEBUG)
 logging.getLogger('root').setLevel(logging.INFO)
@@ -132,12 +133,12 @@ def create_app():
             global serverconfig
             p = multiprocessing.Process(target=multiprocessing_func, args=(serverconfig, ))
             p.start()
-            p.join(5)
+            p.join(5) # TODO: Handle timeout?
             # Update MD5 hashes from file, since data was written in separate process
             serverconfig.updateMd5HashFromFiles()
             serverconfig.postStore()
-        except Exception:
-            app.logger.error("ERROR on storing configuration")
+        except Exception as e:
+            app.logger.error("ERROR on storing configuration: {}".format(e))
 
     sched = BackgroundScheduler(daemon=True)
     trigger = interval.IntervalTrigger(seconds=5)
@@ -577,7 +578,8 @@ def create_app():
             abort(400)
         value = request.json['slot']
         app.logger.info("Activating scene {}".format(value))
-        proj.activateScene(value)
+        if proj.activeSceneId != value:
+            proj.activateScene(value)
         # proj.previewSlot(value)
         return "OK"
 
