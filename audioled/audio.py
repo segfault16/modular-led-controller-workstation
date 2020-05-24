@@ -298,7 +298,7 @@ class AudioInput(Effect):
                 self._cur_gain = 1. / maxVal
             elif self._cur_gain < self._autogain_max:
                 self._cur_gain = min(self._autogain_max, self._cur_gain * self._autogain_perc)
-            logger.info("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
+            logger.debug("cur_gain: {}, gained value: {}".format(self._cur_gain, self._cur_gain * maxVal))
         else:
             self._cur_gain = 1
         maxChannels = len(self._buffer)
