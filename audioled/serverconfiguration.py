@@ -627,6 +627,7 @@ class PersistentConfiguration(ServerConfiguration):
         m.update(value.encode('utf-8'))
         curHash = m.hexdigest()
         if self._lastHash is None or curHash != self._lastHash:
+            logger.debug("Current configuration hash differs from last hash ({} != {})".format(curHash, self._lastHash))
             self.need_write = True
 
         if not self.no_store and self.need_write:
@@ -669,6 +670,14 @@ class PersistentConfiguration(ServerConfiguration):
                 proj._contentRoot = os.path.dirname(projMeta['location'])
 
     def updateMd5HashFromFiles(self):
+        # Read configuration file
+        configFile = os.path.join(self.storageLocation, "configuration.json")
+        if os.path.exists(configFile):
+            with open(os.path.join(self.storageLocation, "configuration.json"), "r", encoding='utf-8') as f:
+                content = f.read()
+                hash_md5 = hashlib.md5()
+                hash_md5.update(content.encode('utf-8'))
+                self._lastHash = hash_md5.hexdigest()
         for key, proj in self._projects.items():
             projMeta = self._projectMetadatas[key]
             fname = projMeta['location']

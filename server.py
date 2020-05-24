@@ -133,7 +133,7 @@ def create_app():
             global serverconfig
             p = multiprocessing.Process(target=multiprocessing_func, args=(serverconfig, ))
             p.start()
-            p.join(5)
+            p.join(5) # TODO: Handle timeout?
             # Update MD5 hashes from file, since data was written in separate process
             serverconfig.updateMd5HashFromFiles()
             serverconfig.postStore()
