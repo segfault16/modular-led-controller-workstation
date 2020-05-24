@@ -51,6 +51,7 @@ logging.debug("Global debug log enabled")
 # Adjust loglevels
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
 logging.getLogger('audioled').setLevel(logging.INFO)
+logging.getLogger('audioled.audio').setLevel(logging.INFO)
 logging.getLogger('audioled_controller').setLevel(logging.DEBUG)
 logging.getLogger('audioled_controller.bluetooth').setLevel(logging.DEBUG)
 logging.getLogger('root').setLevel(logging.INFO)

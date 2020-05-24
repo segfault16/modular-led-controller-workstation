@@ -452,7 +452,7 @@ class Project(Updateable):
             idx += 1
             # Initialize Project Callback
             if slot is not None:
-                slot._contentRoot = self._contentRoot
+                slot.setContentRoot(self._contentRoot)
 
     def setResetControllerModulation(self, newValue):
         self._resetControllerModulation = newValue
@@ -520,7 +520,7 @@ class Project(Updateable):
     def setFiltergraphForSlot(self, slotId, filterGraph):
         logger.info("Set {} for slot {}".format(filterGraph, slotId))
         if isinstance(filterGraph, FilterGraph):
-            filterGraph._contentRoot = self._contentRoot
+            filterGraph.setContentRoot(self._contentRoot)
             self.slots[slotId] = filterGraph
             if filterGraph in self._activeFiltergraphs():
                 self.activate()
@@ -704,7 +704,7 @@ class Project(Updateable):
             logger.info("Initializing slot {}".format(slotId))
             self.slots[slotId] = FilterGraph()
         fg = self.slots[slotId]
-        fg._contentRoot = self._contentRoot
+        fg.setContentRoot(self._contentRoot)
         return fg
 
     def getSceneMatrix(self):

@@ -635,6 +635,16 @@ class FilterGraph(Updateable):
             self._onModulationUpdate(mod, updateParameters)
         return mod
 
+    def setContentRoot(self, path):
+        self._contentRoot = path
+
+    def getContentRoot(self):
+        try:
+            self._contentRoot
+        except AttributeError:
+            self._contentRoot = None
+        return self._contentRoot
+
     def _updateProcessOrder(self):
         processOrder = []
         if self._outputNode is None:
@@ -743,7 +753,6 @@ class FilterGraph(Updateable):
         state['recordTimings'] = self.recordTimings
         state['modulationSources'] = [mod for mod in self.__modulationsources]
         state['modulations'] = [con.__getstate__() for con in self.__modulations]
-        state['_contentRoot'] = self._contentRoot
         return state
 
     def __setstate__(self, state):
@@ -751,7 +760,8 @@ class FilterGraph(Updateable):
         logger.debug("Restoring filtergraph")
         try:
             if '_contentRoot' in state:
-                self._contentRoot = state['_contentRoot']
+                logger.debug("Removing content root from {}".format(state))
+                del state['_contentRoot']
             if 'recordTimings' in state:
                 self.recordTimings = state['recordTimings']
             if 'nodes' in state:
