@@ -522,6 +522,8 @@ class Project(Updateable):
         if isinstance(filterGraph, FilterGraph):
             filterGraph._contentRoot = self._contentRoot
             self.slots[slotId] = filterGraph
+            if filterGraph in self._activeFiltergraphs():
+                self.activate()
 
     def activate(self):
         """Activates project with default scene"""

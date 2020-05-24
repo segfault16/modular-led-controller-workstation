@@ -136,8 +136,8 @@ def create_app():
             # Update MD5 hashes from file, since data was written in separate process
             serverconfig.updateMd5HashFromFiles()
             serverconfig.postStore()
-        except Exception:
-            app.logger.error("ERROR on storing configuration")
+        except Exception as e:
+            app.logger.error("ERROR on storing configuration: {}".format(e))
 
     sched = BackgroundScheduler(daemon=True)
     trigger = interval.IntervalTrigger(seconds=5)
