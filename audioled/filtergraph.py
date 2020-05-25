@@ -561,11 +561,27 @@ class FilterGraph(Updateable):
         """Returns aggregated modulation values per controller as dictionary
         """
         ctrlValDict = {}
+
         for modSource in self.__modulationsources:
             for controller in modulation.allController:
                 amount = modSource.modulator.getControllerModulation(controller)
                 if amount is not None:
                     ctrlValDict[controller] = amount
+
+                # Special treatment for ColorModulations, return original value of modulated effect instead of controller value stored in modulation
+                targets = [mod.targetNode.effect for mod in self.__modulations if mod.targetNode is not None and mod.modulationSource == modSource and mod.targetNode.effect is not None and isinstance(mod.targetNode.effect, colors.StaticRGBColor)]
+                for x in targets:
+                    try:
+                        x = x  # type: colors.StaticRGBColor
+                        if modSource.modulator.isControlledBy(controller) and controller.endswith("_r"):
+                            ctrlValDict[controller] = x.r
+                        if modSource.modulator.isControlledBy(controller) and controller.endswith("_g"):
+                            ctrlValDict[controller] = x.g
+                        if modSource.modulator.isControlledBy(controller) and controller.endswith("_b"):
+                            ctrlValDict[controller] = x.b
+                    except Exception:
+                        pass
+
                 r = modSource.modulator.getControllerModulation(controller, "r")
                 if r is not None and controller.endswith("_r"):
                     ctrlValDict[controller] = r
@@ -575,6 +591,8 @@ class FilterGraph(Updateable):
                 b = modSource.modulator.getControllerModulation(controller, "b")
                 if b is not None and controller.endswith("_b"):
                     ctrlValDict[controller] = b
+                
+
         return ctrlValDict
     
     def getController(self):

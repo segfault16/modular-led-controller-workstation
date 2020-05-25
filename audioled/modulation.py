@@ -185,11 +185,14 @@ class ExternalColourController(ModulationSource):
 
         if param in self.__dict__:
             return self.__dict__[param]
-
+        
         return None
 
     def resetControllerModulation(self):
         self.controllerAmount = None
+        self.r = None
+        self.g = None
+        self.b = None
 
 
 class ExternalColourAController(ExternalColourController):
@@ -251,14 +254,21 @@ class ExternalLinearController(ModulationSource):
             self.resetControllerModulation()
 
     def getValue(self, param=None):
+        """
+        Returns amount of the modulation.
+        Amount of current controller if present, otherwise amount of modulation
+        """
         if not isinstance(self.amount, float) and not isinstance(self.amount, int):
             self.amount = 0.
 
         if param is None:
+            # Default param (amount)
             try:
                 self.controllerAmount
             except AttributeError:
                 self.controllerAmount = None
+
+            # Prefer controllerAmount
             if self.controllerAmount is None:
                 return self.amount
             return self.controllerAmount
