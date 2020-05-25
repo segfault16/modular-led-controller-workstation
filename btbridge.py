@@ -31,6 +31,10 @@ midi_out = None
 def callback(msg: mido.Message):
     global midi_out
     logger.info("Bluetooth received {}".format(msg))
+    if msg.type == 'control_change' and msg.control == 121:
+        # Reset all controllers, close backchannel
+        logger.info("Received reset all controllers via bluetooth, closing backchannel")
+        midi_out = None
     if midi_out is None:
         try:
             logger.info("Connecting to existing port")
@@ -49,5 +53,9 @@ if __name__ == '__main__':
     midi_in = mido.open_input('MOLECOLE Control Out', virtual=True)
     for msg in midi_in:
         logger.info("Received {}".format(msg))
+        if msg.type == 'control_change' and msg.control == 121:
+            # Reset all controllers, close backchannel
+            logger.info("Received reset all controllers, closing backchannel")
+            midi_out = None
         if bt is not None:
             bt.send(msg)

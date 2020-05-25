@@ -102,7 +102,8 @@ stop_lock = multiprocessing.Lock()
 
 midiController = []
 midiBluetooth = None  # type: audioled_controller.bluetooth.BluetoothMidiLELevelCharacteristic # noqa: F821
-midiPort = None
+midiCtrlPortIn = None
+midiCtrlPortOut = None
 
 def lock_preview(fn):
     @wraps(fn)
@@ -155,57 +156,69 @@ def create_app():
     sched.start()
 
     def interrupt():
-        global stop_lock
-        global stop_signal
-        stop_signal = True
-        app.logger.debug("Waiting for stop lock")
-        stop_lock.acquire()
-        app.logger.debug("Interrupt")
-        app.logger.info('cancelling LED thread')
-        global ledThread
-        global midiThread
-        global proj
-        global midiBluetooth
-        if midiBluetooth is not None:
-            midiBluetooth.shutdown()
-        # stop_signal = True
         try:
-            app.logger.warning("Shutting down Midi Thread")
-            midiThread.join(2)
-            if midiThread.is_alive():
-                logger.warning("Midi thread not joined. Terminating")
-                midiThread.terminate()
-            app.logger.warning("Shutdown MIDI thread complete")
-        except Exception as e:
-            app.logger.error("MIDI thread cancelled: {}".format(e))
+            global stop_lock
+            global stop_signal
+            stop_signal = True
+            app.logger.debug("Waiting for stop lock")
+            stop_lock.acquire()
+            app.logger.debug("Interrupt")
+            app.logger.info('cancelling LED thread')
+            global ledThread
+            global midiThread
+            global proj
+            global midiBluetooth
+            global midiCtrlPortOut
+            if midiCtrlPortOut is not None:
+                for channel in range(16):
+                    midiCtrlPortOut.send(mido.Message('control_change', channel=channel, control=121))
+                midiCtrlPortOut.close()
+                midiCtrlPortOut = None
+            try:
+                if midiBluetooth is not None:
+                    midiBluetooth.shutdown()
+            except Exception as e:
+                app.logger.error("Midi bluetooth shutdown error: {}".format(e))
+            # stop_signal = True
+            try:
+                app.logger.warning("Shutting down Midi Thread")
+                midiThread.join(2)
+                if midiThread.is_alive():
+                    logger.warning("Midi thread not joined. Terminating")
+                    midiThread.terminate()
+                app.logger.warning("Shutdown MIDI thread complete")
+            except Exception as e:
+                app.logger.error("MIDI thread cancelled: {}".format(e))
 
-        try:
-            app.logger.warning("Shutting down LED Thread")
-            ledThread.join(2)
-            if ledThread.is_alive():
-                logger.warning("LED thread not joined. Terminating")
-                ledThread.terminate()
-            app.logger.warning("Shutdown LED Thread complete")
-        except Exception as e:
-            app.logger.error("LED thread cancelled: {}".format(e))
+            try:
+                app.logger.warning("Shutting down LED Thread")
+                ledThread.join(2)
+                if ledThread.is_alive():
+                    logger.warning("LED thread not joined. Terminating")
+                    ledThread.terminate()
+                app.logger.warning("Shutdown LED Thread complete")
+            except Exception as e:
+                app.logger.error("LED thread cancelled: {}".format(e))
 
-        try:
-            app.logger.warning("Stopping processing of current project")
-            proj.stopProcessing()
-            app.logger.warning("Project stopped")
-        except Exception as e:
-            app.logger.error("LED thread cancelled: {}".format(e))
+            try:
+                app.logger.warning("Stopping processing of current project")
+                proj.stopProcessing()
+                app.logger.warning("Project stopped")
+            except Exception as e:
+                app.logger.error("LED thread cancelled: {}".format(e))
 
-        try:
-            app.logger.warning("Shutting down background scheduler")
-            # TODO: This contains a thread join and blocks
-            # sched._thread.join(2)
-            sched.shutdown(wait=True)
-            app.logger.warning('Background scheduler shutdown')
+            try:
+                app.logger.warning("Shutting down background scheduler")
+                # TODO: This contains a thread join and blocks
+                # sched._thread.join(2)
+                sched.shutdown(wait=True)
+                app.logger.warning('Background scheduler shutdown')
+            except Exception as e:
+                app.logger.error("LED thread cancelled: {}".format(e))
+            stop_lock.release()
+            app.logger.debug("stop lock released")
         except Exception as e:
-            app.logger.error("LED thread cancelled: {}".format(e))
-        stop_lock.release()
-        app.logger.debug("stop lock released")
+            app.logger.error("Unhandled exception in signal: {}".format(e))
 
     def sigStop(sig, frame):
         interrupt()
@@ -864,7 +877,7 @@ def startMIDIThread():
 def processMidi():
     global stop_signal
     while not stop_signal:
-        for msg in midiPort.iter_pending():
+        for msg in midiCtrlPortIn.iter_pending():
             handleMidiIn(msg)
         time.sleep(0.01)
 
@@ -872,21 +885,25 @@ def handleMidiIn(msg: mido.Message):
     global proj
     global midiController
     global serverconfig
-    global midiBluetooth
+    global midiCtrlPortOut
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT) and (midiCtrlPortOut is None or midiCtrlPortOut.closed):
+        try:
+            midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
+        except Exception as e:
+            logger.error(e)
     for c in midiController:
         c = c  # type: midi_full.MidiProjectController
         c.handleMidiMsg(msg, serverconfig, proj)
-    if midiBluetooth is None and serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT):
-        try:
-            midiBluetooth = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
-        except Exception as e:
-            logger.error(e)
+
 
 def handleMidiOut(msg: mido.Message):
     global midiBluetooth
     if midiBluetooth is not None:
-        logger.debug("Writing midi {}".format(msg))
+        logger.debug("Writing midi {} to bluetooth".format(msg))
         midiBluetooth.send(msg)
+    if midiCtrlPortOut is not None:
+        logger.debug("Writing midi {} to port".format(msg))
+        midiCtrlPortOut.send(msg)
 
 
 if __name__ == '__main__':
@@ -997,8 +1014,11 @@ if __name__ == '__main__':
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN):
         fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
         midiController.append(fullMidiController)
-        midiPort = mido.open_input(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN), virtual=True)
+        midiCtrlPortIn = mido.open_input(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN), virtual=True)
+        logger.info("Added virtual MIDI port {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN)))
         startMIDIThread()
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT):
+        midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_SERVER_EXPOSE):
         app = create_app()
         app.run(debug=False, host="0.0.0.0", port=args.port)
