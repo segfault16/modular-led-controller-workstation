@@ -539,7 +539,7 @@ class MidiProjectController:
         # sendMsg.channel = 1
         # sendMsg.control = 7
         # sendMsg.value = brightness * 127
-        # midiBluetooth.sendMidi(sendMsg)
+        # midiBluetooth.send(sendMsg)
     
     def _handleControlChange(self, ctrl, value, proj):
         if ctrl in controllerMap:

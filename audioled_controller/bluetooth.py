@@ -205,7 +205,7 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         logger.debug("EchoCharacteristic - onIndicate")
         pass
 
-    def sendMidi(self, msg: mido.Message):
+    def send(self, msg: mido.Message):
         if self._updateValueCallback is None:
             logger.debug("No subscription?")
             return
@@ -339,7 +339,7 @@ class MidiBluetoothService(object):
             return None
         return self.primaryServiceName
 
-    def sendMidi(self, msg: mido.Message):
+    def send(self, msg: mido.Message):
         if self.primaryService is None:
             return
-        self.primaryService._characteristic.sendMidi(msg)
+        self.primaryService._characteristic.send(msg)
