@@ -81,6 +81,7 @@ POOL_TIME = 0.0  # Seconds
 dataLock = threading.Lock()
 # thread handler
 ledThread = threading.Thread()
+midiThread = threading.Thread()
 stop_signal = False
 event_loop = None
 # timing
@@ -101,6 +102,7 @@ stop_lock = multiprocessing.Lock()
 
 midiController = []
 midiBluetooth = None  # type: audioled_controller.bluetooth.BluetoothMidiLELevelCharacteristic # noqa: F821
+midiPort = None
 
 def lock_preview(fn):
     @wraps(fn)
@@ -161,11 +163,22 @@ def create_app():
         app.logger.debug("Interrupt")
         app.logger.info('cancelling LED thread')
         global ledThread
+        global midiThread
         global proj
         global midiBluetooth
         if midiBluetooth is not None:
             midiBluetooth.shutdown()
         # stop_signal = True
+        try:
+            app.logger.warning("Shutting down Midi Thread")
+            midiThread.join(2)
+            if midiThread.is_alive():
+                logger.warning("Midi thread not joined. Terminating")
+                midiThread.terminate()
+            app.logger.warning("Shutdown MIDI thread complete")
+        except Exception as e:
+            app.logger.error("MIDI thread cancelled: {}".format(e))
+
         try:
             app.logger.warning("Shutting down LED Thread")
             ledThread.join(2)
@@ -815,9 +828,8 @@ def create_app():
         ledThread = threading.Timer(POOL_TIME, processLED, ())
         app.logger.info('starting LED thread')
         ledThread.start()
-
+    
     # Initiate
-
     if is_running_from_reloader() is False:
         startLEDThread()
     # When you kill Flask (SIGTERM), clear the trigger for the next thread
@@ -844,13 +856,31 @@ def strandTest(dev, num_pixels):
         t = t + dt
         time.sleep(dt)
 
+def startMIDIThread():
+    global midiThread
+    midiThread = threading.Thread(target=processMidi)
+    midiThread.start()
+
+def processMidi():
+    global stop_signal
+    while not stop_signal:
+        for msg in midiPort.iter_pending():
+            handleMidiIn(msg)
+        time.sleep(0.01)
+
 def handleMidiIn(msg: mido.Message):
     global proj
     global midiController
     global serverconfig
+    global midiBluetooth
     for c in midiController:
         c = c  # type: midi_full.MidiProjectController
         c.handleMidiMsg(msg, serverconfig, proj)
+    if midiBluetooth is None and serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT):
+        try:
+            midiBluetooth = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
+        except Exception as e:
+            logger.error(e)
 
 def handleMidiOut(msg: mido.Message):
     global midiBluetooth
@@ -940,7 +970,6 @@ if __name__ == '__main__':
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_TIME) is not None:
         audio.GlobalAudio.global_autogain_time = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_TIME)
     
-
     # strand test
     if args.strand:
         strandTest(serverconfig.createOutputDevice(), serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
@@ -968,15 +997,8 @@ if __name__ == '__main__':
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN):
         fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
         midiController.append(fullMidiController)
-        # TODO Separate thread
-        tmp = mido.open_input(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN), virtual=True)
-        for msg in tmp:
-            if midiBluetooth is None and serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT):
-                try:
-                    midiBluetooth = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
-                except Exception as e:
-                    logger.error(e)
-            handleMidiIn(msg)
+        midiPort = mido.open_input(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN), virtual=True)
+        startMIDIThread()
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_SERVER_EXPOSE):
         app = create_app()
         app.run(debug=False, host="0.0.0.0", port=args.port)
