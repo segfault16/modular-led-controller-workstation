@@ -66,3 +66,4 @@ Temporary Items
 # Pyupdater 
 .pyupdater
 pyu-data
+*.pyo
