@@ -32,6 +32,8 @@ CONFIG_RESET_CONTROLLER_MODULATION = 'reset_controller_modulation'
 CONFIG_UPDATER_AUTOCHECK_PATH = 'updater_autocheck_path'
 CONFIG_ADVERTISE_BLUETOOTH = 'advertise_bluetooth'
 CONFIG_ADVERTISE_BLUETOOTH_NAME = 'advertise_bluetooth_name'
+CONFIG_MIDI_CTRL_PORT_IN = 'midi_ctrl_port_in'
+CONFIG_MIDI_CTRL_PORT_OUT = 'midi_ctrl_port_out'
 
 allowed_configs = [
     CONFIG_SERVER_EXPOSE,
@@ -82,6 +84,9 @@ class ServerConfiguration:
         self._config[CONFIG_AUDIO_AUTOADJUST_ENABLED] = False
         self._config[CONFIG_AUDIO_AUTOADJUST_MAXGAIN] = 1.
         self._config[CONFIG_AUDIO_AUTOADJUST_TIME] = 30.
+        # Virtual ports
+        self._config[CONFIG_MIDI_CTRL_PORT_IN] = "MOLECOLE Control In"
+        self._config[CONFIG_MIDI_CTRL_PORT_OUT] = "MOLECOLE Control Out"
 
         self._projects = {}
         self._projectMetadatas = {}
@@ -100,7 +105,10 @@ class ServerConfiguration:
             CONFIG_AUDIO_MAX_CHANNELS: [2, 1, 24, 1],
             CONFIG_AUDIO_AUTOADJUST_ENABLED: False,
             CONFIG_AUDIO_AUTOADJUST_MAXGAIN: [1.0, 0.01, 50.0, 0.01],
-            CONFIG_AUDIO_AUTOADJUST_TIME: [30.0, 1.0, 100.0, 0.1]
+            CONFIG_AUDIO_AUTOADJUST_TIME: [30.0, 1.0, 100.0, 0.1],
+            CONFIG_ADVERTISE_BLUETOOTH: True,
+            CONFIG_MIDI_CTRL_PORT_IN: "",
+            CONFIG_MIDI_CTRL_PORT_OUT: "",
         }
 
     def setConfiguration(self, dict):

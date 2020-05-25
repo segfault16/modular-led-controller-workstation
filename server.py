@@ -856,7 +856,7 @@ def handleMidiOut(msg: mido.Message):
     global midiBluetooth
     if midiBluetooth is not None:
         logger.debug("Writing midi {}".format(msg))
-        midiBluetooth.sendMidi(msg)
+        midiBluetooth.send(msg)
 
 
 if __name__ == '__main__':
@@ -965,6 +965,18 @@ if __name__ == '__main__':
             logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
             logger.error(e)
             logger.debug("Bluetooth error", exc_info=1)
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN):
+        fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
+        midiController.append(fullMidiController)
+        # TODO Separate thread
+        tmp = mido.open_input(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN), virtual=True)
+        for msg in tmp:
+            if midiBluetooth is None and serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT):
+                try:
+                    midiBluetooth = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
+                except Exception as e:
+                    logger.error(e)
+            handleMidiIn(msg)
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_SERVER_EXPOSE):
         app = create_app()
         app.run(debug=False, host="0.0.0.0", port=args.port)
