@@ -18,6 +18,7 @@ CONFIG_NUM_PIXELS = 'num_pixels'
 CONFIG_NUM_ROWS = 'num_rows'
 CONFIG_DEVICE = 'device'
 CONFIG_DEVICE_CANDY_SERVER = 'device.candy.server'
+CONFIG_DEVICE_RASPBERRYPI_GPIO = 'device.raspberrypi.gpio'
 CONFIG_AUDIO_DEVICE_INDEX = 'audio.device_index'
 CONFIG_AUDIO_MAX_CHANNELS = 'audio.max_channels'
 CONFIG_AUDIO_AUTOADJUST_ENABLED = 'audio.autoadjust.enabled'
@@ -38,6 +39,7 @@ allowed_configs = [
     CONFIG_NUM_ROWS,
     CONFIG_DEVICE,
     CONFIG_DEVICE_CANDY_SERVER,
+    CONFIG_DEVICE_RASPBERRYPI_GPIO,
     CONFIG_AUDIO_DEVICE_INDEX,
     CONFIG_AUDIO_MAX_CHANNELS,
     CONFIG_AUDIO_AUTOADJUST_ENABLED,
@@ -67,6 +69,7 @@ class ServerConfiguration:
         self._config[CONFIG_NUM_ROWS] = 1
         self._config[CONFIG_DEVICE] = 'FadeCandy'
         self._config[CONFIG_DEVICE_CANDY_SERVER] = '127.0.0.1:7890'
+        self._config[CONFIG_DEVICE_RASPBERRYPI_GPIO] = 18
         self._config[CONFIG_DEVICE_PANEL_MAPPING] = ''
         self._config[CONFIG_RESET_CONTROLLER_MODULATION] = False
         # Pyupdater
@@ -311,6 +314,7 @@ class ServerConfiguration:
                         deviceConfigName: [{
                             "device": self.getConfiguration(CONFIG_DEVICE),
                             "device.candy.server": self.getConfiguration(CONFIG_DEVICE_CANDY_SERVER),
+                            "device.raspberrypi.gpio": self.getConfiguration(CONFIG_DEVICE_RASPBERRYPI_GPIO),
                             "device.num_pixels": self.getConfiguration(CONFIG_NUM_PIXELS),
                             "device.num_rows": self.getConfiguration(CONFIG_NUM_ROWS),
                             "device.panel.mapping": self.getConfiguration(CONFIG_DEVICE_PANEL_MAPPING)
@@ -329,11 +333,14 @@ class ServerConfiguration:
                 self.setConfigurationValue(CONFIG_ACTIVE_DEVICE_CONFIGURATION, deviceConfigName)
             return self.createOutputDeviceFromConfig(deviceConfig, deviceConfigs)
 
-    def createSingleDevice(self, deviceName, numPixels, numRows, candyServer=None, panelMapping=None):
+    def createSingleDevice(self, deviceName, numPixels, numRows, candyServer=None, panelMapping=None, raspberryGpio=None):
         # Single device legacy implementation, TODO: Deprecate or adjust
         logger.info("Creating device: {}".format(deviceName))
         if deviceName == devices.RaspberryPi.__name__:
-            device = devices.RaspberryPi(numPixels, numRows)
+            if raspberryGpio is None:
+                device = devices.RaspberryPi(numPixels, numRows)
+            else:
+                device = devices.RaspberryPi(numPixels, numRows, pin=raspberryGpio)
         elif deviceName == devices.FadeCandy.__name__:
             device = devices.FadeCandy(numPixels, numRows, candyServer)
         else:
@@ -426,6 +433,9 @@ class ServerConfiguration:
             candyServer = None
             if 'device.candy.server' in entry:
                 candyServer = entry['device.candy.server']
+            raspberryGpio = None
+            if 'device.raspberrypi.gpio' in entry:
+                raspberryGpio = entry['device.raspberrypi.gpio']
             panelMapping = None
             if 'device.panel.mapping' in entry:
                 panelMapping = entry['device.panel.mapping']
@@ -457,7 +467,7 @@ class ServerConfiguration:
                                                   start_index=start_index,
                                                   panelMapping=panelMapping)
             else:
-                device = self.createSingleDevice(deviceName, pixels, rows, candyServer=candyServer, panelMapping=panelMapping)
+                device = self.createSingleDevice(deviceName, pixels, rows, candyServer=candyServer, panelMapping=panelMapping, raspberryGpio=raspberryGpio)
             outputDevices.append(device)
         return MultiOutputWrapper(outputDevices)
 
