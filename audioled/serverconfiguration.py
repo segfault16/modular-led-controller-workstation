@@ -32,8 +32,10 @@ CONFIG_RESET_CONTROLLER_MODULATION = 'reset_controller_modulation'
 CONFIG_UPDATER_AUTOCHECK_PATH = 'updater_autocheck_path'
 CONFIG_ADVERTISE_BLUETOOTH = 'advertise_bluetooth'
 CONFIG_ADVERTISE_BLUETOOTH_NAME = 'advertise_bluetooth_name'
-CONFIG_MIDI_CTRL_PORT_IN = 'midi_ctrl_port_in'
-CONFIG_MIDI_CTRL_PORT_OUT = 'midi_ctrl_port_out'
+CONFIG_MIDI_CTRL_ENABLED = 'midi_ctrl.enabled'
+CONFIG_MIDI_CTRL_PORT_IN = 'midi_ctrl.port_in'
+CONFIG_MIDI_CTRL_PORT_OUT = 'midi_ctrl.port_out'
+CONFIG_GRPC_ENABLED = 'grpc.enabled'
 
 allowed_configs = [
     CONFIG_SERVER_EXPOSE,
@@ -53,7 +55,9 @@ allowed_configs = [
     CONFIG_DEVICE_CONFIGS,
     CONFIG_RESET_CONTROLLER_MODULATION,
     CONFIG_UPDATER_AUTOCHECK_PATH,
-    CONFIG_ADVERTISE_BLUETOOTH
+    CONFIG_ADVERTISE_BLUETOOTH,
+    CONFIG_MIDI_CTRL_ENABLED,
+    CONFIG_GRPC_ENABLED
 ]
 
 allowed_devices = [
@@ -77,7 +81,7 @@ class ServerConfiguration:
         # Pyupdater
         self._config[CONFIG_UPDATER_AUTOCHECK_PATH] = ""
         # Bluetooth
-        self._config[CONFIG_ADVERTISE_BLUETOOTH] = True
+        self._config[CONFIG_ADVERTISE_BLUETOOTH] = False
         self._config[CONFIG_ADVERTISE_BLUETOOTH_NAME] = "MOLECOLE Control"
         # Audio
         self._config[CONFIG_AUDIO_MAX_CHANNELS] = 2
@@ -85,8 +89,10 @@ class ServerConfiguration:
         self._config[CONFIG_AUDIO_AUTOADJUST_MAXGAIN] = 1.
         self._config[CONFIG_AUDIO_AUTOADJUST_TIME] = 30.
         # Virtual ports
+        self._config[CONFIG_MIDI_CTRL_ENABLED] = False
         self._config[CONFIG_MIDI_CTRL_PORT_IN] = "MOLECOLE Control In"
         self._config[CONFIG_MIDI_CTRL_PORT_OUT] = "MOLECOLE Control Out"
+        self._config[CONFIG_GRPC_ENABLED] = True
 
         self._projects = {}
         self._projectMetadatas = {}
@@ -106,9 +112,11 @@ class ServerConfiguration:
             CONFIG_AUDIO_AUTOADJUST_ENABLED: False,
             CONFIG_AUDIO_AUTOADJUST_MAXGAIN: [1.0, 0.01, 50.0, 0.01],
             CONFIG_AUDIO_AUTOADJUST_TIME: [30.0, 1.0, 100.0, 0.1],
-            CONFIG_ADVERTISE_BLUETOOTH: True,
+            CONFIG_ADVERTISE_BLUETOOTH: False,
+            CONFIG_MIDI_CTRL_ENABLED: False,
             CONFIG_MIDI_CTRL_PORT_IN: "",
             CONFIG_MIDI_CTRL_PORT_OUT: "",
+            CONFIG_GRPC_ENABLED: True
         }
 
     def setConfiguration(self, dict):

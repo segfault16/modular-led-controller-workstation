@@ -1047,22 +1047,24 @@ if __name__ == '__main__':
             logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
             logger.error(e)
             logger.debug("Bluetooth error", exc_info=1)
-    if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN):
-        fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
-        midiController.append(fullMidiController)
-        midiCtrlPortIn = mido.open_input(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN), virtual=True)
-        logger.info("Added virtual MIDI port {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN)))
-        startMIDIThread()
-    if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT):
-        try:
-            midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
-        except Exception as e:
-            logger.error("Error creating midi out port: {}".format(e))
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_ENABLED):
+        if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN):
+            fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
+            midiController.append(fullMidiController)
+            midiCtrlPortIn = mido.open_input(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN), virtual=True)
+            logger.info("Added virtual MIDI port {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN)))
+            startMIDIThread()
+        if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT):
+            try:
+                midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
+            except Exception as e:
+                logger.error("Error creating midi out port: {}".format(e))
 
-    logger.info("Creating server")
-    server, midiGRPCService = grpc_server.create_server(handleMidiIn)
-    server.add_insecure_port('[::]:5001')
-    server.start()
+    if serverconfig.getConfiguration(serverconfiguration.CONFIG_GRPC_ENABLED):
+        logger.info("Creating GRPC server")
+        server, midiGRPCService = grpc_server.create_server(handleMidiIn)
+        server.add_insecure_port('localhost:5001')
+        server.start()
 
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_SERVER_EXPOSE):
         app = create_app()
