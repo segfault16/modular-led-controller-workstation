@@ -173,28 +173,38 @@ def create_app():
             global midiBluetooth
             global midiCtrlPortOut
             global server
-            if server is not None:
-                server.stop(2)
+            try:
+                if server is not None:
+                    app.logger.warning("Shutting down GRPC server")
+                    server.stop(2)
+                    app.logger.warning("Shutdown GRPC server complete")
+            except Exception as e:
+                app.logger.error("Error shutting down GRPC server: {}".format(e))
+
             if midiCtrlPortOut is not None:
+                app.logger.warning("Shutting down MIDI control ports")
                 for channel in range(16):
                     midiCtrlPortOut.send(mido.Message('control_change', channel=channel, control=121))
                 midiCtrlPortOut.close()
+                app.logger.warning("Shutdown MIDI control ports complete")
                 midiCtrlPortOut = None
             try:
                 if midiBluetooth is not None:
+                    app.logger.warning("Shutting down MIDI bluetooth")
                     midiBluetooth.shutdown()
+                    app.logger.warning("Shutdown MIDI bluetooth complete")
             except Exception as e:
-                app.logger.error("Midi bluetooth shutdown error: {}".format(e))
+                app.logger.error("Error shutting down MIDI bluetooth: {}".format(e))
             # stop_signal = True
             try:
-                app.logger.warning("Shutting down Midi Thread")
+                app.logger.warning("Shutting down MIDI thread")
                 midiThread.join(2)
                 if midiThread.is_alive():
                     logger.warning("Midi thread not joined. Terminating")
                     midiThread.terminate()
                 app.logger.warning("Shutdown MIDI thread complete")
             except Exception as e:
-                app.logger.error("MIDI thread cancelled: {}".format(e))
+                app.logger.error("Error shutting down MIDI thread: {}".format(e))
 
             try:
                 app.logger.warning("Shutting down LED Thread")
@@ -204,23 +214,23 @@ def create_app():
                     ledThread.terminate()
                 app.logger.warning("Shutdown LED Thread complete")
             except Exception as e:
-                app.logger.error("LED thread cancelled: {}".format(e))
+                app.logger.error("Error shutting down LED thread: {}".format(e))
 
             try:
                 app.logger.warning("Stopping processing of current project")
                 proj.stopProcessing()
-                app.logger.warning("Project stopped")
+                app.logger.warning("Processing current project stopped")
             except Exception as e:
-                app.logger.error("LED thread cancelled: {}".format(e))
+                app.logger.error("Error shutting down current project: {}".format(e))
 
             try:
-                app.logger.warning("Shutting down background scheduler")
+                app.logger.warning("Shutting down Background Scheduler")
                 # TODO: This contains a thread join and blocks
                 # sched._thread.join(2)
                 sched.shutdown(wait=True)
-                app.logger.warning('Background scheduler shutdown')
+                app.logger.warning('Shutdown Background scheduler complete')
             except Exception as e:
-                app.logger.error("LED thread cancelled: {}".format(e))
+                app.logger.error("Error shutting down Background scheduler: {}".format(e))
             stop_lock.release()
             app.logger.debug("stop lock released")
         except Exception as e:
