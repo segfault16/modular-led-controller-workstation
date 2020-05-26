@@ -1,0 +1,7 @@
+syntax = "proto3";
+message Sysex {
+    bytes data = 1;
+}
+service Midi {
+    rpc MidiChat(stream Sysex) returns (stream Sysex) {}
+}

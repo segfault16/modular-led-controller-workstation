@@ -5,6 +5,12 @@ tasks:
     cmds:
     - rm -rf pyu-data
     - rm -rf molecole.egg-info
+  
+  protogen:
+    desc: Create python files from api/grpc.proto
+    cmds:
+    # - pipenv run python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. .\tests\remote\grpc_wrapper\service.proto
+    - pipenv run python -m grpc_tools.protoc -Iapi --python_out=audioled_controller/. --grpc_python_out=audioled_controller/. api/grpc_midi.proto
 
   test:
     cmds:

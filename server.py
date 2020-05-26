@@ -15,7 +15,9 @@ from timeit import default_timer as timer
 import logging
 import mido
 import signal
+import grpc
 from functools import wraps
+from concurrent import futures
 
 import jsonpickle
 import numpy as np
@@ -25,7 +27,7 @@ from apscheduler.triggers import interval
 from werkzeug.serving import is_running_from_reloader
 
 from audioled import audio, effects, filtergraph, serverconfiguration, runtimeconfiguration, modulation, project, version
-from audioled_controller import midi_full
+from audioled_controller import midi_full, grpc_server
 
 # configure logging here
 orig_factory = logging.getLogRecordFactory()
@@ -852,6 +854,7 @@ def create_app():
     return app
 
 
+
 def strandTest(dev, num_pixels):
     pixels = np.zeros(int(num_pixels / 2)) * np.array([[255.0], [255.0], [255.0]])
     t = 0.0
@@ -1018,7 +1021,18 @@ if __name__ == '__main__':
         logger.info("Added virtual MIDI port {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN)))
         startMIDIThread()
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT):
-        midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
+        try:
+            midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
+        except Exception as e:
+            logger.error("Error creating midi out port: {}".format(e))
+
+    logger.info("Creating server")
+    server = grpc_server.create_server()
+    server.add_insecure_port('[::]:5001')
+    server.start()
+    server.wait_for_termination()
+
+
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_SERVER_EXPOSE):
         app = create_app()
         app.run(debug=False, host="0.0.0.0", port=args.port)

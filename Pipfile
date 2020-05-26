@@ -13,8 +13,9 @@ flake8 = "*"
 yapf = "*"
 pbr = "*"
 pyinstaller = "*"
-pyupdater = {editable = true, git = "https://github.com/segfault16/PyUpdater.git", ref = "3.1.2-pre"}
+pyupdater = {editable = true,git = "https://github.com/segfault16/PyUpdater.git",ref = "3.1.2-pre"}
 pytest = "*"
+grpcio-tools = "*"
 
 [packages]
 numpy = "*"
