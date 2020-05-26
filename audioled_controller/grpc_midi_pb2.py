@@ -18,7 +18,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\x0fgrpc_midi.proto\"\x15\n\x05Sysex\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\x32(\n\x04Midi\x12 \n\x08MidiChat\x12\x06.Sysex\x1a\x06.Sysex\"\x00(\x01\x30\x01\x62\x06proto3'
+  serialized_pb=b'\n\x0fgrpc_midi.proto\"\x15\n\x05Sysex\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"\x07\n\x05\x45mpty2F\n\x04Midi\x12 \n\x08MidiChat\x12\x06.Sysex\x1a\x06.Sysex\"\x00(\x01\x30\x01\x12\x1c\n\x08SendMidi\x12\x06.Sysex\x1a\x06.Empty\"\x00\x62\x06proto3'
 )
 
 
@@ -54,7 +54,32 @@ _SYSEX = _descriptor.Descriptor(
   serialized_end=40,
 )
 
+
+_EMPTY = _descriptor.Descriptor(
+  name='Empty',
+  full_name='Empty',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=42,
+  serialized_end=49,
+)
+
 DESCRIPTOR.message_types_by_name['Sysex'] = _SYSEX
+DESCRIPTOR.message_types_by_name['Empty'] = _EMPTY
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 Sysex = _reflection.GeneratedProtocolMessageType('Sysex', (_message.Message,), {
@@ -64,6 +89,13 @@ Sysex = _reflection.GeneratedProtocolMessageType('Sysex', (_message.Message,), {
   })
 _sym_db.RegisterMessage(Sysex)
 
+Empty = _reflection.GeneratedProtocolMessageType('Empty', (_message.Message,), {
+  'DESCRIPTOR' : _EMPTY,
+  '__module__' : 'grpc_midi_pb2'
+  # @@protoc_insertion_point(class_scope:Empty)
+  })
+_sym_db.RegisterMessage(Empty)
+
 
 
 _MIDI = _descriptor.ServiceDescriptor(
@@ -72,8 +104,8 @@ _MIDI = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=42,
-  serialized_end=82,
+  serialized_start=51,
+  serialized_end=121,
   methods=[
   _descriptor.MethodDescriptor(
     name='MidiChat',
@@ -82,6 +114,15 @@ _MIDI = _descriptor.ServiceDescriptor(
     containing_service=None,
     input_type=_SYSEX,
     output_type=_SYSEX,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='SendMidi',
+    full_name='Midi.SendMidi',
+    index=1,
+    containing_service=None,
+    input_type=_SYSEX,
+    output_type=_EMPTY,
     serialized_options=None,
   ),
 ])

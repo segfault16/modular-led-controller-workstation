@@ -18,12 +18,23 @@ class MidiStub(object):
                 request_serializer=grpc__midi__pb2.Sysex.SerializeToString,
                 response_deserializer=grpc__midi__pb2.Sysex.FromString,
                 )
+        self.SendMidi = channel.unary_unary(
+                '/Midi/SendMidi',
+                request_serializer=grpc__midi__pb2.Sysex.SerializeToString,
+                response_deserializer=grpc__midi__pb2.Empty.FromString,
+                )
 
 
 class MidiServicer(object):
     """Missing associated documentation comment in .proto file"""
 
     def MidiChat(self, request_iterator, context):
+        """Missing associated documentation comment in .proto file"""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SendMidi(self, request, context):
         """Missing associated documentation comment in .proto file"""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -36,6 +47,11 @@ def add_MidiServicer_to_server(servicer, server):
                     servicer.MidiChat,
                     request_deserializer=grpc__midi__pb2.Sysex.FromString,
                     response_serializer=grpc__midi__pb2.Sysex.SerializeToString,
+            ),
+            'SendMidi': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendMidi,
+                    request_deserializer=grpc__midi__pb2.Sysex.FromString,
+                    response_serializer=grpc__midi__pb2.Empty.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -60,5 +76,21 @@ class Midi(object):
         return grpc.experimental.stream_stream(request_iterator, target, '/Midi/MidiChat',
             grpc__midi__pb2.Sysex.SerializeToString,
             grpc__midi__pb2.Sysex.FromString,
+            options, channel_credentials,
+            call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def SendMidi(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/Midi/SendMidi',
+            grpc__midi__pb2.Sysex.SerializeToString,
+            grpc__midi__pb2.Empty.FromString,
             options, channel_credentials,
             call_credentials, compression, wait_for_ready, timeout, metadata)

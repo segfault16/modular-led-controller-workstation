@@ -29,6 +29,8 @@ pillow = "*"
 rpi-ws281x = {version = "*",sys_platform = "== 'linux'"}
 pyaudio = {editable = true,git = "https://github.com/segfault16/pyAudio.git"}
 pybleno = "*"
+grpcio = "*"
+protobuf = "*"
 
 [requires]
 python_version = "3.7"
