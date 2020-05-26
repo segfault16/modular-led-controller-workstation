@@ -428,7 +428,7 @@ def test_get_server_config():
     j_dict = json.loads(dec)
     assert j_dict is not None
     print(j_dict)
-    assert j_dict["advertise_bluetooth"] == True
+    assert j_dict["advertise_bluetooth"] == False
 
 def test_update_server_config():
     # Setup
@@ -436,9 +436,9 @@ def test_update_server_config():
     ctrl = midi_full.MidiProjectController(callback=f)
     # Init in-memory config
     cfg = serverconfiguration.ServerConfiguration()
-    assert cfg.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH)
+    assert not cfg.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH)
     # Get active project metadata
-    j_dict = json.dumps({"advertise_bluetooth": False})
+    j_dict = json.dumps({"advertise_bluetooth": True})
     gzip = zlib.compress(bytes(j_dict, encoding='utf8'))
 
     testMsg = mido.Message('sysex')
@@ -452,7 +452,7 @@ def test_update_server_config():
     assert retMsg.data[0] == 0x02
     assert retMsg.data[1] == 0x10
     
-    assert not cfg.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH)
+    assert cfg.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH)
 
 def test_get_audio_rms():
     # Setup
