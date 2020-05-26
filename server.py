@@ -9,6 +9,7 @@ import os.path
 import sys
 import threading
 import time
+import psutil
 import multiprocessing
 import traceback
 from timeit import default_timer as timer
@@ -174,6 +175,15 @@ def create_app():
             global midiCtrlPortOut
             global server
             try:
+                parent = psutil.Process(os.getpid())
+                children = parent.children(recursive=True)
+                app.logger.warning("Handling signal in {}".format(parent))
+                for child in children:
+                    app.logger.warning("Child process active: {}".format(child))
+            except Exception:
+                pass
+
+            try:
                 if server is not None:
                     app.logger.warning("Shutting down GRPC server")
                     server.stop(2)
@@ -226,11 +236,16 @@ def create_app():
             try:
                 app.logger.warning("Shutting down Background Scheduler")
                 # TODO: This contains a thread join and blocks
-                # sched._thread.join(2)
-                sched.shutdown(wait=True)
+                sched._thread.join(2)
+                sched.shutdown(wait=False)
                 app.logger.warning('Shutdown Background scheduler complete')
             except Exception as e:
                 app.logger.error("Error shutting down Background scheduler: {}".format(e))
+            
+            parent = psutil.Process(os.getpid())
+            children = parent.children(recursive=True)
+            for child in children:
+                app.logger.warning("Child process still active: {}".format(child))
         except Exception as e:
             app.logger.error("Unhandled exception in signal: {}".format(e))
         finally:
@@ -239,6 +254,7 @@ def create_app():
 
     def sigStop(sig, frame):
         interrupt()
+        os.kill(os.getpid(), signal.SIGTERM)
         sys.exit(1)
 
     @app.after_request
