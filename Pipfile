@@ -31,6 +31,7 @@ pyaudio = {editable = true,git = "https://github.com/segfault16/pyAudio.git"}
 pybleno = "*"
 grpcio = "*"
 protobuf = "*"
+psutil = "*"
 
 [requires]
 python_version = "3.7"

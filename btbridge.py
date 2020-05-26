@@ -3,7 +3,6 @@ import logging
 import mido
 import sys
 import threading
-import mido.backends.rtmidi  # Pyupdate required
 from audioled_controller import bluetooth, grpc_midi_pb2, grpc_midi_pb2_grpc
 import grpc
 import time

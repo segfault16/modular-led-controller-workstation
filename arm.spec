@@ -4,9 +4,9 @@ block_cipher = None
 
 
 a = Analysis(['server.py'],
-             binaries=[],
+             binaries=[( './dist/btbridge/btbridge', '.' )],
              datas=[('resources', 'resources'),('molecole.egg-info','molecole.egg-info')],
-             hiddenimports=['pkg_resources.py2_warn'],
+             hiddenimports=['pkg_resources.py2_warn', 'mido.backends.rtmidi'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
