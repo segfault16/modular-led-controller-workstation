@@ -3,7 +3,9 @@ import logging
 import mido
 import sys
 import mido.backends.rtmidi  # Pyupdate required
-from audioled_controller import bluetooth
+from audioled_controller import bluetooth, grpc_midi_pb2, grpc_midi_pb2_grpc
+import grpc
+
 
 logger = logging.getLogger(__name__)
 orig_factory = logging.getLogRecordFactory()
@@ -45,17 +47,23 @@ def callback(msg: mido.Message):
         logger.info("Relay {}".format(msg))
         midi_out.send(msg)
 
+def midiChat(stub: grpc_midi_pb2_grpc.MidiStub):
+    stub.MidiChat([mido.Message('note_on').bytes])
 
 if __name__ == '__main__':
     logger.info("Advertising bluetooth")
     bt = bluetooth.MidiBluetoothService(callback=callback, advertiseName='MOLECOLE Control')
     logger.info("Creating virtual MIDI port")
-    midi_in = mido.open_input('MOLECOLE Control Out', virtual=True)
-    for msg in midi_in:
-        logger.info("Received {}".format(msg))
-        if msg.type == 'control_change' and msg.control == 121:
-            # Reset all controllers, close backchannel
-            logger.info("Received reset all controllers, closing backchannel")
-            midi_out = None
-        if bt is not None:
-            bt.send(msg)
+    with grpc.insecure_channel('localhost:5001') as channel:
+        stub = grpc_midi_pb2_grpc.MidiStub(channel)
+        midiChat(stub)
+    logger.info("Exiting")
+    # midi_in = mido.open_input('MOLECOLE Control Out', virtual=True)
+    # for msg in midi_in:
+    #     logger.info("Received {}".format(msg))
+    #     if msg.type == 'control_change' and msg.control == 121:
+    #         # Reset all controllers, close backchannel
+    #         logger.info("Received reset all controllers, closing backchannel")
+    #         midi_out = None
+    #     if bt is not None:
+    #         bt.send(msg)
