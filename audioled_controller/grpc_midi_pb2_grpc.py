@@ -15,7 +15,7 @@ class MidiStub(object):
         """
         self.MidiChat = channel.stream_stream(
                 '/Midi/MidiChat',
-                request_serializer=grpc__midi__pb2.Sysex.SerializeToString,
+                request_serializer=grpc__midi__pb2.Empty.SerializeToString,
                 response_deserializer=grpc__midi__pb2.Sysex.FromString,
                 )
         self.SendMidi = channel.unary_unary(
@@ -45,7 +45,7 @@ def add_MidiServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'MidiChat': grpc.stream_stream_rpc_method_handler(
                     servicer.MidiChat,
-                    request_deserializer=grpc__midi__pb2.Sysex.FromString,
+                    request_deserializer=grpc__midi__pb2.Empty.FromString,
                     response_serializer=grpc__midi__pb2.Sysex.SerializeToString,
             ),
             'SendMidi': grpc.unary_unary_rpc_method_handler(
@@ -74,7 +74,7 @@ class Midi(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.stream_stream(request_iterator, target, '/Midi/MidiChat',
-            grpc__midi__pb2.Sysex.SerializeToString,
+            grpc__midi__pb2.Empty.SerializeToString,
             grpc__midi__pb2.Sysex.FromString,
             options, channel_credentials,
             call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -39,8 +39,7 @@ def callback(msg: mido.Message):
         grpc_client.SendMidi(send_msg)
 
 def msgStream():
-    msg = grpc_midi_pb2.Sysex()
-    msg.data = bytes(mido.Message('note_on').bytes())
+    msg = grpc_midi_pb2.Empty()
     yield msg
 
 def midiChat(stub: grpc_midi_pb2_grpc.MidiStub):

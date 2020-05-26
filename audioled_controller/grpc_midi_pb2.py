@@ -18,7 +18,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=b'\n\x0fgrpc_midi.proto\"\x15\n\x05Sysex\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"\x07\n\x05\x45mpty2F\n\x04Midi\x12 \n\x08MidiChat\x12\x06.Sysex\x1a\x06.Sysex\"\x00(\x01\x30\x01\x12\x1c\n\x08SendMidi\x12\x06.Sysex\x1a\x06.Empty\"\x00\x62\x06proto3'
+  serialized_pb=b'\n\x0fgrpc_midi.proto\"\x15\n\x05Sysex\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"\x07\n\x05\x45mpty2F\n\x04Midi\x12 \n\x08MidiChat\x12\x06.Empty\x1a\x06.Sysex\"\x00(\x01\x30\x01\x12\x1c\n\x08SendMidi\x12\x06.Sysex\x1a\x06.Empty\"\x00\x62\x06proto3'
 )
 
 
@@ -112,7 +112,7 @@ _MIDI = _descriptor.ServiceDescriptor(
     full_name='Midi.MidiChat',
     index=0,
     containing_service=None,
-    input_type=_SYSEX,
+    input_type=_EMPTY,
     output_type=_SYSEX,
     serialized_options=None,
   ),

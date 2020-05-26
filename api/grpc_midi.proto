@@ -6,6 +6,6 @@ message Empty {
     
 }
 service Midi {
-    rpc MidiChat(stream Sysex) returns (stream Sysex) {}
+    rpc MidiChat(stream Empty) returns (stream Sysex) {}
     rpc SendMidi(Sysex) returns (Empty) {}
 }
