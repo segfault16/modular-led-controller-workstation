@@ -106,6 +106,7 @@ midiController = []
 midiBluetooth = None  # type: audioled_controller.bluetooth.BluetoothMidiLELevelCharacteristic # noqa: F821
 midiCtrlPortIn = None
 midiCtrlPortOut = None
+midiGRPCService = None
 
 def lock_preview(fn):
     @wraps(fn)
@@ -171,6 +172,9 @@ def create_app():
             global proj
             global midiBluetooth
             global midiCtrlPortOut
+            global server
+            if server is not None:
+                server.stop(2)
             if midiCtrlPortOut is not None:
                 for channel in range(16):
                     midiCtrlPortOut.send(mido.Message('control_change', channel=channel, control=121))
@@ -889,11 +893,11 @@ def handleMidiIn(msg: mido.Message):
     global midiController
     global serverconfig
     global midiCtrlPortOut
-    if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT) and (midiCtrlPortOut is None or midiCtrlPortOut.closed):
-        try:
-            midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
-        except Exception as e:
-            logger.error(e)
+    # if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT) and (midiCtrlPortOut is None or midiCtrlPortOut.closed):
+    #     try:
+    #         midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
+    #     except Exception as e:
+    #         logger.error(e)
     for c in midiController:
         c = c  # type: midi_full.MidiProjectController
         c.handleMidiMsg(msg, serverconfig, proj)
@@ -907,6 +911,8 @@ def handleMidiOut(msg: mido.Message):
     if midiCtrlPortOut is not None:
         logger.debug("Writing midi {} to port".format(msg))
         midiCtrlPortOut.send(msg)
+    if midiGRPCService is not None:
+        midiGRPCService.send(msg)
 
 
 if __name__ == '__main__':
@@ -1027,11 +1033,9 @@ if __name__ == '__main__':
             logger.error("Error creating midi out port: {}".format(e))
 
     logger.info("Creating server")
-    server = grpc_server.create_server()
+    server, midiGRPCService = grpc_server.create_server(handleMidiIn)
     server.add_insecure_port('[::]:5001')
     server.start()
-    server.wait_for_termination()
-
 
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_SERVER_EXPOSE):
         app = create_app()

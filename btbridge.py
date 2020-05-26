@@ -28,42 +28,35 @@ logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO,
                     format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
 
-midi_out = None
+bt = None
+grpc_client = None
 
 def callback(msg: mido.Message):
-    global midi_out
     logger.info("Bluetooth received {}".format(msg))
-    if msg.type == 'control_change' and msg.control == 121:
-        # Reset all controllers, close backchannel
-        logger.info("Received reset all controllers via bluetooth, closing backchannel")
-        midi_out = None
-    if midi_out is None:
-        try:
-            logger.info("Connecting to existing port")
-            midi_out = mido.open_output('MOLECOLE Control In')
-        except Exception as e:
-            logger.error(e)
-    if midi_out is not None:
-        logger.info("Relay {}".format(msg))
-        midi_out.send(msg)
+    if grpc_client is not None:
+        send_msg = grpc_midi_pb2.Sysex()
+        send_msg.data = bytes(msg.bytes())
+        grpc_client.SendMidi(send_msg)
+
+def msgStream():
+    msg = grpc_midi_pb2.Sysex()
+    msg.data = bytes(mido.Message('note_on').bytes())
+    yield msg
 
 def midiChat(stub: grpc_midi_pb2_grpc.MidiStub):
-    stub.MidiChat([mido.Message('note_on').bytes])
+    global bt
+    for msg in stub.MidiChat(msgStream()):
+        midi_msg = mido.Message.from_bytes(msg.data)
+        logger.info("Received {}".format(midi_msg))
+        bt.send(midi_msg)
+    pass
+
 
 if __name__ == '__main__':
     logger.info("Advertising bluetooth")
     bt = bluetooth.MidiBluetoothService(callback=callback, advertiseName='MOLECOLE Control')
     logger.info("Creating virtual MIDI port")
     with grpc.insecure_channel('localhost:5001') as channel:
-        stub = grpc_midi_pb2_grpc.MidiStub(channel)
-        midiChat(stub)
+        grpc_client = grpc_midi_pb2_grpc.MidiStub(channel)
+        midiChat(grpc_client)
     logger.info("Exiting")
-    # midi_in = mido.open_input('MOLECOLE Control Out', virtual=True)
-    # for msg in midi_in:
-    #     logger.info("Received {}".format(msg))
-    #     if msg.type == 'control_change' and msg.control == 121:
-    #         # Reset all controllers, close backchannel
-    #         logger.info("Received reset all controllers, closing backchannel")
-    #         midi_out = None
-    #     if bt is not None:
-    #         bt.send(msg)
