@@ -231,10 +231,11 @@ def create_app():
                 app.logger.warning('Shutdown Background scheduler complete')
             except Exception as e:
                 app.logger.error("Error shutting down Background scheduler: {}".format(e))
-            stop_lock.release()
-            app.logger.debug("stop lock released")
         except Exception as e:
             app.logger.error("Unhandled exception in signal: {}".format(e))
+        finally:
+            stop_lock.release()
+            app.logger.warning("End of interrupt")
 
     def sigStop(sig, frame):
         interrupt()
@@ -862,7 +863,7 @@ def create_app():
     if is_running_from_reloader() is False:
         startLEDThread()
     # When you kill Flask (SIGTERM), clear the trigger for the next thread
-    atexit.register(interrupt)
+    # atexit.register(interrupt)
     signal.signal(signal.SIGINT, sigStop)
     signal.signal(signal.SIGUSR1, sigStop)
     return app
