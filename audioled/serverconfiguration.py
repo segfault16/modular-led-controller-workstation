@@ -30,6 +30,7 @@ CONFIG_ACTIVE_DEVICE_CONFIGURATION = 'active_device_config'
 CONFIG_DEVICE_CONFIGS = 'device_configs'
 CONFIG_RESET_CONTROLLER_MODULATION = 'reset_controller_modulation'
 CONFIG_UPDATER_AUTOCHECK_PATH = 'updater_autocheck_path'
+CONFIG_UPDATER_URL = 'updater_url'
 CONFIG_ADVERTISE_BLUETOOTH = 'advertise_bluetooth'
 CONFIG_ADVERTISE_BLUETOOTH_NAME = 'advertise_bluetooth_name'
 CONFIG_MIDI_CTRL_ENABLED = 'midi_ctrl.enabled'
@@ -37,27 +38,8 @@ CONFIG_MIDI_CTRL_PORT_IN = 'midi_ctrl.port_in'
 CONFIG_MIDI_CTRL_PORT_OUT = 'midi_ctrl.port_out'
 CONFIG_GRPC_ENABLED = 'grpc.enabled'
 
-allowed_configs = [
-    CONFIG_SERVER_EXPOSE,
-    CONFIG_NUM_PIXELS,
-    CONFIG_NUM_ROWS,
-    CONFIG_DEVICE,
-    CONFIG_DEVICE_CANDY_SERVER,
-    CONFIG_DEVICE_RASPBERRYPI_GPIO,
-    CONFIG_AUDIO_DEVICE_INDEX,
-    CONFIG_AUDIO_MAX_CHANNELS,
-    CONFIG_AUDIO_AUTOADJUST_ENABLED,
-    CONFIG_AUDIO_AUTOADJUST_MAXGAIN,
-    CONFIG_AUDIO_AUTOADJUST_TIME,
-    CONFIG_ACTIVE_PROJECT,
-    CONFIG_DEVICE_PANEL_MAPPING,
-    CONFIG_ACTIVE_DEVICE_CONFIGURATION,
-    CONFIG_DEVICE_CONFIGS,
-    CONFIG_RESET_CONTROLLER_MODULATION,
-    CONFIG_UPDATER_AUTOCHECK_PATH,
-    CONFIG_ADVERTISE_BLUETOOTH,
-    CONFIG_MIDI_CTRL_ENABLED,
-    CONFIG_GRPC_ENABLED
+# Blacklist of all settings that cannot be configured via API
+restriced_values = [
 ]
 
 allowed_devices = [
@@ -80,6 +62,7 @@ class ServerConfiguration:
         self._config[CONFIG_RESET_CONTROLLER_MODULATION] = False
         # Pyupdater
         self._config[CONFIG_UPDATER_AUTOCHECK_PATH] = ""
+        self._config[CONFIG_UPDATER_URL] = ""
         # Bluetooth
         self._config[CONFIG_ADVERTISE_BLUETOOTH] = False
         self._config[CONFIG_ADVERTISE_BLUETOOTH_NAME] = "MOLECOLE Control"
@@ -108,6 +91,7 @@ class ServerConfiguration:
             CONFIG_RESET_CONTROLLER_MODULATION: False,
             CONFIG_ACTIVE_DEVICE_CONFIGURATION: list(self.getConfiguration(CONFIG_DEVICE_CONFIGS).keys()),
             CONFIG_UPDATER_AUTOCHECK_PATH: "",
+            CONFIG_UPDATER_URL: "",
             CONFIG_AUDIO_MAX_CHANNELS: [2, 1, 24, 1],
             CONFIG_AUDIO_AUTOADJUST_ENABLED: False,
             CONFIG_AUDIO_AUTOADJUST_MAXGAIN: [1.0, 0.01, 50.0, 0.01],
@@ -135,8 +119,9 @@ class ServerConfiguration:
         - RuntimeError if config not valid
         """
         logger.info("Updating {} to {}".format(key, value))
-        if key not in allowed_configs:
-            logger.info("Updating value {} is not allowed.".format(key))
+        if key in restriced_values:
+            logger.error("Updating value {} is not allowed.".format(key))
+            return
 
         if not self._assertConfigChangeValid(key, value):
             raise RuntimeError("Error in setting {} to {}: {}".format(key, value, "Unknown error"))

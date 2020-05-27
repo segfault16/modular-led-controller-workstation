@@ -2,6 +2,7 @@ from audioled import modulation, project, serverconfiguration, version, client_c
 from audioled_controller import sysex_data
 
 from pyupdater.client import Client
+from pyupdater.client.downloader import FileDownloader
 import mido
 import logging
 import os
@@ -43,32 +44,32 @@ def _ctrlToValue(ctrl, val):
     else:
         return {"controllerAmount": val}
 
-class PathAndUrlDownloader:
-
-    def __init__(self, callback, filename, urls, **kwargs):
-        self.filename = filename
-        self.urls = urls
-        self.hexdigest = kwargs.get("hexdigest")
-        self._callback = callback
-        logger.debug("Downloader for {}".format(filename))
-
+class PathAndUrlDownloader(FileDownloader):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._callback = kwargs.get("callback")
+        logger.debug("Downloader for {}".format(args[0]))
         self._data = None
+    
 
     def download_verify_return(self):
         # Download the data from the endpoint and return
         logger.info("Download request for {} received".format(self.filename))
         if self._callback is not None:
             self._data = self._callback(self.filename)
+        if self._data is None:
+            self._data = super().download_verify_return()
         return self._data
 
     def download_verify_write(self):
         if self._data is None:
             self._data = self.download_verify_return()
-        # Write the downloaded data to the current dir
-        logger.info("Write request for {} received".format(self.filename))
-        logger.info("Writing {} bytes to file {}".format(len(self._data), self.filename))
-        with open(self.filename, 'wb') as f:
-            f.write(self._data)
+        if self._data is not None:
+            # Write the downloaded data to the current dir
+            logger.info("Write request for {} received".format(self.filename))
+            logger.info("Writing {} bytes to file {}".format(len(self._data), self.filename))
+            with open(self.filename, 'wb') as f:
+                f.write(self._data)
 
 def print_status_info(info):
     total = info.get(u'total')
@@ -80,6 +81,7 @@ class MidiProjectControllerOptions:
     def __init__(self):
         self.update_paths = None
         self.client_config = None
+        self.update_urls = None
 
 class MidiProjectController:
 
@@ -92,6 +94,7 @@ class MidiProjectController:
         if options is not None:
             self._update_paths = options.update_paths
             self._client_config = options.client_config
+            self._update_urls = options.update_urls
         # Client for pyupdate
         if self._client_config is None:
             self._client_config = client_config.ClientConfig()
@@ -100,7 +103,9 @@ class MidiProjectController:
 
     def createDownloader(self, filename, urls, **kwargs):
         logger.info("Create downloader for {}".format(filename))
-        d = PathAndUrlDownloader(self.downloadCallback, filename, urls)
+        # replace urls from serverconfig
+        urls = self._update_urls
+        d = PathAndUrlDownloader(filename, urls, callback=self.downloadCallback)
         return d
 
     def downloadCallback(self, file):
@@ -154,13 +159,10 @@ class MidiProjectController:
             # Update
             logger.info("MIDI-BLE REQ Update")
             logger.info("Checking for update, current version is {}".format(version.get_version()))
-            updatePath = serverconfig.getConfiguration(serverconfiguration.CONFIG_UPDATER_AUTOCHECK_PATH)
-            logger.info("Scanning configuration for local directories {}".format(updatePath))
-            self._update_paths = self._getUpdatePaths(updatePath)
-            logger.info("Scanning {}".format(self._update_paths))
-
+            self._updatePathsAndUrls(serverconfig)
             if not self._isUpdating:
                 self._isUpdating = True
+                # New Downloaders will be created on request
                 self.client.refresh()
                 app_update = self.client.update_check('Molecole', version.get_version())
                 if app_update is not None:
@@ -178,10 +180,7 @@ class MidiProjectController:
             # Update check
             logger.info("MIDI-BLE REQ Update check")
             logger.info("Checking for update, current version is {}".format(version.get_version()))
-            updatePath = serverconfig.getConfiguration(serverconfiguration.CONFIG_UPDATER_AUTOCHECK_PATH)
-            logger.info("Scanning configuration for local directories {}".format(updatePath))
-            self._update_paths = self._getUpdatePaths(updatePath)
-            logger.info("Scanning {}".format(self._update_paths))
+            self._updatePathsAndUrls(serverconfig)
 
             if not self._isUpdating:
                 self._isUpdating = True
@@ -354,6 +353,7 @@ class MidiProjectController:
     def _updateApp(self, app_update):
         try:
             logger.debug("Starting download in background")
+            threading.current_thread().name = 'UpdateThread'
             app_update.download()
             logger.info("Update downloaded")
             if app_update.is_downloaded():
@@ -553,3 +553,12 @@ class MidiProjectController:
                 proj.updateModulationSourceValue(0xFFF, controlMsg, controlVal)
         else:
             logger.warn("Unknown controller {}".format(ctrl))
+
+    def _updatePathsAndUrls(self, serverconfig):
+        updatePath = serverconfig.getConfiguration(serverconfiguration.CONFIG_UPDATER_AUTOCHECK_PATH)
+        logger.info("Scanning configuration for local directories {}".format(updatePath))
+        updateUrls = serverconfig.getConfiguration(serverconfiguration.CONFIG_UPDATER_URL)
+        self._update_paths = self._getUpdatePaths(updatePath)
+        if updateUrls is not None and isinstance(updateUrls, str):
+            self._update_urls = updateUrls.split(",")
+        logger.info("Scanning local directories {} and urls {}".format(self._update_paths, self._update_urls))
