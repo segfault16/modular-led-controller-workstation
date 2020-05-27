@@ -36,4 +36,5 @@ tasks:
     - pipenv run python setup.py egg_info
     - pipenv run pyupdater build --pyinstaller-log-info --app-version={{.VERSION_RAW}} mac.spec
     - pipenv run pyupdater pkg --process --sign
+    # - pipenv run python setup.py egg_info && pipenv run pyupdater build --pyinstaller-log-info --app-version=1.0.9 arm.spec && pipenv run pyupdater pkg --process --sign
     

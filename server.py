@@ -165,9 +165,9 @@ def create_app():
             global stop_signal
             stop_signal = True
             app.logger.debug("Waiting for stop lock")
+            app.logger.warning("Signal received. Stopping...")
             stop_lock.acquire()
             app.logger.debug("Interrupt")
-            app.logger.info('cancelling LED thread')
             global ledThread
             global midiThread
             global proj
@@ -1036,18 +1036,21 @@ if __name__ == '__main__':
     default_values['num_pixels'] = serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS)
     
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH):
-        logger.debug("Adding bluetooth server to the mix")
         midiAdvertiseName = serverconfig.getConfiguration(serverconfiguration.CONFIG_ADVERTISE_BLUETOOTH_NAME)
+        logger.info("Starting Bluetooth advertise as '{}'".format(midiAdvertiseName))
         try:
             from audioled_controller import bluetooth
             fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
             midiController.append(fullMidiController)
-            midiBluetooth = bluetooth.MidiBluetoothService(callback=handleMidiIn)
+            midiBluetooth = bluetooth.MidiBluetoothService(callback=handleMidiIn, advertiseName=midiAdvertiseName)
         except Exception as e:
             logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
             logger.error(e)
             logger.debug("Bluetooth error", exc_info=1)
+    else:
+        logger.info("Bluetooth advertise is disabled")
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_ENABLED):
+        logger.info("Starting Virtual Port Controller on {} and {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN), serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT)))
         if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN):
             fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
             midiController.append(fullMidiController)
@@ -1059,12 +1062,18 @@ if __name__ == '__main__':
                 midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
             except Exception as e:
                 logger.error("Error creating midi out port: {}".format(e))
+    else:
+        logger.info("Virtual Port Controller is disabled")
 
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_GRPC_ENABLED):
         logger.info("Creating GRPC server")
+        fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
+        midiController.append(fullMidiController)
         server, midiGRPCService = grpc_server.create_server(handleMidiIn)
         server.add_insecure_port('localhost:5001')
         server.start()
+    else:
+        logger.info("GRPC server is disabled")
 
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_SERVER_EXPOSE):
         app = create_app()

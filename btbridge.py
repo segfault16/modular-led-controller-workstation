@@ -7,6 +7,7 @@ from audioled_controller import bluetooth, grpc_midi_pb2, grpc_midi_pb2_grpc
 import grpc
 import time
 import queue
+import argparse
 
 
 logger = logging.getLogger(__name__)
@@ -96,9 +97,22 @@ def createClient():
 
 
 if __name__ == '__main__':
-    logger.info("Advertising bluetooth")
-    bt = bluetooth.MidiBluetoothService(callback=callback, advertiseName='MOLECOLE Control')
-    logger.info("Creating virtual MIDI port")
+    advertiseName = 'MOLECOLE BTBridge Control'
+
+    parser = argparse.ArgumentParser(description='BTBrige - a Bridge from Bluetooth LE MIDI to GRPC')
+    parser.add_argument(
+        '--name',
+        '-N',
+        dest='name',
+        default=advertiseName,
+        help='Name of MIDI-BLE Port to be advertised',
+    )
+    args = parser.parse_args()
+    if args.name:
+        advertiseName = args.name
+    logger.info("Advertising MIDI-BLE as '{}'".format(advertiseName))
+    bt = bluetooth.MidiBluetoothService(callback=callback, advertiseName=advertiseName)
+    logger.info("Creating GRPC Client")
     grpc_client = createClient()
     while True:
         time.sleep(0.1)

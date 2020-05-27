@@ -157,6 +157,8 @@ class ServerConfiguration:
             self.getActiveProjectOrDefault().setDevice(self._createOrReuseOutputDevice())
         if key == CONFIG_AUDIO_MAX_CHANNELS:
             logger.warning("Number of audio channels changed. Restart required!")
+        if key == CONFIG_ADVERTISE_BLUETOOTH:
+            logger.warning("Advertise bluetooth yes/no was changed. Restart required!")
         if key == CONFIG_AUDIO_AUTOADJUST_ENABLED:
             audio.GlobalAudio.global_autogain_enabled = bool(value)
         if key == CONFIG_AUDIO_AUTOADJUST_MAXGAIN:
