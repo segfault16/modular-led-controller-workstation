@@ -39,7 +39,7 @@ msgQueue = queue.SimpleQueue()
 def callback(msg: mido.Message):
     global grpc_client
     global msgQueue
-    logger.info("Bluetooth received {}".format(msg))
+    
     send_msg = grpc_midi_pb2.Sysex()
     send_msg.data = bytes(msg.bytes())
     
@@ -50,6 +50,7 @@ def callback(msg: mido.Message):
     if grpc_client is not None:
         # Try sending message directly
         try:
+            logger.info("BT RECEIVE -> GRPC SEND {}".format(msg))
             grpc_client.SendMidi(send_msg)
         except Exception as e:
             logger.error("Error sending message.. {}".format(e))
@@ -67,19 +68,19 @@ def midiChat(channel):
     global grpc_client
     global msgQueue
     for unsend in iter(msgQueue.get, None):
-        logger.info("Processing..")
+        logger.info("Start chat with GRPC server..")
         try:
-            logger.info("Start receiving...")
+            logger.info("Start receiving GRPC...")
             grpc_client = grpc_midi_pb2_grpc.MidiStub(channel)
             for msg in grpc_client.MidiChat(msgStream()):
                 midi_msg = mido.Message.from_bytes(msg.data)
-                logger.info("Received {}".format(midi_msg))
+                logger.info("GRPC RECEIVE -> BT SEND {}".format(midi_msg))
                 bt.send(midi_msg)
         except Exception as e:
             logger.error(e)
             grpc_client = None
         finally:
-            logger.info("Stop receiving...")
+            logger.info("Stop receiving GRPC...")
 
     
 
