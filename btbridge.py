@@ -8,6 +8,7 @@ import grpc
 import time
 import queue
 import argparse
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def record_factory(*args, **kwargs):
 
 logging.setLogRecordFactory(record_factory)
 logging.basicConfig(stream=sys.stdout,
-                    level=logging.INFO,
+                    level=os.environ.get("LOGLEVEL", "INFO"),
                     format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
 
 bt = None
@@ -84,13 +85,11 @@ thread_lock = threading.Lock()
 def startThreading(channel):
     global thread_lock
     global grpc_client
-    print("START")
     try:
         thread_lock.acquire()
         if grpc_client is None:
             logger.info("Start receiving GRPC...")
             grpc_client = grpc_midi_pb2_grpc.MidiStub(channel)
-            print("GO!")
             thread_lock.release()
             for msg in grpc_client.MidiChat(msgStream()):
                 midi_msg = mido.Message.from_bytes(msg.data)
