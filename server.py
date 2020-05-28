@@ -899,31 +899,25 @@ def strandTest(dev, num_pixels):
         t = t + dt
         time.sleep(dt)
 
-def startMIDIThread():
+def startMIDIThread(callback):
     global midiThread
-    midiThread = threading.Thread(target=processMidi)
-    midiThread.start()
+    midiThread = threading.Thread(target=processMidi, args=([callback])).start()
 
-def processMidi():
+def processMidi(callback):
     global stop_signal
+    global serverconfig
+    global proj
+    global midiCtrlPortOut
     while not stop_signal:
         for msg in midiCtrlPortIn.iter_pending():
-            handleMidiIn(msg)
+            outPortName = serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT)
+            if outPortName is not None and (midiCtrlPortOut is None or midiCtrlPortOut.closed):
+                try:
+                    midiCtrlPortOut = mido.open_output(outPortName)
+                except Exception as e:
+                    logger.error("Error creating MIDI out port {}: {}".format(outPortName, e))
+            callback(msg)
         time.sleep(0.01)
-
-def handleMidiIn(msg: mido.Message):
-    global proj
-    global midiController
-    global serverconfig
-    global midiCtrlPortOut
-    # if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT) and (midiCtrlPortOut is None or midiCtrlPortOut.closed):
-    #     try:
-    #         midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
-    #     except Exception as e:
-    #         logger.error(e)
-    for c in midiController:
-        c = c  # type: midi_full.MidiProjectController
-        c.handleMidiMsg(msg, serverconfig, proj)
 
 
 def handleMidiOut(msg: mido.Message):
@@ -1043,7 +1037,10 @@ if __name__ == '__main__':
             from audioled_controller import bluetooth
             fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
             midiController.append(fullMidiController)
-            midiBluetooth = bluetooth.MidiBluetoothService(callback=handleMidiIn, advertiseName=midiAdvertiseName)
+            midiBluetooth = bluetooth.MidiBluetoothService(
+                callback=lambda msg: fullMidiController.handleMidiMsg(msg, serverconfig, proj),
+                advertiseName=midiAdvertiseName
+            )
         except Exception as e:
             logger.warning("Ignoring Bluetooth error. Bluetooth not available on all plattforms")
             logger.error(e)
@@ -1062,7 +1059,7 @@ if __name__ == '__main__':
                 inPortName,
                 virtual=True)
             logger.info("Added virtual MIDI port {}".format(inPortName))
-            startMIDIThread()
+            startMIDIThread(callback=lambda msg: fullMidiController.handleMidiMsg(msg, serverconfig, proj))
         if outPortName:
             try:
                 midiCtrlPortOut = mido.open_output(outPortName)
@@ -1072,10 +1069,11 @@ if __name__ == '__main__':
         logger.info("Virtual Port Controller is disabled")
 
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_GRPC_ENABLED):
-        logger.info("Creating GRPC server")
         fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
+        logger.info("Creating GRPC server for {}".format(fullMidiController))
         midiController.append(fullMidiController)
-        server, midiGRPCService = grpc_server.create_server(handleMidiIn)
+        server, midiGRPCService = grpc_server.create_server(
+            callback=lambda msg: fullMidiController.handleMidiMsg(msg, serverconfig, proj))
         server.add_insecure_port('localhost:5001')
         server.start()
     else:
