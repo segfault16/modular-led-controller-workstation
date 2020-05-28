@@ -13,6 +13,7 @@ import glob
 import sys
 import threading
 import signal
+import shutil
 from collections.abc import Iterable   # drop `.abc` with Python 2.7 or lower
 
 logger = logging.getLogger(__name__)
@@ -182,17 +183,30 @@ class MidiProjectController:
 
             if not self._isUpdating:
                 self._isUpdating = True
-                self.client.refresh()
-                app_update = self.client.update_check('Molecole', version.get_version())
-                self._isUpdating = False
-                if app_update is not None:
-                    logger.info("Update {} available".format(app_update.version))
-                    if self._sendMidiCallback is not None:
-                        self._sendMidiCallback(self._createUpdateVersionAvailableMsg(app_update.version))
-                else:
-                    logger.info("Update check returned no update")
-                    if self._sendMidiCallback is not None:
-                        self._sendMidiCallback(self._createUpdateNotAvailableMsg())
+                try:
+                    # Move version.gz to force a reload
+                    oldFile = os.path.join(self.client.data_dir, self.client.version_file)
+                    if os.path.exists(oldFile):
+                        shutil.move(oldFile, oldFile.replace('.gz', '.gz.bak'))
+
+                    oldFile = os.path.join(self.client.data_dir, self.client.version_file_compat)
+                    if os.path.exists(oldFile):
+                        shutil.move(oldFile, oldFile.replace('.gz', '.gz.bak'))
+                        
+                    self.client.refresh()
+                    app_update = self.client.update_check('Molecole', version.get_version())
+                    self._isUpdating = False
+                    if app_update is not None:
+                        logger.info("Update {} available".format(app_update.version))
+                        if self._sendMidiCallback is not None:
+                            self._sendMidiCallback(self._createUpdateVersionAvailableMsg(app_update.version))
+                    else:
+                        logger.info("Update check returned no update")
+                        if self._sendMidiCallback is not None:
+                            self._sendMidiCallback(self._createUpdateNotAvailableMsg())
+                except Exception as e:
+                    logger.error("Error trying to update: {}".format(e))
+                    self._isUpdating = False
             else:
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(self._createUpdateBusyMsg())
@@ -353,8 +367,9 @@ class MidiProjectController:
             logger.debug("Starting download in background")
             threading.current_thread().name = 'UpdateThread'
             app_update.download()
-            logger.info("Update downloaded")
+            
             if app_update.is_downloaded():
+                logger.info("Update downloaded")
                 if not getattr(sys, 'frozen', False):
                     logger.info("Not running from executable. Extract only")
                     logger.debug("Extracting update")
@@ -368,8 +383,10 @@ class MidiProjectController:
                     app_update.extract_overwrite()
                     logger.info("Extracting done. Killing server")
                     os.kill(os.getpid(), signal.SIGUSR1)
+            else:
+                if self._sendMidiCallback is not None:
+                    self._sendMidiCallback(self._createUpdateNotAvailableMsg())
             logger.debug("End of update")
-            
         finally:
             self._isUpdating = False
 

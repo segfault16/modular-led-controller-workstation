@@ -42,23 +42,47 @@ def record_factory(*args, **kwargs):
         record.sthreadName = record.threadName
     return record
 
+logLevel = os.environ.get("LOGLEVEL", "INFO")
+levelPerModule = {
+    "apscheduler": "ERROR",
+    "audioled": "INFO",
+    "audioled.audio": "INFO",
+    "audioled_controller": "INFO",
+    "audioled_controller.bluetooth": "INFO",
+    "root": "INFO",
+    "audioled.audio.libasound": "INFO",
+    "pyupdater": "INFO"
+}
+if len(logLevel.split(',')) > 1:
+    # Global loglevel
+    levelPerModule = {}
+    for item in logLevel.split(','):
+        print(item)
+        keyVal = item.split("=")
+        if len(keyVal) == 2:
+            levelPerModule[keyVal[0]] = keyVal[1]
+    logLevel = "INFO"
+elif logLevel == "DEBUG":
+    levelPerModule = {}
+elif '=' in logLevel:
+    levelPerModule = {}
+    keyVal = logLevel.split("=")
+    
+    if len(keyVal) == 2:
+        levelPerModule[keyVal[0]] = keyVal[1]
+    logLevel = "INFO"    
 
 logging.setLogRecordFactory(record_factory)
 logging.basicConfig(stream=sys.stdout,
-                    level=logging.INFO,
+                    level=logLevel,
                     format='[%(relativeCreated)6d %(sthreadName)10s  ] %(sname)10s:%(levelname)s %(message)s')
 logging.debug("Global debug log enabled")
 # Adjust loglevels
-logging.getLogger('apscheduler').setLevel(logging.ERROR)
-logging.getLogger('audioled').setLevel(logging.INFO)
-logging.getLogger('audioled.audio').setLevel(logging.INFO)
-logging.getLogger('audioled_controller').setLevel(logging.INFO)
-logging.getLogger('audioled_controller.bluetooth').setLevel(logging.INFO)
-logging.getLogger('root').setLevel(logging.INFO)
-logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO)  # Silence!
-logging.getLogger('pyupdater').setLevel(logging.INFO)
+for key, value in levelPerModule.items():
+    logging.getLogger(key).setLevel(value)
+    print("Setting loglevel for {} to {}".format(key, value))
+logging.getLogger('apscheduler').setLevel("ERROR")
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 libnames = ['audioled_controller.bluetooth']
 for libname in libnames:

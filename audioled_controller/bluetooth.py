@@ -4,10 +4,8 @@ import pybleno
 import traceback
 import logging
 import time
-import os
 
 from audioled_controller import midi_timestamp
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
 class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
