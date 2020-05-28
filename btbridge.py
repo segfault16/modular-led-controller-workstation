@@ -50,37 +50,69 @@ def callback(msg: mido.Message):
     if grpc_client is not None:
         # Try sending message directly
         try:
-            logger.info("BT RECEIVE -> GRPC SEND {}".format(msg))
+            logger.info("BT RECEIVE -> GRPC SEND")
+            logger.debug("BT RECEIVE -> GRPC SEND {}".format(msg))
             grpc_client.SendMidi(send_msg)
         except Exception as e:
             logger.error("Error sending message.. {}".format(e))
             grpc_client = None
             if send_msg is not None:
                 msgQueue.put(send_msg)
-            
+
+def sendMsgAfter(send_msg: grpc_midi_pb2.Sysex, delay: float):
+    time.sleep(delay)
+    global grpc_client
+
+    if grpc_client is not None:
+        # Try sending message directly
+        try:
+            logger.info("BT RECEIVE -> GRPC SEND DIRECT")
+            logger.debug("BT RECEIVE -> GRPC SEND DIRECT {}".format(send_msg))
+            grpc_client.SendMidi(send_msg)
+        except Exception as e:
+            logger.error("Error sending message.. {}".format(e))
+    else:
+        logger.error("FATAL. Could not send message {}".format(send_msg))
 
 def msgStream():
     msg = grpc_midi_pb2.Empty()
     yield msg
+
+
+thread_lock = threading.Lock()
+
+def startThreading(channel):
+    global thread_lock
+    global grpc_client
+    print("START")
+    try:
+        thread_lock.acquire()
+        if grpc_client is None:
+            logger.info("Start receiving GRPC...")
+            grpc_client = grpc_midi_pb2_grpc.MidiStub(channel)
+            print("GO!")
+            thread_lock.release()
+            for msg in grpc_client.MidiChat(msgStream()):
+                midi_msg = mido.Message.from_bytes(msg.data)
+                logger.info("GRPC RECEIVE -> BT SEND")
+                logger.debug("GRPC RECEIVE -> BT SEND {}".format(midi_msg))
+                bt.send(midi_msg)
+        else:
+            thread_lock.release()
+    except Exception as e:
+        logger.error("Error starting thread {}".format(e))
+        grpc_client = None
+        
 
 def midiChat(channel):
     global bt
     global grpc_client
     global msgQueue
     for unsend in iter(msgQueue.get, None):
-        logger.info("Start chat with GRPC server..")
-        try:
-            logger.info("Start receiving GRPC...")
-            grpc_client = grpc_midi_pb2_grpc.MidiStub(channel)
-            for msg in grpc_client.MidiChat(msgStream()):
-                midi_msg = mido.Message.from_bytes(msg.data)
-                logger.info("GRPC RECEIVE -> BT SEND {}".format(midi_msg))
-                bt.send(midi_msg)
-        except Exception as e:
-            logger.error(e)
-            grpc_client = None
-        finally:
-            logger.info("Stop receiving GRPC...")
+        logger.debug("Start chat with GRPC server starting with {}".format(unsend))
+        threading.Thread(target=sendMsgAfter, args=([unsend, 0.1])).start()
+        threading.Thread(target=startThreading, args=([channel])).start()
+        
 
 def createClient():
     global grpc_client
@@ -89,7 +121,7 @@ def createClient():
         channel = grpc.insecure_channel('localhost:5001')
         grpc_thread = threading.Thread(target=midiChat, args=(channel,), daemon=True).start()
     except Exception as e:
-        logger.error(e)
+        logger.error("Error creating client: {}".format(e))
         return None
     return grpc_client
 

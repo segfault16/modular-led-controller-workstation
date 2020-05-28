@@ -52,11 +52,11 @@ logging.debug("Global debug log enabled")
 logging.getLogger('apscheduler').setLevel(logging.ERROR)
 logging.getLogger('audioled').setLevel(logging.INFO)
 logging.getLogger('audioled.audio').setLevel(logging.INFO)
-logging.getLogger('audioled_controller').setLevel(logging.DEBUG)
-logging.getLogger('audioled_controller.bluetooth').setLevel(logging.DEBUG)
+logging.getLogger('audioled_controller').setLevel(logging.INFO)
+logging.getLogger('audioled_controller.bluetooth').setLevel(logging.INFO)
 logging.getLogger('root').setLevel(logging.INFO)
 logging.getLogger('audioled.audio.libasound').setLevel(logging.INFO)  # Silence!
-logging.getLogger('pyupdater').setLevel(logging.DEBUG)
+logging.getLogger('pyupdater').setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -1065,8 +1065,7 @@ if __name__ == '__main__':
             startMIDIThread()
         if outPortName:
             try:
-                midiCtrlPortOut = mido.open_output(
-                    serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
+                midiCtrlPortOut = mido.open_output(outPortName)
             except Exception as e:
                 logger.error("Error creating midi out port: {}".format(e))
     else:

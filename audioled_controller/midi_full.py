@@ -53,7 +53,7 @@ class PathAndUrlDownloader(FileDownloader):
     
     def download_verify_return(self):
         # Download the data from the endpoint and return
-        logger.info("Download request for {} received".format(self.filename))
+        logger.debug("Download request for {} received".format(self.filename))
         if self._callback is not None:
             self._data = self._callback(self.filename)
         if self._data is None:
@@ -101,14 +101,13 @@ class MidiProjectController:
         self.client.add_progress_hook(print_status_info)
 
     def createDownloader(self, filename, urls, **kwargs):
-        logger.info("Create downloader for {}".format(filename))
+        logger.debug("Create downloader for {}".format(filename))
         # replace urls from serverconfig
         urls = self._update_urls
         d = PathAndUrlDownloader(filename, urls, callback=self.downloadCallback)
         return d
 
     def downloadCallback(self, file):
-        logger.info("Callback! {}".format(file))
         if self._update_paths is not None:
             for updatePath in self._update_paths:
                 for p in glob.iglob(updatePath):
@@ -118,7 +117,7 @@ class MidiProjectController:
                         if os.path.isfile(path):
                             logger.info("Downloading from path {}".format(path))
                             return open(path, "rb").read()
-        logger.error("{} not found".format(file))
+                logger.debug("{} not found in {}".format(file, updatePath))
         return None
 
     def handleMidiMsg(self, msg: mido.Message, serverconfig: serverconfiguration.ServerConfiguration, proj: project.Project):
@@ -330,7 +329,7 @@ class MidiProjectController:
         return sendMsg
 
     def _createGetServerConfigMsg(self, config: dict):
-        logger.info("MIDI-BLE RESPONSE Get server config - Successful")
+        logger.debug("MIDI-BLE RESPONSE Get server config - Successful")
         json = jsonpickle.dumps(config)
         gzip = zlib.compress(bytes(json, encoding='utf8'))
         sendMsg = mido.Message('sysex')
@@ -338,13 +337,13 @@ class MidiProjectController:
         return sendMsg
 
     def _createUpdateServerConfigSuccessfulMsg(self):
-        logger.info("MIDI-BLE RESPONSE Update server config - Successful")
+        logger.debug("MIDI-BLE RESPONSE Update server config - Successful")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x02, 0x10]
         return sendMsg
 
     def _createUpdateServerConfigErrorMsg(self):
-        logger.info("MIDI-BLE RESPONSE Update server config - Successful")
+        logger.debug("MIDI-BLE RESPONSE Update server config - Successful")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x02, 0x1F]
         return sendMsg
@@ -381,37 +380,37 @@ class MidiProjectController:
             if controller in inverseControllerMap:
                 controllerEnabled[inverseControllerMap[controller]] = False
 
-        logger.info("Status: {}".format(status.keys()))
+        logger.debug("Status: {}".format(status.keys()))
         for controller in status.keys():
             if controller in inverseControllerMap:
                 controllerEnabled[inverseControllerMap[controller]] = True
 
-        logger.info("MIDI-BLE RESPONSE Enabled controllers for active scene: {}".format(controllerEnabled))
+        logger.debug("MIDI-BLE RESPONSE Enabled controllers for active scene: {}".format(controllerEnabled))
         
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x01, 0x30] + sysex_data.encode(json.dumps(controllerEnabled))
         return sendMsg
 
     def _createScenesMetadataMsg(self, metadata):
-        logger.info("MIDI-BLE RESPONSE Get scenes metadata {}".format(metadata))
+        logger.debug("MIDI-BLE RESPONSE Get scenes metadata {}".format(metadata))
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x01, 0x20] + sysex_data.encode(json.dumps(metadata))
         return sendMsg
 
     def _createActiveSceneMetadataMsg(self, metadata):
-        logger.info("MIDI-BLE RESPONSE Get active scene metadata {}".format(metadata))
+        logger.debug("MIDI-BLE RESPONSE Get active scene metadata {}".format(metadata))
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x01, 0x10] + sysex_data.encode(json.dumps(metadata))
         return sendMsg
 
     def _createGetActiveSceneIdMsg(self, sceneId: int):
-        logger.info("MIDI-BLE RESPONSE Get active scene id {}".format(sceneId))
+        logger.debug("MIDI-BLE RESPONSE Get active scene id {}".format(sceneId))
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x01, 0x00] + sysex_data.encode("{}".format(sceneId))
         return sendMsg
 
     def _createExportProjSuccessfulMsg(self, proj):
-        logger.info("MIDI-BLE RESPONSE Export project - Successful")
+        logger.debug("MIDI-BLE RESPONSE Export project - Successful")
         projJson = jsonpickle.dumps(proj)
         projGzip = zlib.compress(bytes(projJson, encoding='utf8'))
         sendMsg = mido.Message('sysex')
@@ -419,82 +418,82 @@ class MidiProjectController:
         return sendMsg
     
     def _createExportProjNotFoundMsg(self):
-        logger.info("MIDI-BLE RESPONSE Export project - Not found")
+        logger.debug("MIDI-BLE RESPONSE Export project - Not found")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x6F]
         return sendMsg
 
     def _deleteProjSuccessfulMsg(self):
-        logger.info("MIDI-BLE RESPONSE Delete project - Successful")
+        logger.debug("MIDI-BLE RESPONSE Delete project - Successful")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x70]
         return sendMsg
     
     def _deleteProjNotFoundMsg(self):
-        logger.info("MIDI-BLE RESPONSE Delete project - Not found")
+        logger.debug("MIDI-BLE RESPONSE Delete project - Not found")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x7F]
         return sendMsg
 
     def _createImportProjSuccessfulMsg(self):
-        logger.info("MIDI-BLE RESPONSE Import project - Successful")
+        logger.debug("MIDI-BLE RESPONSE Import project - Successful")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x50]
         return sendMsg
 
     def _createImportProjErrorMsg(self):
-        logger.info("MIDI-BLE RESPONSE Import project - Error")
+        logger.debug("MIDI-BLE RESPONSE Import project - Error")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x5F]
         return sendMsg
 
     def _createActivateProjSuccessfulMsg(self):
-        logger.info("MIDI-BLE RESPONSE Activate project - Successful")
+        logger.debug("MIDI-BLE RESPONSE Activate project - Successful")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x40]
         return sendMsg
     
     def _createActivateProjNotFoundMsg(self):
-        logger.info("MIDI-BLE RESPONSE Activate project - Project not found")
+        logger.debug("MIDI-BLE RESPONSE Activate project - Project not found")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x4F]
         return sendMsg
 
     def _createUpdateVersionAvailableMsg(self, version):
-        logger.info("MIDI-BLE RESPONSE Update to version {} available".format(version))
+        logger.debug("MIDI-BLE RESPONSE Update to version {} available".format(version))
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x11] + sysex_data.encode(version)
         return sendMsg
 
     def _createUpdateNotAvailableMsg(self):
-        logger.info("MIDI-BLE RESPONSE No update available")
+        logger.debug("MIDI-BLE RESPONSE No update available")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x1F]
         return sendMsg
 
     def _createUpdateBusyMsg(self):
-        logger.info("MIDI-BLE RESPONSE Update or update check running. I'm busy.")
+        logger.debug("MIDI-BLE RESPONSE Update or update check running. I'm busy.")
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x1E]
         return sendMsg
     
     def _createActiveProjectMsg(self, metadata):
         data = json.dumps(metadata)
-        logger.info("MIDI-BLE RESPONSE Active project {}".format(data))
+        logger.debug("MIDI-BLE RESPONSE Active project {}".format(data))
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x20] + sysex_data.encode(data)
         return sendMsg
 
     def _createProjectsMsg(self, metadata):
         data = json.dumps(metadata)
-        logger.info("MIDI-BLE RESPONSE project metadata: {}".format(data))
+        logger.debug("MIDI-BLE RESPONSE project metadata: {}".format(data))
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x30] + sysex_data.encode(data)
         return sendMsg
 
     def _createVersionMsg(self):
         v = version.get_version()
-        logger.info("MIDI-BLE RESPONSE Current Version {}".format(v))
+        logger.debug("MIDI-BLE RESPONSE Current Version {}".format(v))
         sendMsg = mido.Message('sysex')
         sendMsg.data = [0x00, 0x00] + sysex_data.encode(v)
         return sendMsg
@@ -503,7 +502,7 @@ class MidiProjectController:
         # Send current midi controller status
         status = proj.getControllerModulations()
         for controller, v in status.items():
-            logger.info("Sending modulation controller value {} for controller {}".format(v, controller))
+            logger.debug("Sending modulation controller value {} for controller {}".format(v, controller))
             sendMsg = mido.Message('control_change')
             if controller in inverseControllerMap:
                 sendMsg.channel = 1

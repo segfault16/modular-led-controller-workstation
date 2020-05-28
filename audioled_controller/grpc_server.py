@@ -14,19 +14,20 @@ class MidiServicer(audioled_controller.grpc_midi_pb2_grpc.MidiServicer):
 
     def MidiChat(self, request_iterator, context):
         for new_msg in request_iterator:
-            logger.info("Started Midi Backchannel {}".format(new_msg))
+            logger.info("Starting GRPC MIDI Backchannel".format(new_msg))
+            logger.info("Started GRPC MIDI Backchannel {}".format(new_msg))
             for prev_msg in iter(self._queue.get, None):
                 yield prev_msg
 
     def SendMidi(self, request, context):
-        logger.info("Received {}".format(request))
+        logger.debug("Received {}".format(request))
         midi_msg = mido.Message.from_bytes(request.data)
         if self._midiCallback is not None:
             self._midiCallback(midi_msg)
         return audioled_controller.grpc_midi_pb2.Empty()
 
     def send(self, msg: mido.Message):
-        logger.info("Appending {}".format(msg))
+        logger.debug("MIDI-GRPC Receive {}".format(msg))
         grpc_msg = audioled_controller.grpc_midi_pb2.Sysex()
         grpc_msg.data = bytes(msg.bytes())
         self._queue.put(grpc_msg)

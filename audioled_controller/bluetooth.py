@@ -187,10 +187,10 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
 
     def onSubscribe(self, maxValueSize, updateValueCallback):
         logger.debug("EchoCharacteristic - onSubscribe, maxValueSize: {}".format(maxValueSize))
-        maxValueSize = min(maxValueSize, 100)  # Problems with large value sizes... Should be enough
-        logger.info("MIDI-BLE device connected. Max value size: {}".format(maxValueSize))
+        maxValueSizeAdjusted = min(maxValueSize, 100)  # Problems with large value sizes... Should be enough
+        logger.info("MIDI-BLE device connected. Max value size: {} (requested: {})".format(maxValueSizeAdjusted, maxValueSize))
 
-        self._maxValueSize = maxValueSize
+        self._maxValueSize = maxValueSizeAdjusted
         self._updateValueCallback = updateValueCallback
 
     def onUnsubscribe(self):
