@@ -51,7 +51,6 @@ class PathAndUrlDownloader(FileDownloader):
         logger.debug("Downloader for {}".format(args[0]))
         self._data = None
     
-
     def download_verify_return(self):
         # Download the data from the endpoint and return
         logger.info("Download request for {} received".format(self.filename))

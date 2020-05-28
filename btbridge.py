@@ -82,8 +82,6 @@ def midiChat(channel):
         finally:
             logger.info("Stop receiving GRPC...")
 
-    
-
 def createClient():
     global grpc_client
     global grpc_thread
@@ -94,7 +92,6 @@ def createClient():
         logger.error(e)
         return None
     return grpc_client
-
 
 
 if __name__ == '__main__':

@@ -428,7 +428,7 @@ def test_get_server_config():
     j_dict = json.loads(dec)
     assert j_dict is not None
     print(j_dict)
-    assert j_dict["advertise_bluetooth"] == False
+    assert not j_dict["advertise_bluetooth"]
 
 def test_update_server_config():
     # Setup

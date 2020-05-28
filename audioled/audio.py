@@ -303,7 +303,7 @@ class AudioInput(Effect):
             self._cur_gain = 1
         maxChannels = len(self._buffer)
         for i in range(0, self.num_channels):
-            self._outBuffer[i].audio = self._cur_gain * self._buffer[i%maxChannels]
+            self._outBuffer[i].audio = self._cur_gain * self._buffer[i % maxChannels]
             # TODO: Calculate audio stats per channel: peak, rms, FFT buckets for remote display
             self._outputBuffer[i] = self._outBuffer[i]
             # logger.info("{}: {}".format(i, np.max(self._outputBuffer[i].audio)))

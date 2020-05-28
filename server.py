@@ -1,6 +1,5 @@
 #!flask/bin/python
 import asyncio
-import atexit
 import colorsys
 import importlib
 import inspect
@@ -16,9 +15,7 @@ from timeit import default_timer as timer
 import logging
 import mido
 import signal
-import grpc
 from functools import wraps
-from concurrent import futures
 
 import jsonpickle
 import numpy as np
@@ -885,7 +882,6 @@ def create_app():
     return app
 
 
-
 def strandTest(dev, num_pixels):
     pixels = np.zeros(int(num_pixels / 2)) * np.array([[255.0], [255.0], [255.0]])
     t = 0.0
@@ -1012,16 +1008,21 @@ if __name__ == '__main__':
             serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)))
         audio.AudioInput.overrideDeviceIndex = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX)
         # Initialize global audio
-        globalAudio = audio.GlobalAudio(serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX), num_channels=maxChannels)
+        globalAudio = audio.GlobalAudio(
+            serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_DEVICE_INDEX),
+            num_channels=maxChannels)
     else:
         globalAudio = audio.GlobalAudio(num_channels=maxChannels)
     
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_ENABLED) is not None:
-        audio.GlobalAudio.global_autogain_enabled = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_ENABLED)
+        audio.GlobalAudio.global_autogain_enabled = serverconfig.getConfiguration(
+            serverconfiguration.CONFIG_AUDIO_AUTOADJUST_ENABLED)
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_MAXGAIN) is not None:
-        audio.GlobalAudio.global_autogain_maxgain = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_MAXGAIN)
+        audio.GlobalAudio.global_autogain_maxgain = serverconfig.getConfiguration(
+            serverconfiguration.CONFIG_AUDIO_AUTOADJUST_MAXGAIN)
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_TIME) is not None:
-        audio.GlobalAudio.global_autogain_time = serverconfig.getConfiguration(serverconfiguration.CONFIG_AUDIO_AUTOADJUST_TIME)
+        audio.GlobalAudio.global_autogain_time = serverconfig.getConfiguration(
+            serverconfiguration.CONFIG_AUDIO_AUTOADJUST_TIME)
     
     # strand test
     if args.strand:
@@ -1049,17 +1050,23 @@ if __name__ == '__main__':
             logger.debug("Bluetooth error", exc_info=1)
     else:
         logger.info("Bluetooth advertise is disabled")
+        
     if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_ENABLED):
-        logger.info("Starting Virtual Port Controller on {} and {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN), serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT)))
-        if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN):
+        inPortName = serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN)
+        outPortName = serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT)
+        logger.info("Starting Virtual Port Controller on {} and {}".format(inPortName, outPortName))
+        if inPortName:
             fullMidiController = midi_full.MidiProjectController(callback=handleMidiOut)
             midiController.append(fullMidiController)
-            midiCtrlPortIn = mido.open_input(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN), virtual=True)
-            logger.info("Added virtual MIDI port {}".format(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_IN)))
+            midiCtrlPortIn = mido.open_input(
+                inPortName,
+                virtual=True)
+            logger.info("Added virtual MIDI port {}".format(inPortName))
             startMIDIThread()
-        if serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT):
+        if outPortName:
             try:
-                midiCtrlPortOut = mido.open_output(serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
+                midiCtrlPortOut = mido.open_output(
+                    serverconfig.getConfiguration(serverconfiguration.CONFIG_MIDI_CTRL_PORT_OUT))
             except Exception as e:
                 logger.error("Error creating midi out port: {}".format(e))
     else:

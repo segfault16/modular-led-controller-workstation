@@ -592,7 +592,6 @@ class FilterGraph(Updateable):
                 if b is not None and controller.endswith("_b"):
                     ctrlValDict[controller] = b
                 
-
         return ctrlValDict
     
     def getController(self):

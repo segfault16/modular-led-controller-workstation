@@ -800,7 +800,8 @@ class Project(Updateable):
         if str(dIdx) not in outputs and create:
             outputs[str(dIdx)] = {}
             if str(0) in outputs and "refSlo" in outputs[str(0)]:
-                logger.info("Upgrading slot for device {} to {} compatibility: Init with slotId = sceneId".format(dIdx, outputs[str(0)]["refSlot"]))
+                logger.info("Upgrading slot for device {} to {} compatibility: Init with slotId = sceneId".format(
+                    dIdx, outputs[str(0)]["refSlot"]))
                 outputs[str(dIdx)]["refSlot"] = outputs[str(0)]["refSlot"]
             else:
                 logger.warning("Backwards compatibility: Init with slotId = sceneId")

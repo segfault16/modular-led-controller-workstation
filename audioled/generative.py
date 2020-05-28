@@ -23,8 +23,8 @@ sortbydefault = 'red'
 direction = ['side1', 'side2', 'random']
 direction_default = 'random'
 waveshape = ['sin(x)', '1/x', '1/x**2', '1/x**3', 'const(x)', 'x', 'x**2', 'x**3', 'x * e**(-x)',
-              '-sin(x)', '-1/x', '-1/x**2', '-1/x**3', '-const(x)', '-x', '-x**2', '-x**3', '-x * e**(-x)',
-              'all positive', 'all negative', 'all']
+             '-sin(x)', '-1/x', '-1/x**2', '-1/x**3', '-const(x)', '-x', '-x**2', '-x**3', '-x * e**(-x)',
+             'all positive', 'all negative', 'all']
 waveshape_pos = ['sin(x)', '1/x', '1/x**2', '1/x**3', 'const(x)', 'x', 'x**2', 'x**3', 'x * e**(-x)']
 waveshape_neg = ['-sin(x)', '-1/x', '-1/x**2', '-1/x**3', '-const(x)', '-x', '-x**2', '-x**3', '-x * e**(-x)']
 waveshape_default = 'sin(x)'
@@ -213,8 +213,11 @@ class SwimmingPool(Effect):
             self._WaveSpecSpeed = None
 
         if self._Wave is None or self._WaveSpecSpeed is None or len(self._Wave) < int(self.num_waves):
-            self._Wave, self._WaveSpecSpeed = self._initWaves(self.num_waves, self.wavespread_low,
-                                                                self.wavespread_high, self.max_speed)
+            self._Wave, self._WaveSpecSpeed = self._initWaves(
+                self.num_waves,
+                self.wavespread_low,
+                self.wavespread_high,
+                self.max_speed)
         # Rotate waves
         self._rotate_counter += 1
         if self._rotate_counter > 30:

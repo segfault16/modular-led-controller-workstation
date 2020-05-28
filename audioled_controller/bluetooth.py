@@ -232,7 +232,6 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
             # Append timestamp
             bytes = bytes[:-1] + [timestamp[1]] + [bytes[-1]]
 
-        
         splitMsg = []
         if self._maxValueSize is not None and len(bytes) > self._maxValueSize:
             # logger.debug("split {}".format([hex(c) for c in bytes]))
@@ -261,9 +260,6 @@ class BluetoothMidiLELevelCharacteristic(pybleno.Characteristic):
         if len(bytes) > 0:
             ret.append(bytes)
         return ret
-
-
-
 
 class BluetoothMidiLEService(pybleno.BlenoPrimaryService):
     def __init__(self, _msgReceivedCallback):
