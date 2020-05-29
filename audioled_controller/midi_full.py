@@ -531,6 +531,15 @@ class MidiProjectController:
                     sendMsg.value = int(v * 127)
                 if self._sendMidiCallback is not None:
                     self._sendMidiCallback(sendMsg)
+        # Send current brightness value
+        brightness = proj.getBrightnessActiveScene()
+        if brightness is not None:
+            sendMsg = mido.Message('control_change')
+            sendMsg.channel = 1
+            sendMsg.control = 7
+            sendMsg.value = int(brightness * 127)
+            if self._sendMidiCallback is not None:
+                self._sendMidiCallback(sendMsg)
 
     def _getUpdatePaths(self, paths: str):
         if ',' in paths:
@@ -548,13 +557,8 @@ class MidiProjectController:
         if self._sendMidiCallback is not None:
             self._sendMidiCallback(self._createEnabledControllersMsg(proj))
 
-        # TODO: Send brightness
-        # brightness = proj.getBrightness() # TODO: Implement
-        # sendMsg = mido.Message('control_change')
-        # sendMsg.channel = 1
-        # sendMsg.control = 7
-        # sendMsg.value = brightness * 127
-        # midiBluetooth.send(sendMsg)
+        
+
     
     def _handleControlChange(self, ctrl, value, proj):
         if ctrl in controllerMap:
@@ -563,7 +567,7 @@ class MidiProjectController:
             logger.debug("Propagating control change message")
             if controlMsg == modulation.CTRL_BRIGHTNESS:
                 # Handle brightness globally
-                proj.setBrightness(value / 127)
+                proj.setBrightnessForActiveScene(value / 127)
             else:
                 proj.updateModulationSourceValue(0xFFF, controlMsg, controlVal)
         else:

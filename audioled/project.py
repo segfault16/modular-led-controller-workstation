@@ -19,6 +19,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+SCENE_META_BRIGHTNESS = "brightness"
 
 def ensure_parent(func):
     @wraps(func)
@@ -566,6 +567,8 @@ class Project(Updateable):
                     continue
 
                 self._createOrUpdateProcess(dIdx, device, slotId, filterGraph)
+                # Update devices for scene brightness
+                self.setBrightnessForActiveScene(self.getBrightnessActiveScene())
                 dIdx += 1
         finally:
             self._processingEnabled = True
@@ -597,9 +600,29 @@ class Project(Updateable):
             ctrl.update(update)
         return ctrl
 
-    def setBrightness(self, value):
+    def setBrightnessForActiveScene(self, value):
+        # Store brightness value for current Scene
+        if self.activeSceneId is None:
+            return
+        actSceneId = str(self.activeSceneId)
+        if actSceneId not in self.sceneMetadata:
+            logger.error("No metadata for active scene with id {}".format(actSceneId))
+            return
+        self.sceneMetadata[actSceneId][SCENE_META_BRIGHTNESS] = value
         # Brightness per device
         self._sendBrightnessCommand(value)
+
+    def getBrightnessActiveScene(self):
+        # returns brightness for current scene
+        if self.activeSceneId is None:
+            return 1.
+        actSceneId = str(self.activeSceneId)
+        if actSceneId not in self.sceneMetadata:
+            logger.error("No metadata for active scene with id {}".format(actSceneId))
+            return 1.
+        if SCENE_META_BRIGHTNESS in self.sceneMetadata[actSceneId]:
+            return self.sceneMetadata[actSceneId][SCENE_META_BRIGHTNESS]
+        return 1.
 
     def stopProcessing(self):
         logger.info('Stop processing')
@@ -753,7 +776,8 @@ class Project(Updateable):
         #           "refSlot": 12,
         #           "filtergraph": null // TODO project without slots could be added this way
         #       }
-        #    }
+        #    },
+        #    "brightness": 1.
         # }
 
         outputsForScene = {}
@@ -773,7 +797,7 @@ class Project(Updateable):
         
         sceneMeta = {}
         for sceneId in outputsForScene.keys():
-            sceneMeta[sceneId] = {"name": "Unnamed scene", "output": outputsForScene[sceneId]}
+            sceneMeta[sceneId] = {"name": "Unnamed scene", "output": outputsForScene[sceneId], "brightness": 1.}
         
         logger.info("Converted slot matrix to scene meta: {}".format(sceneMeta))
         self.sceneMetadata = sceneMeta
@@ -793,7 +817,7 @@ class Project(Updateable):
         if sceneId not in self.sceneMetadata:
             if create:
                 logger.info("Backwards compatibility: Init scene {}".format(sceneId))
-                self.sceneMetadata[sceneId] = {"name": "Unnamed scene", "output": {}}
+                self.sceneMetadata[sceneId] = {"name": "Unnamed scene", "output": {}, "brightness": 1.}
             else:
                 return None
         outputs = self.sceneMetadata[sceneId]["output"]
@@ -908,6 +932,7 @@ class Project(Updateable):
                 p = mp.Process(target=output, args=(q, outputDevice, virtualDevice))
                 p.start()
                 # Make sure process starts
+                q.put(BrightnessMessage(self.getBrightnessActiveScene()))
                 q.put("check_is_processing")
                 time.sleep(sleepfact * 0.1)
                 if not q._unfinished_tasks._semlock._is_zero():

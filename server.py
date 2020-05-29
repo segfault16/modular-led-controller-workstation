@@ -816,11 +816,12 @@ def create_app():
         value = int(request.args.get('value'))
         floatVal = float(value / 100)
         app.logger.info("Setting brightness: {}".format(floatVal))
-        proj.setBrightness(floatVal)
+        proj.setBrightnessForActiveScene(floatVal)
         return "OK"
 
     @app.route('/remote/favorites/<id>', methods=['POST'])
     def remote_favorites_id_post(id):
+        # TODO: Switch to selecting scenes
         filename = "favorites/{}.json".format(id)
         global proj
         if os.path.isfile(filename):
