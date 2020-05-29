@@ -291,14 +291,20 @@ class MidiProjectController:
                 self._sendMidiCallback(self._createScenesMetadataMsg(metadata))
         elif data[0] == 0x01 and data[1] == 0x30:
             # Get enabled controllers for active scene
-            logger.info("MIDI-BLE REQ Get controller for active scene")
+            logger.info("MIDI-BLE REQ Get controller enabled for active scene")
             proj = serverconfig.getActiveProjectOrDefault()
             if self._sendMidiCallback is not None:
                 self._sendMidiCallback(self._createEnabledControllersMsg(proj))
         elif data[0] == 0x01 and data[1] == 0x40:
             # Request controller values for active project
-            logger.info("MIDI-BLE REQ Get controller for active scene")
+            logger.info("MIDI-BLE REQ Get controller values for active scene")
             proj = serverconfig.getActiveProjectOrDefault()
+            self._sendControllerStatus(proj)
+        elif data[0] == 0x01 and data[1] == 0x50:
+            # Reset controller values for active project
+            logger.info("MIDI-BLE REQ Reset controller for active scene")
+            proj = serverconfig.getActiveProjectOrDefault()
+            proj.resetControllerModulation()
             self._sendControllerStatus(proj)
         elif data[0] == 0x02 and data[1] == 0x00:
             # Get server configuration

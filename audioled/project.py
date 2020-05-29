@@ -458,6 +458,10 @@ class Project(Updateable):
     def setResetControllerModulation(self, newValue):
         self._resetControllerModulation = newValue
 
+    def resetControllerModulation(self):
+        for fg in self._activeFiltergraphs():
+            fg.resetControllerModulations()
+
     def setDevice(self, device: audioled.devices.MultiOutputWrapper):
         logging.debug("setting device")
         if not isinstance(device, audioled.devices.MultiOutputWrapper):

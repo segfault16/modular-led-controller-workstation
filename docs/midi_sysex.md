@@ -81,6 +81,7 @@ followed by `0xf7` for Midi Sysex End.
 | REQ      | Get enabled controller for active scene    | `0x01`, `0x30` |                                                                       |                              |
 | RESP     | Get enabled controller for active scene    | `0x01`, `0x30` | Binary data encode of utf8 json dict controller -> True/False         |                              |
 | REQ      | Request controller values for active scene | `0x01`, `0x40` |                                                                       | Response on corresponding CC |
+| REQ      | Reset controller values for active scene   | `0x01`, `0x50` |                                                                       | Response on corresponding CC |
 | REQ      | Get server configuration                   | `0x02`, `0x00` |                                                                       |                              |
 | RESP     | Get server configuration                   | `0x02`, `0x00` | Binary data encode of utf8 server config json compressed with zlib    |                              |
 | REQ      | Update server configuration                | `0x02`, `0x10` | Binary data encode of utf8 server config json compressed with zlib    |                              |
