@@ -13,6 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 SHORT_NORMALIZE = 1.0 / 32768.0
+interpolation_mode = ['linear', 'quadratic']
 
 
 class Shift(Effect):
@@ -361,9 +362,11 @@ class Mirror(Effect):
     def getParameterHelp():
         help = {
             "parameters": {
-                "mirror_lower": "Switch between mirroring the lower or the upper part of input channel 0.",
-                "recursion": "Recursion depth of the mirroring effect. If recursion is set to 1, "
-                             "the lower and upper half of the strip are mirrored again at their centers."
+                "mirror_lower":
+                "Switch between mirroring the lower or the upper part of input channel 0.",
+                "recursion":
+                "Recursion depth of the mirroring effect. If recursion is set to 1, "
+                "the lower and upper half of the strip are mirrored again at their centers."
             }
         }
         return help
@@ -646,7 +649,6 @@ class Swing(Effect):
 
 class Flipping(Effect):
     """Effect that flips output array."""
-
     @staticmethod
     def getEffectDescription():
         return \
@@ -663,8 +665,7 @@ class Flipping(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters":
-            OrderedDict([
+            "parameters": OrderedDict([
                 ("Flip", True),
             ])
         }
@@ -672,11 +673,7 @@ class Flipping(Effect):
 
     @staticmethod
     def getParameterHelp():
-        help = {
-            "parameters": {
-                "Flip": "Activate the Flip."
-            }
-        }
+        help = {"parameters": {"Flip": "Activate the Flip."}}
         return help
 
     def getParameter(self):
@@ -716,12 +713,13 @@ class Shapes(Effect):
             Intervals are split equally over length. Interpolation mode: linear.
             """
 
-    def __init__(self, x0=0, x1=100, x2=0, x3=0, x4=0):
+    def __init__(self, x0=0, x1=100, x2=0, x3=0, x4=0, interpolation_mode='linear'):
         self.x0 = x0
         self.x1 = x1
         self.x2 = x2
         self.x3 = x3
         self.x4 = x4
+        self.interpolation_mode = interpolation_mode
         self.__initstate__()
 
     def __initstate__(self):
@@ -737,13 +735,15 @@ class Shapes(Effect):
     @staticmethod
     def getParameterDefinition():
         definition = {
-            "parameters": OrderedDict([
+            "parameters":
+            OrderedDict([
                 # default, min, max, stepsize
                 ("x0", [0, 0.0, 100.0, 1.0]),
                 ("x1", [100, 0.0, 100.0, 1.0]),
                 ("x2", [0, 0.0, 100.0, 1.0]),
                 ("x3", [0, 0.0, 100.0, 1.0]),
                 ("x4", [0, 0.0, 100.0, 1.0]),
+                ("interpolation_mode", interpolation_mode)
             ])
         }
         return definition
@@ -756,7 +756,8 @@ class Shapes(Effect):
                 "x1": "point 1",
                 "x2": "point 2",
                 "x3": "point 3",
-                "x4": "point 4"
+                "x4": "point 4",
+                "interpolation_mode": "choose your mode"
             }
         }
         return help
@@ -768,6 +769,8 @@ class Shapes(Effect):
         definition['parameters']['x2'][0] = self.x2
         definition['parameters']['x3'][0] = self.x3
         definition['parameters']['x4'][0] = self.x4
+        definition['parameters']['interpolation_mode'] = [self.interpolation_mode
+                                                          ] + [x for x in interpolation_mode if x != self.interpolation_mode]
         return definition
 
     # No point checking needed with fader input
@@ -795,31 +798,47 @@ class Shapes(Effect):
         elif len(A) == 1:
             B.append([0, A[0]])
         else:
-            delta_l = int(length / (len(A)-1))
+            delta_l = int(length / (len(A) - 1))
             for i in range(len(A)):
                 B.append([i * delta_l, A[i] / 100])
         return B
 
-    # Get different slopes between points. Linear solving only.
-    def _solvePoints(self, A):
+    # Get different slopes between points. Linear solving.
+    def _solvePoints(self, A, mode):
         B = []
-        for i in range(int(len(A)-1)):
-            temp1 = np.array([[A[i][0], 1], [A[i+1][0], 1]])
-            temp2 = np.array([A[i][1], A[i+1][1]])
-            temp3 = np.linalg.solve(temp1, temp2)
-            B.append(temp3)
+        if mode == 'linear':
+            for i in range(int(len(A) - 1)):
+                temp1 = np.array([[A[i][0], 1], [A[i + 1][0], 1]])
+                temp2 = np.array([A[i][1], A[i + 1][1]])
+                temp3 = np.linalg.solve(temp1, temp2)
+                B.append(temp3)
+        elif mode == 'quadratic':
+            for i in range(0, int(len(A) - 2), 2):
+                temp1 = np.array([[A[i][0]**2, A[i][0], 1], [A[i+1][0]**2, A[i+1][0], 1], [A[i+2][0]**2, A[i+2][0], 1]])
+                temp2 = np.array([A[i][1], A[i+1][1], A[i+2][1]])
+                temp3 = np.linalg.inv(temp1).dot(temp2)
+                B.append(temp3)
         return B
 
     # Calculate array for brightness
-    def _createArray(self, A, B, length):
+    def _createArray(self, A, B, length, mode):
         C = []
         count = 0
-        for i in range(int(len(A)-1)):
-            for j in range(A[i][0], A[i+1][0]):
-                C.append(round(B[i][0] * count + B[i][1], 4))
-                count += 1
-        while len(C) < length:
-            C.append(C[-1])
+        if mode == 'linear':
+            for i in range(int(len(A) - 1)):
+                for j in range(A[i][0], A[i + 1][0]):
+                    C.append(round(B[i][0] * count + B[i][1], 4))
+                    count += 1
+            while len(C) < length:
+                C.append(C[-1])
+        elif mode == 'quadratic':
+            B = [B[0], B[0], B[1], B[1]]
+            for i in range(0, int(len(A) - 1)):
+                for _ in range(A[i][0], A[i+1][0]):
+                    C.append(round(B[i][0] * count**2 + B[i][1] * count + B[i][2], 4))  # quadratic calculation
+                    count += 1
+            while len(C) < length:
+                C.append(C[-1])
         return C
 
     def process(self):
@@ -832,8 +851,9 @@ class Shapes(Effect):
         y = self._inputBuffer[0]
 
         A = self._processPoints([self.x0, self.x1, self.x2, self.x3, self.x4], len(y[0]))
-        B = self._solvePoints(A)
-        C = self._createArray(A, B, len(y[0]))
+
+        B = self._solvePoints(A, self.interpolation_mode)
+        C = self._createArray(A, B, len(y[0]), self.interpolation_mode)
 
         for i in range(3):
             y[i] = np.multiply(C, y[i])
