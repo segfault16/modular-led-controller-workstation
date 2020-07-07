@@ -41,7 +41,7 @@
     "file-saver": "^2.0.2",
     "material-table": "^1.57.2",
     "notistack": "^0.8.9",
-    "npm": "^6.12.1",
+    "npm": "^6.14.6",
     "react": "^16.11.0",
     "react-dom": "^16.11.0",
     "react-measure": "^2.3.0",
