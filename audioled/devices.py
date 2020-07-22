@@ -175,6 +175,32 @@ class FadeCandy(LEDController):
             pixels = np.zeros((3, self.num_pixels))
         self.client.put_pixels((pixels * self.getBrightness()).T.clip(0, 255).astype(int).tolist())
 
+class WS2812SPI(LEDController):
+    def __init__(self, num_pixels, num_rows=1, bus=0, device=0):
+        super().__init__(num_pixels, num_rows)
+        """Initializes object for communicating with a FadeCandy device
+
+        Parameters
+        ----------
+        server: str, optional
+            FadeCandy server used to communicate with the FadeCandy device.
+        """
+        import spidev
+        self.spi = spidev.SpiDev()
+        self.spi.open(bus, device)
+
+    def show(self, pixels):
+        pixels = np.swapaxes(pixels,0,1).astype(np.uint8)
+        d=np.array(pixels).ravel()
+        tx=np.zeros(len(d)*4, dtype=np.uint8)
+        for ibit in range(4):
+            tx[3-ibit::4]=((d>>(2*ibit+1))&1)*0x60 + ((d>>(2*ibit+0))&1)*0x06 +  0x88
+        self.spi.xfer(tx.tolist(), int(4/1.25e-6))
+
+    def shutdown(self):
+        self.spi.close()
+        return super().shutdown()
+
 
 class BlinkStick(LEDController):
     def __init__(self, num_pixels, num_rows=1):
