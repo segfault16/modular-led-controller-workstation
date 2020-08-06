@@ -188,14 +188,35 @@ class WS2812SPI(LEDController):
         import spidev
         self.spi = spidev.SpiDev()
         self.spi.open(bus, device)
+        self.spi.max_speed_hz = int(2 * 1000 * 1000) #int(4.01/1.25e-6)
+        # self.spi.lsbfirst = False
+        # self.spi.mode = 0b00
+        # self.spi.bits_per_word = 8
+        self.cnt = 0
 
     def show(self, pixels):
+        def wrap(s, w):
+            return [s[i:i + w] for i in range(0, len(s), w)]
         pixels = np.swapaxes(pixels,0,1).astype(np.uint8)
+        
         d=np.array(pixels).ravel()
-        tx=np.zeros(len(d)*4, dtype=np.uint8)
-        for ibit in range(4):
-            tx[3-ibit::4]=((d>>(2*ibit+1))&1)*0x60 + ((d>>(2*ibit+0))&1)*0x06 +  0x88
-        self.spi.xfer(tx.tolist(), int(4/1.25e-6))
+        enc = np.reshape(d, (-1, 3))
+        self.cnt = (self.cnt + 1) % 8
+        status = (0x0F & self.cnt) | 0xF0
+
+        toWrite = np.zeros((self.num_pixels+1)*4).astype(np.uint8)
+        toWrite[0] = status
+        toWrite[1] = status
+        toWrite[2] = status
+        toWrite[3] = status
+        
+        for id, chunk in enumerate(enc):
+            toWrite[(id+1)*4 + 0] = (0x0F & self.cnt)
+            toWrite[(id+1)*4 + 1] = chunk[0]
+            toWrite[(id+1)*4 + 2] = chunk[1]
+            toWrite[(id+1)*4 + 3] = chunk[2]
+        
+        self.spi.writebytes2(toWrite)
 
     def shutdown(self):
         self.spi.close()

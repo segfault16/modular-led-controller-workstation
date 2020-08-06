@@ -27,7 +27,24 @@ def strandTest(dev, num_pixels):
         pixels[2][0] = b * 255.0
         dev.show(np.concatenate((pixels, pixels[:, ::-1]), axis=1))
         t = t + dt
-        # time.sleep(dt)
+        time.sleep(dt)
+
+def runTest(dev, num_pixels):
+    pos = np.zeros(int(num_pixels))
+    for i in range(0, num_pixels):
+        pos[i] = 1
+        pixels = pos * np.array([[255.0], [255.0], [255.0]])
+        tMs = time.time() * 1000
+        dev.show(pixels)
+        t2Ms = time.time() * 1000
+        # print("Device took {} ms".format(t2Ms - tMs))
+        pos[i] = 0
+
+        time.sleep((max(0, (1./60.)*1000 - (t2Ms - tMs)))/1000.)
+        # time.sleep(0.01)
+        # print("Slept for {} ms".format(time.time() * 1000 - t2Ms))
+        # print("Achieving {} Hz".format(1. / (time.time()*1000-tMs )*1000))
+        
 
 if __name__ == '__main__':
     num_pixels = 10
@@ -36,7 +53,7 @@ if __name__ == '__main__':
         '--num_pixels',
         '-N',
         dest='num_pixels',
-        default=300,
+        default=500,
         help='Number of pixels to show',
     )
     args = parser.parse_args()
@@ -45,5 +62,6 @@ if __name__ == '__main__':
     
     device = devices.WS2812SPI(num_pixels, 1, 1, 0)
     logger.info("Starting test on '{}'".format(device))
-    strandTest(device, num_pixels)
+    while True:
+        runTest(device, num_pixels)
     logger.info("Test finished")
