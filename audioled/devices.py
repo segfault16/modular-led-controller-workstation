@@ -176,7 +176,7 @@ class FadeCandy(LEDController):
         self.client.put_pixels((pixels * self.getBrightness()).T.clip(0, 255).astype(int).tolist())
 
 class WS2812SPI(LEDController):
-    def __init__(self, num_pixels, num_rows=1, bus=0, device=0):
+    def __init__(self, num_pixels, num_rows=1, bus=0, device=0, speedMhz=2.):
         super().__init__(num_pixels, num_rows)
         """Initializes object for communicating with a FadeCandy device
 
@@ -188,7 +188,7 @@ class WS2812SPI(LEDController):
         import spidev
         self.spi = spidev.SpiDev()
         self.spi.open(bus, device)
-        self.spi.max_speed_hz = int(2 * 1000 * 1000) #int(4.01/1.25e-6)
+        self.spi.max_speed_hz = int(speedMhz * 1000 * 1000) #int(4.01/1.25e-6)
         # self.spi.lsbfirst = False
         # self.spi.mode = 0b00
         # self.spi.bits_per_word = 8
