@@ -800,7 +800,14 @@ class PersistentConfiguration(ServerConfiguration):
 
     def _readProject(self, uid):
         if uid not in self._projectMetadatas:
-            raise RuntimeError("No metadata for project {}. Does the file exist?".format(uid))
+            logger.error("No metadata for project {}. Does the file exist?".format(uid))
+            logger.info("Creating new empty project")
+            newProj = self.initDefaultProject()
+            activeProjectUid = newProj.id
+            logger.info("Default project initialized: {}".format(activeProjectUid))
+            self.setConfiguration({CONFIG_ACTIVE_PROJECT: activeProjectUid})
+            self.getActiveProjectOrDefault()
+            return newProj
         projMeta = self._projectMetadatas[uid]
 
         filepath = projMeta['location']

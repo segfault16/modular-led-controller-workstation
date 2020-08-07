@@ -63,7 +63,7 @@ deviceCandy = 'FadeCandy'
 
 parser = runtimeconfiguration.commonRuntimeArgumentParser()
 # Add specific arguments
-deviceChoices = serverconfiguration.ServerConfiguration.getConfigurationParameters().get('device')
+deviceChoices = serverconfiguration.allowed_devices
 parser.add_argument(
     '-D',
     '--device',

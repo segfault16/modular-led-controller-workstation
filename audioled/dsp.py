@@ -232,7 +232,7 @@ def design_filter(lowcut, highcut, fs, order=3):
 
 
 class Bandpass():
-    def __init__(self, lowcut, highcut, fs, order=3):
+    def __init__(self, lowcut=0.0, highcut=20000, fs=44100, order=3):
         self._fs = fs
         self._filter_a = None
         self._filter_b = None
@@ -257,4 +257,12 @@ class Bandpass():
             self._initFilter()
 
     def _initFilter(self):
+        if self._lowcut is None:
+            self._lowcut = 0.0
+        if self._highcut is None:
+            self._highcut = 20000.0
+        if self._fs is None:
+            self._fs = 44100
+        if self._order is None:
+            self._order = 3
         self._filter_b, self._filter_a, self._filter_zi = design_filter(self._lowcut, self._highcut, self._fs, self._order)
