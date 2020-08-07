@@ -30,6 +30,8 @@ def ensure_parent(func):
 
     return inner
 
+def dummy():
+    pass
 
 class PublishQueue(object):
     def __init__(self):
@@ -93,10 +95,11 @@ class PublishQueue(object):
 
 
 class UpdateMessage:
-    def __init__(self, dt, audioBuffer, chunkRate, globalAutogainEnabled, globalAutogainMaxGain, globalAutogainTime):
+    def __init__(self, dt, audioBuffer, chunkRate, sampleRate, globalAutogainEnabled, globalAutogainMaxGain, globalAutogainTime):
         self.dt = dt
         self.audioBuffer = audioBuffer
         self.chunkRate = chunkRate
+        self.sampleRate = sampleRate
         self.globalAutogainEnabled = globalAutogainEnabled
         self.globalAutogainMaxGain = globalAutogainMaxGain
         self.globalAutogainTime = globalAutogainTime
@@ -191,6 +194,7 @@ def worker_process_updateMessage(filtergraph: FilterGraph, outputDevice: audiole
     # TODO: Hack to propagate audio?
     audioled.audio.GlobalAudio.buffer = audioBuffer
     audioled.audio.GlobalAudio.chunk_rate = message.chunkRate
+    audioled.audio.GlobalAudio.sample_rate = message.sampleRate
     audioled.audio.GlobalAudio.global_autogain_enabled = message.globalAutogainEnabled
     audioled.audio.GlobalAudio.global_autogain_maxgain = message.globalAutogainMaxGain
     audioled.audio.GlobalAudio.global_autogain_time = message.globalAutogainTime
@@ -296,6 +300,7 @@ def worker(q: PublishQueue, filtergraph: FilterGraph, outputDevice: audioled.dev
         asyncio.set_event_loop(event_loop)
         filtergraph.propagateNumPixels(outputDevice.getNumPixels(), outputDevice.getNumRows())
         for message in iter(q.get, None):
+            # logger.info("filtergraph process {} message".format(os.getpid()))
             try:
                 if isinstance(message, UpdateMessage):
                     worker_process_updateMessage(filtergraph, outputDevice, slotId, event_loop, message)
@@ -552,15 +557,19 @@ class Project(Updateable):
             # Create new publish queue
             if self._publishQueue is None:
                 self._publishQueue = PublishQueue()
+                logger.debug("Publish queue created")
             # Create new show queue
             if self._showQueue is None:
                 self._showQueue = PublishQueue()
+                logger.debug("Show queue created")
 
             # Instanciate new scene
             dIdx = 0
             for device in self._devices:
+                logger.debug("Init device {}".format(device))
                 # Get slot Id associated with this device
                 slotId = self._getSlotForDevice(dIdx, sceneId, create=True)
+                logger.debug("Device {} corresponds to slot {}".format(device, slotId))
                 # Get filtergraph
                 filterGraph = self.getSlot(slotId)
                 if self._resetControllerModulation:
@@ -569,8 +578,10 @@ class Project(Updateable):
                 if dIdx == self._previewDeviceIndex:
                     dIdx += 1
                     continue
-
+                
+                logger.debug("Creating process")
                 self._createOrUpdateProcess(dIdx, device, slotId, filterGraph)
+                logger.debug("Process created")
                 # Update devices for scene brightness
                 self.setBrightnessForActiveScene(self.getBrightnessActiveScene())
                 dIdx += 1
@@ -906,17 +917,23 @@ class Project(Updateable):
             realDevice = device
 
         # Start filtergraph process
+        p = mp.Process(target=dummy)
+        start = time.time()
+        p.start()
+        p.join()
+        dur = time.time() - start
         successful = False
         sleepfact = 1.
         while not successful:
             q = self._publishQueue.register()
             p = mp.Process(target=worker, args=(q, filterGraph, fgDevice, dIdx, slotId))
             p.start()
+            time.sleep(dur)
             # Process sometimes doesn't start...
             q.put("check_is_processing")
             time.sleep(sleepfact * 0.1)
             if not q._unfinished_tasks._semlock._is_zero():
-                logger.warning("Process didn't respond in time!")
+                logger.warning("Filtergraph processing didn't respond in time!")
                 self._publishQueue.unregister(q)
                 p.join(sleepfact * 0.1)
                 if p.is_alive():
@@ -935,6 +952,7 @@ class Project(Updateable):
                 q = self._showQueue.register()
                 p = mp.Process(target=output, args=(q, outputDevice, virtualDevice))
                 p.start()
+                time.sleep(dur)
                 # Make sure process starts
                 q.put(BrightnessMessage(self.getBrightnessActiveScene()))
                 q.put("check_is_processing")
@@ -1065,6 +1083,7 @@ class Project(Updateable):
                 dt,
                 audioled.audio.GlobalAudio.buffer,
                 audioled.audio.GlobalAudio.chunk_rate,
+                audioled.audio.GlobalAudio.sample_rate,
                 audioled.audio.GlobalAudio.global_autogain_enabled,
                 audioled.audio.GlobalAudio.global_autogain_maxgain,
                 audioled.audio.GlobalAudio.global_autogain_time,

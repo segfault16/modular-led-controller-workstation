@@ -88,6 +88,7 @@ class GlobalAudio():
     def __init__(self, device_index=None, chunk_rate=60, num_channels=None):
         GlobalAudio.device_index = device_index
         GlobalAudio.chunk_rate = chunk_rate
+        GlobalAudio.sample_rate = 44100
         self.num_channels = 1
         try:
             self.global_stream, GlobalAudio.sample_rate, self.num_channels = self.stream_audio(device_index, chunk_rate, num_channels)

@@ -1048,7 +1048,7 @@ if __name__ == '__main__':
         strandTest(serverconfig.createOutputDevice(), serverconfig.getConfiguration(serverconfiguration.CONFIG_NUM_PIXELS))
 
     # Initialize project
-    proj = serverconfig.getActiveProjectOrDefault()
+    proj = serverconfig.getActiveProjectOrDefault()  # type: project.Project
     proj.activate()
 
     # Init defaults

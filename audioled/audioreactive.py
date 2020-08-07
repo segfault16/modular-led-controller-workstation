@@ -46,9 +46,9 @@ class Spectrum(Effect):
         self.__initstate__()
 
     def __initstate__(self):
+        super().__initstate__()
         # state
         self._norm_dist = None
-        self.fft_bins = 64
         self._fft_dist = np.linspace(0, 1, self.fft_bins)
         self._max_filter = np.ones(8)
         self._min_feature_win = np.hamming(8)
@@ -57,7 +57,6 @@ class Spectrum(Effect):
         self._melody_rms = None
         self._lastAudioChunk = None
         self._gen = None
-        super(Spectrum, self).__initstate__()
 
     def numInputChannels(self):
         return 3
