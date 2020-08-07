@@ -18,8 +18,8 @@ pytest = "*"
 grpcio-tools = "*"
 
 [packages]
-numpy = "*"
-scipy = "*"
+#numpy = "*"
+#scipy = "*"
 jsonpickle = "*"
 flask = "*"
 mido = "*"
@@ -27,7 +27,7 @@ python-rtmidi = "*"
 apscheduler = "*"
 pillow = "*"
 rpi-ws281x = {version = "*",sys_platform = "== 'linux'"}
-pyaudio = {editable = true,git = "https://github.com/segfault16/pyAudio.git"}
+pyaudio = {editable = true,git = "https://github.com/segfault16/pyAudio.git", ref="master"}
 pybleno = "*"
 grpcio = "*"
 protobuf = "*"
